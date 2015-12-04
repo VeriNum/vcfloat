@@ -68,10 +68,12 @@ Open Scope R_scope.
 2. remove all unsupported "long double" definitions
 3. use CompCert Clightgen
 4. extract the expressions from the return statements of f and g.
+
+Assume x is a double-precision floating-point variable.
 *)
 
 (**
-2.0f * x - 3.0
+2.0f * (float) x - 3.0
 *)
 
 Definition _x : ident := 47%positive.
