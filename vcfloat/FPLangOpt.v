@@ -764,6 +764,7 @@ Fixpoint erase (e: FPLang.expr (V := V)) {struct e}: FPLang.expr :=
     | Binop SterbenzMinus e1 e2 => Binop (Rounded2 MINUS None) (erase e1) (erase e2)
     | Binop (PlusZero minus_ _) e1 e2 => Binop (Rounded2 (if minus_ then MINUS else PLUS) None) (erase e1) (erase e2)
     | Unop (Rounded1 u k) e => Unop (Rounded1 u None) (erase e)
+    | Unop (CastTo u _) e => Unop (CastTo u None) (erase e)
     | Unop u e => Unop u (erase e)
     | _ => e
   end.
