@@ -43,7 +43,9 @@ Most interesting files:
 
   vcfloat/Clight2FPOpt.v: VCFloat annotation tactic
 
-  vcfloat/Example.v: examples of Section 4 of the abovementioned CPP 2016 paper (to understand 
+  vcfloat/Example.v: examples of Section 4 of the abovementioned CPP
+  2016 paper (to be replayed interactively under ProofGeneral-Coq or
+  CoqIDE)
 
 VCFloat requires Coq 8.5beta2.
 
