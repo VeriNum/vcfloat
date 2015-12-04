@@ -1,0 +1,509 @@
+# VCFloat: A Unified Coq Framework for Verifying C Programs with
+# Floating-Point Computations. Application to SAR Backprojection.
+# 
+# Version 1.0 (2015-12-04)
+# 
+# Copyright (C) 2015 Reservoir Labs Inc.
+# All rights reserved.
+# 
+# This file, which is part of VCFloat, is free software. You can
+# redistribute it and/or modify it under the terms of the GNU General
+# Public License as published by the Free Software Foundation, either
+# version 3 of the License (GNU GPL v3), or (at your option) any later
+# version. A verbatim copy of the GNU GPL v3 is included in gpl-3.0.txt.
+# 
+# This file is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See LICENSE for
+# more details about the use and redistribution of this file and the
+# whole VCFloat library.
+# 
+# This work is sponsored in part by DARPA MTO as part of the Power
+# Efficiency Revolution for Embedded Computing Technologies (PERFECT)
+# program (issued by DARPA/CMO under Contract No: HR0011-12-C-0123). The
+# views and conclusions contained in this work are those of the authors
+# and should not be interpreted as representing the official policies,
+# either expressly or implied, of the DARPA or the
+# U.S. Government. Distribution Statement "A" (Approved for Public
+# Release, Distribution Unlimited.)
+# 
+# 
+# If you are using or modifying VCFloat in your work, please consider
+# citing the following paper:
+# 
+# Tahina Ramananandro, Paul Mountcastle, Benoit Meister and Richard
+# Lethin.
+# A Unified Coq Framework for Verifying C Programs with Floating-Point
+# Computations.
+# In CPP (5th ACM/SIGPLAN conference on Certified Programs and Proofs)
+# 2016.
+# 
+# 
+# VCFloat requires third-party libraries listed in ACKS along with their
+# copyright information.
+# 
+# VCFloat depends on third-party libraries listed in ACKS along with
+# their copyright and licensing information.
+--- a/Archi.v	2015-10-18 17:57:03.354368623 -0400
++++ b/Archi.v	2015-05-29 13:05:32.466278503 -0400
+@@ -17,8 +17,8 @@
+ (** Architecture-dependent parameters for IA32 *)
+ 
+ Require Import ZArith.
+-Require Import Fappli_IEEE.
+-Require Import Fappli_IEEE_bits.
++Require Import Flocq.Appli.Fappli_IEEE.
++Require Import Flocq.Appli.Fappli_IEEE_bits.
+ 
+ Definition big_endian := false.
+ 
+@@ -26,13 +26,13 @@
+ Notation align_float64 := 4%Z (only parsing).
+ 
+ Program Definition default_pl_64 : bool * nan_pl 53 := 
+-  (true, nat_iter 51 xO xH).
++  (true, Fcore_Zaux.iter_nat xO 51 xH).
+ 
+ Definition choose_binop_pl_64 (s1: bool) (pl1: nan_pl 53) (s2: bool) (pl2: nan_pl 53) :=
+   false.                        (**r always choose first NaN *)
+ 
+ Program Definition default_pl_32 : bool * nan_pl 24 := 
+-  (true, nat_iter 22 xO xH).
++  (true, Fcore_Zaux.iter_nat xO 22 xH).
+ 
+ Definition choose_binop_pl_32 (s1: bool) (pl1: nan_pl 24) (s2: bool) (pl2: nan_pl 24) :=
+   false.                        (**r always choose first NaN *)
+--- a/AST.v	2015-10-18 17:57:03.354368623 -0400
++++ b/AST.v	2015-05-29 13:45:17.649271910 -0400
+@@ -19,7 +19,7 @@
+ Require Import Coqlib.
+ Require String.
+ Require Import Errors.
+-Require Import Integers.
++Require Import compcert.Integers.
+ Require Import Floats.
+ 
+ Set Implicit Arguments.
+@@ -100,12 +100,13 @@
+ calling conventions for the function. *)
+ 
+ Record calling_convention : Type := mkcallconv {
+-  cc_vararg: bool;
+-  cc_structret: bool
++  cc_vararg: bool;                      (**r variable-arity function *)
++  cc_unproto: bool;                     (**r old-style unprototyped function *)
++  cc_structret: bool                    (**r function returning a struct  *)
+ }.
+ 
+ Definition cc_default :=
+-  {| cc_vararg := false; cc_structret := false |}.
++  {| cc_vararg := false; cc_unproto := false; cc_structret := false |}.
+ 
+ Record signature : Type := mksignature {
+   sig_args: list typ;
+--- a/Clightdefs.v	2015-10-18 17:57:03.354368623 -0400
++++ b/Clightdefs.v	2015-05-29 15:51:18.296098977 -0400
+@@ -17,7 +17,7 @@
+ 
+ Require Export List.
+ Require Export ZArith.
+-Require Export Integers.
++Require Export compcert.Integers.
+ Require Export Floats.
+ Require Export AST.
+ Require Export Ctypes.
+--- a/Clight.v	2015-10-18 17:57:03.354368623 -0400
++++ b/Clight.v	2015-05-29 12:48:21.953015627 -0400
+@@ -20,7 +20,7 @@
+ Require Import Coqlib.
+ Require Import Errors.
+ Require Import Maps.
+-Require Import Integers.
++Require Import compcert.Integers.
+ Require Import Floats.
+ Require Import Values.
+ Require Import AST.
+--- a/Cop.v	2015-10-18 17:57:03.354368623 -0400
++++ b/Cop.v	2015-05-29 14:00:44.766474897 -0400
+@@ -17,7 +17,7 @@
+ 
+ Require Import Coqlib.
+ Require Import AST.
+-Require Import Integers.
++Require Import compcert.Integers.
+ Require Import Floats.
+ Require Import Values.
+ Require Import Memory.
+--- a/Coqlib.v	2015-10-18 17:57:03.354368623 -0400
++++ b/Coqlib.v	2015-05-29 12:54:31.693475445 -0400
+@@ -51,7 +51,7 @@
+ Lemma modusponens: forall (P Q: Prop), P -> (P -> Q) -> Q.
+ Proof. auto. Qed.
+ 
+-Ltac exploit x :=
++Ltac eexploit x := (
+     refine (modusponens _ _ (x _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) _)
+  || refine (modusponens _ _ (x _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) _)
+  || refine (modusponens _ _ (x _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) _)
+@@ -86,7 +86,10 @@
+  || refine (modusponens _ _ (x _ _ _ _) _)
+  || refine (modusponens _ _ (x _ _ _) _)
+  || refine (modusponens _ _ (x _ _) _)
+- || refine (modusponens _ _ (x _) _).
++ || refine (modusponens _ _ (x _) _)
++).
++
++Ltac exploit x := eexploit x; shelve_unifiable.
+ 
+ (** * Definitions and theorems over the type [positive] *)
+ 
+--- a/Events.v	2015-10-18 17:57:03.354368623 -0400
++++ b/Events.v	2015-05-29 13:55:54.130101686 -0400
+@@ -18,7 +18,7 @@
+ Require Import Coqlib.
+ Require Intv.
+ Require Import AST.
+-Require Import Integers.
++Require Import compcert.Integers.
+ Require Import Floats.
+ Require Import Values.
+ Require Import Memory.
+--- a/Fappli_IEEE_extra.v	2015-10-18 17:57:03.354368623 -0400
++++ b/Fappli_IEEE_extra.v	2015-05-29 13:32:25.248259985 -0400
+@@ -20,15 +20,15 @@
+ Require Import Psatz.
+ Require Import Bool.
+ Require Import Eqdep_dec.
+-Require Import Fcore.
+-Require Import Fcore_digits.
+-Require Import Fcalc_digits.
+-Require Import Fcalc_ops.
+-Require Import Fcalc_round.
+-Require Import Fcalc_bracket.
+-Require Import Fprop_Sterbenz.
+-Require Import Fappli_IEEE.
+-Require Import Fappli_rnd_odd.
++Require Import Flocq.Core.Fcore.
++Require Import Flocq.Core.Fcore_digits.
++Require Import Flocq.Calc.Fcalc_digits.
++Require Import Flocq.Calc.Fcalc_ops.
++Require Import Flocq.Calc.Fcalc_round.
++Require Import Flocq.Calc.Fcalc_bracket.
++Require Import Flocq.Prop.Fprop_Sterbenz.
++Require Import Flocq.Appli.Fappli_IEEE.
++Require Import Flocq.Appli.Fappli_rnd_odd.
+ 
+ Local Open Scope Z_scope.
+ 
+@@ -63,10 +63,10 @@
+ 
+ Definition is_finite_pos0 (f: binary_float) : bool :=
+   match f with
+-  | B754_zero s => negb s
+-  | B754_infinity _ => false
+-  | B754_nan _ _ => false
+-  | B754_finite _ _ _ _ => true
++  | B754_zero _ _ s => negb s
++  | B754_infinity _ _ _ => false
++  | B754_nan _ _ _ _ => false
++  | B754_finite _ _ _ _ _ _ => true
+   end.
+ 
+ Lemma Bsign_pos0:
+@@ -693,10 +693,10 @@
+ 
+ Definition ZofB (f: binary_float): option Z :=
+   match f with
+-    | B754_finite s m (Zpos e) _ => Some (cond_Zopp s (Zpos m) * Zpower_pos radix2 e)%Z
+-    | B754_finite s m 0 _ => Some (cond_Zopp s (Zpos m))
+-    | B754_finite s m (Zneg e) _ => Some (cond_Zopp s (Zpos m / Zpower_pos radix2 e))%Z
+-    | B754_zero _ => Some 0%Z
++    | B754_finite _ _ s m (Zpos e) _ => Some (cond_Zopp s (Zpos m) * Zpower_pos radix2 e)%Z
++    | B754_finite _ _ s m 0 _ => Some (cond_Zopp s (Zpos m))
++    | B754_finite _ _ s m (Zneg e) _ => Some (cond_Zopp s (Zpos m / Zpower_pos radix2 e))%Z
++    | B754_zero _ _ _ => Some 0%Z
+     | _ => None
+   end.
+ 
+@@ -949,7 +949,7 @@
+ - revert H H0. fold emin. fold fexp. 
+   set (x := B754_finite prec emax b0 m0 e1 e2). set (rx := B2R _ _ x). 
+   set (y := B754_finite prec emax b m e e0). set (ry := B2R _ _ y).
+-  rewrite (Rmult_comm ry rx). destruct Rlt_bool.
++  rewrite (Rmult_comm ry rx). destruct (Rlt_bool (Rabs (round radix2 fexp (round_mode mode) (rx * ry))) (bpow radix2 emax)).
+   + intros (A1 & A2 & A3) (B1 & B2 & B3).
+     apply B2R_Bsign_inj; auto. rewrite <- B1 in A1. auto. 
+     rewrite ! Bsign_FF2B. f_equal. f_equal. apply xorb_comm. apply Pos.mul_comm. apply Z.add_comm.
+@@ -1002,9 +1002,9 @@
+ Remark Bexact_inverse_mantissa_value:
+   Zpos Bexact_inverse_mantissa = 2 ^ (prec - 1).
+ Proof.
+-  assert (REC: forall n, Z.pos (nat_iter n xO xH) = 2 ^ (Z.of_nat n)).
++  assert (REC: forall n, Z.pos (nat_rect (fun _ => positive) xH (fun _ => xO) n) = 2 ^ (Z.of_nat n)).
+   { induction n. reflexivity. 
+-    simpl nat_iter. transitivity (2 * Z.pos (nat_iter n xO xH)). reflexivity. 
++    simpl nat_rect. transitivity (2 * Z.pos (nat_rect (fun _ => positive) xH (fun _ => xO) n)). reflexivity. 
+     rewrite inj_S. rewrite IHn. unfold Z.succ. rewrite Zpower_plus by omega. 
+     change (2 ^ 1) with 2. ring. }
+   red in prec_gt_0_.
+@@ -1015,12 +1015,12 @@
+ Remark Bexact_inverse_mantissa_digits2_pos:
+   Z.pos (digits2_pos Bexact_inverse_mantissa) = prec.
+ Proof.
+-  assert (DIGITS: forall n, digits2_pos (nat_iter n xO xH) = Pos.of_nat (n+1)).
++  assert (DIGITS: forall n, digits2_pos (nat_rect _ xH (fun _ => xO) n) = Pos.of_nat (n+1)).
+   { induction n; simpl. auto. rewrite IHn. destruct n; auto. }
+   red in prec_gt_0_.
+   unfold Bexact_inverse_mantissa. rewrite iter_nat_of_Z by omega. rewrite DIGITS.
+   rewrite Zabs2Nat.abs_nat_nonneg, Z2Nat.inj_sub by omega.
+-  destruct prec; try  discriminate. rewrite NPeano.Nat.sub_add.
++  destruct prec; try  discriminate. rewrite Nat.sub_add.
+   simpl. rewrite Pos2Nat.id. auto.
+   simpl. zify; omega.
+ Qed.
+@@ -1039,7 +1039,7 @@
+ 
+ Program Definition Bexact_inverse (f: binary_float) : option binary_float :=
+   match f with
+-  | B754_finite s m e B =>
++  | B754_finite _ _ s m e B =>
+       if positive_eq_dec m Bexact_inverse_mantissa then
+       let e' := -e - (prec - 1) * 2 in
+       if Z_le_dec emin e' then
+@@ -1129,10 +1129,10 @@
+ 
+ Definition Bconv (conv_nan: bool -> nan_pl prec1 -> bool * nan_pl prec2) (md: mode) (f: binary_float1) : binary_float2 :=
+   match f with
+-    | B754_nan s pl => let '(s, pl) := conv_nan s pl in B754_nan _ _ s pl
+-    | B754_infinity s => B754_infinity _ _ s
+-    | B754_zero s => B754_zero _ _ s
+-    | B754_finite s m e _ => binary_normalize _ _ _ Hmax2 md (cond_Zopp s (Zpos m)) e s
++    | B754_nan _ _ s pl => let '(s, pl) := conv_nan s pl in B754_nan _ _ s pl
++    | B754_infinity _ _ s => B754_infinity _ _ s
++    | B754_zero _ _ s => B754_zero _ _ s
++    | B754_finite _ _ s m e _ => binary_normalize _ _ _ Hmax2 md (cond_Zopp s (Zpos m)) e s
+   end.
+ 
+ Theorem Bconv_correct:
+--- a/Floats.v	2015-10-18 17:57:03.354368623 -0400
++++ b/Floats.v	2015-05-29 13:44:10.285183004 -0400
+@@ -17,11 +17,11 @@
+ (** Formalization of floating-point numbers, using the Flocq library. *)
+ 
+ Require Import Coqlib.
+-Require Import Integers.
+-Require Import Fappli_IEEE.
+-Require Import Fappli_IEEE_bits.
+-Require Import Fappli_IEEE_extra.
+-Require Import Fcore.
++Require Import compcert.Integers.
++Require Import Flocq.Appli.Fappli_IEEE.
++Require Import Flocq.Appli.Fappli_IEEE_bits.
++Require Import compcert.Fappli_IEEE_extra.
++Require Import Flocq.Core.Fcore.
+ Require Import Program.
+ Require Archi.
+ 
+@@ -203,7 +203,7 @@
+ (** Transform a Nan payload to a quiet Nan payload. *)
+ 
+ Program Definition transform_quiet_pl (pl:nan_pl 53) : nan_pl 53 :=
+-  Pos.lor pl (nat_iter 51 xO xH).
++  Pos.lor pl (iter_nat xO 51 xH).
+ Next Obligation.
+   destruct pl.
+   simpl. rewrite Z.ltb_lt in *.
+@@ -239,12 +239,14 @@
+ 
+ Definition expand_pl (pl: nan_pl 24) : nan_pl 53.
+ Proof.
+-  refine (exist _ (Pos.shiftl_nat (proj1_sig pl) 29) _).
++  refine (exist _ (Pos.shiftl_nat (proj1_sig pl) 29) _);
+   abstract (
+-    destruct pl; unfold proj1_sig, Pos.shiftl_nat, nat_iter, Fcore_digits.digits2_pos;
+-    fold (Fcore_digits.digits2_pos x);
++    destruct pl; unfold proj1_sig, Pos.shiftl_nat, nat_rect, Fcore_digits.digits2_pos;
++    fold Fcore_digits.digits2_pos;
+     rewrite Z.ltb_lt in *;
+-    zify; omega).
++    zify;
++    omega
++  ).
+ Defined.
+ 
+ Definition of_single_pl (s:bool) (pl:nan_pl 24) : (bool * nan_pl 53) :=
+@@ -257,7 +259,7 @@
+ Proof.
+   refine (exist _ (Pos.shiftr_nat (proj1_sig pl) 29) _).
+   abstract (
+-    destruct pl; unfold proj1_sig, Pos.shiftr_nat, nat_iter;
++    destruct pl; unfold proj1_sig, Pos.shiftr_nat, nat_rect;
+     rewrite Z.ltb_lt in *;
+     assert (forall x, Fcore_digits.digits2_pos (Pos.div2 x) =
+                       (Fcore_digits.digits2_pos x - 1)%positive)
+@@ -284,12 +286,12 @@
+ 
+ Definition binop_pl (x y: binary64) : bool*nan_pl 53 :=
+   match x, y with
+-  | B754_nan s1 pl1, B754_nan s2 pl2 =>
++  | B754_nan _ _ s1 pl1, B754_nan _ _ s2 pl2 =>
+       if Archi.choose_binop_pl_64 s1 pl1 s2 pl2
+       then (s2, transform_quiet_pl pl2)
+       else (s1, transform_quiet_pl pl1)
+-  | B754_nan s1 pl1, _ => (s1, transform_quiet_pl pl1)
+-  | _, B754_nan s2 pl2 => (s2, transform_quiet_pl pl2)
++  | B754_nan _ _ s1 pl1, _ => (s1, transform_quiet_pl pl1)
++  | _, B754_nan _ _ s2 pl2 => (s2, transform_quiet_pl pl2)
+   | _, _ => Archi.default_pl_64
+   end.
+ 
+@@ -659,7 +661,11 @@
+   rewrite ! from_words_eq. rewrite ox8000_0000_signed_unsigned.
+   change (Int.unsigned ox8000_0000) with Int.half_modulus.
+   unfold sub. rewrite BofZ_minus. 
+-  unfold of_int. f_equal. omega.
++  unfold of_int. 
++   match goal with
++   |- _ _ _ _ _ ?a = _ _ _ _ _ ?b => cut (a = b); [ intro L; rewrite <- L; reflexivity | ]
++   end.
++   omega.
+   apply integer_representable_n; auto; smart_omega.
+   apply integer_representable_n; auto; smart_omega.
+ Qed.
+@@ -768,7 +774,10 @@
+      with ((xh - 2^20) * 2^32) 
+        by (compute_this p; compute_this Int.half_modulus; ring).
+   unfold add. rewrite BofZ_plus. 
+-  unfold of_long. f_equal. 
++  unfold of_long.
++   match goal with
++   |- _ _ _ _ _ ?a = _ _ _ _ _ ?b => cut (a = b); [ intro L; rewrite <- L; reflexivity | ]
++   end.
+   rewrite <- (Int64.ofwords_recompose l) at 1. rewrite Int64.ofwords_add''.
+   fold xh; fold xl. compute_this (two_p 32); ring. 
+   apply integer_representable_n2p; auto.
+@@ -925,7 +934,7 @@
+ (** ** NaN payload manipulations *)
+ 
+ Program Definition transform_quiet_pl (pl:nan_pl 24) : nan_pl 24 :=
+-  Pos.lor pl (nat_iter 22 xO xH).
++  Pos.lor pl (Fcore_Zaux.iter_nat xO 22 xH).
+ Next Obligation.
+   destruct pl.
+   simpl. rewrite Z.ltb_lt in *.
+@@ -949,12 +958,12 @@
+ 
+ Definition binop_pl (x y: binary32) : bool*nan_pl 24 :=
+   match x, y with
+-  | B754_nan s1 pl1, B754_nan s2 pl2 =>
++  | B754_nan _ _ s1 pl1, B754_nan _ _ s2 pl2 =>
+       if Archi.choose_binop_pl_32 s1 pl1 s2 pl2
+       then (s2, transform_quiet_pl pl2)
+       else (s1, transform_quiet_pl pl1)
+-  | B754_nan s1 pl1, _ => (s1, transform_quiet_pl pl1)
+-  | _, B754_nan s2 pl2 => (s2, transform_quiet_pl pl2)
++  | B754_nan _ _ s1 pl1, _ => (s1, transform_quiet_pl pl1)
++  | _, B754_nan _ _ s2 pl2 => (s2, transform_quiet_pl pl2)
+   | _, _ => Archi.default_pl_32
+   end.
+ 
+--- a/Globalenvs.v	2015-10-18 17:57:03.354368623 -0400
++++ b/Globalenvs.v	2015-05-29 13:54:44.390011625 -0400
+@@ -40,7 +40,7 @@
+ Require Import Errors.
+ Require Import Maps.
+ Require Import AST.
+-Require Import Integers.
++Require Import compcert.Integers.
+ Require Import Floats.
+ Require Import Values.
+ Require Import Memory.
+--- a/Integers.v	2015-10-18 17:57:03.354368623 -0400
++++ b/Integers.v	2015-05-29 12:59:58.877875912 -0400
+@@ -3576,8 +3576,8 @@
+   intros. 
+   destruct (andb_prop _ _ H1). clear H1. 
+   destruct (andb_prop _ _ H2). clear H2.
+-  exploit proj_sumbool_true. eexact H1. intro A; clear H1.
+-  exploit proj_sumbool_true. eexact H4. intro B; clear H4.
++  generalize (@proj_sumbool_true _ _ _ H1). intro A; clear H1.
++  generalize (@proj_sumbool_true _ _ _ H4). intro B; clear H4.
+   assert (unsigned ofs1 + sz1 <= unsigned ofs2 \/ unsigned ofs2 + sz2 <= unsigned ofs1).
+   destruct (orb_prop _ _ H3). left. eapply proj_sumbool_true; eauto. right. eapply proj_sumbool_true; eauto.
+   clear H3.
+--- a/Intv.v	2015-10-18 17:57:03.354368623 -0400
++++ b/Intv.v	2015-05-29 13:48:26.889520518 -0400
+@@ -248,7 +248,7 @@
+   destruct H2. congruence. auto. 
+ Qed.
+ Next Obligation.
+-  exists wildcard'0; split; auto. omega.
++  exists wildcard'; split; auto. omega.
+ Qed.
+ Next Obligation.
+   exists (hi - 1); split; auto. omega.
+--- a/Memdata.v	2015-10-18 17:57:03.354368623 -0400
++++ b/Memdata.v	2015-05-29 13:49:21.925592509 -0400
+@@ -19,7 +19,7 @@
+ Require Import Coqlib.
+ Require Archi.
+ Require Import AST.
+-Require Import Integers.
++Require Import compcert.Integers.
+ Require Import Floats.
+ Require Import Values.
+ 
+--- a/Memory.v	2015-10-18 17:57:03.354368623 -0400
++++ b/Memory.v	2015-05-29 13:52:19.745824184 -0400
+@@ -33,7 +33,7 @@
+ Require Import Maps.
+ Require Archi.
+ Require Import AST.
+-Require Import Integers.
++Require Import compcert.Integers.
+ Require Import Floats.
+ Require Import Values.
+ Require Export Memdata.
+@@ -1505,7 +1505,8 @@
+   try discriminate.
+   rewrite pred_dec_true. 
+   decEq. inv STORE; simpl. rewrite PMap.gss. rewrite nat_of_Z_of_nat. 
+-  apply getN_setN_same. 
++  apply getN_setN_same.
++  inv STORE; simpl.
+   red; eauto with mem. 
+ Qed.
+ 
+--- a/Memtype.v	2015-10-18 17:57:03.354368623 -0400
++++ b/Memtype.v	2015-05-29 13:50:31.365683146 -0400
+@@ -25,7 +25,7 @@
+ 
+ Require Import Coqlib.
+ Require Import AST.
+-Require Import Integers.
++Require Import compcert.Integers.
+ Require Import Floats.
+ Require Import Values.
+ Require Import Memdata.
+--- a/Smallstep.v	2015-10-18 17:57:03.354368623 -0400
++++ b/Smallstep.v	2015-05-29 13:58:58.298338567 -0400
+@@ -24,7 +24,7 @@
+ Require Import Coqlib.
+ Require Import Events.
+ Require Import Globalenvs.
+-Require Import Integers.
++Require Import compcert.Integers.
+ 
+ Set Implicit Arguments.
+ 
+--- a/Values.v	2015-10-18 17:57:03.354368623 -0400
++++ b/Values.v	2015-05-29 13:45:50.117314684 -0400
+@@ -18,7 +18,7 @@
+ 
+ Require Import Coqlib.
+ Require Import AST.
+-Require Import Integers.
++Require Import compcert.Integers.
+ Require Import Floats.
+ 
+ Definition block : Type := positive.

@@ -1,0 +1,97 @@
+# VCFloat: A Unified Coq Framework for Verifying C Programs with
+# Floating-Point Computations. Application to SAR Backprojection.
+#
+# Version 1.0 (2015-12-04)
+#
+# Copyright (C) 2015 Reservoir Labs Inc.
+# All rights reserved.
+#
+# This file, which is part of VCFloat, is free software. You can
+# redistribute it and/or modify it under the terms of CeCILL-C,
+# version 1.0. A verbatim copy of CeCILL-C is included in
+# cecill-c-1.0.txt.
+#
+# This file is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See LICENSE for
+# more details about the use and redistribution of this file and the
+# whole R-CoqLib library.
+#
+# This file is a modification of Coq-Interval version 1.1.0, which is
+# Copyright (C) 2007-2015 Guillaume Melquiond. All rights
+# reserved. See ACKS for more copyright and licensing information
+# about Coq-Interval.
+#
+diff --git a/src/Interval_tactic.v b/src/Interval_tactic.v
+index a4f5eec..1ed03b8 100644
+--- a/src/Interval_tactic.v
++++ b/src/Interval_tactic.v
+@@ -436,7 +436,7 @@ Ltac xalgorithm_pre :=
+     idtac
+   | |- (?a <> ?b)%R =>
+     apply Rminus_not_eq
+-  | _ => fail 100 "Goal is not an inequality with floating-point bounds."
++  | _ => fail 1 "Goal is not an inequality with floating-point bounds."
+   end.
+ 
+ Ltac xalgorithm_post lx :=
+@@ -587,7 +587,7 @@ Ltac get_bounds l prec :=
+           | H: Rle x ?b |- _ => idtac
+           | H: Rle (Rabs x) ?b |- _ => idtac
+           end ;
+-          fail 100 "Atom" x "is neither a floating-point value nor bounded by floating-point values."
++          fail 3 "Atom" x "is neither a floating-point value nor bounded by floating-point values."
+         | _ =>
+           constr:(A.Bproof x (I.bnd F.nan F.nan) (conj I I), @Some R x)
+         end
+@@ -732,7 +732,7 @@ Ltac do_interval vars prec depth eval_tac :=
+         vm_cast_no_check (refl_equal true)
+       end
+     end)) ||
+-  fail 100 "Numerical evaluation failed to conclude. You may want to adjust some parameters.".
++  fail 0 "Numerical evaluation failed to conclude. You may want to adjust some parameters.".
+ 
+ Ltac do_interval_eval bounds output formula prec depth n :=
+   refine (interval_helper_evaluate bounds output formula prec n _).
+@@ -750,7 +750,7 @@ Ltac tuple_to_list params l :=
+   match params with
+   | pair ?a ?b => tuple_to_list a (b :: l)
+   | ?b => constr:(b :: l)
+-  | ?z => fail 100 "Unknown tactic parameter" z "."
++  | ?z => fail 1 "Unknown tactic parameter" z "."
+   end.
+ 
+ Ltac do_interval_parse params :=
+@@ -762,20 +762,20 @@ Ltac do_interval_parse params :=
+     | cons (i_bisect_diff ?x) ?t => aux (cons x nil) prec depth do_interval_bisect_diff t
+     | cons (i_bisect_taylor ?x ?d) ?t => aux (cons x nil) prec depth ltac:(do_interval_bisect_taylor d) t
+     | cons (i_depth ?d) ?t => aux vars prec d eval_tac t
+-    | cons ?h _ => fail 100 "Unknown tactic parameter" h "."
++    | cons ?h _ => fail 1 "Unknown tactic parameter" h "."
+     end in
+   aux (@nil R) 30%nat 15%nat do_interval_eval params.
+ 
+ Ltac do_interval_generalize t b :=
+   match eval vm_compute in (I.convert b) with
+-  | Inan => fail 100 "Nothing known about" t
++  | Inan => fail 1 "Nothing known about" t
+   | Ibnd ?l ?u =>
+     match goal with
+     | |- ?P =>
+       match l with
+       | Xnan =>
+         match u with
+-        | Xnan => fail 100 "Nothing known about" t
++        | Xnan => fail 4 "Nothing known about" t
+         | Xreal ?u => refine ((_ : (t <= u)%R -> P) _)
+         end
+       | Xreal ?l =>
+@@ -836,7 +836,7 @@ Ltac do_interval_intro_parse t_ extend params_ :=
+     | cons (i_bisect_diff ?x) ?t => aux (cons x nil) prec depth do_interval_intro_bisect_diff t
+     | cons (i_bisect_taylor ?x ?d) ?t => aux (cons x nil) prec depth ltac:(do_interval_intro_bisect_taylor d) t
+     | cons (i_depth ?d) ?t => aux vars prec d eval_tac t
+-    | cons ?h _ => fail 100 "Unknown tactic parameter" h "."
++    | cons ?h _ => fail 1 "Unknown tactic parameter" h "."
+     end in
+   aux (@nil R) 30%nat 5%nat do_interval_intro_eval params_.
+ 
