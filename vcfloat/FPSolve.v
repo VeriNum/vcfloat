@@ -646,6 +646,15 @@ Proof.
   eapply rndval_shift_le; eauto.
 Qed.
 
+Lemma val_inject_single_left_inv v l:
+  val_inject v Tsingle l ->
+  v = Values.Vsingle l.
+Proof.
+  inversion 1; subst.
+  apply val_inject_single_inv in H.
+  congruence.
+Qed.
+
 Lemma val_inject_double_left_inv v l:
   val_inject v Tdouble l ->
   v = Values.Vfloat l.

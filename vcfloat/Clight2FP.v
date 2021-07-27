@@ -54,55 +54,12 @@ rounding error terms and their correctness proofs.
 **)
 
 Require Export Omega.
-Require Export FPLang.
+Require Export FPLang FPSolve.
 Require Export compcert.cfrontend.Clight.
 Require Export cverif.ClightFacts.
 
 Section WITHNANS.
 Context {NANS: Nans}.
-
-Lemma cast_id ty f:
-    cast ty ty f = f.
-Proof.
-  unfold cast.
-  destruct (type_eq_dec ty ty); try congruence.
-  assert (e = eq_refl) as K.
-  {
-    apply Eqdep_dec.eq_proofs_unicity.
-    intros.
-    unfold not.
-    rewrite <- type_eqb_eq.
-    destruct (type_eqb x y); intuition congruence.
-  }
-  rewrite K.
-  reflexivity.
-Qed.
-
-Lemma type_lub_comm a b:
-  type_lub a b = type_lub b a.
-Proof.
-  apply type_ext; simpl; eauto using Pos.max_comm, Z.max_comm.
-Qed.
-
-Lemma type_lub_r a b:
-  type_le a b ->
-  type_lub a b = b.
-Proof.
-  inversion 1.
-  apply type_ext; simpl; eauto using Pos.max_r, Z.max_r.
-Qed.
-
-Lemma type_lub_id a:
-  type_lub a a = a.
-Proof.
-  apply type_ext; simpl; eauto using Pos.max_id, Z.max_id.
-Qed.
-
-Lemma single_le_double:
-  type_le Tsingle Tdouble.
-Proof.
-  constructor; compute; congruence.
-Qed.
 
 Fixpoint static_float_type (c: Ctypes.type): option FPLang.type :=
   match c with
@@ -110,11 +67,6 @@ Fixpoint static_float_type (c: Ctypes.type): option FPLang.type :=
     | Ctypes.Tfloat Ctypes.F64 _ => Some Tdouble
     | _ => None
   end.
-
-Global Instance ident_vartype: VarType AST.ident :=
-  {
-    var_eqb_eq := Pos.eqb_eq
-  }.
 
 Definition static_unop (c: Cop.unary_operation) : option (forall  (e: FPLang.expr (V := AST.ident)), FPLang.expr) :=
   match c with
@@ -347,85 +299,6 @@ Proof.
   destruct t; try discriminate.
   simpl in T.
   destruct f; simpl; intuition congruence.
-Qed.
-
-Inductive val_inject: Values.val -> forall ty, ftype ty -> Prop :=
-| val_inject_single f:
-    val_inject (Values.Vsingle f) Tsingle f
-| val_inject_double f:
-    val_inject (Values.Vfloat f) Tdouble f
-.
-
-Lemma val_inject_single_inv f1 f2:
-  val_inject (Values.Vsingle f1) Tsingle f2 ->
-  f1 = f2.
-Proof.
-  inversion 1; subst.
-  revert H2.
-  apply Eqdep_dec.inj_pair2_eq_dec; auto.
-  apply type_eq_dec.
-Qed.
-
-Lemma val_inject_double_inv f1 f2:
-  val_inject (Values.Vfloat f1) Tdouble f2 ->
-  f1 = f2.
-Proof.
-  inversion 1; subst.
-  revert H2.
-  apply Eqdep_dec.inj_pair2_eq_dec; auto.
-  apply type_eq_dec.
-Qed.
-
-Definition val_injectb v ty (f: ftype ty): bool :=
-  match v with
-    | Values.Vsingle f' =>
-      type_eqb Tsingle ty && binary_float_eqb f' f
-    | Values.Vfloat f' =>
-      type_eqb Tdouble ty && binary_float_eqb f' f
-    | _ => false
-  end.
-
-Lemma val_injectb_inject v ty f:
-  val_injectb v ty f = true <-> val_inject v ty f.
-Proof.
-  unfold val_injectb.
-  destruct v;
-  (try (split; (try congruence); inversion 1; fail));
-  rewrite Bool.andb_true_iff.
-  {
-    destruct (type_eqb Tdouble ty) eqn:EQ.
-    {
-      rewrite type_eqb_eq in EQ.
-      subst.
-      rewrite binary_float_eqb_eq.
-      split.
-      {
-        destruct 1; subst.
-        constructor.
-      }
-      intros; eauto using val_inject_double_inv.
-    }
-    split; try intuition congruence.
-    inversion 1; subst.
-    apply type_eqb_eq in H3.
-    congruence.
-  }
-  destruct (type_eqb Tsingle ty) eqn:EQ.
-  {
-    rewrite type_eqb_eq in EQ.
-    subst.
-    rewrite binary_float_eqb_eq.
-    split.
-    {
-      destruct 1; subst.
-      constructor.
-    }
-    intros; eauto using val_inject_single_inv.
-  }
-  split; try intuition congruence.
-  inversion 1; subst.
-  apply type_eqb_eq in H3.
-  congruence.  
 Qed.
 
 Theorem static_float_correct'
@@ -1149,150 +1022,8 @@ Qed.
 
 End WITHNANS.
 
-Lemma fprec_gt_one ty:
-  (1 < fprec ty)%Z.
-Proof.
-  generalize (fprec_gt_0 ty).
-  unfold Fcore_FLX.Prec_gt_0.
-  unfold fprec.
-  intros.
-  generalize (fprecp_not_one ty).
-  intros.
-  assert (Z.pos (fprecp ty) <> 1%Z) by congruence.
-  omega.
-Qed.
-
-Corollary any_nan ty: Fappli_IEEE.nan_pl (fprec ty).
-Proof.
-  exists 1%positive.
-  apply Z.ltb_lt.
-  apply fprec_gt_one.
-Defined. 
-
-Lemma conv_nan_ex:
-  { conv_nan: forall ty1 ty2,
-                   bool -> Fappli_IEEE.nan_pl (fprec ty1) -> bool * Fappli_IEEE.nan_pl (fprec ty2)
-  |
-  conv_nan Tsingle Tdouble = Floats.Float.of_single_pl
-  /\
-  conv_nan Tdouble Tsingle = Floats.Float.to_single_pl
-  }.
-Proof.
-  eapply exist.
-  Unshelve.
-  {
-    shelve.
-  }
-  intros ty1 ty2.
-  destruct (type_eq_dec ty1 Tsingle).
-  {
-    subst.
-    destruct (type_eq_dec ty2 Tdouble).
-    {
-      subst.
-      exact Floats.Float.of_single_pl.
-    }
-    intros.
-    split; auto using any_nan.
-  }
-  destruct (type_eq_dec ty1 Tdouble).
-  {
-    subst.
-    destruct (type_eq_dec ty2 Tsingle).
-    {
-      subst.
-      exact Floats.Float.to_single_pl.
-    }
-    intros.
-    split; auto using any_nan.
-  }
-  intros.
-  split; auto using any_nan.
-  Unshelve.
-  split; reflexivity.
-Defined.
-
-Definition conv_nan := let (c, _) := conv_nan_ex in c.
-
-Lemma single_double_ex (U: _ -> Type):
-  (forall ty, U ty) ->
-  forall s: U Tsingle,
-  forall d: U Tdouble,
-    {
-      f: forall ty, U ty |
-      f Tsingle = s /\
-      f Tdouble = d
-    }.
-Proof.
-  intro ref.
-  intros.
-  esplit.
-  Unshelve.
-  shelve.
-  intro ty.
-  destruct (type_eq_dec ty Tsingle).
-  {
-    subst.
-    exact s.
-  }
-  destruct (type_eq_dec ty Tdouble).
-  {
-    subst.
-    exact d.
-  }
-  apply ref.
-  Unshelve.
-  split; reflexivity.
-Defined.
-
-Definition single_double (U: _ -> Type)
-           (f_: forall ty, U ty)
-           (s: U Tsingle)
-           (d: U Tdouble)
-:
-  forall ty, U ty :=
-  let (f, _) := single_double_ex U f_ s d in f.
-
-Definition binop_nan :=
-  single_double
-    (fun ty =>
-       Fappli_IEEE.binary_float (fprec ty) (femax ty) ->
-       Fappli_IEEE.binary_float (fprec ty) (femax ty) ->
-       bool * Fappli_IEEE.nan_pl (fprec ty))
-    $( intros; split; auto using any_nan, true )$ Floats.Float32.binop_pl Floats.Float.binop_pl.
-
-Definition abs_nan :=
-  single_double
-    (fun ty : type =>
-      bool ->
-      Fappli_IEEE.nan_pl (fprec ty) -> bool * Fappli_IEEE.nan_pl (fprec ty))
-    $( intros; split; auto using any_nan, true )$
-    Floats.Float32.abs_pl Floats.Float.abs_pl
-.
-
-Definition opp_nan :=
-  single_double
-    (fun ty : type =>
-      bool ->
-      Fappli_IEEE.nan_pl (fprec ty) -> bool * Fappli_IEEE.nan_pl (fprec ty))
-    $( intros; split; auto using any_nan, true )$
-    Floats.Float32.neg_pl Floats.Float.neg_pl
-.
 
 Section NANS.
-
-Local Instance nans: Nans :=
-  {
-    conv_nan := conv_nan;
-    plus_nan := binop_nan;
-    mult_nan := binop_nan;
-    div_nan := binop_nan;
-    abs_nan := abs_nan;
-    opp_nan := opp_nan
-  }.
-Proof.
-  intros; split; auto using any_nan, true.
-Defined.
 
 Definition static_float_correct_1 :=
   static_float_correct'
