@@ -55,7 +55,7 @@ rounding error terms and their correctness proofs.
 
 Require Export Omega.
 Require Export FPLang.
-Require Export compcert.Clight.
+Require Export compcert.cfrontend.Clight.
 Require Export cverif.ClightFacts.
 
 Section WITHNANS.

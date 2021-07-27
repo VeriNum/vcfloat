@@ -1,22 +1,21 @@
-(** VCFloat: A Unified Coq Framework for Verifying C Programs with
- Floating-Point Computations. Application to SAR Backprojection.
+(** R-CoqLib: general-purpose Coq libraries and tactics.
  
  Version 1.0 (2015-12-04)
  
  Copyright (C) 2015 Reservoir Labs Inc.
  All rights reserved.
  
- This file, which is part of VCFloat, is free software. You can
+ This file, which is part of R-CoqLib, is free software. You can
  redistribute it and/or modify it under the terms of the GNU General
  Public License as published by the Free Software Foundation, either
  version 3 of the License (GNU GPL v3), or (at your option) any later
- version. A verbatim copy of the GNU GPL v3 is included in gpl-3.0.txt.
+ version.
  
  This file is distributed in the hope that it will be useful, but
  WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See LICENSE for
  more details about the use and redistribution of this file and the
- whole VCFloat library.
+ whole R-CoqLib library.
  
  This work is sponsored in part by DARPA MTO as part of the Power
  Efficiency Revolution for Embedded Computing Technologies (PERFECT)
@@ -26,47 +25,42 @@
  either expressly or implied, of the DARPA or the
  U.S. Government. Distribution Statement "A" (Approved for Public
  Release, Distribution Unlimited.)
- 
- 
- If you are using or modifying VCFloat in your work, please consider
- citing the following paper:
- 
- Tahina Ramananandro, Paul Mountcastle, Benoit Meister and Richard
- Lethin.
- A Unified Coq Framework for Verifying C Programs with Floating-Point
- Computations.
- In CPP (5th ACM/SIGPLAN conference on Certified Programs and Proofs)
- 2016.
- 
- 
- VCFloat requires third-party libraries listed in ACKS along with their
- copyright information.
- 
- VCFloat depends on third-party libraries listed in ACKS along with
- their copyright and licensing information.
 *)
 (**
 Author: Tahina Ramananandro <ramananandro@reservoir.com>
 
-Helpers for computing in rational numbers.
+Auxiliary theorems for big rational numbers
 *)
 
-Require Export QArith Qreals Flocq.Core.Raux.
-Open Scope R_scope.
+Require Export Morphisms.
+Require Export QArith.
+Require Export Bignums.BigQ.BigQ.
 
-Global Instance Q2R_proper:
-  Proper (Qeq ==> eq) Q2R.
+Global Instance to_Q_morph: Proper (BigQ.eq ==> Qeq) BigQ.to_Q.
 Proof.
   do 2 red.
   intros.
-  apply Qreals.Qeq_eqR.
+  rewrite <- BigQ.eqb_eq in H.
+  rewrite BigQ.spec_eq_bool in H.
+  rewrite Qeq_bool_iff in H.
   assumption.
 Qed.
 
-Lemma Q2R_inject_Z n:
-  Q2R (inject_Z n) = IZR n.
+Lemma to_Q_bigZ z:
+  BigQ.to_Q (BigQ.Qz z) == inject_Z (BigZ.to_Z z).
 Proof.
-  unfold Q2R.
-  simpl.
-  field.
+  reflexivity.
 Qed.
+
+Definition Bnum b :=
+  match b with
+  | BigQ.Qz t => t
+  | BigQ.Qq n d =>
+    if (d =? BigN.zero)%bigN then 0%bigZ else n
+  end.
+
+Definition Bden b :=
+  match b with
+  | BigQ.Qz _ => 1%bigN
+  | BigQ.Qq _ d => if (d =? BigN.zero)%bigN then 1%bigN else d 
+  end.

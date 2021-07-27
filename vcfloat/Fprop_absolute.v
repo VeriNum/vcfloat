@@ -52,48 +52,51 @@ More properties of floating-point numbers: absolute error,
 multiply/divide by radix.
 *)
 
-Require Import ZArith RAux.
+Require Import ZArith Flocq.Core.Raux.
+Require Import Lia Lra.
 
-Require Import Flocq.Prop.Fprop_relative.
-Require Import Flocq.Appli.Fappli_IEEE.
+Require Import Flocq.Prop.Relative.
+(*Require Import Flocq.Appli.Fappli_IEEE. *)
+
+Open Scope R_scope.
 
 Section I3E.
 Variables prec emin : Z.
-Context (prec_gt_0_ : Fcore_FLX.Prec_gt_0 prec).
+Context (prec_gt_0_ : Core.FLX.Prec_gt_0 prec).
 
-Let fexp := Fcore_FLT.FLT_exp emin prec.
+Let fexp := Core.FLT.FLT_exp emin prec.
 
-Import Fcore_Raux Fcore_FLT Fcore_generic_fmt Fcore_ulp.
+Import Core.FLT Generic_fmt Core.Ulp.
 
 Lemma absolute_error_N_FLT_aux beta choice :
   forall x,
   (0 < x)%R ->
   x < bpow beta (emin + prec) ->
  exists eta,
-  (Rabs eta <= /2 * Fcore_Raux.bpow beta (emin))%R /\
-  Fcore_generic_fmt.round beta fexp (Fcore_generic_fmt.Znearest choice) x = (x + eta)%R.
+  (Rabs eta <= /2 * Raux.bpow beta (emin))%R /\
+  Generic_fmt.round beta fexp (Generic_fmt.Znearest choice) x = (x + eta)%R.
 Proof.
 (* from error_N_FLT_aux *)
 intros x Hx2 Hx.
 exists (round beta (FLT_exp emin prec) (Znearest choice) x - x)%R.
 split.
 apply Rle_trans with (/2*ulp beta (FLT_exp emin prec) x)%R.
-apply ulp_half_error.
+apply error_le_half_ulp.
 now apply FLT_exp_valid.
 apply Rmult_le_compat_l; auto with real.
-unfold ulp.
+rewrite ulp_neq_0 by lra.
 apply bpow_le.
-unfold FLT_exp, canonic_exp.
+unfold FLT_exp, cexp.
 rewrite Zmax_right.
-omega.
-destruct (ln_beta beta x) as (e,He); simpl.
+lia.
+destruct (mag beta x) as (e,He); simpl.
 assert (e-1 < emin+prec)%Z.
 apply (lt_bpow beta).
 apply Rle_lt_trans with (2:=Hx).
 rewrite <- (Rabs_right x).
 apply He; auto with real.
 apply Rle_ge; now left.
-omega.
+lia.
 unfold fexp. ring.
 Qed.
 
@@ -105,7 +108,7 @@ Proof.
   intros a b Hab u v Huv.
   subst.
   unfold Znearest.
-  destruct (Rcompare (v - Z2R (Zfloor v)) (/ 2)); auto.
+  destruct (Rcompare (v - IZR (Zfloor v)) (/ 2)); auto.
   replace (b (Zfloor v)) with (a (Zfloor v)) by auto.
   reflexivity.
 Qed.
@@ -114,8 +117,8 @@ Corollary absolute_error_N_FLT beta choice:
  forall x,
   Rabs x < bpow beta (emin + prec) ->
  exists eta,
-  (Rabs eta <= /2 * Fcore_Raux.bpow beta (emin))%R /\
-  Fcore_generic_fmt.round beta fexp (Fcore_generic_fmt.Znearest choice) x = (x + eta)%R.
+  (Rabs eta <= /2 * Raux.bpow beta (emin))%R /\
+  Generic_fmt.round beta fexp (Generic_fmt.Znearest choice) x = (x + eta)%R.
 Proof.
   intros.
   destruct (Req_dec x 0).
@@ -161,65 +164,57 @@ Qed.
 End I3E.
 
 Lemma FLT_format_mult_beta beta emin prec x:
-  Fcore_FLT.FLT_format beta emin prec x ->
-  Fcore_FLT.FLT_format beta emin prec (Fcore_Raux.Z2R (Fcore_Zaux.radix_val beta) * x)
+  FLT.FLT_format beta emin prec x ->
+  FLT.FLT_format beta emin prec (IZR (Zaux.radix_val beta) * x)
 .
 Proof.
-  destruct 1 as (f & Hx & mantissa & exponent).
+  intros [f Hx mantissa exponent].
   subst.
-  exists (Fcore_defs.Float _ (Fcore_defs.Fnum f) (Fcore_defs.Fexp f + 1)).
+  exists (Defs.Float _ (Defs.Fnum f) (Defs.Fexp f + 1)).
   simpl.
-  unfold Fcore_defs.F2R.
+  unfold Defs.F2R.
   simpl.
-  rewrite Fcore_Raux.bpow_plus1.
-  split.
-  {
-    ring.
-  }
-  omega.
+  rewrite Core.Raux.bpow_plus_1.
+  ring. auto. simpl. lia.
 Qed.
 
 Lemma FLT_format_div_beta beta emin prec
       (Hprec: (0 <= prec)%Z) x:
-  Fcore_FLT.FLT_format beta emin prec x ->
-  Fcore_Raux.bpow beta (emin + prec) <= Rabs x ->
-  Fcore_FLT.FLT_format beta emin prec (x / Fcore_Raux.Z2R (Fcore_Zaux.radix_val beta))
+  FLT.FLT_format beta emin prec x ->
+  Core.Raux.bpow beta (emin + prec) <= Rabs x ->
+  FLT.FLT_format beta emin prec (x / IZR (Zaux.radix_val beta))
 .
 Proof.
-  destruct 1 as (f & Hx & mantissa & exponent).
+  intros [f Hx mantissa exponent].
   subst.
-  exists (Fcore_defs.Float _ (Fcore_defs.Fnum f) (Fcore_defs.Fexp f - 1)).
+  exists (Defs.Float _ (Defs.Fnum f) (Defs.Fexp f - 1)); auto.
+ -
+  unfold Defs.F2R.
   simpl.
-  unfold Fcore_defs.F2R.
+  replace (Defs.Fexp f) with (Defs.Fexp f - 1 + 1)%Z at 1 by ring.
+  rewrite bpow_plus_1.
+  field.
+  apply IZR_neq.
+  generalize (radix_gt_0 beta). lia.
+ -
   simpl.
-  replace (Fcore_defs.Fexp f) with (Fcore_defs.Fexp f - 1 + 1)%Z at 1 by ring.
-  rewrite Fcore_Raux.bpow_plus1.
-  split.
-  {
-    field.
-    rewrite Fcore_Raux.Z2R_IZR.
-    replace 0 with (IZR 0) by reflexivity.
-    apply IZR_neq.
-    generalize (Fcore_Zaux.radix_gt_0 beta). omega.
-  }
-  split; auto.
-  destruct (Z_eq_dec emin (Fcore_defs.Fexp f)); try omega.
+  destruct (Z.eq_dec emin (Defs.Fexp f)); try lia.
   exfalso.
   clear exponent.
   subst.
   revert H.
-  unfold Fcore_defs.F2R.
+  unfold Defs.F2R.
   rewrite Rabs_mult.
-  rewrite Fcore_Raux.bpow_plus.
-  rewrite (Rmult_comm (Fcore_Raux.bpow _ _)).
-  generalize (Fcore_Raux.bpow_gt_0 beta (Fcore_defs.Fexp f)).
+  rewrite bpow_plus.
+  rewrite (Rmult_comm (Raux.bpow _ _)).
+  generalize (Raux.bpow_gt_0 beta (Defs.Fexp f)).
   intro.
-  rewrite (Rabs_right (Fcore_Raux.bpow _ _)) by lra.
+  rewrite (Rabs_right (Raux.bpow _ _)) by lra.
   intro K.
   apply Rmult_le_reg_r in K; auto.
-  rewrite <- Fcore_Raux.Z2R_Zpower in K by assumption.
-  repeat rewrite Fcore_Raux.Z2R_IZR in K.
+  rewrite <- Raux.IZR_Zpower in K by assumption.
+  repeat rewrite IZR_IZR in K.
   rewrite Rabs_Zabs in K.
   apply le_IZR in K.
-  omega.
+  lia.
 Qed.

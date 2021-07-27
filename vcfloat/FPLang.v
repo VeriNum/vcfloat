@@ -51,9 +51,15 @@ Author: Tahina Ramananandro <ramananandro@reservoir.com>
 VCFloat: core and annotated languages for floating-point operations.
 *)
 
+Require Import Lia Lra.
 Require Export RAux.
-
+From Flocq Require Import Binary Bits Core.
+From compcert Require Import lib.IEEE754_extra.
+Require compcert.lib.Maps.  
 Require Coq.MSets.MSetAVL.
+Require Import Interval.Tactic.
+Require Fprop_absolute.
+Global Unset Asymmetric Patterns. (* because "Require compcert..." sets it *)
 
 Module MSET := MSetAVL.Make(Nat).
 
@@ -198,17 +204,11 @@ Qed.
 Lemma fprec_eq ty: fprec ty = Z.pos (fprecp ty).
 Proof. reflexivity. Qed.
 
-Require Export compcert.Fappli_IEEE_extra.
-
-Global Instance fprec_gt_0: forall ty, Fcore_FLX.Prec_gt_0 (fprec ty).
+Global Instance fprec_gt_0: forall ty, Prec_gt_0 (fprec ty).
 Proof.
   intros.
   reflexivity.
 Defined.
-
-Require Flocq.Core.Fcore_defs.
-
-Require Export Flocq.Appli.Fappli_IEEE.
 
 Definition ftype ty := binary_float (fprec ty) (femax ty).
 
@@ -253,72 +253,112 @@ Class VarType (V: Type): Type :=
     var_eqb_eq: forall v1 v2, var_eqb v1 v2 = true <-> v1 = v2
   }.
 
+Definition nan_payload prec emax : Type := {x : binary_float prec emax
+                                                          | is_nan prec emax x = true}.
+
 Class Nans: Type :=
   {
-    conv_nan: forall ty1 ty2, (bool -> nan_pl (fprec ty1) -> bool * nan_pl (fprec ty2))
+    conv_nan: forall ty1 ty2, 
+                binary_float (fprec ty1) (femax ty1) -> (* guaranteed to be a nan, if this is not a nan then any result will do *)
+                nan_payload (fprec ty2) (femax ty2)
     ;
     plus_nan:
       forall ty,
         binary_float (fprec ty) (femax ty) ->
         binary_float (fprec ty) (femax ty) ->
-        bool * nan_pl (fprec ty)
+        nan_payload (fprec ty) (femax ty)
     ;
     mult_nan:
       forall ty,
         binary_float (fprec ty) (femax ty) ->
         binary_float (fprec ty) (femax ty) ->
-        bool * nan_pl (fprec ty)
+        nan_payload (fprec ty) (femax ty)
     ;
     div_nan:
       forall ty,
         binary_float (fprec ty) (femax ty) ->
         binary_float (fprec ty) (femax ty) ->
-        bool * nan_pl (fprec ty)
+        nan_payload (fprec ty) (femax ty)
     ;
-
     abs_nan:
       forall ty,
-        bool -> nan_pl (fprec ty) ->
-        bool * nan_pl (fprec ty)
+        binary_float (fprec ty) (femax ty) -> (* guaranteed to be a nan, if this is not a nan then any result will do *)
+        nan_payload (fprec ty) (femax ty)
     ;
     opp_nan:
       forall ty,
-        bool -> nan_pl (fprec ty) ->
-        bool * nan_pl (fprec ty)
+        binary_float (fprec ty) (femax ty) -> (* guaranteed to be a nan, if this is not a nan then any result will do *)
+        nan_payload (fprec ty) (femax ty)
     ;
     sqrt_nan:
       forall ty,
         binary_float (fprec ty) (femax ty) ->
-        bool * nan_pl (fprec ty)
+        nan_payload (fprec ty) (femax ty)
   }.
 
 Section WITHNANS.
 
 Context `{VAR: VarType}.
 
-Definition nan_pl_eqb {prec1 prec2} (n1: nan_pl prec1) (n2: nan_pl prec2) :=
-  let (pl1, _) := n1 in
-  let (pl2, _) := n2 in
-  Pos.eqb pl1 pl2
-.
+Definition nan_pl_eqb {prec1 emax1 prec2 emax2} 
+         (n1: nan_payload prec1 emax1) (n2: nan_payload prec2 emax2) :=
+ match proj1_sig n1, proj1_sig n2 with
+ | B754_nan _ _ b1 pl1 _, B754_nan _ _ b2 pl2 _ => Bool.eqb b1 b2 && Pos.eqb pl1 pl2
+ | _, _ => true
+ end.
 
-Lemma nan_pl_eqb_eq prec (n1 n2: nan_pl prec):
+Definition nan_pl_eqb' {prec1 emax1 prec2 emax2}
+         (n1: nan_payload prec1 emax1) (n2: nan_payload prec2 emax2) : bool.
+destruct n1 as [x1 e1].
+destruct n2 as [x2 e2].
+unfold is_nan in *.
+destruct x1; try discriminate.
+destruct x2; try discriminate.
+apply (Bool.eqb s s0 && Pos.eqb pl pl0).
+Defined.
+
+Lemma nan_pl_sanity_check:
+   forall prec1 emax1 prec2 emax2 n1 n2, 
+   @nan_pl_eqb' prec1 emax1 prec2 emax2 n1 n2 = @nan_pl_eqb prec1 emax1 prec2 emax2 n1 n2.
+Proof.
+intros.
+destruct n1 as [x1 e1], n2 as [x2 e2].
+simpl.
+unfold is_nan in *.
+destruct x1; try discriminate.
+destruct x2; try discriminate.
+unfold nan_pl_eqb. simpl.
+auto.
+Qed.
+
+Lemma nan_payload_eqb_eq prec emax (n1 n2: nan_payload prec emax):
   (nan_pl_eqb n1 n2 = true <-> n1 = n2).
 Proof.
+  unfold nan_pl_eqb.
   destruct n1; destruct n2; simpl.
-  rewrite Pos.eqb_eq.
-  split; intros; try congruence.
-  subst.
-  f_equal.
-  apply Eqdep_dec.eq_proofs_unicity.
-  destruct x; destruct y; intuition congruence.
+  destruct x; try discriminate.
+  destruct x0; try discriminate.
+  split; intros.
+ -
+  rewrite andb_true_iff in H. destruct H.
+  rewrite eqb_true_iff in H.
+  rewrite Pos.eqb_eq in H0.
+  assert (e=e0) by 
+     (apply Eqdep_dec.eq_proofs_unicity; destruct x; destruct y; intuition congruence).
+   subst s0 pl0 e0.
+ assert (e1=e2) by 
+     (apply Eqdep_dec.eq_proofs_unicity; destruct x; destruct y; intuition congruence).
+   subst e2.
+  reflexivity.
+ - inversion H; clear H; subst.
+    rewrite eqb_reflx. rewrite Pos.eqb_refl. reflexivity.
 Qed.
 
 Definition binary_float_eqb {prec1 emax1 prec2 emax2} (b1: binary_float prec1 emax1) (b2: binary_float prec2 emax2): bool :=
   match b1, b2 with
     | B754_zero _ _ b1, B754_zero _ _ b2 => Bool.eqb b1 b2
     | B754_infinity _ _ b1, B754_infinity _ _ b2 => Bool.eqb b1 b2
-    | B754_nan _ _ b1 n1, B754_nan _ _ b2 n2 => Bool.eqb b1 b2 && nan_pl_eqb n1 n2
+    | B754_nan _ _ b1 n1 _, B754_nan _ _ b2 n2 _ => Bool.eqb b1 b2 && Pos.eqb n1 n2
     | B754_finite _ _ b1 m1 e1 _, B754_finite _ _ b2 m2 e2 _ =>
       Bool.eqb b1 b2 && Pos.eqb m1 m2 && Z.eqb e1 e2
     | _, _ => false
@@ -331,31 +371,21 @@ Proof.
   
       (repeat rewrite andb_true_iff);
       (try rewrite Bool.eqb_true_iff);
-      (try rewrite nan_pl_eqb_eq);
-      (try intuition congruence)
-    
-.
-  destruct (Pos.eqb m m0) eqn:EQ.
-  {
-    apply Pos.eqb_eq in EQ.
-    subst.
-    destruct (Z.eqb e e1) eqn:EQ.
-    {
-      apply Z.eqb_eq in EQ.
-      subst.
-      split; try intuition congruence.
-      destruct 1.
-      destruct H.
-      subst.
-      f_equal.
+      (try rewrite Pos.eqb_eq);
+      (try intuition congruence).
+- split; intro.
+   + destruct H; subst; f_equal.
       apply Eqdep_dec.eq_proofs_unicity.
       destruct x; destruct y; intuition congruence.
-    }
-    apply Z.eqb_neq in EQ.
-    intuition congruence.
-  }
-  apply Pos.eqb_neq in EQ.
-  intuition congruence.
+   + inversion H; clear H; subst; auto.
+- split; intro.
+   + destruct H as [[? ?] ?]. 
+      apply Z.eqb_eq in H1. subst.
+      f_equal.       
+      apply Eqdep_dec.eq_proofs_unicity.
+      destruct x; destruct y; intuition congruence.
+   + inversion H; clear H; subst; split; auto.
+       apply Z.eqb_eq. auto.
 Qed.
 
 Inductive expr: Type :=
@@ -365,7 +395,7 @@ Inductive expr: Type :=
 | Unop (u: unop) (e1: expr)
 .
 
-Fixpoint Rop_of_rounded_binop (r: rounded_binop) {struct r}: R -> R -> R :=
+Definition Rop_of_rounded_binop (r: rounded_binop): R -> R -> R :=
   match r with
     | PLUS => Rplus
     | MINUS => Rminus
@@ -373,7 +403,7 @@ Fixpoint Rop_of_rounded_binop (r: rounded_binop) {struct r}: R -> R -> R :=
     | DIV => Rdiv
   end.
 
-Fixpoint Rop_of_binop (r: binop) {struct r}: R -> R -> R :=
+Definition Rop_of_binop (r: binop): R -> R -> R :=
   match r with
     | Rounded2 op _ => Rop_of_rounded_binop op
     | SterbenzMinus => Rminus
@@ -384,21 +414,21 @@ Fixpoint Rop_of_binop (r: binop) {struct r}: R -> R -> R :=
         fun x _ => x
   end.
 
-Fixpoint Rop_of_rounded_unop (r: rounded_unop) {struct r}: R -> R :=
+Definition Rop_of_rounded_unop (r: rounded_unop): R -> R :=
   match r with
     | SQRT => R_sqrt.sqrt
   end.
 
-Fixpoint Rop_of_exact_unop (r: exact_unop) {struct r}: R -> R :=
+Definition Rop_of_exact_unop (r: exact_unop): R -> R :=
   match r with
     | Abs => Rabs
     | Opp => Ropp
     | Shift pow b =>
-      Rmult (Fcore_Raux.bpow Fcore_Zaux.radix2 (Z.of_N pow))
-    | InvShift pow _ => Rmult (Fcore_Raux.bpow Fcore_Zaux.radix2 (- Z.pos pow))
+      Rmult (Raux.bpow Zaux.radix2 (Z.of_N pow))
+    | InvShift pow _ => Rmult (Raux.bpow Zaux.radix2 (- Z.pos pow))
   end.
 
-Fixpoint Rop_of_unop (r: unop) {struct r}: R -> R :=
+Definition Rop_of_unop (r: unop): R -> R :=
   match r with
     | Rounded1 op _ => Rop_of_rounded_unop op
     | Exact1 op => Rop_of_exact_unop op
@@ -406,33 +436,33 @@ Fixpoint Rop_of_unop (r: unop) {struct r}: R -> R :=
   end.
 
 Definition B2F {prec emax} (f : binary_float prec emax):
-  Fcore_defs.float Fcore_Zaux.radix2 :=
+  Defs.float Zaux.radix2 :=
 match f with
 | @B754_finite _ _ s m e _ =>
       {|
-      Fcore_defs.Fnum := Fcore_Zaux.cond_Zopp s (Z.pos m);
-      Fcore_defs.Fexp := e |}
+      Defs.Fnum := Zaux.cond_Zopp s (Z.pos m);
+      Defs.Fexp := e |}
 | _ =>
   {|
-    Fcore_defs.Fnum := 0;
-    Fcore_defs.Fexp := 0
+    Defs.Fnum := 0;
+    Defs.Fexp := 0
   |}
 end.
 
 Lemma B2F_F2R_B2R {prec emax} f:
-  B2R prec emax f = Fcore_defs.F2R (B2F f).
+  B2R prec emax f = Defs.F2R (B2F f).
 Proof.
-  destruct f; simpl; unfold Fcore_defs.F2R; simpl; ring.
+  destruct f; simpl; unfold Defs.F2R; simpl; ring.
 Qed.
 
-Definition F2R beta (f: Fcore_defs.float beta): R :=
+Definition F2R beta (f: Defs.float beta): R :=
   match f with
-    | Fcore_defs.Float _ Fnum Fexp =>
-      Fcore_Raux.Z2R Fnum * Fcore_Raux.bpow beta Fexp
+    | Defs.Float _ Fnum Fexp =>
+      IZR Fnum * Raux.bpow beta Fexp
   end.
 
 Lemma F2R_eq beta f:
-  F2R beta f = Fcore_defs.F2R f.
+  F2R beta f = Defs.F2R f.
 Proof.
   destruct f; reflexivity.
 Qed.
@@ -466,7 +496,7 @@ Proof.
   rewrite Pos2Z.inj_max.
   rewrite Z.max_lt_iff.
   repeat rewrite Z.max_lub_lt_iff.
-  omega.
+  lia.
 Defined.
 
 Lemma  type_lub_neq_one a1 a2:
@@ -538,11 +568,14 @@ Qed.
 
 Context {NANS: Nans}.
 
+
+
 Definition cast (tto: type) (tfrom: type) (f: ftype tfrom): ftype tto :=
   match type_eq_dec tfrom tto with
     | left r => eq_rect _ _ f _ r
-    | _ => Bconv (fprec tfrom) (femax tfrom) (fprec tto) (femax tto) (fprec_gt_0 _) (fprec_lt_femax _) (conv_nan _ _) mode_NE f
-  end.  
+    | _ => Bconv (fprec tfrom) (femax tfrom) (fprec tto) (femax tto)
+                        (fprec_gt_0 _) (fprec_lt_femax _) (conv_nan _ _) mode_NE f
+  end.
 
 Definition cast_lub_l t1 t2 := cast (type_lub t1 t2) t1.
 Definition cast_lub_r t1 t2 := cast (type_lub t1 t2) t2.
@@ -582,7 +615,7 @@ Proof.
   typeclasses eauto.
 Qed.
 
-Fixpoint type_of_unop (u: unop): type -> type :=
+Definition type_of_unop (u: unop): type -> type :=
   match u with
     | CastTo ty _ => fun _ => ty
     | _ => Datatypes.id
@@ -596,13 +629,15 @@ Fixpoint type_of_expr (e: expr) {struct e}: type :=
     | Unop b e => type_of_unop b (type_of_expr e)
   end.
 
+Local Open Scope R_scope.
+
 Lemma center_R_correct a b x:
  0 <= b - a - Rabs (2 * x - (a + b)) ->
  a <= x <= b.
 Proof.
   intros.
-  assert (Rabs (2 * x - (a + b)) <= (b - a) ) by lra.
-  apply Fcore_Raux.Rabs_le_inv in H0.
+  assert (Rabs (2 * x - (a + b)) <= (b - a) )%R by lra.
+  apply Raux.Rabs_le_inv in H0.
   lra.
 Qed.
 
@@ -673,7 +708,7 @@ Fixpoint expr_valid (e: expr): bool :=
     | _ => true
   end.
 
-Definition BINOP (op: $( let t := type of Bplus in exact t )$ ) op_nan
+Definition BINOP (op: ltac:( let t := type of Bplus in exact t ) ) op_nan
            ty := op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (op_nan ty) mode_NE.
 
 Definition BPLUS := BINOP Bplus plus_nan.
@@ -684,14 +719,14 @@ Definition BMULT := BINOP Bmult mult_nan.
 
 Definition BDIV := BINOP Bdiv div_nan.
 
-Fixpoint rounded_binop_precond (r: rounded_binop):
+Definition rounded_binop_precond (r: rounded_binop):
   R -> R -> Prop :=
   match r with
     | DIV => fun _ y => y <> 0
     | _ => fun _ _ => True
   end.
 
-Fixpoint fop_of_rounded_binop (r: rounded_binop): 
+Definition fop_of_rounded_binop (r: rounded_binop): 
   forall ty,
     binary_float (fprec ty) (femax ty) ->
     binary_float (fprec ty) (femax ty) ->
@@ -704,7 +739,7 @@ Fixpoint fop_of_rounded_binop (r: rounded_binop):
       | DIV => BDIV
     end.
 
-Fixpoint fop_of_binop (r: binop):
+Definition fop_of_binop (r: binop):
   forall ty,
     binary_float (fprec ty) (femax ty) ->
     binary_float (fprec ty) (femax ty) ->
@@ -718,13 +753,13 @@ Fixpoint fop_of_binop (r: binop):
 
 Definition Bsqrt ty := Bsqrt _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (sqrt_nan ty) mode_NE.
 
-Fixpoint rounded_unop_precond (r: rounded_unop):
+Definition rounded_unop_precond (r: rounded_unop):
   R -> Prop :=
   match r with
     | SQRT => Rle 0
   end.
 
-Fixpoint fop_of_rounded_unop (r: rounded_unop):
+Definition fop_of_rounded_unop (r: rounded_unop):
   forall ty,
     binary_float (fprec ty) (femax ty) ->
     binary_float (fprec ty) (femax ty)
@@ -787,18 +822,18 @@ Definition F2 prec e :=
   F754_finite false (2 ^ p) (e - Z.pos p).
 
 Lemma F2R_F2 prec e:
-  FF2R Fcore_Zaux.radix2 (F2 prec e) = Fcore_Raux.bpow Fcore_Zaux.radix2 e.
+  FF2R Zaux.radix2 (F2 prec e) = Raux.bpow Zaux.radix2 e.
 Proof.
   simpl.
-  unfold Fcore_defs.F2R.
-  simpl Fcore_defs.Fnum.
-  simpl Fcore_defs.Fexp.
+  unfold Defs.F2R.
+  simpl Defs.Fnum.
+  simpl Defs.Fexp.
   generalize (Pos.pred prec).
   intros.
   rewrite Pos2Z.inj_pow.
-  replace 2%Z with (Fcore_Zaux.radix_val Fcore_Zaux.radix2) by reflexivity.
-  rewrite Fcore_Raux.Z2R_Zpower by (vm_compute; congruence).
-  rewrite <- Fcore_Raux.bpow_plus.
+  replace 2%Z with (Zaux.radix_val Zaux.radix2) by reflexivity.
+  rewrite Raux.IZR_Zpower by (vm_compute; congruence).
+  rewrite <- Raux.bpow_plus.
   f_equal.
   ring.
 Qed.
@@ -811,48 +846,48 @@ Lemma F2_valid_binary_gen prec emax e:
 Proof.
   intros.
   unfold valid_binary.
-  apply bounded_canonic_lt_emax.
+  apply bounded_canonical_lt_emax.
   { constructor. }
   { assumption.  }
   {
-    unfold Fcore_generic_fmt.canonic.
-    rewrite Fcore_generic_fmt.canonic_exp_fexp with  (ex := (e + 1)%Z). (* (e - Z.pos (Pos.pred prec))%Z). *)
+   red.
+   rewrite cexp_fexp with (ex := (e + 1)%Z). 
     {
-      simpl Fcore_defs.Fexp.
-      unfold Fcore_FLT.FLT_exp.
+      simpl Defs.Fexp.
+      unfold FLT_exp.
       symmetry.
       rewrite  Z.max_l.
       {
         rewrite Pos2Z.inj_pred by assumption.
-        omega.
+        lia.
       }
-      omega.
+      lia.
     }
-    unfold Fcore_defs.F2R. simpl Fcore_defs.Fnum. simpl Fcore_defs.Fexp.
+    unfold Defs.F2R. simpl Defs.Fnum. simpl Defs.Fexp.
     rewrite Pos2Z.inj_pow.
-    replace 2%Z with (Fcore_Zaux.radix_val Fcore_Zaux.radix2) by reflexivity.
-    rewrite Fcore_Raux.Z2R_Zpower by (vm_compute; congruence).
-    rewrite <- Fcore_Raux.bpow_plus.
+    replace 2%Z with (Zaux.radix_val Zaux.radix2) by reflexivity.
+    rewrite Raux.IZR_Zpower by (vm_compute; congruence).
+    rewrite <- Raux.bpow_plus.
     rewrite Rabs_right.
     {
       split.
       {
-        apply Fcore_Raux.bpow_le.
-        omega.
+        apply Raux.bpow_le.
+        lia.
       }
-      apply Fcore_Raux.bpow_lt.
-      omega.
+      apply Raux.bpow_lt.
+      lia.
     }
     apply Rle_ge.
-    apply Fcore_Raux.bpow_ge_0.
+    apply Raux.bpow_ge_0.
   }
-  unfold Fcore_defs.F2R. simpl Fcore_defs.Fnum. simpl Fcore_defs.Fexp.
+  unfold Defs.F2R. simpl Defs.Fnum. simpl Defs.Fexp.
   rewrite Pos2Z.inj_pow.
-  replace 2%Z with (Fcore_Zaux.radix_val Fcore_Zaux.radix2) by reflexivity.
-  rewrite Fcore_Raux.Z2R_Zpower by (vm_compute; congruence).
-  rewrite <- Fcore_Raux.bpow_plus.
-  apply Fcore_Raux.bpow_lt.
-  omega.
+  replace 2%Z with (Zaux.radix_val Zaux.radix2) by reflexivity.
+  rewrite Raux.IZR_Zpower by (vm_compute; congruence).
+  rewrite <- Raux.bpow_plus.
+  apply Raux.bpow_lt.
+  lia.
 Qed.
 
 Lemma F2_valid_binary ty e:
@@ -880,7 +915,7 @@ Qed.
 
 Lemma B2_correct ty e:
   (3 - femax ty <= e + 1 <= femax ty)%Z ->
-  B2R _ _ (B2 ty e) = Fcore_Raux.bpow Fcore_Zaux.radix2 e.
+  B2R _ _ (B2 ty e) = Raux.bpow Zaux.radix2 e.
 Proof.
   intros.
   unfold B2.
@@ -976,10 +1011,8 @@ Proof.
   replace (Nat.ltb i n) with (Nat.ltb i (S n)); auto.
   rewrite Bool.eq_iff_eq_true.
   repeat rewrite Nat.ltb_lt.
-  intuition omega.
+  intuition lia.
 Qed.  
-
-Require compcert.Maps.
 
 Section COMPCERTMAPS.
 
@@ -991,16 +1024,14 @@ Class MapIndex (T: Type): Type :=
         (tr1 = tr2) <-> (index_of_tr tr1 = index_of_tr tr2)
   }.
 
-Local Instance compcert_map:
+Local Program Instance compcert_map:
   forall T U, MapIndex T -> Map T U (Maps.PMap.t U) :=
   {
     mget m t := Maps.PMap.get (index_of_tr t) m;
     mset m t u := Maps.PMap.set (index_of_tr t) u m;
     mempty := @Maps.PMap.init _
   }.
-Proof.
-  {
-    intros.
+Next Obligation.
     rewrite Maps.PMap.gsspec.
     destruct (Coqlib.peq (index_of_tr t') (index_of_tr t)).
     {
@@ -1009,9 +1040,9 @@ Proof.
     }
     rewrite <- index_of_tr_correct in n.
     destruct (m_T_eq_dec t' t); congruence.
-  }
-  intros.
-  apply Maps.PMap.gi.
+Defined.
+Next Obligation.
+ apply Maps.PMap.gi.
 Defined.
 
 End COMPCERTMAPS.
@@ -1024,7 +1055,7 @@ Proof.
   intuition congruence.
 Qed.
 
-Local Instance index_of_option T:
+Local Program Instance index_of_option T:
   MapIndex T ->
   MapIndex (option T) :=
   {
@@ -1034,8 +1065,7 @@ Local Instance index_of_option T:
         | Some t => xI (index_of_tr t)
       end
   }.
-Proof.
-  intros.
+Next Obligation.
   destruct tr1; destruct tr2; try intuition congruence.
   generalize (index_of_tr_correct t t0).
   rewrite <- some_eq.
@@ -1150,7 +1180,7 @@ Proof.
   intuition congruence.
 Qed.
 
-Local Instance index_of_pair U V:
+Local Program Instance index_of_pair U V:
   MapIndex U ->
   MapIndex V ->
   MapIndex (U * V) :=
@@ -1159,9 +1189,7 @@ Local Instance index_of_pair U V:
                      let '(u, v) := uv in
                      inj_pair (index_of_tr u) (index_of_tr v)
   }.
-Proof.
-  destruct tr1.
-  destruct tr2.
+Next Obligation.
   rewrite <- inj_pair_correct.
   repeat rewrite <- inject_pair_iff.
   repeat rewrite <- index_of_tr_correct.
@@ -1170,18 +1198,16 @@ Defined.
 
 End I_OF_TR.
 
-Require Interval.Interval_tactic.
-
 Inductive ratom: Type :=
-| RConst (_: Fcore_defs.float Fcore_Zaux.radix2)
+| RConst (_: Defs.float Zaux.radix2)
 | RVar (ty: type) (_: V)
 | RError (_: nat)
 .
 
 Inductive rexpr: Type :=
   | RAtom (_: ratom)
-  | RUnop (o: Interval_bisect.unary_op) (e: rexpr)
-  | RBinop (o: Interval_bisect.binary_op) (e1 e2: rexpr)
+  | RUnop (o: Tree.unary_op) (e: rexpr)
+  | RBinop (o: Tree.binary_op) (e1 e2: rexpr)
 . 
 
 Fixpoint reval (e: rexpr) (env: forall ty, V -> ftype ty) (eenv: nat -> R): R :=
@@ -1189,8 +1215,8 @@ Fixpoint reval (e: rexpr) (env: forall ty, V -> ftype ty) (eenv: nat -> R): R :=
     | RAtom (RConst q) => F2R _ q
     | RAtom (RVar ty n) => B2R _ _ (env ty n)
     | RAtom (RError n) => eenv n
-    | RUnop o e => Interval_bisect.unary Interval_bisect.real_operations o (reval e env eenv)
-    | RBinop o e1 e2 => Interval_bisect.binary Interval_bisect.real_operations o (reval e1 env eenv) (reval e2 env eenv)
+    | RUnop o e => Prog.unary Prog.real_operations o (reval e env eenv)
+    | RBinop o e1 e2 => Prog.binary Prog.real_operations o (reval e1 env eenv) (reval e2 env eenv)
   end.
 
 Fixpoint max_error_var (e: rexpr): nat :=
@@ -1224,10 +1250,10 @@ Proof.
   eapply IHe2; eauto with arith.
 Qed.
 
-Definition fone: Fcore_defs.float Fcore_Zaux.radix2 :=
+Definition fone: Defs.float Zaux.radix2 :=
   {|
-    Fcore_defs.Fnum := 1;
-    Fcore_defs.Fexp := 0
+    Defs.Fnum := 1;
+    Defs.Fexp := 0
   |}.
 
 Lemma F2R_fone: F2R _ fone = 1.
@@ -1252,9 +1278,9 @@ Definition make_rounding
         let e := S d in
         let es2 := mset es1 e (ty, Denormal) in
         (
-          RBinop Interval_bisect.Add
-                 (RBinop Interval_bisect.Mul x
-                         (RBinop Interval_bisect.Add (RAtom (RConst fone))
+          RBinop Tree.Add
+                 (RBinop Tree.Mul x
+                         (RBinop Tree.Add (RAtom (RConst fone))
                                  (RAtom (RError d)))
                  )
                  (RAtom (RError e))
@@ -1265,8 +1291,8 @@ Definition make_rounding
         let d := si in
         let es1 := mset shift d (ty, Normal) in
         (
-          RBinop Interval_bisect.Mul x
-                 (RBinop Interval_bisect.Add (RAtom (RConst fone))
+          RBinop Tree.Mul x
+                 (RBinop Tree.Add (RAtom (RConst fone))
                          (RAtom (RError d))
                  )
           , (S d, es1)
@@ -1276,7 +1302,7 @@ Definition make_rounding
         let e := si in
         let es1 := mset shift e (ty, Denormal) in
         (
-          RBinop Interval_bisect.Add x
+          RBinop Tree.Add x
                  (RAtom (RError e))
           , (S e, es1)
         )
@@ -1317,13 +1343,13 @@ Proof.
     inversion 1; subst; intros;
     rewrite (mget_set eq_nat_dec);
     destruct (Nat.eq_dec i si); auto;
-    exfalso; omega.
+    exfalso; lia.
   }
   inversion 1; subst; intros.
   repeat rewrite (mget_set eq_nat_dec).
   destruct (Nat.eq_dec i (S si)); auto;
   destruct (Nat.eq_dec i si); auto;
-  exfalso; omega.
+  exfalso; lia.
 Qed.
 
 Lemma make_rounding_shift_le
@@ -1347,7 +1373,7 @@ Proof.
 Qed.
 
 Definition error_bound ty k :=
-  / 2 * Fcore_Raux.bpow Fcore_Zaux.radix2
+  / 2 * Raux.bpow Zaux.radix2
   match k with
     | Normal => (- fprec ty + 1)
     | Denormal =>  (3 - femax ty - fprec ty)
@@ -1358,14 +1384,14 @@ Lemma error_bound_nonneg ty k:
 Proof.
     unfold error_bound.
     apply Rmult_le_pos; try lra.
-    apply Fcore_Raux.bpow_ge_0.
+    apply Raux.bpow_ge_0.
 Qed.
 
 Definition error_bound' ty k :=
   match k with
-    | Normal => / 2 * Fcore_Raux.bpow Fcore_Zaux.radix2
+    | Normal => / 2 * Raux.bpow Zaux.radix2
  (- fprec ty + 1)
-    | Denormal => / 2 * Fcore_Raux.bpow Fcore_Zaux.radix2
+    | Denormal => / 2 * Raux.bpow Zaux.radix2
  (3 - femax ty - fprec ty)
   end.
 
@@ -1379,12 +1405,10 @@ Definition rounding_cond ty k x :=
   match k with
     | None => True
     | Some Normal =>
-      Fcore_Raux.bpow Fcore_Zaux.radix2 (3 - femax ty - 1) <= Rabs x
+      Raux.bpow Zaux.radix2 (3 - femax ty - 1) <= Rabs x
     | Some Denormal =>
-      Rabs x < Fcore_Raux.bpow Fcore_Zaux.radix2 (3 - femax ty)
+      Rabs x < Raux.bpow Zaux.radix2 (3 - femax ty)
   end.
-
-Require Fprop_absolute.
 
 Lemma make_rounding_correct
       si shift kn ty x y si' shift':
@@ -1403,10 +1427,10 @@ Lemma make_rounding_correct
        errors2 i = errors1 i)
     /\
     reval y env errors2 =
-    Fcore_generic_fmt.round
-      Fcore_Zaux.radix2
-      (Fcore_FLT.FLT_exp (3 - femax ty - fprec ty) (fprec ty))
-      (Fcore_generic_fmt.Znearest choice)
+    Generic_fmt.round
+      Zaux.radix2
+      (FLT_exp (3 - femax ty - fprec ty) (fprec ty))
+      (Generic_fmt.Znearest choice)
       (reval x env errors1)
     /\
     (forall i ty' k,
@@ -1421,7 +1445,7 @@ Proof.
     destruct r.
     {
       replace (3 - femax ty - 1)%Z with (3 - femax ty - fprec ty + fprec ty - 1)%Z in H2 by ring.
-      generalize (Fprop_relative.relative_error_N_FLT_ex _ _ _ (fprec_gt_0 _) choice _ H2).
+      generalize (Relative.relative_error_N_FLT_ex _ _ _ (fprec_gt_0 _) choice _ H2).
       destruct 1 as (eps & Heps & Hround).
       pose (errors2 := fun i => if Nat.eq_dec i si
                                 then eps
@@ -1433,7 +1457,7 @@ Proof.
         unfold errors2.
         intros.
         destruct (Nat.eq_dec i si); auto.
-        omega.
+        lia.
       }
       inversion H; clear H; subst.
       simpl reval.
@@ -1449,7 +1473,7 @@ Proof.
         unfold errors2.
         destruct (Nat.eq_dec i si); auto.
         exfalso.
-        omega.
+        lia.
       }
       intros until i.
       rewrite (mget_set Nat.eq_dec).
@@ -1472,7 +1496,7 @@ Proof.
       unfold errors2.
       intros.
       destruct (Nat.eq_dec i si); auto.
-      omega.
+      lia.
     }
     inversion H; clear H; subst.
     simpl reval.
@@ -1486,7 +1510,7 @@ Proof.
       intros.
       unfold errors2.
       destruct (Nat.eq_dec i si); auto.
-      omega.      
+      lia.      
     }
     intros until i.
     rewrite (mget_set Nat.eq_dec).
@@ -1496,7 +1520,7 @@ Proof.
     inversion H; subst.
     auto.
   }
-  generalize (Fprop_relative.error_N_FLT Fcore_Zaux.radix2 (3 - femax ty - fprec ty) (fprec ty) (fprec_gt_0 _)  choice (reval x env errors1)).
+  generalize (Relative.error_N_FLT Zaux.radix2 (3 - femax ty - fprec ty) (fprec ty) (fprec_gt_0 _)  choice (reval x env errors1)).
   destruct 1 as (eps & eta & Heps & Heta & _ & Hround).
   pose (errors2 := fun i => if Nat.eq_dec i (S (si))
                             then eta
@@ -1510,8 +1534,8 @@ Proof.
   {
     unfold errors2.
     intros.
-    destruct (Nat.eq_dec i (S si)); try omega.
-    destruct (Nat.eq_dec i si); try omega.
+    destruct (Nat.eq_dec i (S si)); try lia.
+    destruct (Nat.eq_dec i si); try lia.
     auto.
   }
   inversion H; clear H; subst.
@@ -1522,14 +1546,14 @@ Proof.
     rewrite <- (reval_error_ext errors1).
     {
       unfold errors2.
-      destruct (Nat.eq_dec si (S si)); try (exfalso; omega).
+      destruct (Nat.eq_dec si (S si)); try (exfalso; lia).
       destruct (Nat.eq_dec si si); try congruence.
       destruct (Nat.eq_dec (S si) (S si)); congruence.
     }
     intros.
     unfold errors2.
-    destruct (Nat.eq_dec i (S si)); try omega.
-    destruct (Nat.eq_dec i si); try omega.
+    destruct (Nat.eq_dec i (S si)); try lia.
+    destruct (Nat.eq_dec i si); try lia.
     auto.
   }
   intros until i.
@@ -1548,10 +1572,10 @@ Qed.
 
 Definition Rbinop_of_rounded_binop o :=
   match o with
-    | PLUS => Interval_bisect.Add
-    | MULT => Interval_bisect.Mul
-    | MINUS => Interval_bisect.Sub
-    | DIV => Interval_bisect.Div
+    | PLUS => Tree.Add
+    | MULT => Tree.Mul
+    | MINUS => Tree.Sub
+    | DIV => Tree.Div
   end.
 
 Definition rnd_of_binop
@@ -1561,13 +1585,13 @@ Definition rnd_of_binop
            (o: binop) (r1 r2: rexpr)
   :=
     match o with
-      | SterbenzMinus => (RBinop Interval_bisect.Sub r1 r2, (si, shift))
+      | SterbenzMinus => (RBinop Tree.Sub r1 r2, (si, shift))
       | PlusZero minus zero_left =>
         ((
             if zero_left
             then
               if minus
-              then RUnop Interval_bisect.Neg r2
+              then RUnop Tree.Neg r2
               else r2
             else
               r1
@@ -1592,15 +1616,15 @@ Definition rnd_of_cast
 
 Definition Runop_of_rounded_unop o :=
   match o with
-    | SQRT => Interval_bisect.Sqrt
+    | SQRT => Tree.Sqrt
   end.
 
 Definition Runop_of_exact_unop ty o :=
   match o with
-    | Abs => RUnop Interval_bisect.Abs
-    | Opp => RUnop Interval_bisect.Neg
-    | Shift n _ => RBinop Interval_bisect.Mul (RAtom (RConst (B2F (B2 ty (Z.of_N n)))))
-    | InvShift n _ => RBinop Interval_bisect.Mul (RAtom (RConst (B2F (B2 ty (- Z.pos n)))))
+    | Abs => RUnop Tree.Abs
+    | Opp => RUnop Tree.Neg
+    | Shift n _ => RBinop Tree.Mul (RAtom (RConst (B2F (B2 ty (Z.of_N n)))))
+    | InvShift n _ => RBinop Tree.Mul (RAtom (RConst (B2F (B2 ty (- Z.pos n)))))
   end.
 
 Definition rnd_of_unop
@@ -2169,9 +2193,9 @@ Definition rounding_cond_ast ty k x: list cond :=
   match k with
     | None => nil
     | Some Normal =>
-      (RBinop Interval_bisect.Sub (RUnop Interval_bisect.Abs x) (RAtom (RConst (Fcore_defs.Float _ 1 (3 - femax ty - 1)))), false) :: nil
+      (RBinop Tree.Sub (RUnop Tree.Abs x) (RAtom (RConst (Defs.Float _ 1 (3 - femax ty - 1)))), false) :: nil
     | Some Denormal =>
-      (RBinop Interval_bisect.Sub (RAtom (RConst (Fcore_defs.Float _ 1 (3 - femax ty)))) (RUnop Interval_bisect.Abs x), true) :: nil
+      (RBinop Tree.Sub (RAtom (RConst (Defs.Float _ 1 (3 - femax ty)))) (RUnop Tree.Abs x), true) :: nil
   end.
 
 Lemma rounding_cond_ast_shift ty k x e b:
@@ -2218,10 +2242,10 @@ Proof.
 Qed.
 
 Definition no_overflow ty x: cond := 
-  (RBinop Interval_bisect.Sub (RAtom (RConst (Fcore_defs.Float _ 1 (femax ty)))) (RUnop Interval_bisect.Abs x), true).
+  (RBinop Tree.Sub (RAtom (RConst (Defs.Float _ 1 (femax ty)))) (RUnop Tree.Abs x), true).
 
 Definition rnd_of_plus_zero_cond (zero_left: bool) r1 r2 :=
-  (RUnop Interval_bisect.Neg (RUnop Interval_bisect.Abs (if zero_left then r1 else r2)), false) :: nil.  
+  (RUnop Tree.Neg (RUnop Tree.Abs (if zero_left then r1 else r2)), false) :: nil.  
 
 Definition rnd_of_binop_with_cond
            si
@@ -2232,10 +2256,10 @@ Definition rnd_of_binop_with_cond
   :=
     match o with
       | SterbenzMinus =>
-        ((RBinop Interval_bisect.Sub r1 r2, (si, shift)),
-         (RBinop Interval_bisect.Sub r1 (RBinop Interval_bisect.Mul r2 (RAtom (RConst (Fcore_defs.Float _ 1 (-1))))), false)
+        ((RBinop Tree.Sub r1 r2, (si, shift)),
+         (RBinop Tree.Sub r1 (RBinop Tree.Mul r2 (RAtom (RConst (Defs.Float _ 1 (-1))))), false)
            ::
-           (RBinop Interval_bisect.Sub (RBinop Interval_bisect.Mul r2 (RAtom (RConst (Fcore_defs.Float _ 1 1)))) r1, false)
+           (RBinop Tree.Sub (RBinop Tree.Mul r2 (RAtom (RConst (Defs.Float _ 1 1)))) r1, false)
            :: nil)
       | PlusZero minus zero_left =>
         (
@@ -2243,7 +2267,7 @@ Definition rnd_of_binop_with_cond
               if zero_left
               then
                 if minus
-                then RUnop Interval_bisect.Neg r2
+                then RUnop Tree.Neg r2
                 else r2
               else
                 r1
@@ -2256,7 +2280,7 @@ Definition rnd_of_binop_with_cond
         let rs := make_rounding si shift k ty ru in
         let '(r, _) := rs in
         (rs,
-         (if is_div o' then (RUnop Interval_bisect.Abs r2, true) :: nil else nil)
+         (if is_div o' then (RUnop Tree.Abs r2, true) :: nil else nil)
            ++ no_overflow ty r :: rounding_cond_ast ty k ru)
     end.
 
@@ -2303,7 +2327,7 @@ Proof.
       inversion H1; clear H1; subst.
       simpl.
       apply make_rounding_shift_incr in EQ.
-      omega.
+      lia.
     }
     destruct H1.
     {
@@ -2317,7 +2341,7 @@ Proof.
     rewrite H1.
     simpl.
     apply make_rounding_shift_incr in EQ.
-    apply Max.max_lub; omega.
+    apply Max.max_lub; lia.
   }
   {
     intro K.
@@ -2328,13 +2352,13 @@ Proof.
       inversion H1; clear H1; subst.
       simpl.
       rewrite Max.max_0_r.
-      apply Max.max_lub; omega.
+      apply Max.max_lub; lia.
     }
     destruct H1; try contradiction.
     inversion H1; clear H1; subst.
     simpl.
     rewrite Max.max_0_r.
-    apply Max.max_lub; omega.
+    apply Max.max_lub; lia.
   }
   {
     intro K.
@@ -2390,7 +2414,7 @@ Proof.
   apply rounding_cond_ast_shift_cond in H0.
   rewrite H0.
   apply make_rounding_shift_incr in EQ.
-  omega.
+  lia.
 Qed.
 
 Definition is_sqrt o :=
@@ -2418,7 +2442,7 @@ Definition rnd_of_unop_with_cond
         ((ru, (si, shift)), 
          match o with
            | Shift _ _ => no_overflow ty ru :: nil
-           | InvShift n _ => (RBinop Interval_bisect.Sub (RUnop Interval_bisect.Abs r1) (RAtom (RConst (Fcore_defs.Float _ 1 (3 - femax ty + Z.pos n - 1)))), false) :: nil
+           | InvShift n _ => (RBinop Tree.Sub (RUnop Tree.Abs r1) (RAtom (RConst (Defs.Float _ 1 (3 - femax ty + Z.pos n - 1)))), false) :: nil
            | _ => nil
          end)
       | CastTo ty' k => rnd_of_cast_with_cond si shift ty ty' k r1
@@ -2446,13 +2470,13 @@ Proof.
       destruct H0; try contradiction.
       inversion H0; clear H0; subst.
       eapply make_rounding_shift_incr in EQ.
-      omega.
+      lia.
     }
     apply rounding_cond_ast_shift_cond in H0.
     rewrite H0.
     simpl.
     apply make_rounding_shift_incr in EQ.
-    omega.
+    lia.
   }
   {
     intro K.
@@ -2614,21 +2638,21 @@ Proof.
     generalize H2.
     intro.
     apply rnd_of_binop_shift_incr in H2.
-    apply rnd_of_binop_shift_le in H5; try omega.
+    apply rnd_of_binop_shift_le in H5; try lia.
     apply in_app_or in H0.
     destruct H0.
     {
       eapply rnd_of_binop_with_cond_shift_cond; eauto.
-      omega.
+      lia.
     }
     apply in_app_or in H0.
     destruct H0.
     {
       eapply IHe1 in H0; [ | eassumption ] .
-      omega.
+      lia.
     }
     eapply IHe2 in H0; [ | eassumption ].
-    omega.
+    lia.
   }
   destruct (rndval_with_cond si shift e) as [[r1 [si1 s1]] p1] eqn:EQ1.
   destruct (rnd_of_unop_with_cond si1 s1 (type_of_expr e) u r1) eqn:EQ.
@@ -2650,14 +2674,14 @@ Proof.
   generalize H1.
   intro.
   apply rnd_of_unop_shift_incr in H1.
-  apply rnd_of_unop_shift_le in H3; try omega.
+  apply rnd_of_unop_shift_le in H3; try lia.
   apply in_app_or in H0.
   destruct H0.
   {
     eapply rnd_of_unop_with_cond_shift_cond; eauto.
   }
   eapply IHe in H0; [ | eassumption ] .
-  omega.
+  lia.
 Qed.
 
 Lemma sterbenz_no_overflow A x y:
@@ -2673,22 +2697,22 @@ Qed.
 
 Lemma is_finite_no_overflow prec emax f:
   is_finite prec emax f = true ->
-  Rabs (Fappli_IEEE.B2R _ _ f) < Fcore_Raux.bpow Fcore_Zaux.radix2 emax.
+  Rabs (Binary.B2R _ _ f) < Raux.bpow Zaux.radix2 emax.
 Proof.
   destruct f; simpl; try congruence; intros _.
   {
     rewrite Rabs_R0.
-    apply Fcore_Raux.bpow_gt_0.
+    apply Raux.bpow_gt_0.
   }
-  unfold Fcore_defs.F2R.
+  unfold Defs.F2R.
   simpl.
   rewrite Rabs_mult.
-  apply Fappli_IEEE.bounded_lt_emax in e0.
-  unfold Fcore_defs.F2R in e0.
+  apply Binary.bounded_lt_emax in e0.
+  unfold Defs.F2R in e0.
   simpl in e0.
-  rewrite <- Fcore_Raux.Z2R_abs.
-  rewrite Fcore_Zaux.abs_cond_Zopp.
-  rewrite Fcore_Raux.Z2R_abs.
+  rewrite <- abs_IZR.
+  rewrite Zaux.abs_cond_Zopp.
+  rewrite abs_IZR.
   simpl.
   rewrite Rabs_right.
   {
@@ -2696,12 +2720,10 @@ Proof.
     {
       assumption.
     }
-    generalize (Fcore_Raux.bpow_ge_0 Fcore_Zaux.radix2 e).
+    generalize (Raux.bpow_ge_0 Zaux.radix2 e).
     lra.
   }
-  rewrite Fcore_Raux.P2R_INR.
-  generalize (pos_INR (Pos.to_nat m)).
-  lra.
+  apply IZR_ge. lia.
 Qed.
 
 Lemma Rabs_lt_pos: forall x : R, 0 < Rabs x -> x <> 0.
@@ -2726,17 +2748,17 @@ Theorem fop_of_rounded_binop_correct op shift errors
         (V2: reval r2 env errors = B2R _ _ e2)
         r
         (V_: reval r env errors =
-            Fcore_generic_fmt.round Fcore_Zaux.radix2
-                                    (Fcore_FLT.FLT_exp
+            Generic_fmt.round Zaux.radix2
+                                    (FLT.FLT_exp
                                        (3 - femax ty - fprec ty)
                                        (fprec ty)
                                     )
-                                    (Fcore_generic_fmt.Znearest (fun x : Z => negb (Fcore_Zaux.Zeven x)))
+                                    (Generic_fmt.Znearest (fun x : Z => negb (Z.even x)))
                                     (reval (RBinop (Rbinop_of_rounded_binop op) r1 r2) env errors))
         (COND:
            (forall i,
               In i ((if is_div op
-                     then (RUnop Interval_bisect.Abs r2, true) :: nil
+                     then (RUnop Tree.Abs r2, true) :: nil
                      else nil)) ->
               eval_cond1 env shift i))
         (NO_OVERFLOW:
@@ -2761,21 +2783,21 @@ Proof.
   {
     (* plus *)
     generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
-    rewrite Fcore_Raux.Rlt_bool_true by (unfold round_mode; lra).
+    rewrite Raux.Rlt_bool_true by (unfold round_mode; lra).
     destruct 1 as (? & ? & _).
     auto.
   }
   {
     (* minus *)
     generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
-    rewrite Fcore_Raux.Rlt_bool_true by (unfold round_mode; lra).
+    rewrite Raux.Rlt_bool_true by (unfold round_mode; lra).
     destruct 1 as (? & ? & _).
     auto.
   }
   {
     (* mult *)
     generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE e1 e2).
-    rewrite Fcore_Raux.Rlt_bool_true by (unfold round_mode; lra).
+    rewrite Raux.Rlt_bool_true by (unfold round_mode; lra).
     rewrite F1. rewrite F2.
     simpl andb.
     destruct 1 as (? & ? & _).
@@ -2783,7 +2805,7 @@ Proof.
   }
   (* div *)
   generalize (fun K => Bdiv_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (div_nan _) mode_NE e1 e2 K).
-  rewrite Fcore_Raux.Rlt_bool_true by (unfold round_mode; lra).
+  rewrite Raux.Rlt_bool_true by (unfold round_mode; lra).
   rewrite F1.
   destruct 1 as (? & ? & _).
   {
@@ -2807,12 +2829,12 @@ Theorem fop_of_rounded_unop_correct op shift errors
              B2R _ _ e1)
         r
         (V_: reval r env errors =
-            Fcore_generic_fmt.round Fcore_Zaux.radix2
-                                    (Fcore_FLT.FLT_exp
+            Generic_fmt.round Zaux.radix2
+                                    (FLT.FLT_exp
                                        (3 - femax ty - fprec ty)
                                        (fprec ty)
                                     )
-                                    (Fcore_generic_fmt.Znearest (fun x : Z => negb (Fcore_Zaux.Zeven x)))
+                                    (Generic_fmt.Znearest (fun x : Z => negb (Z.even x)))
                                     (reval (RUnop (Runop_of_rounded_unop op) r1) env errors))
         (COND:
            (forall i,
@@ -2832,8 +2854,6 @@ Proof.
   destruct op;
     cbn -[Zminus] in * |- * ;
     rewrite V1 in * |- *.
-
-  {
     (* sqrt *)
     generalize (Bsqrt_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (sqrt_nan _) mode_NE e1).
     destruct 1 as (? & ? & _).
@@ -2844,36 +2864,42 @@ Proof.
     rewrite V1 in COND.
     clear r1 V1.
     destruct e1; auto.
-    destruct b; auto.
+    destruct s; auto.
     exfalso.
     revert COND.
     clear.
     simpl.
     clear e0.
-    unfold Fcore_defs.F2R.
-    rewrite Fcore_Raux.Z2R_IZR.
+    unfold Defs.F2R.
     simpl.
-    assert (0 < INR (Pos.to_nat m) * Fcore_Raux.bpow Fcore_Zaux.radix2 e).
+    assert (0 < INR (Pos.to_nat m) * Raux.bpow Zaux.radix2 e).
     {
       apply Rmult_lt_0_compat.
       {
         apply pos_INR_nat_of_P.
       }
-      apply Fcore_Raux.bpow_gt_0.
+      apply Raux.bpow_gt_0.
     }
-    lra.
-  }
+   rewrite INR_IZR_INZ in H.
+   intro.
+   replace (IZR (Z.neg m)) with (- IZR (Z.of_nat (Pos.to_nat m))) in COND.
+   lra.
+   rewrite <- opp_IZR.
+   f_equal.
+   rewrite <- Pos2Z.opp_pos.
+   f_equal.
+   apply positive_nat_Z.
 Qed.
 
 Lemma FLT_format_mult_beta_n_aux beta emin prec n
       x:
-  Fcore_FLX.Prec_gt_0 prec ->
-  (Fcore_generic_fmt.generic_format
-     beta (Fcore_FLT.FLT_exp emin prec) x) ->  
-  Fcore_generic_fmt.generic_format
+  FLX.Prec_gt_0 prec ->
+  (Generic_fmt.generic_format
+     beta (FLT.FLT_exp emin prec) x) ->  
+  Generic_fmt.generic_format
     beta
-    (Fcore_FLT.FLT_exp emin prec)
-    (x * Fcore_Raux.bpow beta (Z.of_N n)).
+    (FLT.FLT_exp emin prec)
+    (x * Raux.bpow beta (Z.of_N n)).
 Proof.
   intros.
   revert x H0.
@@ -2888,38 +2914,38 @@ Proof.
   intros.
   rewrite Nat2Z.inj_succ.
   unfold Z.succ.
-  rewrite Fcore_Raux.bpow_plus1.
-  rewrite (Rmult_comm (Fcore_Raux.Z2R _)).
+  rewrite bpow_plus_1.
+  rewrite (Rmult_comm (IZR _)).
   rewrite <- Rmult_assoc.
-  apply Fcore_FLT.generic_format_FLT.
-  rewrite <- (Rmult_comm (Fcore_Raux.Z2R _)).
+  apply FLT.generic_format_FLT.
+  rewrite <- (Rmult_comm (IZR _)).
   apply Fprop_absolute.FLT_format_mult_beta.
-  apply Fcore_FLT.FLT_format_generic; auto.
+  apply FLT.FLT_format_generic; auto.
 Qed.
 
 Lemma FLT_format_mult_beta_n ty (x: ftype ty) n rnd
-      {H: Fcore_generic_fmt.Valid_rnd rnd}:
-  Fcore_generic_fmt.round
-      Fcore_Zaux.radix2
-      (Fcore_FLT.FLT_exp (3 - femax ty - fprec ty) (fprec ty))
-      rnd (B2R _ _ x * Fcore_Raux.bpow Fcore_Zaux.radix2 (Z.of_N n)) = B2R _ _ x * Fcore_Raux.bpow Fcore_Zaux.radix2 (Z.of_N n).
+      {H: Generic_fmt.Valid_rnd rnd}:
+  Generic_fmt.round
+      Zaux.radix2
+      (FLT.FLT_exp (3 - femax ty - fprec ty) (fprec ty))
+      rnd (B2R _ _ x * Raux.bpow Zaux.radix2 (Z.of_N n)) = B2R _ _ x * Raux.bpow Zaux.radix2 (Z.of_N n).
 Proof.
   intros.
-  apply Fcore_generic_fmt.round_generic; auto.
+  apply Generic_fmt.round_generic; auto.
   apply FLT_format_mult_beta_n_aux; try typeclasses eauto.
   apply generic_format_B2R.
 Qed.
 
 Lemma bpow_minus1
-     : forall (r : Fcore_Zaux.radix) (e : Z),
-       Fcore_Raux.bpow r (e - 1) =
-       Fcore_Raux.bpow r e / Fcore_Raux.Z2R (Fcore_Zaux.radix_val r)
+     : forall (r : Zaux.radix) (e : Z),
+       Raux.bpow r (e - 1) =
+       Raux.bpow r e / IZR (Zaux.radix_val r)
 .
 Proof.
   intros.
   replace (e - 1)%Z with (e + - (1))%Z by ring.
-  rewrite Fcore_Raux.bpow_plus.
-  rewrite Fcore_Raux.bpow_opp.
+  rewrite Raux.bpow_plus.
+  rewrite Raux.bpow_opp.
   unfold Rdiv.
   f_equal.
   f_equal.
@@ -2930,18 +2956,18 @@ Qed.
 
 Lemma FLT_format_div_beta_1_aux beta emin prec n
       x:
-  Fcore_FLX.Prec_gt_0 prec ->
-  (Fcore_generic_fmt.generic_format
-     beta (Fcore_FLT.FLT_exp emin prec) x) ->
-  Fcore_Raux.bpow beta (emin + prec + Z.pos n - 1) <= Rabs x ->
-  Fcore_generic_fmt.generic_format
+  FLX.Prec_gt_0 prec ->
+  (Generic_fmt.generic_format
+     beta (FLT.FLT_exp emin prec) x) ->
+  Raux.bpow beta (emin + prec + Z.pos n - 1) <= Rabs x ->
+  Generic_fmt.generic_format
     beta
-    (Fcore_FLT.FLT_exp emin prec)
-    (x / Fcore_Raux.bpow beta (Z.pos n)).
+    (FLT.FLT_exp emin prec)
+    (x / Raux.bpow beta (Z.pos n)).
 Proof.
   intros until 1.
   unfold Rdiv.
-  rewrite <- Fcore_Raux.bpow_opp.
+  rewrite <- Raux.bpow_opp.
   rewrite <- positive_nat_Z.
   revert x.
   induction (Pos.to_nat n).
@@ -2959,93 +2985,94 @@ Proof.
   rewrite bpow_minus1.
   unfold Rdiv.
   rewrite <- Rmult_assoc.
-  apply Fcore_FLT.generic_format_FLT.
+  apply FLT.generic_format_FLT.
   apply Fprop_absolute.FLT_format_div_beta.
   {
-    unfold Fcore_FLX.Prec_gt_0 in H. omega.
+    unfold FLX.Prec_gt_0 in H. lia.
   }
   {
-    apply Fcore_FLT.FLT_format_generic; auto.
+    apply FLT.FLT_format_generic; auto.
     apply IHn0; auto.
     eapply Rle_trans; [ | eassumption ].
-    apply Fcore_Raux.bpow_le.
-    omega.
+    apply Raux.bpow_le.
+    lia.
   }
   rewrite Rabs_mult.
-  rewrite (Rabs_right (Fcore_Raux.bpow _ _)) by (apply Rle_ge; apply Fcore_Raux.bpow_ge_0).
+  rewrite (Rabs_right (Raux.bpow _ _)) by (apply Rle_ge; apply Raux.bpow_ge_0).
   eapply Rle_trans; [ | apply Rmult_le_compat_r ; try eassumption ].
   {
-    rewrite <- Fcore_Raux.bpow_plus.
-    apply Fcore_Raux.bpow_le.
-    omega.
+    rewrite <- Raux.bpow_plus.
+    apply Raux.bpow_le.
+    lia.
   }
-  apply Fcore_Raux.bpow_ge_0.
+  apply Raux.bpow_ge_0.
 Qed.
 
 Lemma FLT_format_div_beta_1 ty (x: ftype ty) n rnd
-      {H: Fcore_generic_fmt.Valid_rnd rnd}:
-  Fcore_Raux.bpow Fcore_Zaux.radix2 (3 - femax ty + Z.pos n - 1) <= Rabs (B2R _ _ x) ->
-  Fcore_generic_fmt.round
-      Fcore_Zaux.radix2
-      (Fcore_FLT.FLT_exp (3 - femax ty - fprec ty) (fprec ty))
-      rnd (B2R _ _ x * / Fcore_Raux.bpow Fcore_Zaux.radix2 (Z.pos n)) = B2R _ _ x / Fcore_Raux.bpow Fcore_Zaux.radix2 (Z.pos n).
+      {H: Generic_fmt.Valid_rnd rnd}:
+  Raux.bpow Zaux.radix2 (3 - femax ty + Z.pos n - 1) <= Rabs (B2R _ _ x) ->
+  Generic_fmt.round
+      Zaux.radix2
+      (FLT.FLT_exp (3 - femax ty - fprec ty) (fprec ty))
+      rnd (B2R _ _ x * / Raux.bpow Zaux.radix2 (Z.pos n)) = B2R _ _ x / Raux.bpow Zaux.radix2 (Z.pos n).
 Proof.
   intros.
-  apply Fcore_generic_fmt.round_generic; auto.
+  apply Generic_fmt.round_generic; auto.
   apply FLT_format_div_beta_1_aux; try typeclasses eauto.
   {
     apply generic_format_B2R.
   }
   eapply Rle_trans; [ | eassumption ].
-  apply Fcore_Raux.bpow_le.
-  omega.
+  apply Raux.bpow_le.
+  lia.
 Qed.
 
 Lemma Bdiv_beta_no_overflow ty (x: ftype ty) n:
   is_finite _ _ x = true ->
-  Rabs (B2R _ _ x / Fcore_Raux.bpow Fcore_Zaux.radix2 (Z.pos n)) < Fcore_Raux.bpow Fcore_Zaux.radix2 (femax ty).
+  Rabs (B2R _ _ x / Raux.bpow Zaux.radix2 (Z.pos n)) < Raux.bpow Zaux.radix2 (femax ty).
 Proof.
   intros.
   apply is_finite_no_overflow in H.
   unfold Rdiv.
   rewrite Rabs_mult.
-  rewrite <- Fcore_Raux.bpow_opp.
-  rewrite (Rabs_right (Fcore_Raux.bpow _ _)) by (apply Rle_ge; apply Fcore_Raux.bpow_ge_0).
+  rewrite <- Raux.bpow_opp.
+  rewrite (Rabs_right (Raux.bpow _ _)) by (apply Rle_ge; apply Raux.bpow_ge_0).
   eapply Rlt_le_trans.
   {
     apply Rmult_lt_compat_r.
     {
-      apply Fcore_Raux.bpow_gt_0.
+      apply Raux.bpow_gt_0.
     }
     eassumption.
   }
-  rewrite <- Fcore_Raux.bpow_plus.
-  apply Fcore_Raux.bpow_le.
+  rewrite <- Raux.bpow_plus.
+  apply Raux.bpow_le.
   generalize (Pos2Z.is_nonneg n).
-  omega.
+  lia.
 Qed.
 
+
 Lemma Bmult_correct_comm:
-forall (prec emax : Z) (prec_gt_0_ : Fcore_FLX.Prec_gt_0 prec)
+forall (prec emax : Z) (prec_gt_0_ : FLX.Prec_gt_0 prec)
          (Hmax : (prec < emax)%Z)
          (mult_nan : binary_float prec emax ->
-                     binary_float prec emax -> bool * nan_pl prec) 
+                     binary_float prec emax -> nan_payload prec emax) 
          (m : mode) (x y : binary_float prec emax),
        if
-        Fcore_Raux.Rlt_bool
+        Raux.Rlt_bool
           (Rabs
-             (Fcore_generic_fmt.round Fcore_Zaux.radix2
-                (Fcore_FLT.FLT_exp (3 - emax - prec) prec) 
+             (Generic_fmt.round Zaux.radix2
+                (FLT.FLT_exp (3 - emax - prec) prec) 
                 (round_mode m)
-                (Fappli_IEEE.B2R prec emax x * Fappli_IEEE.B2R prec emax y)))
-          (Fcore_Raux.bpow Fcore_Zaux.radix2 emax)
+                (B2R prec emax x * B2R prec emax y)))
+          (Raux.bpow Zaux.radix2 emax)
        then
-        Fappli_IEEE.B2R prec emax
+        B2R prec emax
           (Bmult prec emax prec_gt_0_ Hmax mult_nan m y x) =
-        Fcore_generic_fmt.round Fcore_Zaux.radix2
-          (Fcore_FLT.FLT_exp (3 - emax - prec) prec) 
+        Generic_fmt.round Zaux.radix2
+          (FLT.FLT_exp (3 - emax - prec) prec) 
           (round_mode m)
-          (Fappli_IEEE.B2R prec emax x * Fappli_IEEE.B2R prec emax y) /\
+          (B2R prec emax x * B2R prec emax y) /\
         is_finite prec emax (Bmult prec emax prec_gt_0_ Hmax mult_nan m y x) =
         is_finite prec emax x && is_finite prec emax y /\
         (is_nan prec emax (Bmult prec emax prec_gt_0_ Hmax mult_nan m y x) =
@@ -3147,8 +3174,7 @@ Proof.
     simpl in K_.
     symmetry in K_.
 
-    specialize (IHe1 H _ _ _ _ _ _ EQ1).
-    refine (let N := _ in _ (IHe1 N)).
+   assert (N : forall i : cond, In i p1 -> eval_cond1 env s1 i).
     {
       intros. 
       apply (eval_cond1_preserved s).
@@ -3172,12 +3198,10 @@ Proof.
       }
       apply H1. apply in_or_app. right. apply in_or_app. auto.
     }
-    clear IHe1 N.
-    intro IHe1.
-    specialize (IHe1 _ H2).
+    specialize (IHe1 H _ _ _ _ _ _ EQ1 N _ H2).
+    clear N.
     destruct IHe1 as (errors1_1 & E1 & EB1 & F1 & V1).
-    specialize (IHe2 H0 _ _ _ _ _ _ EQ2).
-    refine (let N := _ in _ (IHe2 N)).
+    assert (N : forall i : cond, In i p2 -> eval_cond1 env s2 i).
     {
       intros.
       apply (eval_cond1_preserved s).
@@ -3191,9 +3215,8 @@ Proof.
       }
       apply H1. apply in_or_app. right. apply in_or_app. auto.
     }
-    clear IHe2 N.
-    intro IHe2.
-    specialize (IHe2 _ EB1).
+    specialize (IHe2 H0 _ _ _ _ _ _ EQ2 N _ EB1).
+    clear N.
     destruct IHe2 as (errors1_2 & E2 & EB2 & F2 & V2).
 
     generalize (cast_finite _ _ (type_lub_left _ (type_of_expr e2)) _ F1).
@@ -3231,7 +3254,7 @@ Proof.
         generalize (make_rounding_correct _ _ _ _ _ _ _ _ ROUND).
         intro K.
         simpl max_error_var in K.
-        refine (let L := _ in _ (K L)).
+        assert (L: (Nat.max (max_error_var r1) (max_error_var r2) <= si2_)%nat).
         {
           intros.
           apply Nat.max_lub.
@@ -3244,9 +3267,10 @@ Proof.
           }
           eapply rndval_shift_le; eauto.
         }
-        clear K L. intro K.
-        specialize (K _ EB2).
-        refine (let L := _ in _ (K _ L)).
+        specialize (K L _ EB2).
+        clear L.
+        assert (L: rounding_cond (type_lub (type_of_expr e1) (type_of_expr e2)) knowl
+                            (reval (RBinop (Rbinop_of_rounded_binop op) r1 r2) env errors1_2)).
         {
           eapply rounding_cond_ast_correct.
           {
@@ -3279,12 +3303,16 @@ Proof.
           right.
           assumption.
         }
-        clear K L. intro L.
-        specialize (L  (fun x : Z => negb (Fcore_Zaux.Zeven x))).
-        destruct L as (errors2 & E & R & EB).
-
+        specialize (K _ L (fun x : Z => negb (Z.even x))).
+        clear L.
+        destruct K as (errors2 & E & R & EB).
+        assert (W1: reval r1 env errors2 = reval r1 env errors1_2). {
+          apply reval_error_ext.
+(*
+        assert (
         refine (let L1 := _ in _ (reval_error_ext errors2 env errors1_2 r1 L1)).
         {
+*)
           intros.
           apply E.
           eapply lt_le_trans.
@@ -3297,10 +3325,9 @@ Proof.
           }
           eapply rndval_shift_incr; eauto.
         }
-        generalize L1. clear L1. intros L1 W1. rewrite <- W1 in V1.
 
-        refine (let L2 := _ in _ (reval_error_ext errors2 env errors1_2 r2 L2)).
-        {
+        assert (W2: reval r2 env errors2 = reval r2 env errors1_2). {
+          apply reval_error_ext.
           intros.
           apply E.
           eapply lt_le_trans.
@@ -3309,8 +3336,7 @@ Proof.
           }
           eapply rndval_shift_le; eauto.
         }
-        generalize L2. clear L2. intros L2 W2. rewrite <- W2 in V2.
-
+        rewrite <- W1, <- W2 in *.
         assert (
             reval (RBinop (Rbinop_of_rounded_binop op) r1 r2) env errors1_2
             =
@@ -3322,14 +3348,9 @@ Proof.
         }
         rewrite W in * |- *.
 
-        generalize (fop_of_rounded_binop_correct _ _ _ EB 
-                                                 _ _ F1
-                                                 _ _ V1
-                                                 _ F2
-                                                 _ V2
-                                                 _ R).
-        intro K.
-        refine (let L := _ in _ (K L)).
+        assert (L : forall i : rexpr * bool,
+             In i (if is_div op then (RUnop Tree.Abs r2, true) :: nil else nil) ->
+             eval_cond1 env s i).
         {
           intros.
           apply H1.
@@ -3338,8 +3359,8 @@ Proof.
           apply in_or_app.
           auto.
         }
-        clear K L. intro K.
-        refine (let L := _ in _ (K L)).
+       assert (L': eval_cond1 env s
+            (no_overflow (type_lub (type_of_expr e1) (type_of_expr e2)) r)).
         {
           apply H1.
           apply in_or_app.
@@ -3350,7 +3371,15 @@ Proof.
           auto.
         }
 
-        destruct 1.
+        assert (K := fop_of_rounded_binop_correct _ _ _ EB 
+                                                 _ _ F1
+                                                 _ _ V1
+                                                 _ F2
+                                                 _ V2
+                                                 _ R L L').
+        clear L L'.
+
+        destruct K.
         exists errors2.
         split; auto.
         intros.
@@ -3403,15 +3432,15 @@ Proof.
         ) in K.
         rewrite <- V1 in K.
         rewrite <- V2 in K.
-        rewrite Fcore_generic_fmt.round_generic in K; try typeclasses eauto.
+        rewrite Generic_fmt.round_generic in K; try typeclasses eauto.
         {
           destruct (Rlt_dec
                       (Rabs (reval r1 env errors1_2 - reval r2 env errors1_2))
-                      (Fcore_Raux.bpow Fcore_Zaux.radix2
+                      (Raux.bpow Zaux.radix2
                                        (femax (type_lub (type_of_expr e1) (type_of_expr e2))))
                    ).
           {
-            apply Fcore_Raux.Rlt_bool_true in r.
+            apply Raux.Rlt_bool_true in r.
             rewrite r in K.
             destruct K as (KR & KF & _).
             exists errors1_2.
@@ -3433,15 +3462,15 @@ Proof.
           apply is_finite_no_overflow in F2.
           rewrite <- V1 in F1.
           rewrite <- V2 in F2.
-          apply Fcore_Raux.Rabs_lt_inv in F1.
-          apply Fcore_Raux.Rabs_lt_inv in F2.
+          apply Raux.Rabs_lt_inv in F1.
+          apply Raux.Rabs_lt_inv in F2.
           generalize (sterbenz_no_overflow _ _ _ F1 F2 H1 H1').
           clear K.
           intro K.
-          apply Fcore_Raux.Rabs_lt in K.
+          apply Raux.Rabs_lt in K.
           contradiction.
         }
-        apply Fprop_Sterbenz.sterbenz; try typeclasses eauto.
+        apply Sterbenz.sterbenz; try typeclasses eauto.
         {
           rewrite V1.
           apply generic_format_B2R.
@@ -3497,11 +3526,11 @@ Proof.
             generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
             rewrite ZERO.
             rewrite Rminus_0_l.
-            rewrite Fcore_generic_fmt.round_opp.
-            rewrite Fcore_generic_fmt.round_generic; try typeclasses eauto.
+            rewrite Generic_fmt.round_opp.
+            rewrite Generic_fmt.round_generic; try typeclasses eauto.
             {
               rewrite Rabs_Ropp.
-              rewrite Fcore_Raux.Rlt_bool_true by assumption.
+              rewrite Raux.Rlt_bool_true by assumption.
               unfold BMINUS.
               unfold BINOP.
               simpl reval.
@@ -3517,9 +3546,9 @@ Proof.
           generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
           rewrite ZERO.
           rewrite Rplus_0_l.
-          rewrite Fcore_generic_fmt.round_generic; try typeclasses eauto.
+          rewrite Generic_fmt.round_generic; try typeclasses eauto.
           {
-            rewrite Fcore_Raux.Rlt_bool_true by assumption.
+            rewrite Raux.Rlt_bool_true by assumption.
             unfold BPLUS.
             unfold BINOP.
             simpl reval.
@@ -3540,9 +3569,9 @@ Proof.
           generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
           rewrite ZERO.
           rewrite Rminus_0_r.
-          rewrite Fcore_generic_fmt.round_generic; try typeclasses eauto.
+          rewrite Generic_fmt.round_generic; try typeclasses eauto.
           {
-            rewrite Fcore_Raux.Rlt_bool_true by assumption.
+            rewrite Raux.Rlt_bool_true by assumption.
             unfold BMINUS.
             unfold BINOP.
             simpl reval.
@@ -3558,9 +3587,9 @@ Proof.
         generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
         rewrite ZERO.
         rewrite Rplus_0_r.
-        rewrite Fcore_generic_fmt.round_generic; try typeclasses eauto.
+        rewrite Generic_fmt.round_generic; try typeclasses eauto.
         {
-          rewrite Fcore_Raux.Rlt_bool_true by assumption.
+          rewrite Raux.Rlt_bool_true by assumption.
           unfold BPLUS.
           unfold BINOP.
           simpl reval.
@@ -3602,8 +3631,7 @@ Proof.
   intro K_.
   symmetry in K_.
 
-  specialize (IHe H0 _ _ _ _ _ _ EQ1).
-  refine (let N := _ in _ (IHe N)).
+  assert (N: forall i : cond, In i p1 -> eval_cond1 env s1 i).
   {
     intros.
     apply (eval_cond1_preserved s).
@@ -3616,9 +3644,8 @@ Proof.
     }
     apply H1. apply in_or_app. auto.
   }
-  clear IHe N.
-  intro IHe.
-  specialize (IHe _ H2).
+  specialize (IHe H0 _ _ _ _ _ _ EQ1 N _ H2).
+  clear N.
   destruct IHe as (errors1_1 & E1 & EB1 & F1 & V1).
 
   destruct u.
@@ -3639,14 +3666,13 @@ Proof.
     generalize (make_rounding_correct _ _ _ _ _ _ _ _ ROUND).
     intro K.
     simpl max_error_var in K.
-    refine (let L := _ in _ (K L)).
+    assert (L:  (max_error_var r1 <= si1)%nat).
     {
       intros.
       eapply rndval_shift_le; eauto.
     }
-    clear K L. intro K.
-    specialize (K _ EB1).
-    refine (let L := _ in _ (K _ L)).
+    assert (L': rounding_cond (type_of_expr e) knowl
+      (reval (RUnop (Runop_of_rounded_unop op) r1) env errors1_1)).
     {
       eapply rounding_cond_ast_correct.
       {
@@ -3662,7 +3688,6 @@ Proof.
         eapply rnd_of_unop_shift_unchanged; eauto.
         eapply lt_le_trans; eauto.
         etransitivity; try eassumption.
-        eapply rndval_shift_le; eauto.
       }
       eapply H1.
       apply in_or_app.
@@ -3671,12 +3696,13 @@ Proof.
       right.
       assumption.
     }
-    clear K L. intro L.
-    specialize (L  (fun x : Z => negb (Fcore_Zaux.Zeven x))).
-    destruct L as (errors2 & E & R & EB).
+    specialize (K L _ EB1 _ L' (fun x : Z => negb (Z.even x))).
+    clear L L'.
+    destruct K as (errors2 & E & R & EB).
 
-    refine (let L1 := _ in _ (reval_error_ext errors2 env errors1_1 r1 L1)).
+    assert (W1: reval r1 env errors2 = reval r1 env errors1_1).
     {
+      apply reval_error_ext.
       intros.
       apply E.
       eapply lt_le_trans.
@@ -3685,7 +3711,7 @@ Proof.
       }
       eapply rndval_shift_le; eauto.
     }
-    generalize L1. clear L1. intros L1 W1. rewrite <- W1 in V1.
+    rewrite <- W1 in V1.
 
     assert (
         reval (RUnop (Runop_of_rounded_unop op) r1) env errors1_1
@@ -3698,12 +3724,9 @@ Proof.
     }
     rewrite W in * |- *.
 
-    generalize (fop_of_rounded_unop_correct _ _ _ EB 
-                                             _ _ F1
-                                             _ _ V1
-                                             _ R).
-    intro K.
-    refine (let L := _ in _ (K L)).
+   assert (L : forall i : rexpr * bool,
+     In i (if is_sqrt op then (r1, false) :: nil else nil) ->
+     eval_cond1 env s i).
     {
       intros.
       apply H1.
@@ -3712,7 +3735,11 @@ Proof.
       apply in_or_app.
       auto.
     }
-    clear K L. intro K.
+    assert (K := fop_of_rounded_unop_correct _ _ _ EB 
+                                             _ _ F1
+                                             _ _ V1
+                                             _ R L).
+    clear L.
 
     destruct K.
     exists errors2.
@@ -3793,7 +3820,7 @@ Proof.
       rewrite F1.
       rewrite B2_FIN.
       simpl andb.
-      rewrite Fcore_Raux.Rlt_bool_true.
+      rewrite Raux.Rlt_bool_true.
       {
         unfold BMULT, BINOP.
         destruct 1 as (LC & ? & ?).
@@ -3833,15 +3860,15 @@ Proof.
     intro K.
     rewrite K.
     replace (Z.neg pow) with (- Z.pos pow)%Z in * |- * by reflexivity.   
-    rewrite Fcore_Raux.bpow_opp.
+    rewrite Raux.bpow_opp.
     rewrite FLT_format_div_beta_1; try typeclasses eauto.
     {
       unfold Rdiv.
-      rewrite <- Fcore_Raux.bpow_opp.
+      rewrite <- Raux.bpow_opp.
       rewrite F1.
       rewrite B2_FIN.
       simpl andb.
-      rewrite Fcore_Raux.Rlt_bool_true.
+      rewrite Raux.Rlt_bool_true.
       {
         unfold BMULT, BINOP.
         destruct 1 as (LC & ? & ?).
@@ -3854,7 +3881,7 @@ Proof.
         rewrite L.
         ring.
       }
-      rewrite Fcore_Raux.bpow_opp.
+      rewrite Raux.bpow_opp.
       apply Bdiv_beta_no_overflow.
       assumption.
     }
@@ -3887,7 +3914,7 @@ Proof.
     rewrite type_leb_le in LEB.
     inversion LEB.
     generalize ((fun J1 =>
-                  Bconv_widen_exact _ _ _ _ J1 (fprec_gt_0 _) (fprec_lt_femax _) (Z.le_ge _ _ H3) (Z.le_ge _ _ H4) (conv_nan _ _) mode_NE _ F1) $( typeclasses eauto )$ ).
+                  Bconv_widen_exact _ _ _ _ J1 (fprec_gt_0 _) (fprec_lt_femax _) (Z.le_ge _ _ H3) (Z.le_ge _ _ H4) (conv_nan _ _) mode_NE _ F1) ltac:( typeclasses eauto ) ).
     destruct 1 as (K & L & _).
     symmetry in K.
     rewrite <- V1 in K.
@@ -3897,13 +3924,11 @@ Proof.
   inversion EQ; clear EQ; subst.
   generalize (make_rounding_correct _ _ _ _ _ _ _ _ ROUND).
   intro K.
-  refine (let L := _ in _ (K L)).
+  assert (L: (max_error_var r1 <= si1)%nat).
   {
     eapply rndval_shift_le; eauto.
   }
-  clear K L. intro K.
-  specialize (K _ EB1).
-  refine (let L := _ in _ (K _ L)).
+  assert (L': rounding_cond ty knowl (reval r1 env errors1_1)).
   {
     eapply rounding_cond_ast_correct.
     {
@@ -3919,22 +3944,20 @@ Proof.
       eapply make_rounding_shift_unchanged; eauto.
       eapply lt_le_trans; eauto.
       etransitivity; try eassumption.
-      eapply rndval_shift_le; eauto.
     }
     eapply H1.
     apply in_or_app.
     left.
     right.
     assumption.
-  }
-  clear K L. intro L.
-  specialize (L  (fun x : Z => negb (Fcore_Zaux.Zeven x))).
-  destruct L as (errors2 & E & R & EB).
+  } 
+  specialize (K L _ EB1 _ L'  (fun x : Z => negb (Z.even x))); clear L L'.
+  destruct K as (errors2 & E & R & EB).
   rewrite V1 in R.
   generalize (Bconv_correct _ _ _ _ (fprec_gt_0 _) (fprec_lt_femax ty) (conv_nan _ _) mode_NE _ F1).
   unfold round_mode.
   rewrite <- R.
-  rewrite Fcore_Raux.Rlt_bool_true.
+  rewrite Raux.Rlt_bool_true.
   {
     destruct 1 as (J & K & _).
     symmetry in J.
@@ -3962,11 +3985,11 @@ End WITHNANS.
 
 Section TEST.
 
-Local Instance map_nat: MapIndex nat :=
+Local Program Instance map_nat: MapIndex nat :=
   {
     index_of_tr := Pos.of_succ_nat
   }.
-Proof.
+Next Obligation.
   generalize SuccNat2Pos.inj_iff.
   clear.
   firstorder.
@@ -3977,10 +4000,12 @@ Local Existing Instances compcert_map.
 Definition Tsingle := TYPE 24 128 I I.
 Definition Tdouble := TYPE 53 1024 I I.
 
+
 (* OK
-Eval simpl in
-    (rndval 0 (Maps.PMap.init 0) (Unop (Rounded1 SQRT None) (Const Tsingle (B2 _ 0)))
-    ).
+Definition sqrt_of_two : @expr ident := Unop (Rounded1 SQRT None) (Const Tsingle (B2 _ 0)).
+Eval simpl in rndval 0 (Maps.PMap.init 0) sqrt_of_two.
+Eval simpl in rndval_with_cond 0 (Maps.PMap.init 0) sqrt_of_two.
 *)
+
 
 End TEST.
