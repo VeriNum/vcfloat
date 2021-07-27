@@ -52,13 +52,14 @@ A simple separation logic for the CompCert memory model.
 *)
 
 Require Import Arith.
-Require Import compcert.Coqlib.
-Require Import compcert.Integers.
-Require Import compcert.AST.
-Require Import compcert.Values.
-Require Import compcert.Memory.
+Require Import compcert.lib.Coqlib.
+Require Import compcert.lib.Integers.
+Require Import compcert.common.AST.
+Require Import compcert.common.Values.
+Require Import compcert.common.Memory.
 Require Import Relations.
 Require Import Morphisms.
+Require Import Lia.
 
 Lemma NoDup_app_elim {A: Type} (l1 l2: list A):
   NoDup (l1 ++ l2) ->
@@ -69,7 +70,7 @@ Proof.
     intuition auto using NoDup_nil.
   }
   inversion 1; subst.
-  specialize (IHl1 $( assumption )$ ).
+  specialize (IHl1 ltac:( assumption ) ).
   destruct IHl1 as (? & ? & ? ).
   rewrite in_app in *.  
   split.
@@ -475,7 +476,7 @@ Proof.
     simpl.
     unfold Mem.range_perm.
     intros X.
-    specialize (X $( intros ; omega )$ ).
+    specialize (X ltac:( intros ; lia ) ).
     destruct X as (m' & SB).
     rewrite <- app_nil_end.
     esplit.
@@ -486,9 +487,7 @@ Proof.
       eapply Mem.perm_storebytes_1; eauto.
     }
     intros b0 o0 v.
-    erewrite <- Mem.loadbytes_storebytes_other; (try eassumption); auto; try omega.
-    simpl.
-    right; omega.
+    erewrite <- Mem.loadbytes_storebytes_other; (try eassumption); auto; try lia.
   }
   simpl.
   intros P o m H l2 H0.
@@ -510,7 +509,7 @@ Proof.
     simpl.
     red.
     intros ofs H.
-    assert (ofs = o) by omega.
+    assert (ofs = o) by lia.
     subst.
     eapply Mem.perm_implies; eauto.
   }
@@ -522,12 +521,12 @@ Proof.
       eapply Mem.perm_storebytes_1; eauto.
     }
     intros b0 o0 p0 v0 H.
-    erewrite <- Mem.loadbytes_storebytes_other; eauto; try omega.
+    erewrite <- Mem.loadbytes_storebytes_other; eauto; try lia.
     simpl.
     destruct (peq b0 b); auto.
     subst.
     right.
-    destruct (Z.eq_dec o0 o); try omega.
+    destruct (Z.eq_dec o0 o); try lia.
     subst.
     apply (in_map fst) in H.
     simpl in H.
@@ -571,12 +570,12 @@ Proof.
       intros b0 o0 p0 v0 H.
       apply (in_map fst) in H.
       simpl in H.
-      erewrite <- Mem.loadbytes_storebytes_other; eauto; try omega.
+      erewrite <- Mem.loadbytes_storebytes_other; eauto; try lia.
       destruct (peq b0 b); auto.
       subst.
       simpl.
       right.
-      destruct (Z.eq_dec o0 o); try omega.
+      destruct (Z.eq_dec o0 o); try lia.
       subst.
       edestruct DISJS; simpl; eauto.
     }
@@ -613,7 +612,7 @@ Proof.
     generalize (Mem.range_perm_loadbytes m b o 0).
     unfold Mem.range_perm.
     intros K.
-    specialize (K $( intros; omega )$ ).
+    specialize (K ltac:( intros; lia ) ).
     destruct K as (bytes & Hbytes).
     generalize (Mem.loadbytes_length _ _ _ _ _ Hbytes).
     destruct bytes; auto; discriminate.
@@ -628,7 +627,7 @@ Proof.
   unfold Z.succ.
   rewrite <- Zplus_comm.
   rewrite <- app_cons_nil.
-  eapply Mem.loadbytes_concat; eauto; omega.
+  eapply Mem.loadbytes_concat; eauto; lia.
 Qed.
 
 Lemma Prange_fst_eq b p1 p2 l1:
@@ -740,7 +739,7 @@ Proof.
   generalize (holds_storebytes p Hperm b l1 P o m H (encode_val chunk v)).
   rewrite encode_val_length.
   intro K.
-  specialize (K $( assumption )$ ).
+  specialize (K ltac:( assumption ) ).
   destruct K as (m' & STORE & HOLDS).
   esplit.
   split; eauto.
@@ -778,7 +777,7 @@ Lemma Prange_perm m b p l:
 Proof.
   induction l; simpl.
   {
-    intros; omega.
+    intros; lia.
   }
   intros o H i H0.
   rewrite <- app_cons_nil in H.
@@ -789,7 +788,7 @@ Proof.
   destruct (Z.eq_dec o i); try congruence.
   eapply IHl; eauto.
   rewrite Zpos_P_of_succ_nat in H0.
-  omega.
+  lia.
 Qed.
 
 Lemma Prange_fst_in b p l:
@@ -804,12 +803,12 @@ Proof.
   {
     inversion K; subst.
     split; auto.
-    omega.
+    lia.
   }
   apply IHl in K.
   destruct K.
   split; auto.
-  omega.
+  lia.
 Qed.
 
 Lemma holds_Pperm_intro m b p n:
@@ -832,14 +831,14 @@ Proof.
   {
     split; auto.
     apply H.
-    omega.
+    lia.
   }
   split.
   {
     apply IHn.
     intros.
     apply H.
-    omega.
+    lia.
   }
   simpl.
   destruct 1; try contradiction.
@@ -847,7 +846,7 @@ Proof.
   intros H0.
   apply Prange_fst_in in H0.
   destruct H0.
-  omega.
+  lia.
 Qed.
 
 Lemma Prange_Pperm_weak m b p l o:
@@ -985,15 +984,15 @@ Proof.
     apply holds_Pperm_intro.
     destruct (Z_le_dec lo hi).
     {
-      rewrite Z2Nat.id by omega.
+      rewrite Z2Nat.id by lia.
       intros.
       eapply Mem.perm_alloc_2; eauto.
-      omega.
+      lia.
     }
-    rewrite Z_to_nat_negative by omega.
+    rewrite Z_to_nat_negative by lia.
     simpl.
     intros.
-    omega.
+    lia.
   }
   intros bo H1 H2.
   destruct bo as [b o].
@@ -1023,23 +1022,23 @@ Lemma Prange_fst_in_intro_aux b p l:
     forall o,
       In (b, o + Z.of_nat i) (map fst (Prange b o p l)).
 Proof.
-  induction l; simpl; try (intros; omega).
+  induction l; simpl; try (intros; lia).
   destruct i as [ | i ].
   {
     intros _.
     left.
     f_equal.
     simpl.
-    omega.
+    lia.
   }
   intros H o.
-  assert (i < length l)%nat as LT by omega.
+  assert (i < length l)%nat as LT by lia.
   specialize (IHl _ LT (o + 1)).
   simpl.
   rewrite Zpos_P_of_succ_nat.
   unfold Z.succ.
   right.
-  replace (o + (Z.of_nat i + 1))%Z with (o + 1 + Z.of_nat i)%Z by omega.
+  replace (o + (Z.of_nat i + 1))%Z with (o + 1 + Z.of_nat i)%Z by lia.
   assumption.
 Qed.
 
@@ -1054,12 +1053,12 @@ Proof.
     exists (Z.to_nat (o' - o)).
     split.
     {
-      rewrite Z2Nat.id by omega.
-      omega.
+      rewrite Z2Nat.id by lia.
+      lia.
     }
     apply Nat2Z.inj_lt.
-    rewrite Z2Nat.id by omega.
-    omega.
+    rewrite Z2Nat.id by lia.
+    lia.
   }
   destruct EX as (i & Hi & LT).
   subst.
@@ -1086,8 +1085,8 @@ Proof.
   {
     intros.
     apply HF.
-    rewrite Z2Nat.id by omega.
-    omega.
+    rewrite Z2Nat.id by lia.
+    lia.
   }
   clear HF.
   apply Mem.range_perm_free in HF'.
@@ -1111,8 +1110,8 @@ Proof.
     eapply DISJ; eauto.
     apply Prange_fst_in_intro.
     rewrite repeat_length.
-    rewrite Z2Nat.id by omega.
-    omega.
+    rewrite Z2Nat.id by lia.
+    lia.
   }
   intros b0 o p v H.
   erewrite <- Mem.loadbytes_free; eauto.
@@ -1130,8 +1129,8 @@ Proof.
   eapply DISJ; eauto.
   apply Prange_fst_in_intro.
   rewrite repeat_length.
-  rewrite Z2Nat.id by omega.
-  omega.
+  rewrite Z2Nat.id by lia.
+  lia.
 Qed.  
 
 Fixpoint type_of_chunk (c: AST.memory_chunk): Type :=
@@ -1175,7 +1174,7 @@ Proof.
   induction i; simpl.
   {
     intros j H o.
-    assert (j = O) by omega.
+    assert (j = O) by lia.
     subst.
     simpl.
     f_equal.
@@ -1191,22 +1190,22 @@ Proof.
     rewrite Pperm_eq.
     simpl.
     rewrite <- Pperm_eq.
-    repeat ((try omega); f_equal).
+    repeat ((try lia); f_equal).
   }
   rewrite Zpos_P_of_succ_nat.
   rewrite <- Pperm_eq.
-  rewrite (IHi j $( omega )$ ).
-  repeat ((try (omega || ring)); f_equal).
+  rewrite (IHi j ltac:( lia ) ).
+  repeat ((try (lia || ring)); f_equal).
 Qed.
 
 Corollary Pperm_plus b o p u v:
   Pperm b o p (u + v) =
   Pperm b o p u ++ Pperm b (o + Z.of_nat u) p v.
 Proof.
-  rewrite Pperm_decomp with (j := u) by omega.
+  rewrite Pperm_decomp with (j := u) by lia.
   f_equal.
   f_equal.
-  omega.
+  lia.
 Qed.
 
 Fixpoint Parray_opt (chunk: memory_chunk) (lo: Z) (data: Z -> option (type_of_chunk chunk)) (bd: block) (od: Z) (p: permission) (i: nat) {struct i}: pred :=
@@ -1237,7 +1236,7 @@ Proof.
   }
   intros lo H od.
   replace lo with (lo + Z.of_nat O) at 1 by (simpl; ring).
-  rewrite H by omega.
+  rewrite H by lia.
   rewrite IHi.
   {
     rewrite <- mult_n_Sm.
@@ -1249,11 +1248,11 @@ Proof.
   intros j H0.
   replace (lo + 1 + Z.of_nat j) with (lo + Z.of_nat (S j)).
   {
-    apply H; omega.
+    apply H; lia.
   }
   simpl.
   rewrite Zpos_P_of_succ_nat.
-  omega.
+  lia.
 Qed.
 
 Theorem holds_Parray_opt chunk data bd p m i:
@@ -1271,7 +1270,7 @@ Theorem holds_Parray_opt chunk data bd p m i:
 Proof.
   induction i.
   {
-    intros; omega.
+    intros; lia.
   }
   intros od H lo H0 j H1 v H2.
   simpl in H0.
@@ -1296,7 +1295,7 @@ Proof.
   rewrite Z.add_assoc.
   rewrite (Z.add_comm _ 1).
   repeat rewrite Z.add_assoc.
-  apply IHi; auto; try omega.
+  apply IHi; auto; try lia.
   {
     apply Z.divide_add_r; auto.
     apply align_size_chunk_divides.
@@ -1319,8 +1318,8 @@ Proof.
   intros lo H od.
   f_equal.
   {
-    replace lo with (lo + Z.of_nat O) by (simpl; omega).
-    rewrite H by omega.
+    replace lo with (lo + Z.of_nat O) by (simpl; lia).
+    rewrite H by lia.
     reflexivity.
   }
   apply IHi.
@@ -1328,11 +1327,11 @@ Proof.
   replace (lo + 1 + Z.of_nat j) with (lo + Z.of_nat (S j)).
   {
     apply H.
-    omega.
+    lia.
   }
   simpl.
   rewrite Zpos_P_of_succ_nat.
-  omega.
+  lia.
 Qed.
 
 Lemma Parray_opt_decomp chunk data bd p i:
@@ -1350,7 +1349,7 @@ Lemma Parray_opt_decomp chunk data bd p i:
 Proof.
   induction i.
   {
-    intros; omega.
+    intros; lia.
   }
   intros j H lo od.
   cbn -[Z.add].
@@ -1366,7 +1365,7 @@ Proof.
   cbn -[Z.add].
   rewrite app_ass.
   f_equal.
-  rewrite (IHi j $( omega )$ ).
+  rewrite (IHi j ltac:( lia ) ).
   f_equal.
   rewrite Zpos_P_of_succ_nat.
   unfold Z.succ.
@@ -1374,10 +1373,10 @@ Proof.
   {
     replace (lo + (Z.of_nat j + 1))%Z with (lo + 1 + Z.of_nat j)%Z by ring.
     destruct (data (lo + 1 + Z.of_nat j));
-      repeat ((try first [omega | ring] );
+      repeat ((try first [lia | ring] );
               f_equal).
   }
-  repeat ((try first [omega | ring] );
+  repeat ((try first [lia | ring] );
           f_equal).
 Qed.
 
@@ -1440,114 +1439,114 @@ Proof.
     apply Parray_opt_ext.
     intros j0 H.
     destruct (Z.eq_dec (1 + Z.of_nat j + Z.of_nat j0) (Z.of_nat j)); try congruence.
-    omega.
+    lia.
   }
   apply Parray_opt_ext.
   intros j0 H.
   rewrite Z.add_0_l.
   destruct (Z.eq_dec (Z.of_nat j0) (Z.of_nat j)) as [ e | ] ; auto.
   apply Nat2Z.inj in e.
-  omega.
+  lia.
 Qed.
 
 Global Instance:
-  Reflexive Int.eqm.
+  Reflexive Ptrofs.eqm.
 Proof.
-  exact Int.eqm_refl.
+  exact Ptrofs.eqm_refl.
 Qed.
 
 Global Instance:
-  Symmetric Int.eqm.
+  Symmetric Ptrofs.eqm.
 Proof.
-  exact Int.eqm_sym.
+  exact Ptrofs.eqm_sym.
 Qed.
 
 Global Instance:
-  Transitive Int.eqm.
+  Transitive Ptrofs.eqm.
 Proof.
-  exact Int.eqm_trans.
+  exact Ptrofs.eqm_trans.
 Qed.
 
 Global Instance:
-  Proper (Int.eqm ==> Int.eqm ==> Int.eqm) Zplus.
-Proof.
-  do 3 red.
-  intros; eauto using Int.eqm_add.
-Qed.
-
-Global Instance:
-  Proper (Int.eqm ==> Int.eqm ==> Int.eqm) Zminus.
+  Proper (Ptrofs.eqm ==> Ptrofs.eqm ==> Ptrofs.eqm) Zplus.
 Proof.
   do 3 red.
-  intros; eauto using Int.eqm_sub.
+  intros; eauto using Ptrofs.eqm_add.
 Qed.
 
 Global Instance:
-  Proper (Int.eqm ==> Int.eqm) Zopp.
-Proof.
-  exact Int.eqm_neg.
-Qed.
-
-Global Instance:
-  Proper (Int.eqm ==> Int.eqm ==> Int.eqm) Zmult.
+  Proper (Ptrofs.eqm ==> Ptrofs.eqm ==> Ptrofs.eqm) Zminus.
 Proof.
   do 3 red.
-  intros; eauto using Int.eqm_mult.
+  intros; eauto using Ptrofs.eqm_sub.
 Qed.
 
 Global Instance:
-  Proper (Int.eqm ==> Logic.eq) Int.repr.
+  Proper (Ptrofs.eqm ==> Ptrofs.eqm) Z.opp.
 Proof.
-  exact Int.eqm_samerepr.
+  exact Ptrofs.eqm_neg.
+Qed.
+
+Global Instance:
+  Proper (Ptrofs.eqm ==> Ptrofs.eqm ==> Ptrofs.eqm) Zmult.
+Proof.
+  do 3 red.
+  intros; eauto using Ptrofs.eqm_mult.
+Qed.
+
+Global Instance:
+  Proper (Ptrofs.eqm ==> Logic.eq) Ptrofs.repr.
+Proof.
+  exact Ptrofs.eqm_samerepr.
 Qed.
 
 Lemma eqm_signed_repr b:
-   Int.eqm (Int.signed (Int.repr b)) b.
+   Ptrofs.eqm (Ptrofs.signed (Ptrofs.repr b)) b.
 Proof.
-  rewrite Int.eqm_signed_unsigned.
-  rewrite <- Int.eqm_unsigned_repr.
+  rewrite Ptrofs.eqm_signed_unsigned.
+  rewrite <- Ptrofs.eqm_unsigned_repr.
   reflexivity.
 Qed.
 
 Lemma mul_repr a b:
-  Int.mul (Int.repr a) (Int.repr b) = Int.repr (a * b).
+  Ptrofs.mul (Ptrofs.repr a) (Ptrofs.repr b) = Ptrofs.repr (a * b).
 Proof.
-  rewrite Int.mul_signed.
-  apply Int.eqm_samerepr.
-  apply Int.eqm_mult; auto using eqm_signed_repr.
+  rewrite Ptrofs.mul_signed.
+  apply Ptrofs.eqm_samerepr.
+  apply Ptrofs.eqm_mult; auto using eqm_signed_repr.
 Qed.
 
 Lemma add_repr a b:
-  Int.add (Int.repr a) (Int.repr b) = Int.repr (a + b).
+  Ptrofs.add (Ptrofs.repr a) (Ptrofs.repr b) = Ptrofs.repr (a + b).
 Proof.
-  rewrite Int.add_signed.
-  apply Int.eqm_samerepr.
-  apply Int.eqm_add; auto using eqm_signed_repr.
+  rewrite Ptrofs.add_signed.
+  apply Ptrofs.eqm_samerepr.
+  apply Ptrofs.eqm_add; auto using eqm_signed_repr.
 Qed.
 
 Lemma unsigned_eqm u v:
-    Int.eqm (Int.unsigned u) v ->
-    (0 <= v <= Int.max_unsigned)%Z ->
-    Int.unsigned u = v.
+    Ptrofs.eqm (Ptrofs.unsigned u) v ->
+    (0 <= v <= Ptrofs.max_unsigned)%Z ->
+    Ptrofs.unsigned u = v.
 Proof.
   intros.
-  apply Int.unsigned_repr in H0.
+  apply Ptrofs.unsigned_repr in H0.
   rewrite <- H0.
   f_equal.
-  rewrite <- (Int.repr_unsigned u).
-  apply Int.eqm_samerepr.
+  rewrite <- (Ptrofs.repr_unsigned u).
+  apply Ptrofs.eqm_samerepr.
   assumption.
 Qed.
 
 Lemma unsigned_add_repr u v:
-  (0 <= Int.unsigned u + v <= Int.max_unsigned)%Z ->
-  Int.unsigned (Int.add u (Int.repr v)) = (Int.unsigned u + v)%Z.
+  (0 <= Ptrofs.unsigned u + v <= Ptrofs.max_unsigned)%Z ->
+  Ptrofs.unsigned (Ptrofs.add u (Ptrofs.repr v)) = (Ptrofs.unsigned u + v)%Z.
 Proof.
   intros.
   apply unsigned_eqm; auto.
-  rewrite Int.add_unsigned.
-  rewrite <- Int.eqm_unsigned_repr.
-  rewrite <- Int.eqm_unsigned_repr.
+  rewrite Ptrofs.add_unsigned.
+  rewrite <- Ptrofs.eqm_unsigned_repr.
+  rewrite <- Ptrofs.eqm_unsigned_repr.
   reflexivity.
 Qed.
 
@@ -1625,62 +1624,62 @@ Proof.
 Qed.
 
 Definition Parray_opt_int chunk data bd od p sz :=
-  Parray_opt chunk 0 data bd (Int.unsigned od) p (Z.to_nat (Int.signed sz)).
+  Parray_opt chunk 0 data bd (Ptrofs.unsigned od) p (Z.to_nat (Int.signed sz)).
 
 Corollary holds_Parray_opt_int chunk:
   forall od,
-    (align_chunk chunk | Int.unsigned od) ->
+    (align_chunk chunk | Ptrofs.unsigned od) ->
     forall sz,
-      (Int.unsigned od + Memdata.size_chunk chunk * Int.signed sz <= Int.max_unsigned)%Z ->
+      (Ptrofs.unsigned od + Memdata.size_chunk chunk * Int.signed sz <= Int.max_unsigned)%Z ->
       forall i,
-        0 <= Int.signed i < Int.signed sz ->
+        0 <= Ptrofs.signed i < Int.signed sz ->
         forall data v,
-          data (Int.signed i) = Some v ->
+          data (Ptrofs.signed i) = Some v ->
           forall bd p m,
             holds (Parray_opt_int chunk data bd od p sz) m ->
-            Memory.Mem.loadv chunk m (Vptr bd (Int.add od (Int.mul (Int.repr (Memdata.size_chunk chunk)) i))) =
+            Memory.Mem.loadv chunk m (Vptr bd (Ptrofs.add od (Ptrofs.mul (Ptrofs.repr (Memdata.size_chunk chunk)) i))) =
             Some (Val.load_result chunk (value_of_chunk chunk v)).
 Proof.
   intros od H sz H0 i H1 data v H2 bd p m H3.
   simpl.
-  rewrite <- (Int.repr_signed i).
+  rewrite <- (Ptrofs.repr_signed i).
   rewrite mul_repr.
-  rewrite <- (Int.repr_unsigned od).
+  rewrite <- (Ptrofs.repr_unsigned od).
   rewrite add_repr.
-  rewrite Int.unsigned_repr.
+  rewrite Ptrofs.unsigned_repr.
   {
-    rewrite <- (Z2Nat.id (Int.signed i)) by omega.
+    rewrite <- (Z2Nat.id (Int.signed i)) by lia.
     eapply holds_Parray_opt; eauto.
     {
       apply Nat2Z.inj_lt.
-      repeat rewrite Z2Nat.id by omega.
-      omega.
+      repeat rewrite Z2Nat.id by lia.
+      lia.
     }
     rewrite <- H2.
     f_equal.
-    rewrite Z2Nat.id by omega.
-    omega.
+    rewrite Z2Nat.id by lia.
+    lia.
   }
   split.
   {
     apply Z.le_trans with (Int.unsigned od + 0).
     {
-      generalize (Int.unsigned_range od); omega.
+      generalize (Int.unsigned_range od); lia.
     }
     apply Zplus_le_compat_l.
     apply Z.mul_nonneg_nonneg.
     {
-      generalize (size_chunk_pos chunk); omega.
+      generalize (size_chunk_pos chunk); lia.
     }
-    omega.
+    lia.
   }
   eapply Z.le_trans; [ | eassumption].
   apply Zplus_le_compat_l.
   apply Zmult_le_compat_l.
   {
-    omega.
+    lia.
   }
-  generalize (size_chunk_pos chunk); omega.
+  generalize (size_chunk_pos chunk); lia.
 Qed.
 
 Corollary holds_Parray_opt_int_repr chunk:
@@ -1702,7 +1701,7 @@ Proof.
     apply Int.signed_repr.
     generalize (Int.signed_range sz).
     assert (Int.min_signed <= 0) by (vm_compute; congruence).
-    omega.
+    lia.
   }
   rewrite <- Hi in H2.  
   eapply holds_Parray_opt_int; eauto.
@@ -1720,7 +1719,7 @@ Proof.
   intros H.
   unfold counter.
   rewrite Int.signed_repr by (vm_compute; intuition congruence).
-  omega.
+  lia.
 Qed.
 
 Lemma incr_counter sz i:
@@ -1737,11 +1736,11 @@ Proof.
   rewrite add_repr.
   rewrite Int.signed_repr.
   {
-    omega.
+    lia.
   }
   generalize (Int.signed_range sz).
   generalize (Int.signed_range i).
-  omega.
+  lia.
 Qed.
 
 Lemma fin_counter sz i:
@@ -1754,7 +1753,7 @@ Proof.
   unfold Int.lt.
   intros H H0.
   destruct (zlt (Int.signed i) (Int.signed sz)); try discriminate.
-  assert (Int.signed i = Int.signed sz) as EQ by omega.
+  assert (Int.signed i = Int.signed sz) as EQ by lia.
   apply (f_equal Int.repr) in EQ.
   repeat rewrite Int.repr_signed in EQ.
   assumption.
@@ -1781,7 +1780,7 @@ Proof.
   unfold Int.lt in H2.
   destruct (zlt (Int.signed i) (Int.signed sz)); try discriminate.
   eapply holds_Parray_opt_int; eauto.
-  omega.
+  lia.
 Qed.
 
 Definition Parray chunk data := Parray_opt chunk 0 (fun x => Some (data x)).
@@ -1985,7 +1984,7 @@ Ltac search_for_gen m t :=
          holds ?P m_ ->
          holds ?Q m_),
     K2: holds ?R m |- _ =>
-    let HP := constr: $( search_for_exact_in P K2 )$ in
+    let HP := constr: ( search_for_exact_in P K2 ) in
     let K3 := constr: (K1 _ HP) in
     let TU := type of K3 in
     t K3
@@ -2015,7 +2014,7 @@ Ltac Pval_solve :=
   match goal with
       |- exists v,
            Mem.loadv ?chunk ?m (Vptr ?b ?o) = Some v /\ _ =>
-      let z := constr: $( search_for_Pval_int chunk b o m )$ in
+      let z := constr: ( search_for_Pval_int chunk b o m ) in
       generalize z;
         holds_loadv_exists
   end.
@@ -2132,7 +2131,7 @@ Proof.
   generalize (Int.signed_range (Int.repr sz)).
   rewrite K.
   assert (Int.min_signed <= 0)%Z by (vm_compute; congruence).
-  omega.
+  lia.
 Qed.
 
 Ltac Parray_solve :=
@@ -2154,7 +2153,7 @@ Ltac solve_trivial :=
 Ltac holds_Parray_int_repr_exists_const_bound :=
     apply holds_Parray_int_repr_exists_const_bound;
     solve_trivial;
-    split; [ omega | ];
+    split; [ lia | ];
     let v := fresh "v" in
     let Hv := fresh "Hv" in
     intros v Hv;
@@ -2291,7 +2290,7 @@ Section WithDecideEq.
     induction l1; simpl; auto.
     intros l2 i.
     rewrite IHl1.
-    destruct (DEC _ i); omega.
+    destruct (DEC _ i); lia.
   Qed.
 
   Lemma count_occ_in i j l:
@@ -2344,7 +2343,7 @@ Section WithDecideEq.
     specialize (H i).
     rewrite count_occ_app in H |- * .
     simpl in H.
-    destruct (DEC a i); omega.
+    destruct (DEC a i); lia.
   Qed.
 
 End WithDecideEq.

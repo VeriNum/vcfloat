@@ -4,15 +4,17 @@
 # or as a "Coq Platform" package.
 
 COQC=coqc
-COQFLAGS=
+COQDEP=coqdep
+COQPROJECT != cat _CoqProject
+COQFLAGS=$(COQPROJECT)
 
-target: Test.vo
+target: Test.vo Clight2FPOpt.vo
 
 %.vo: %.v
 	$(COQC) $(COQFLAGS) $*.v
 
 depend: 
-	coqdep *.v > .depend
+	$(COQDEP) $(COQFLAGS) *.v cverif/*.v > .depend
 
 include .depend
 

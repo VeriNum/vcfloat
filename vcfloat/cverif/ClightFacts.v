@@ -51,11 +51,11 @@ Author: Tahina Ramananandro <ramananandro@reservoir.com>
 More properties about the operational semantics of CompCert Clight.
 *)
 
-Require Export Clight.
+From compcert.cfrontend Require Export Clight.
 Require Import MSets.
 Require Import ZArith.
 Require Import LibTac.
-Require Export ClightBigstep2.
+Require Export cverif.ClightBigstep2.
 
 Module VSET := MSetAVL.Make(Pos).
 

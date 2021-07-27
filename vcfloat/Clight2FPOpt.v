@@ -108,7 +108,7 @@ Qed.
 
 (* Tactic for automatic annotations *)
 
-Require Import Flocq.Appli.Fappli_IEEE.
+(* Require Import Flocq.Appli.Fappli_IEEE. *)
 Require Import Reals.
 Open Scope R_scope.
 
@@ -117,12 +117,12 @@ Local Existing Instances
 .
 
 
-Require Import compcert.Values.
+Require Import compcert.common.Values.
 
 
-Require Import Clight.
+Require Import compcert.cfrontend.Clight.
 
-Require Import Interval.Interval_tactic.
+Require Import Interval.Tactic.
 Require Import Psatz.
 
 
@@ -156,7 +156,7 @@ Ltac C_to_float_aux k ge lenv tenv m e :=
       clear K; intro K;
       specialize
         (K
-           $(
+           ltac:(
              rewrite <- list_forall_spec;
              simpl;
              repeat
@@ -164,16 +164,16 @@ Ltac C_to_float_aux k ge lenv tenv m e :=
                    |- _ /\ _ => split
                  | |- True => exact I
                  | |- _ => inversion 1; subst;
-                   now (eauto using Clight2FP.val_inject_single, Clight2FP.val_inject_double)
+                   now (eauto using val_inject_single, val_inject_double)
                end
-           )$
+           )
         );
       let v := fresh in
       let Hv := fresh in
       let INJ := fresh in
       destruct K as (v & Hv & INJ);
         match type of INJ with
-            Clight2FP.val_inject _ _ ?z =>
+            val_inject _ _ ?z =>
             generalize (eqpivot z)
         end;
         let o := fresh in
@@ -182,7 +182,7 @@ Ltac C_to_float_aux k ge lenv tenv m e :=
           rewrite OL in INJ;
           vm_compute in INJ, o;
           match type of INJ with
-              Clight2FP.val_inject _ ?ty _ =>
+              val_inject _ ?ty _ =>
               let b := (eval cbn in (type_eqb ty Tsingle)) in
               match b with
                 | true => apply val_inject_single_left_inv in INJ

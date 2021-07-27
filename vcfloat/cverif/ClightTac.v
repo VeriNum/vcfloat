@@ -52,18 +52,13 @@ Helpers for CompCert Clight structured control and temporary
 variables.
 *)
 
-Require Export Coqlib.
-Require Export compcert.Integers.
-Require Export Values.
-Require Export Events.
-Require Export Smallstep.
-Require Export Ctypes.
-Require Export Cop.
-Require Export Clight.
-Require Export Clightdefs.
-Require Export ClightBigstep2.
+From compcert.lib Require Export Coqlib Integers.
+From compcert.common Require Export Values Events Smallstep.
+From compcert.cfrontend Require Export Ctypes Cop Clight.
+From compcert.exportclight Require Export Clightdefs.
+Require Export cverif.ClightBigstep2.
 Require Export LibTac.
-Require Export ClightFacts.
+Require Export cverif.ClightFacts.
 Require Export Reals Psatz.
 Require Export ZArith.
 Require Export Morphisms.
@@ -272,7 +267,7 @@ Qed.
 Ltac call_fn :=
   match goal with
       |- exists s,
-           step2 ?ge (Callstate (Clight.Internal ?f) ?l _ ?m) _ _ /\ _ =>
+           step2 ?ge (Callstate (Ctypes.Internal ?f) ?l _ ?m) _ _ /\ _ =>
       let j := fresh in
       let JL := fresh in
       let JR := fresh in
@@ -324,7 +319,7 @@ Qed.
 
 (* Some "program logic"-like proof rules *)
 
-Require Import Globalenvs.
+Require Import compcert.common.Globalenvs.
 
 Lemma step_exists_seq (P: _ -> Prop) f u1 u2 k lenv tenv m ge:
   P (State f u1 (Kseq u2 k) lenv tenv m)
@@ -369,7 +364,7 @@ Lemma eval_exists_Evar_global v (P: _ -> Prop) (ge: genv) tenv m ty:
     Ctypes.access_mode ty = Ctypes.By_reference /\
     exists l,
       Genv.find_symbol ge v = Some l /\
-      P (Vptr l Integers.Int.zero)
+      P (Vptr l Integers.Ptrofs.zero)
   ) ->
   exists vf,
     eval_expr ge empty_env tenv m (Evar v ty) vf /\ P vf.
@@ -402,7 +397,7 @@ Fixpoint eval_exprlist_exists ge lenv tenv m (l: list Clight.expr) (lt: Ctypes.t
           exists v1,
             eval_expr ge lenv tenv m e1 v1 /\
             exists v2,
-              Cop.sem_cast v1 (typeof e1) ty1 = Some v2 /\
+              Cop.sem_cast v1 (typeof e1) ty1 m = Some v2 /\
               eval_exprlist_exists ge lenv tenv m l' lt' (fun l_ => P (v2 :: l_))
         | _ => False
       end
@@ -596,7 +591,7 @@ Lemma step_exists_assign ge f a1 a2 k e le m (P: _ -> Prop):
       exists v2,
         eval_expr ge e le m a2 v2 /\
         exists v,
-          Cop.sem_cast v2 (typeof a2) (typeof a1) = Some v /\
+          Cop.sem_cast v2 (typeof a2) (typeof a1) m = Some v /\
           exists m',
             assign_loc ge (typeof a1) m loc ofs v m' /\
             P (State f Sskip k e le m')
@@ -759,7 +754,7 @@ Proof.
   eauto.
 Qed.
 
-Require compcert.Clightdefs.
+Require compcert.exportclight.Clightdefs.
 
 Lemma eval_exists_Ole_double ge le te m u1 u2 (P: _ -> Prop):
   (exists f1,
@@ -876,11 +871,11 @@ Qed.
 Lemma sem_cast_double_int_exists bin (P: _ -> Prop):
   (
     exists v,
-      Float.to_int bin = Some v /\
+      Floats.Float.to_int bin = Some v /\
       P (Vint v)
   ) ->
-  exists v,
-    Cop.sem_cast (Vfloat bin) tdouble tint = Some v /\ P v.
+  exists v, forall m,
+    Cop.sem_cast (Vfloat bin) tdouble tint m = Some v /\ P v.
 Proof.
   intros (v & Hv & HP).
   cbn.
@@ -889,20 +884,20 @@ Proof.
 Qed.
 
 Lemma Rle_dec_to_bool a b:
-  sumbool_to_bool (Rle_dec a b) = Fcore_Raux.Rle_bool a b.
+  sumbool_to_bool (Rle_dec a b) = Raux.Rle_bool a b.
 Proof.
   symmetry.
-  destruct (Rle_dec a b); simpl; auto using Fcore_Raux.Rle_bool_true.
-  apply Fcore_Raux.Rle_bool_false.
+  destruct (Rle_dec a b); simpl; auto using Raux.Rle_bool_true.
+  apply Raux.Rle_bool_false.
   lra.
 Qed.
 
 Lemma Rlt_dec_to_bool a b:
-  sumbool_to_bool (Rlt_dec a b) = Fcore_Raux.Rlt_bool a b.
+  sumbool_to_bool (Rlt_dec a b) = Raux.Rlt_bool a b.
 Proof.
   symmetry.
-  destruct (Rlt_dec a b); simpl; auto using Fcore_Raux.Rlt_bool_true.
-  apply Fcore_Raux.Rlt_bool_false.
+  destruct (Rlt_dec a b); simpl; auto using Raux.Rlt_bool_true.
+  apply Raux.Rlt_bool_false.
   lra.
 Qed.
 
@@ -947,7 +942,7 @@ Lemma eval_exists_Ecast ge e le m (a : expr) (ty : type) (P: _ -> Prop):
   (exists v1,
      eval_expr ge e le m a v1 /\
      exists v,
-       Cop.sem_cast v1 (typeof a) ty = Some v /\
+       Cop.sem_cast v1 (typeof a) ty m = Some v /\
        P v) ->
   exists v,
     eval_expr ge e le m (Ecast a ty) v /\
@@ -1001,7 +996,7 @@ Ltac pattern_expr i ep e :=
     | Efield ?e1 ?f ?ty =>
       let e2 := pattern_expr i ep e1 in
       constr:(Efield e2 f ty)
-    | _ => constr:e
+    | _ => constr:(e)
   end. 
 
 Fixpoint typelist_of_list_type (l: list Ctypes.type): typelist :=
@@ -1009,6 +1004,8 @@ Fixpoint typelist_of_list_type (l: list Ctypes.type): typelist :=
     | nil => Ctypes.Tnil
     | cons a q => Ctypes.Tcons a (typelist_of_list_type q)
   end.
+
+Import AST.
 
 Fixpoint alloc_variables_prop (l: list (ident * type)) (Q: env -> Memory.Mem.mem -> Prop) (ge: genv) (le: env) (m: Memory.Mem.mem) {struct l}: Prop :=
   match l with
@@ -1044,21 +1041,21 @@ Proof.
   econstructor; eauto.
 Qed.
 
-Definition outcome_result_value_exists (out: outcome) (t: type) (P: _ -> Prop) :=
+Definition outcome_result_value_exists (out: outcome) (t: type) m (P: _ -> Prop) :=
   match out, t with
-    | Out_normal, Tvoid => P Vundef
-    | Out_return None, Tvoid => P Vundef
-    | Out_return (Some (v', t')), ty => ty <> Tvoid /\
+    | Out_normal, Ctypes.Tvoid => P Vundef
+    | Out_return None, Ctypes.Tvoid => P Vundef
+    | Out_return (Some (v', t')), ty => ty <> Ctypes.Tvoid /\
                                         exists v,
-                                          Cop.sem_cast v' t' t = Some v /\
+                                          Cop.sem_cast v' t' t m = Some v /\
                                           P v
     | _, _ => False
   end.
 
-Lemma outcome_result_value_exists_correct out t (P: _ -> Prop):
-  outcome_result_value_exists out t P ->
+Lemma outcome_result_value_exists_correct out t m (P: _ -> Prop):
+  outcome_result_value_exists out t m P ->
   exists v,
-    outcome_result_value out t v /\ P v.
+    outcome_result_value out t m v /\ P v.
 Proof.
   destruct out; simpl; try tauto.
   {
@@ -1095,11 +1092,11 @@ Lemma eval_funcall_exists_internal ge m f vargs (P: _ -> _ -> Prop):
               /\
               exists m3,
                 Memory.Mem.free_list m2 (blocks_of_env ge le1) = Some m3 /\
-                outcome_result_value_exists out (fn_return f) (P m3)
+                outcome_result_value_exists out (fn_return f) m2 (P m3)
       ) ge empty_env m
   ) ->
   exists m_ vres,
-    eval_funcall ge m (Clight.Internal f) vargs E0 m_ vres /\
+    eval_funcall ge m (Ctypes.Internal f) vargs E0 m_ vres /\
     P m_ vres
 .  
 Proof.
@@ -1121,8 +1118,9 @@ Proof.
   destruct H0 as (? & ? & ?).
   esplit.
   esplit.
-  split; eauto.
+  split.
   eapply eval_funcall_internal; eauto.
+  auto.
 Qed.
 
 
@@ -1251,12 +1249,12 @@ Lemma exec_Sassign_exists
               (m : Memory.Mem.mem) (a1 a2 : expr)
               (P: _ -> _ -> _ -> Prop),
          (exists 
-             (loc : block) (ofs : int),
+             (loc : block) (ofs : ptrofs),
              eval_lvalue ge e le m a1 loc ofs /\
              exists v2,
                eval_expr ge e le m a2 v2 /\
                exists (v : val),
-                 Cop.sem_cast v2 (typeof a2) (typeof a1) = Some v /\
+                 Cop.sem_cast v2 (typeof a2) (typeof a1) m = Some v /\
                  exists (m' : Memory.Mem.mem),
                    assign_loc ge (typeof a1) m loc ofs v m' /\
                    P le m' Out_normal
@@ -1341,11 +1339,11 @@ Lemma eval_lvalue_exists_Evar (ge: genv) le te m id ty (P: _ -> _ -> Prop):
       match u with
         | Some (l, ty_) =>
           ty_ = ty /\
-          P l Integers.Int.zero
+          P l Integers.Ptrofs.zero
         | None =>
           exists l,
             Globalenvs.Genv.find_symbol ge id = Some l /\
-            P l Integers.Int.zero
+            P l Integers.Ptrofs.zero
       end
   ) ->
   exists l o,
@@ -1615,7 +1613,7 @@ Proof.
   econstructor; eauto.
 Qed.
 
-Definition deref_loc_exists (mo: mode) (m: Memory.Mem.mem) (b: block) (ofs: int) (P: val -> Prop) :=
+Definition deref_loc_exists (mo: mode) (m: Memory.Mem.mem) (b: block) (ofs: ptrofs) (P: val -> Prop) :=
   match mo with
     | By_value chunk =>
       exists v,
@@ -1685,7 +1683,7 @@ Ltac eval_Elvalue_exists :=
 
 Lemma eval_exists_Eaddrof (ge : genv) (e : env) (le : temp_env) (m : Memory.Mem.mem)
      (a : expr) (ty : type) (P: _ -> Prop):
-  (exists (loc : block) (ofs : int),
+  (exists (loc : block) (ofs : ptrofs),
      eval_lvalue ge e le m a loc ofs /\
      P (Vptr loc ofs)) ->
   exists v,

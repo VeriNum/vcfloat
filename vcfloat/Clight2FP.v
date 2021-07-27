@@ -53,7 +53,7 @@ floating-point expression into a real-number expression with all
 rounding error terms and their correctness proofs.
 **)
 
-Require Export Omega.
+Require Export Lia.
 Require Export FPLang FPSolve.
 Require Export compcert.cfrontend.Clight.
 Require Export cverif.ClightFacts.
@@ -301,25 +301,27 @@ Proof.
   destruct f; simpl; intuition congruence.
 Qed.
 
+Import FPLang.
+
 Theorem static_float_correct'
       (conv_nan_single_double:
-         conv_nan Tsingle Tdouble = Floats.Float.of_single_pl)
+         conv_nan Tsingle Tdouble = Floats.Float.of_single_nan)
       (conv_nan_double_single:
-         conv_nan Tdouble Tsingle = Floats.Float.to_single_pl)
+         conv_nan Tdouble Tsingle = Floats.Float.to_single_nan)
 
-      (plus_nan_single: plus_nan Tsingle = Floats.Float32.binop_pl)
-      (plus_nan_double: plus_nan Tdouble = Floats.Float.binop_pl)
+      (plus_nan_single: plus_nan Tsingle = Floats.Float32.binop_nan)
+      (plus_nan_double: plus_nan Tdouble = Floats.Float.binop_nan)
 
-      (mult_nan_single: mult_nan Tsingle = Floats.Float32.binop_pl)
-      (mult_nan_double: mult_nan Tdouble = Floats.Float.binop_pl)
+      (mult_nan_single: mult_nan Tsingle = Floats.Float32.binop_nan)
+      (mult_nan_double: mult_nan Tdouble = Floats.Float.binop_nan)
 
-      (div_nan_single: div_nan Tsingle = Floats.Float32.binop_pl)
-      (div_nan_double: div_nan Tdouble = Floats.Float.binop_pl)
+      (div_nan_single: div_nan Tsingle = Floats.Float32.binop_nan)
+      (div_nan_double: div_nan Tdouble = Floats.Float.binop_nan)
 
-      (abs_nan_double: abs_nan Tdouble = Floats.Float.abs_pl)
+      (abs_nan_double: abs_nan Tdouble = Floats.Float.abs_nan)
 
-      (opp_nan_single: opp_nan Tsingle = Floats.Float32.neg_pl)
-      (opp_nan_double: opp_nan Tdouble = Floats.Float.neg_pl)
+      (opp_nan_single: opp_nan Tsingle = Floats.Float32.neg_nan)
+      (opp_nan_double: opp_nan Tdouble = Floats.Float.neg_nan)
 
       m me env
       ge ce mm
@@ -612,7 +614,7 @@ Proof.
     fold ty' in f_cast.
     assert (
       forall
-        f_double f_single
+        f_double f_single m
       ,
         exists v,
           (forall f_int f_long,
@@ -620,7 +622,7 @@ Proof.
                              (fun n1 n2 => Some (Values.Vfloat (f_double n1 n2)))
                              (fun n1 n2 => Some (Values.Vsingle (f_single n1 n2)))
                              v1 (Ctypes.Tfloat f a)
-                             v2 (Ctypes.Tfloat f0 a0) = Some v) /\
+                             v2 (Ctypes.Tfloat f0 a0) m = Some v) /\
             val_inject v ty'
                        (
                          f_cast f_single f_double
@@ -716,7 +718,7 @@ Proof.
       (* plus *)
       specialize (TH
                     Floats.Float.add
-                    Floats.Float32.add ).
+                    Floats.Float32.add mm ).
       destruct TH as (v & Hv & INJ).
       esplit.
       split.
@@ -761,7 +763,7 @@ Proof.
       (* minus *)
       specialize (TH
                     Floats.Float.sub
-                    Floats.Float32.sub ).
+                    Floats.Float32.sub mm ).
       destruct TH as (v & Hv & INJ).
       esplit.
       split.
@@ -806,7 +808,7 @@ Proof.
       (* mult *)
       specialize (TH
                     Floats.Float.mul
-                    Floats.Float32.mul ).
+                    Floats.Float32.mul mm).
       destruct TH as (v & Hv & INJ).
       esplit.
       split.
@@ -850,7 +852,7 @@ Proof.
       (* div *)
       specialize (TH
                     Floats.Float.div
-                    Floats.Float32.div ).
+                    Floats.Float32.div mm).
       destruct TH as (v & Hv & INJ).
       esplit.
       split.
