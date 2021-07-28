@@ -1,4 +1,4 @@
-Require Import FPLang FPLangOpt FPSolve.
+From vcfloat Require Import FPLang FPLangOpt FPSolve.
 Require Import compcert.common.AST compcert.common.Values.
 Require Import compcert.lib.Floats.
 Import Binary.

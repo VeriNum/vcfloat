@@ -54,9 +54,9 @@ rounding error terms and their correctness proofs.
 **)
 
 Require Export Lia.
-Require Export FPLang FPSolve.
+From vcfloat Require Export FPLang FPSolve.
 Require Export compcert.cfrontend.Clight.
-Require Export cverif.ClightFacts.
+Require Export vcfloat.cverif.ClightFacts.
 
 Section WITHNANS.
 Context {NANS: Nans}.

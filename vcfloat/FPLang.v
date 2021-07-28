@@ -52,13 +52,13 @@ VCFloat: core and annotated languages for floating-point operations.
 *)
 
 Require Import Lia Lra.
-Require Export RAux.
+From vcfloat Require Export RAux.
 From Flocq Require Import Binary Bits Core.
 From compcert Require Import lib.IEEE754_extra.
 Require compcert.lib.Maps.  
 Require Coq.MSets.MSetAVL.
 Require Import Interval.Tactic.
-Require Fprop_absolute.
+Require vcfloat.Fprop_absolute.
 Global Unset Asymmetric Patterns. (* because "Require compcert..." sets it *)
 
 Module MSET := MSetAVL.Make(Nat).

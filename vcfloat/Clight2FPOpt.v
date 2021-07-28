@@ -53,11 +53,8 @@ expression into a real-number expression with all rounding error terms
 and their correctness proofs.
 **)
 
-Require Export RAux.
-Require Export Clight2FP.
-Require Export LibTac.
-Require Export FPLangOpt.
-      
+From vcfloat Require Export RAux Clight2FP LibTac FPLangOpt.
+
 Local Existing Instance nans.
 
 Definition static_float m e :=

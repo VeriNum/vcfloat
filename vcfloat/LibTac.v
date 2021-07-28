@@ -202,7 +202,7 @@ Definition sumbool_to_bool {A B} (u: {A} + {B}): bool :=
 
 Coercion sumbool_to_bool: sumbool >-> bool.
 
-Require Import ZArith Reals RAux.
+Require Import ZArith Reals vcfloat.RAux.
 Import List.
 
 Lemma rememb {A} (a: A): {x | x = a}.

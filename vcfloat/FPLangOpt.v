@@ -52,11 +52,11 @@ VCFloat: helpers for correct optimization of rounding error terms in
 the real-number semantics of floating-point computations.
 **)
 
-Require Export FPLang.
+Require Export vcfloat.FPLang.
 Import RAux.
 Import compcert.lib.IEEE754_extra.
-Require Export LibTac.
-Require Export BigRAux.
+Require Export vcfloat.LibTac.
+Require Export vcfloat.BigRAux.
 
 Definition rounded_binop_eqb (r1 r2: rounded_binop): bool :=
   match r1, r2 with

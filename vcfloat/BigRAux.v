@@ -52,8 +52,8 @@ Auxiliary theorems for the real-number semantics of big rational
 numbers.
 *)
 
-Require Export BigQAux.
-Require Export Q2RAux.
+Require Export vcfloat.BigQAux.
+Require Export vcfloat.Q2RAux.
 Require Export Flocq.Core.Raux.
 Open Scope R_scope.
 
