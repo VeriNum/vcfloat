@@ -1,3 +1,8 @@
+(** Test.v:  some experiments with application of VCFloat.
+ Copyright (C) 2021 Andrew W. Appel.  Licensed with the same open-source
+ license (GNU GPL v3 or later) as the rest of VCFloat.
+*)
+
 From vcfloat Require Import FPLang FPLangOpt FPSolve.
 Require Import compcert.common.AST compcert.common.Values.
 Require Import compcert.lib.Floats.
