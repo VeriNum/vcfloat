@@ -52,11 +52,11 @@ VCFloat: helpers for correct optimization of rounding error terms in
 the real-number semantics of floating-point computations.
 **)
 
-Require Export FPLang.
+Require Export vcfloat.FPLang.
 Import RAux.
-Import Flocq.Appli.Fappli_IEEE.
-Import compcert.Fappli_IEEE_extra.
-Require Export LibTac.
+Import compcert.lib.IEEE754_extra.
+Require Export vcfloat.LibTac.
+Require Export vcfloat.BigRAux.
 
 Definition rounded_binop_eqb (r1 r2: rounded_binop): bool :=
   match r1, r2 with
@@ -327,7 +327,7 @@ Qed.
 
 Lemma is_finite_eq_rect_r ty1 ty2 (f: ftype ty2)
       (EQ: ty1 = ty2):
-  is_finite _ _ (eq_rect_r _ f EQ) = is_finite _ _ f.
+  Binary.is_finite _ _ (eq_rect_r _ f EQ) = Binary.is_finite _ _ f.
 Proof.
   subst.
   reflexivity.
@@ -335,24 +335,25 @@ Qed.
 
 Lemma B2R_eq_rect_r ty1 ty2 (f: ftype ty2)
       (EQ: ty1 = ty2):
-  B2R _ _ (eq_rect_r _ f EQ) = B2R _ _ f.
+  Binary.B2R _ _ (eq_rect_r _ f EQ) = Binary.B2R _ _ f.
 Proof.
   subst.
   reflexivity.
 Qed.
 
-(* Identification of shifts *)
-Require Export BigRAux.
+Import Qreals.
+Open Scope R_scope.
 
-Definition F2BigQ (beta : Fcore_Zaux.radix) (f : Fcore_defs.float beta) :=
+(* Identification of shifts *)
+Definition F2BigQ (beta : Zaux.radix) (f : Defs.float beta) :=
   match f with
-    | {| Fcore_defs.Fnum := Fnum; Fcore_defs.Fexp := Fexp |} =>
-      BigQ.mul (BigQ.Qz (BigZ.of_Z Fnum)) (BigQ.power (BigQ.Qz (BigZ.of_Z (Fcore_Zaux.radix_val beta))) Fexp)
+    | {| Defs.Fnum := Fnum; Defs.Fexp := Fexp |} =>
+      BigQ.mul (BigQ.Qz (BigZ.of_Z Fnum)) (BigQ.power (BigQ.Qz (BigZ.of_Z (Zaux.radix_val beta))) Fexp)
   end.
 
 Lemma Q2R_Qpower_positive p:
   forall q,
-    Qreals.Q2R (Qpower_positive q p) = Qreals.Q2R q ^ Pos.to_nat p.
+    Q2R (Qpower_positive q p) = Q2R q ^ Pos.to_nat p.
 Proof.
   induction p.
   {
@@ -382,13 +383,13 @@ Qed.
 
 Lemma Q2R_pow q z:
   ~ q == 0%Q ->
-  Qreals.Q2R (q ^ z) = powerRZ (Qreals.Q2R q) z.
+  Q2R (q ^ z) = powerRZ (Q2R q) z.
 Proof.
   intros.
   unfold powerRZ, Qpower.
   destruct z.
   {
-    unfold Qreals.Q2R. simpl. field.
+    unfold Q2R. simpl. field.
   }
   {
     apply Q2R_Qpower_positive.
@@ -411,26 +412,24 @@ Proof.
   rewrite BigQ.spec_power.
   repeat rewrite to_Q_bigZ.
   repeat rewrite BigZ.spec_of_Z.
-  rewrite Q2R_correct.
   rewrite Q2R_mult.
   rewrite Q2R_pow.
   {
-    repeat rewrite <- Q2R_correct.
     repeat rewrite Q2R_inject_Z.
-    repeat rewrite <- Fcore_Raux.Z2R_IZR.
-    rewrite <- Fcore_Raux.bpow_powerRZ.
+    repeat rewrite <- Z2R_IZR.
+    rewrite <- bpow_powerRZ.
     reflexivity.
   }
   replace 0%Q with (inject_Z 0) by reflexivity.
   rewrite inject_Z_injective.
-  generalize (Fcore_Zaux.radix_gt_0 beta).
-  omega.
+  generalize (Zaux.radix_gt_0 beta).
+  lia.
 Qed.
 
 Definition B2BigQ {prec emax} b := F2BigQ _ (@B2F prec emax b).
 
 Lemma B2BigQ2R {prec emax} b:
-  B2R prec emax b = BigQ2R (B2BigQ b).
+  Binary.B2R prec emax b = BigQ2R (B2BigQ b).
 Proof.
   unfold B2BigQ.
   rewrite F2BigQ2R.
@@ -452,13 +451,13 @@ Fixpoint blog (base: bigZ) (accu: nat) (z: bigZ) (fuel: nat) {struct fuel}: nat 
         else O
   end.
 
-Definition to_power_2 {prec emax} (x: binary_float prec emax) :=
+Definition to_power_2 {prec emax} (x: Binary.binary_float prec emax) :=
   let y := B2BigQ x in
   let '(q, r) := BigZ.div_eucl (Bnum y) (BigZ.Pos (Bden y)) in
   N.of_nat (blog (BigZ.of_Z 2) O q (Z.to_nat emax))
 .
 
-Definition to_inv_power_2 {prec emax} (x: binary_float prec emax) :=
+Definition to_inv_power_2 {prec emax} (x: Binary.binary_float prec emax) :=
   let y := BigQ.inv (B2BigQ x) in
   let '(q, r) := BigZ.div_eucl (Bnum y) (BigZ.Pos (Bden y)) in
   Pos.of_nat (blog (BigZ.of_Z 2) O q (Z.to_nat emax))

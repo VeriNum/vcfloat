@@ -1,5 +1,5 @@
 dir-locals
-Makefile
+#Makefile
 *.aux
 .dir-locals.el
 *.glob
