@@ -196,10 +196,9 @@ Proof.
 Qed.
 
 Definition calling_convention_eqb s1 s2 :=
-  andb (Bool.eqb (AST.cc_vararg s1) (AST.cc_vararg s2))
+  andb (option_eqb Z.eqb (AST.cc_vararg s1) (AST.cc_vararg s2))
        (andb (Bool.eqb (AST.cc_unproto s1) (AST.cc_unproto s2))
-            (Bool.eqb (AST.cc_structret s1) (AST.cc_structret s2)))
-.
+            (Bool.eqb (AST.cc_structret s1) (AST.cc_structret s2))).
 
 Lemma calling_convention_eqb_eq s1 s2:
   calling_convention_eqb s1 s2 = true <-> s1 = s2.
@@ -207,6 +206,7 @@ Proof.
   unfold calling_convention_eqb.
   destruct s1; destruct s2; simpl.
   repeat rewrite Bool.andb_true_iff.
+  rewrite (option_eqb_eq (Z.eqb_eq)).
   repeat rewrite Bool.eqb_true_iff.
   intuition congruence.
 Qed.
