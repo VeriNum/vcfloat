@@ -182,13 +182,6 @@ Definition fcval_nonrec (e: expr): option (ftype (type_of_expr e)) :=
     | _ => None
   end.
 
-Definition fcval_nonrec2 (e: expr) env: option (ftype (type_of_expr e)) :=
-  match e as e' return option (ftype (type_of_expr (V := V) e')) with
-    | Const ty f => Some f
-    | Var ty i => Some (env ty i)
-    | _ => None
-  end.
-
 Lemma fcval_nonrec_correct e:
   forall v, fcval_nonrec e = Some v ->
             forall env, fval env e = v.
@@ -785,6 +778,7 @@ Definition to_power_2_pos {prec emax} (x: Binary.binary_float prec emax) :=
   Pos.of_nat (blog (BigZ.of_Z 2) O q (Z.to_nat emax))
 .
 
+
 Fixpoint fshift_div env (e: FPLang.expr) {struct e}: FPLang.expr :=
   match e with
     | Binop b e1 e2 =>
@@ -797,15 +791,24 @@ Fixpoint fshift_div env (e: FPLang.expr) {struct e}: FPLang.expr :=
                 let c2 := cast ty _ c2' in
                 match (Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) c2) with
                   | Some z' => 
-                    let fin := (eqb (Binary.is_finite _ _ (fval env e'1)) true) in 
                     let n1 := to_power_2_pos c2 in
-                    if (binary_float_eqb z' (B2 ty (Z.neg n1))) && fin
-                    then Unop (Exact1 (InvShift n1 true)) (Unop (CastTo ty None) e'1)
+                    if (type_eqb Tsingle ty || type_eqb Tdouble ty) then
+                      if binary_float_eqb z' (B2 ty (Z.neg n1))
+                      then Unop (Exact1 (InvShift n1 true)) (Unop (CastTo ty None) e'1)
+                      else
+                      let n2 := to_inv_power_2 c2 in
+                      if binary_float_eqb z' (B2 ty (Z.pos n2))
+                      then Unop (Exact1 (Shift (N.of_nat (Pos.to_nat n2)) true)) (Unop (CastTo ty None) e'1)
+                      else Binop b e'1 e'2
                     else
-                    let n2 := to_inv_power_2 c2 in
-                    if (binary_float_eqb z' (B2 ty (Z.pos n2))) && fin
-                    then Unop (Exact1 (Shift (N.of_nat (Pos.to_nat n2)) true)) (Unop (CastTo ty None) e'1)
-                    else Binop b e'1 e'2
+                      let fin := (eqb (Binary.is_finite _ _ (fval env e'1)) true) in 
+                      if (binary_float_eqb z' (B2 ty (Z.neg n1))) && fin
+                      then Unop (Exact1 (InvShift n1 true)) (Unop (CastTo ty None) e'1)
+                      else
+                      let n2 := to_inv_power_2 c2 in
+                      if (binary_float_eqb z' (B2 ty (Z.pos n2))) && fin
+                      then Unop (Exact1 (Shift (N.of_nat (Pos.to_nat n2)) true)) (Unop (CastTo ty None) e'1)
+                      else Binop b e'1 e'2
                   | None => Binop b e'1 e'2
                 end
              | None => Binop b e'1 e'2
@@ -843,6 +846,12 @@ Proof.
           end;
             simpl.
         {
+          match goal with
+              |- type_of_expr (if ?v then _ else _) = _ =>
+              destruct v
+          end;
+            simpl.
+        {
           unfold Datatypes.id.
           congruence.
         }
@@ -858,8 +867,23 @@ Proof.
           congruence.
 }
 }
-        simpl.
-        congruence.
+          match goal with
+              |- type_of_expr (if ?v then _ else _) = _ =>
+              destruct v
+          end;
+            simpl.
+        {
+          unfold Datatypes.id.
+          congruence.
+}
+          match goal with
+              |- type_of_expr (if ?v then _ else _) = _ =>
+              destruct v
+          end;
+            simpl.
+{
+          unfold Datatypes.id.
+          congruence.
 }
         simpl.
         congruence.
@@ -867,7 +891,13 @@ Proof.
         simpl.
         congruence.
 }
+        simpl.
         congruence.
+}
+        simpl.
+        congruence.
+}
+congruence. 
 Defined. 
 
 Lemma fshift_div_correct' env e:
