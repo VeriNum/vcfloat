@@ -182,12 +182,32 @@ Definition fcval_nonrec (e: expr): option (ftype (type_of_expr e)) :=
     | _ => None
   end.
 
+Definition fcval_nonrec2 (e: expr) env: option (ftype (type_of_expr e)) :=
+  match e as e' return option (ftype (type_of_expr (V := V) e')) with
+    | Const ty f => Some f
+    | Var ty i => Some (env ty i)
+    | _ => None
+  end.
+
 Lemma fcval_nonrec_correct e:
   forall v, fcval_nonrec e = Some v ->
             forall env, fval env e = v.
 Proof.
   destruct e; simpl; try discriminate.
   intros; congruence.
+Qed.
+
+Lemma fcval_nonrec2_correct e:
+  forall env v, (fcval_nonrec2 e env) = Some v ->
+             fval env e = v.
+Proof.
+  destruct e; simpl; try discriminate.
+{
+  intros; congruence.
+}
+{
+  intros; congruence.
+}
 Qed.
 
 Definition option_pair_of_options {A B} (a: option A) (b: option B) :=
@@ -470,7 +490,7 @@ Fixpoint fshift (e: FPLang.expr) {struct e}: FPLang.expr :=
       let e'2 := fshift e2 in
       if binop_eqb b (Rounded2 MULT None)
       then
-        let ty := type_lub (type_of_expr e'1) (type_of_expr e'2) in
+      let ty := type_lub (type_of_expr e'1) (type_of_expr e'2) in
         match fcval_nonrec e'1 with
           | Some c1' =>
             let c1 := cast ty _ c1' in
@@ -533,23 +553,19 @@ Proof.
         match goal with
             |- type_of_expr (if ?v then _ else _) = _ =>
             destruct v
-        end; simpl;
-        unfold Datatypes.id;
-        congruence.
-      }
+        end; simpl.
+        {
+          unfold Datatypes.id.
+          congruence.
+        }
+          congruence.
+}
       destruct (fcval_nonrec (fshift e2)).
-      {
-        revert IHe2 f. 
-        generalize (fshift e2).
-        intros until 1.
-        rewrite IHe2.
-        intros.
-        simpl.
+ {
         match goal with
             |- type_of_expr (if ?v then _ else _) = _ =>
             destruct v
-        end;
-          simpl.
+        end; simpl.
         {
           unfold Datatypes.id.
           congruence.
@@ -557,18 +573,22 @@ Proof.
         match goal with
             |- type_of_expr (if ?v then _ else _) = _ =>
             destruct v
-        end; simpl;
+        end; simpl.
+        {
         unfold Datatypes.id;
         congruence.
       }
-      simpl.
-      congruence.
+        congruence.
+      }
+        simpl.
+        congruence.
+}
+    simpl.
+    congruence.
     }
     simpl.
     congruence.
-  }
-  congruence.
-Defined. (* needed because of eq_rect_r *)
+Defined. 
 
 Lemma fshift_correct' env e:
  binary_float_eqb (fval env (fshift e)) (fval env e) = true.
@@ -625,6 +645,7 @@ Proof.
         end;
           simpl.
         {
+          unfold Datatypes.id.
           unfold cast_lub_l.
           unfold cast_lub_r.
           revert IHe2.
@@ -635,7 +656,7 @@ Proof.
           apply binary_float_eqb_eq in IHe2.
           subst.
           apply binary_float_eqb_eq in FEQ.
-          rewrite <- FEQ.
+                   rewrite <- FEQ.
           apply binary_float_eqb_eq.
           reflexivity.
         }
@@ -754,6 +775,373 @@ Proof.
   apply binary_float_eqb_eq_strong.
   apply fshift_correct'.
 Qed.
+
+
+(* BEGIN - A.E.K additions for converting expressions withe exact division
+by powers of two. *)
+Definition to_power_2_pos {prec emax} (x: Binary.binary_float prec emax) :=
+  let y := B2BigQ x in
+  let '(q, r) := BigZ.div_eucl (Bnum y) (BigZ.Pos (Bden y)) in
+  Pos.of_nat (blog (BigZ.of_Z 2) O q (Z.to_nat emax))
+.
+
+Fixpoint fshift_div env (e: FPLang.expr) {struct e}: FPLang.expr :=
+  match e with
+    | Binop b e1 e2 =>
+      let e'1 := fshift_div env e1 in
+      let e'2 := fshift_div env e2 in
+      if binop_eqb b (Rounded2 DIV None) then
+      let ty := type_lub (type_of_expr e'1) (type_of_expr e'2) in
+      match (fcval_nonrec e'2) with
+            | Some c2' =>
+                let c2 := cast ty _ c2' in
+                match (Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) c2) with
+                  | Some z' => 
+                    let fin := (eqb (Binary.is_finite _ _ (fval env e'1)) true) in 
+                    let n1 := to_power_2_pos c2 in
+                    if (binary_float_eqb z' (B2 ty (Z.neg n1))) && fin
+                    then Unop (Exact1 (InvShift n1 true)) (Unop (CastTo ty None) e'1)
+                    else
+                    let n2 := to_inv_power_2 c2 in
+                    if (binary_float_eqb z' (B2 ty (Z.pos n2))) && fin
+                    then Unop (Exact1 (Shift (N.of_nat (Pos.to_nat n2)) true)) (Unop (CastTo ty None) e'1)
+                    else Binop b e'1 e'2
+                  | None => Binop b e'1 e'2
+                end
+             | None => Binop b e'1 e'2
+         end
+      else
+        Binop b e'1 e'2
+    | Unop b e => Unop b (fshift_div env e)
+    | _ => e
+  end.
+
+
+Lemma fshift_type_div env e:
+  type_of_expr (fshift_div env e) = type_of_expr e.
+Proof.
+   induction e; simpl; auto.
+  {
+    destruct (binop_eqb b (Rounded2 DIV None)) eqn:EQ.
+    {
+      apply binop_eqb_eq in EQ.
+      subst.
+      simpl.
+      destruct (fcval_nonrec (fshift_div env e2)).
+      {
+        revert IHe2 f. 
+        generalize (fshift_div env e2).
+        intros until 1.
+        rewrite IHe2.
+        intros.
+        simpl.
+        destruct (Bexact_inverse _ ). 
+        {
+          match goal with
+              |- type_of_expr (if ?v then _ else _) = _ =>
+              destruct v
+          end;
+            simpl.
+        {
+          unfold Datatypes.id.
+          congruence.
+        }
+        {
+        match goal with
+            |- type_of_expr (if ?v then _ else _) = _ =>
+            destruct v
+        end; simpl.
+        {
+          unfold Datatypes.id.
+          congruence.
+        }
+          congruence.
+}
+}
+        simpl.
+        congruence.
+}
+        simpl.
+        congruence.
+}
+        simpl.
+        congruence.
+}
+        congruence.
+Defined. 
+
+Lemma fshift_div_correct' env e:
+ binary_float_eqb (fval env (fshift_div env e)) (fval env e) = true.
+Proof.
+  induction e; cbn [fshift_div].
+  {
+    apply binary_float_eqb_eq. reflexivity.
+  }
+  {
+    apply binary_float_eqb_eq. reflexivity.
+  }
+  {
+    destruct (binop_eqb b (Rounded2 DIV None)) eqn:ISDIV.
+    {
+      apply binop_eqb_eq in ISDIV.
+      subst.
+      destruct (fcval_nonrec (fshift_div env e1)) eqn:E1.
+          { (* case Some e1*)
+              generalize (fshift_type_div env e1).
+        destruct (fshift_div env e1); try discriminate.
+        simpl in E1.
+        simpl in f.
+        inversion E1; clear E1; subst.
+        simpl in IHe1.
+        simpl.
+        intros.
+        subst.
+        apply binary_float_eqb_eq in IHe1.
+        subst.
+   destruct (fcval_nonrec (fshift_div env e2)) eqn:E2.
+      {
+        generalize (fshift_type_div env e2).
+        destruct (fshift_div env e2); try discriminate.
+        simpl in E2.
+        simpl in f.
+        inversion E2; clear E2; subst.
+        simpl in IHe2.
+        simpl.
+        intros.
+        subst.
+        apply binary_float_eqb_eq in IHe2.
+        subst.
+             destruct (Bexact_inverse _ ) eqn:EINV. 
+              {
+                match goal with
+                  |- binary_float_eqb (fval env (if ?b then _ else _)) _ = _ =>
+                  destruct b eqn:FEQ
+                end.
+                {
+                simpl. rewrite ?andb_true_iff in FEQ; destruct FEQ as [FEQ FIN]. 
+                  unfold cast_lub_l.
+                  unfold cast_lub_r.
+                   apply binary_float_eqb_eq in FEQ.
+                  apply eqb_prop in FIN.
+                  set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
+                  change (Z.max (femax (type_of_expr e1)) (femax (type_of_expr e2))) with (femax ty) in *.
+                  pose proof type_lub_left (type_of_expr e1) (type_of_expr e2).
+                  pose proof cast_finite (type_of_expr e1) ty H (fval env e1) FIN.
+                  set (x:=(cast ty (type_of_expr e1) (fval env e1))) in *.
+                  set (y:=(cast ty (type_of_expr e2) (fval env e2))) in *.
+                  apply binary_float_eqb_eq. 
+                  unfold BMULT, BDIV, BINOP. symmetry. 
+                  rewrite FEQ in EINV. 
+                  apply Bdiv_mult_inverse_finite; auto.
+                  {    
+                    apply Bexact_inverse_correct in EINV.
+                    destruct EINV as (A & B & C & D & E).
+                    apply is_finite_strict_finite; auto.
+                    } 
+                    apply Bexact_inverse_correct in EINV.
+                    destruct EINV as (A & B & C & D & E).
+                    apply is_finite_strict_finite; auto.
+                    }
+clear FEQ.
+              match goal with
+                  |- binary_float_eqb (fval env (if ?b then _ else _)) _ = _ =>
+                  destruct b eqn:FEQ
+                end.
+                   {
+                      simpl. rewrite ?andb_true_iff in FEQ; destruct FEQ as [FEQ FIN]. 
+                      unfold cast_lub_l.
+                      unfold cast_lub_r.
+                      apply binary_float_eqb_eq in FEQ.
+                      apply eqb_prop in FIN.
+                      set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
+                      change (Z.max (femax (type_of_expr e1)) (femax (type_of_expr e2))) with (femax ty) in *.
+                      pose proof type_lub_left (type_of_expr e1) (type_of_expr e2).
+                      pose proof cast_finite (type_of_expr e1) ty H (fval env e1) FIN.
+                      set (x:=(cast ty (type_of_expr e1) (fval env e1))) in *.
+                      set (y:=(cast ty (type_of_expr e2) (fval env e2))) in *.
+                      apply binary_float_eqb_eq. 
+                      unfold BMULT, BDIV, BINOP. symmetry. 
+                      replace (Z.of_N (N.of_nat (Pos.to_nat (to_inv_power_2 y)))) with  (Z.pos (to_inv_power_2 y)) in * by lia.
+                      rewrite FEQ in EINV. 
+                      apply Bdiv_mult_inverse_finite; auto.
+                      {    
+                        apply Bexact_inverse_correct in EINV.
+                        destruct EINV as (A & B & C & D & E).
+                        apply is_finite_strict_finite; auto.
+                      } 
+                        apply Bexact_inverse_correct in EINV.
+                        destruct EINV as (A & B & C & D & E).
+                        apply is_finite_strict_finite; auto.
+                     }
+                       apply binary_float_eqb_eq.
+                       reflexivity.
+}
+                       apply binary_float_eqb_eq.
+                       reflexivity.
+} (*case None e2, Some e1*)
+
+      revert IHe2.
+      simpl.
+      generalize (fval env (fshift_div env e2)).
+      repeat rewrite fshift_type_div.
+      intros.
+      apply binary_float_eqb_eq in IHe2. subst.
+      apply binary_float_eqb_eq.
+      reflexivity.
+} (*case None e1*)
+   destruct (fcval_nonrec (fshift_div env e2)) eqn:E2.
+      {
+        generalize (fshift_type_div env e2).
+        destruct (fshift_div env e2); try discriminate.
+        simpl in E2.
+        simpl in f.
+        inversion E2; clear E2; subst.
+        simpl in IHe2.
+        simpl.
+        intros.
+        subst.
+        apply binary_float_eqb_eq in IHe2.
+        subst.
+ destruct (Bexact_inverse _ ) eqn:EINV. 
+              {
+                match goal with
+                  |- binary_float_eqb (fval env (if ?b then _ else _)) _ = _ =>
+                  destruct b eqn:FEQ
+                end.
+                {
+                simpl. rewrite ?andb_true_iff in FEQ; destruct FEQ as [FEQ FIN]. 
+                      unfold cast_lub_l.
+                      unfold cast_lub_r.
+                      revert IHe1. revert FIN. 
+           apply binary_float_eqb_eq in FEQ. subst. revert EINV.
+                      generalize (fval env (fshift_div env e1)).
+                      rewrite fshift_type_div.
+intros. 
+apply binary_float_eqb_eq in IHe1. subst.
+apply eqb_prop in FIN.
+                   apply binary_float_eqb_eq.
+                  set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
+                  change (Z.max (femax (type_of_expr e1)) (femax (type_of_expr e2))) with (femax ty) in *.
+                  pose proof type_lub_left (type_of_expr e1) (type_of_expr e2).
+                  pose proof cast_finite (type_of_expr e1) ty H (fval env e1) FIN.
+                  set (x:=(cast ty (type_of_expr e1) (fval env e1))) in *.
+                  set (y:=(cast ty (type_of_expr e2) (fval env e2))) in *.
+                  unfold BMULT, BDIV, BINOP. symmetry. 
+                  apply Bdiv_mult_inverse_finite; auto.
+                  {    
+                    apply Bexact_inverse_correct in EINV.
+                    destruct EINV as (A & B & C & D & E).
+                    apply is_finite_strict_finite; auto.
+                    } 
+                    apply Bexact_inverse_correct in EINV.
+                    destruct EINV as (A & B & C & D & E).
+                    apply is_finite_strict_finite; auto.
+                    }
+clear FEQ.
+         match goal with
+                  |- binary_float_eqb (fval env (if ?b then _ else _)) _ = _ =>
+                  destruct b eqn:FEQ
+                end.
+                   {
+                simpl. rewrite ?andb_true_iff in FEQ; destruct FEQ as [FEQ FIN]. 
+                      unfold cast_lub_l.
+                      unfold cast_lub_r.
+                      revert IHe1. revert FIN. 
+           apply binary_float_eqb_eq in FEQ. subst. revert EINV.
+                      generalize (fval env (fshift_div env e1)).
+                      rewrite fshift_type_div.
+intros. 
+apply binary_float_eqb_eq in IHe1. subst.
+apply eqb_prop in FIN.
+                   apply binary_float_eqb_eq.
+                  set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
+                  change (Z.max (femax (type_of_expr e1)) (femax (type_of_expr e2))) with (femax ty) in *.
+                  pose proof type_lub_left (type_of_expr e1) (type_of_expr e2).
+                  pose proof cast_finite (type_of_expr e1) ty H (fval env e1) FIN.
+                  set (x:=(cast ty (type_of_expr e1) (fval env e1))) in *.
+                  set (y:=(cast ty (type_of_expr e2) (fval env e2))) in *.
+                  unfold BMULT, BDIV, BINOP. symmetry. 
+                  apply Bdiv_mult_inverse_finite; auto.
+                  {    
+                    apply Bexact_inverse_correct in EINV.
+                    destruct EINV as (A & B & C & D & E).
+                    apply is_finite_strict_finite; auto.
+                    } 
+{
+                    apply Bexact_inverse_correct in EINV.
+                    destruct EINV as (A & B & C & D & E).
+                      replace (Z.of_N (N.of_nat (Pos.to_nat (to_inv_power_2 y)))) with  (Z.pos (to_inv_power_2 y)) in * by lia.
+                    apply is_finite_strict_finite; auto.
+                    }
+replace (Z.of_N (N.of_nat (Pos.to_nat (to_inv_power_2 y)))) with  (Z.pos (to_inv_power_2 y)) in * by lia.
+auto.
+}
+clear FEQ.
+                      simpl. 
+                      unfold cast_lub_l.
+                      unfold cast_lub_r.
+                      revert IHe1. revert EINV. revert b.
+                      generalize (fval env (fshift_div env e1)).
+                      rewrite fshift_type_div.
+intros. 
+apply binary_float_eqb_eq in IHe1. subst.
+                   apply binary_float_eqb_eq. reflexivity.
+}
+clear EINV.
+ simpl. 
+                      unfold cast_lub_l.
+                      unfold cast_lub_r.
+                      revert IHe1. 
+                      generalize (fval env (fshift_div env e1)).
+                      rewrite fshift_type_div.
+intros. 
+apply binary_float_eqb_eq in IHe1. subst.
+                   apply binary_float_eqb_eq. reflexivity.
+}
+     clear E1 E2.
+      revert IHe1 IHe2.
+      simpl.
+      generalize (fval env (fshift_div env e1)).
+      generalize (fval env (fshift_div env e2)).
+      repeat rewrite fshift_type_div.
+      intros.
+      apply binary_float_eqb_eq in IHe1. subst.
+      apply binary_float_eqb_eq in IHe2. subst.
+      apply binary_float_eqb_eq.
+      reflexivity.
+    }
+    clear ISDIV.
+    revert IHe1 IHe2.
+    simpl.
+      generalize (fval env (fshift_div env e1)).
+      generalize (fval env (fshift_div env e2)).
+      repeat rewrite fshift_type_div.
+    intros.
+    apply binary_float_eqb_eq in IHe1. subst.
+    apply binary_float_eqb_eq in IHe2. subst.
+    apply binary_float_eqb_eq.
+    reflexivity.
+  }
+simpl.
+  revert IHe.
+      generalize (fval env (fshift_div env e)).
+  rewrite fshift_type_div.
+  intros.
+  apply binary_float_eqb_eq in IHe.
+  subst.
+  apply binary_float_eqb_eq.
+  reflexivity.
+Qed.
+
+Lemma fshift_div_correct env e:
+  fval env (fshift_div env e) = eq_rect_r _ (fval env e) (fshift_type_div env e).
+Proof.
+  apply binary_float_eqb_eq.
+  apply binary_float_eqb_eq_strong.
+  apply fshift_div_correct'.
+Qed.
+(* END - A.E.K additions for converting expressions withe exact division
+by powers of two. *)
 
 (* Erasure of rounding annotations *)
 

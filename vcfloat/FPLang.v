@@ -54,7 +54,7 @@ VCFloat: core and annotated languages for floating-point operations.
 Require Import Lia Lra.
 From vcfloat Require Export RAux.
 From Flocq Require Import Binary Bits Core.
-From compcert Require Import lib.IEEE754_extra.
+From compcert Require Import lib.IEEE754_extra lib.Floats.
 Require compcert.lib.Maps.  
 Require Coq.MSets.MSetAVL.
 Require Import Interval.Tactic.
@@ -902,6 +902,7 @@ Proof.
 Qed.
 
 Definition B2 ty e := FF2B_gen (fprec ty) (femax ty) (F2 (fprecp ty) e).
+Definition B2_opp ty e := BOPP ty (B2 ty e).
 
 Lemma B2_finite ty e:
   (3 - femax ty <= e + 1 <= femax ty)%Z ->
@@ -3051,6 +3052,68 @@ Proof.
   lia.
 Qed.
 
+
+(* BEGIN - A.E.K additions for fshift_div correct *)
+Theorem Bdiv_mult_inverse_finite ty:
+  forall x y z: (Binary.binary_float (fprec ty) (femax ty)),
+is_finite _ _ x = true ->
+is_finite _ _ y = true ->
+is_finite _ _ z = true ->
+Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
+Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) mode_NE x y =
+Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) mode_NE x z .
+Proof.
+intros.
+destruct (Bexact_inverse_correct _ _ _ _ _ _ H2) as (A & B & C & D & E).
+pose proof (Binary.Bmult_correct 
+  (fprec ty) 
+  (femax ty) 
+  (fprec_gt_0 ty)
+  (fprec_lt_femax ty)
+  (mult_nan ty) mode_NE x z) as HMUL.
+pose proof (Binary.Bdiv_correct 
+  (fprec ty) 
+  (femax ty) 
+  (fprec_gt_0 ty)
+  (fprec_lt_femax ty)
+  (div_nan ty) mode_NE x y D) as HDIV.
+unfold Rdiv in HDIV. 
+rewrite <- C in HDIV.
+destruct Rlt_bool. 
+{
+  destruct HMUL as (P & Q & R). 
+  destruct HDIV as (S & T & U).
+  assert (Binary.is_finite 
+    (fprec ty) (femax ty)
+    (Binary.Bmult (fprec ty) (femax ty) 
+    (fprec_gt_0 ty) (fprec_lt_femax ty) 
+    (mult_nan ty) mode_NE x z) = true) by
+    (rewrite Q; auto;
+    rewrite ?andb_true_iff; auto).
+  assert (Binary.is_finite 
+    (fprec ty) (femax ty)
+    (Binary.Bdiv (fprec ty) (femax ty) 
+    (fprec_gt_0 ty) (fprec_lt_femax ty) 
+    (div_nan ty) mode_NE x y) = true) by
+    (rewrite T; auto).
+  apply Binary.B2R_Bsign_inj; auto. 
+  {
+    rewrite S; auto.
+  }
+    rewrite R,U,E; auto.
+    all: apply is_finite_not_is_nan; auto.
+}
+pose proof Binary.B2FF_inj _ _
+(Binary.Bdiv (fprec ty) (femax ty) (fprec_gt_0 ty) 
+            (fprec_lt_femax ty) (div_nan ty) mode_NE x y)
+(Binary.Bmult (fprec ty) (femax ty) (fprec_gt_0 ty) 
+            (fprec_lt_femax ty) (mult_nan ty) mode_NE x z)
+. 
+rewrite E in HMUL. 
+revert H3.
+rewrite HMUL, HDIV; auto.
+Qed.
+(* END - A.E.K additions for fshift_div correct *)
 
 Lemma Bmult_correct_comm:
 forall (prec emax : Z) (prec_gt_0_ : FLX.Prec_gt_0 prec)
