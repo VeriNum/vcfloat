@@ -55,6 +55,7 @@ the real-number semantics of floating-point computations.
 Require Export vcfloat.FPLang.
 Import RAux.
 Import compcert.lib.IEEE754_extra.
+Import compcert.lib.Floats.
 Require Export vcfloat.LibTac.
 Require Export vcfloat.BigRAux.
 
@@ -188,19 +189,6 @@ Lemma fcval_nonrec_correct e:
 Proof.
   destruct e; simpl; try discriminate.
   intros; congruence.
-Qed.
-
-Lemma fcval_nonrec2_correct e:
-  forall env v, (fcval_nonrec2 e env) = Some v ->
-             fval env e = v.
-Proof.
-  destruct e; simpl; try discriminate.
-{
-  intros; congruence.
-}
-{
-  intros; congruence.
-}
 Qed.
 
 Definition option_pair_of_options {A B} (a: option A) (b: option B) :=
@@ -948,21 +936,30 @@ Proof.
                   destruct b eqn:FEQ
                 end.
                 {
-                simpl. rewrite ?andb_true_iff in FEQ; destruct FEQ as [FEQ FIN]. 
+                  simpl. 
+                  rewrite ?orb_true_iff in FEQ. destruct FEQ. 
                   unfold cast_lub_l.
                   unfold cast_lub_r.
-                   apply binary_float_eqb_eq in FEQ.
-                  apply eqb_prop in FIN.
+                  apply type_eqb_eq in H.
+
                   set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
                   change (Z.max (femax (type_of_expr e1)) (femax (type_of_expr e2))) with (femax ty) in *.
-                  pose proof type_lub_left (type_of_expr e1) (type_of_expr e2).
-                  pose proof cast_finite (type_of_expr e1) ty H (fval env e1) FIN.
                   set (x:=(cast ty (type_of_expr e1) (fval env e1))) in *.
                   set (y:=(cast ty (type_of_expr e2) (fval env e2))) in *.
-                  apply binary_float_eqb_eq. 
-                  unfold BMULT, BDIV, BINOP. symmetry. 
-                  rewrite FEQ in EINV. 
-                  apply Bdiv_mult_inverse_finite; auto.
+                  match goal with
+                    |- binary_float_eqb (fval env (if ?b then _ else _)) _ = _ =>
+                    destruct b eqn:FEQ
+                  end. 
+                  {
+                    simpl. apply binary_float_eqb_eq in FEQ.
+                    apply binary_float_eqb_eq. 
+                    unfold BMULT, BDIV, BINOP. symmetry. 
+                    rewrite FEQ in EINV. 
+                    pose proof Float32.div_mul_inverse.
+unfold float32, Bits.binary32 in H0.
+cbv [type_of_expr].
+Search "binary_float".
+                    apply Float32.div_mul_inverse; auto.
                   {    
                     apply Bexact_inverse_correct in EINV.
                     destruct EINV as (A & B & C & D & E).
