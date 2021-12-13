@@ -911,7 +911,13 @@ Proof.
         simpl in f.
         inversion E1; clear E1; subst.
         simpl in IHe1.
-        simpl.
+(* replace simpl with the following so as to not simpl in 
+matches on fprec and femax *)
+match goal with |- context [type_of_expr (Const ?ty ?f)] =>
+ set (m := type_of_expr (Const ty f));
+simpl in m; subst m; auto
+end.
+(* end replace simpl *)
         intros.
         subst.
         apply binary_float_eqb_eq in IHe1.
@@ -924,7 +930,13 @@ Proof.
         simpl in f.
         inversion E2; clear E2; subst.
         simpl in IHe2.
-        simpl.
+(* replace simpl with the following so as to not simpl in 
+matches on fprec and femax *)
+match goal with |- context [type_of_expr (Const ?ty ?f)] =>
+ set (m := type_of_expr (Const ty f));
+simpl in m; subst m; auto
+end.
+(* end replace simpl *)
         intros.
         subst.
         apply binary_float_eqb_eq in IHe2.
@@ -940,11 +952,7 @@ Proof.
                   rewrite ?orb_true_iff in FEQ. 
                   rewrite ?andb_true_iff in FEQ. destruct FEQ. 
 destruct H. 
-apply eqb_eq in H. 
-
-
-destruct H. 
-apply Z.eqb_eq in H. 
+apply Z.eqb_eq in H, H0. 
                   unfold cast_lub_l.
                   unfold cast_lub_r.
 destruct H. 
