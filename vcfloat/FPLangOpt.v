@@ -758,7 +758,7 @@ Proof.
 Qed.
 
 
-(* BEGIN - A.E.K additions for converting expressions withe exact division
+(* BEGIN - AEK additions for converting expressions withe exact division
 by powers of two. *)
 Definition to_power_2_pos {prec emax} (x: Binary.binary_float prec emax) :=
   let y := B2BigQ x in
@@ -774,33 +774,33 @@ Fixpoint fshift_div env (e: FPLang.expr) {struct e}: FPLang.expr :=
       let e'2 := fshift_div env e2 in
       if binop_eqb b (Rounded2 DIV None) then
       let ty := type_lub (type_of_expr e'1) (type_of_expr e'2) in
-      match (fcval_nonrec e'2) with
+      match (fcval_nonrec e'2) with (* match 1 *)
             | Some c2' =>
                 let c2 := cast ty _ c2' in
-                match (Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) c2) with
+                match (Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) c2) with (* match 2 *)
                   | Some z' => 
                     let n1 := to_power_2_pos c2 in
-                    if (type_eqb Tsingle ty || type_eqb Tdouble ty) then
-                      if binary_float_eqb z' (B2 ty (Z.neg n1))
-                      then Unop (Exact1 (InvShift n1 true)) (Unop (CastTo ty None) e'1)
+                    if ((Z.eqb (fprec ty) 24 && Z.eqb (femax ty) 128) || (Z.eqb (fprec ty) 53 && Z.eqb (femax ty) 1024)) then
+                      if binary_float_eqb z' (B2 ty (Z.neg n1)) then 
+                        Unop (Exact1 (InvShift n1 true)) (Unop (CastTo ty None) e'1)
                       else
-                      let n2 := to_inv_power_2 c2 in
-                      if binary_float_eqb z' (B2 ty (Z.pos n2))
-                      then Unop (Exact1 (Shift (N.of_nat (Pos.to_nat n2)) true)) (Unop (CastTo ty None) e'1)
-                      else Binop b e'1 e'2
+                        let n2 := to_inv_power_2 c2 in
+                          if binary_float_eqb z' (B2 ty (Z.pos n2)) then 
+                            Unop (Exact1 (Shift (N.of_nat (Pos.to_nat n2)) true)) (Unop (CastTo ty None) e'1)
+                          else Binop b e'1 e'2
                     else
                       let fin := (eqb (Binary.is_finite _ _ (fval env e'1)) true) in 
-                      if (binary_float_eqb z' (B2 ty (Z.neg n1))) && fin
-                      then Unop (Exact1 (InvShift n1 true)) (Unop (CastTo ty None) e'1)
-                      else
-                      let n2 := to_inv_power_2 c2 in
-                      if (binary_float_eqb z' (B2 ty (Z.pos n2))) && fin
-                      then Unop (Exact1 (Shift (N.of_nat (Pos.to_nat n2)) true)) (Unop (CastTo ty None) e'1)
-                      else Binop b e'1 e'2
-                  | None => Binop b e'1 e'2
+                        if (binary_float_eqb z' (B2 ty (Z.neg n1))) && fin then 
+                          Unop (Exact1 (InvShift n1 true)) (Unop (CastTo ty None) e'1)
+                        else
+                        let n2 := to_inv_power_2 c2 in
+                          if (binary_float_eqb z' (B2 ty (Z.pos n2))) && fin then
+                            Unop (Exact1 (Shift (N.of_nat (Pos.to_nat n2)) true)) (Unop (CastTo ty None) e'1)
+                          else Binop b e'1 e'2
+                  | None => Binop b e'1 e'2 (* match 2 *)
                 end
              | None => Binop b e'1 e'2
-         end
+         end (* match 1 *)
       else
         Binop b e'1 e'2
     | Unop b e => Unop b (fshift_div env e)
@@ -937,9 +937,18 @@ Proof.
                 end.
                 {
                   simpl. 
-                  rewrite ?orb_true_iff in FEQ. destruct FEQ. 
+                  rewrite ?orb_true_iff in FEQ. 
+                  rewrite ?andb_true_iff in FEQ. destruct FEQ. 
+destruct H. 
+apply eqb_eq in H. 
+
+
+destruct H. 
+apply Z.eqb_eq in H. 
                   unfold cast_lub_l.
                   unfold cast_lub_r.
+destruct H. 
+apply eqb in H0. 
                   apply type_eqb_eq in H.
 
                   set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
@@ -956,6 +965,7 @@ Proof.
                     unfold BMULT, BDIV, BINOP. symmetry. 
                     rewrite FEQ in EINV. 
                     pose proof Float32.div_mul_inverse.
+assert (type_eq_dec float32 Tsingle).
 unfold float32, Bits.binary32 in H0.
 cbv [type_of_expr].
 Search "binary_float".
