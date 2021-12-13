@@ -955,10 +955,6 @@ destruct H.
 apply Z.eqb_eq in H, H0. 
                   unfold cast_lub_l.
                   unfold cast_lub_r.
-destruct H. 
-apply eqb in H0. 
-                  apply type_eqb_eq in H.
-
                   set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
                   change (Z.max (femax (type_of_expr e1)) (femax (type_of_expr e2))) with (femax ty) in *.
                   set (x:=(cast ty (type_of_expr e1) (fval env e1))) in *.
@@ -973,6 +969,9 @@ apply eqb in H0.
                     unfold BMULT, BDIV, BINOP. symmetry. 
                     rewrite FEQ in EINV. 
                     pose proof Float32.div_mul_inverse.
+subst.
+rewrite H in EINV.  
+
 assert (type_eq_dec float32 Tsingle).
 unfold float32, Bits.binary32 in H0.
 cbv [type_of_expr].
