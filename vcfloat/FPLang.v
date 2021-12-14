@@ -597,35 +597,6 @@ Proof.
   typeclasses eauto.
 Qed.
 
-(* AEK 12/2021 *)
-Lemma cast_not_is_nan tfrom tto:
-  type_le tfrom tto ->
-  forall f,
-  is_nan _ _ f = false ->
-  is_nan _ _ (cast tto tfrom f) = false.
-Proof.
-  unfold cast.
-  intros.
-  destruct (type_eq_dec tfrom tto).
-  {
-    subst. assumption.
-  }
-  destruct H.
-  destruct f. 
-  {
-  simpl. auto.
-  }
-  { 
-  simpl. auto.
-  }
-  { 
-  simpl. auto.
-  }
-  apply is_finite_not_is_nan. 
-  apply Bconv_widen_exact; auto with zarith.
-  typeclasses eauto.
-Qed.
-(* end AEK *)
 
 Lemma cast_eq tfrom tto:
   type_le tfrom tto ->
@@ -3083,7 +3054,7 @@ Proof.
 Qed.
 
 
-(* BEGIN - AEK additions for fshift_div correct *)
+(* begin - AEK additions for fshift_div correct *)
 Theorem Bdiv_mult_inverse_finite ty:
   forall x y z: (Binary.binary_float (fprec ty) (femax ty)),
 is_finite _ _ x = true ->
@@ -3143,7 +3114,36 @@ rewrite E in HMUL.
 revert H3.
 rewrite HMUL, HDIV; auto.
 Qed.
-(* END - AEK additions for fshift_div correct *)
+
+Lemma cast_not_is_nan tfrom tto:
+  type_le tfrom tto ->
+  forall f,
+  is_nan _ _ f = false ->
+  is_nan _ _ (cast tto tfrom f) = false.
+Proof.
+  unfold cast.
+  intros.
+  destruct (type_eq_dec tfrom tto).
+  {
+    subst. assumption.
+  }
+  destruct H;
+  destruct f.
+  {
+  simpl. auto.
+  }
+  { 
+  simpl. auto.
+  }
+  { 
+  simpl. auto.
+  }
+  apply is_finite_not_is_nan. 
+  apply Bconv_widen_exact; auto with zarith.
+  typeclasses eauto.
+Qed.
+
+(* end - AEK additions for fshift_div correct *)
 
 Lemma Bmult_correct_comm:
 forall (prec emax : Z) (prec_gt_0_ : FLX.Prec_gt_0 prec)
