@@ -597,6 +597,36 @@ Proof.
   typeclasses eauto.
 Qed.
 
+(* AEK 12/2021 *)
+Lemma cast_not_is_nan tfrom tto:
+  type_le tfrom tto ->
+  forall f,
+  is_nan _ _ f = false ->
+  is_nan _ _ (cast tto tfrom f) = false.
+Proof.
+  unfold cast.
+  intros.
+  destruct (type_eq_dec tfrom tto).
+  {
+    subst. assumption.
+  }
+  destruct H.
+  destruct f. 
+  {
+  simpl. auto.
+  }
+  { 
+  simpl. auto.
+  }
+  { 
+  simpl. auto.
+  }
+  apply is_finite_not_is_nan. 
+  apply Bconv_widen_exact; auto with zarith.
+  typeclasses eauto.
+Qed.
+(* end AEK *)
+
 Lemma cast_eq tfrom tto:
   type_le tfrom tto ->
   forall f,
