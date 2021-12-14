@@ -3083,7 +3083,7 @@ Proof.
 Qed.
 
 
-(* BEGIN - A.E.K additions for fshift_div correct *)
+(* BEGIN - AEK additions for fshift_div correct *)
 Theorem Bdiv_mult_inverse_finite ty:
   forall x y z: (Binary.binary_float (fprec ty) (femax ty)),
 is_finite _ _ x = true ->
@@ -3143,7 +3143,7 @@ rewrite E in HMUL.
 revert H3.
 rewrite HMUL, HDIV; auto.
 Qed.
-(* END - A.E.K additions for fshift_div correct *)
+(* END - AEK additions for fshift_div correct *)
 
 Lemma Bmult_correct_comm:
 forall (prec emax : Z) (prec_gt_0_ : FLX.Prec_gt_0 prec)
