@@ -1247,125 +1247,47 @@ Proof.
   apply fshift_div_correct'.
 Qed.
 
-Fixpoint is_zero_expr (env: forall ty, V -> ftype ty) (e: FPLang.expr) {struct e}: bool :=
+Require Import Reals.ROrderedType.
+
+Definition is_zero_expr (env: forall ty, V -> ftype ty) (e: FPLang.expr)
+ : bool := Reqb (rval env e) 0%R.
+
+Definition Rltb (x y : R) := match total_order_T x y with
+                            | inleft (left _) => true
+                            | _ => false
+                            end.
+
+Fixpoint is_nan_expr (env: forall ty, V -> ftype ty) (e: expr)
+{struct e}: bool := 
   match e with
-    | Const ty f => 
-        let s:= Binary.Bsign (fprec (type_of_expr e)) (femax (type_of_expr e)) (fval env e) in
-        binary_float_eqb (Binary.B754_zero (fprec ty) (femax ty) s) f 
-    | Var ty i => 
-        let s:= Binary.Bsign (fprec (type_of_expr e)) (femax (type_of_expr e)) (fval env e) in
-        binary_float_eqb (Binary.B754_zero (fprec ty) (femax ty) s) (fval env e) 
+    | Const ty f => Binary.is_nan _ _ f
+    | Var ty i => Binary.is_nan _ _ (env ty i)
     | Binop b e1 e2 =>
-        let e1' := is_zero_expr env e1 in 
-        let e2' := is_zero_expr env e2 in (e1' && e2')
-    | Unop b e1 =>
-        let e1' := is_zero_expr env e1 in e1'
+        match b with (Rounded2 DIV None) => 
+          let be1':= is_zero_expr env e1 in 
+          let be2':= is_zero_expr env e2 in
+          be1' && be2'
+          | _ => 
+            let be1':= is_nan_expr env e1 in 
+            let be2':= is_nan_expr env e2 in
+            be1' && be2' end
+    | Unop b e1 => 
+        match b with (Rounded1 SQRT None) => 
+        Rltb (rval env e) 0%R
+        |_ => is_nan_expr env e1 end
   end.
 
-Lemma is_zero_expr_correct' env e:
- binary_float_eqb (fval env e) (Binary.B754_zero (fprec (type_of_expr e)) (femax (type_of_expr e)) 
- (Binary.Bsign (fprec (type_of_expr e)) (femax (type_of_expr e)) (fval env e) )) = 
- (is_zero_expr env e).
+Lemma not_is_nan_correct env (e:FPLang.expr):
+is_nan_expr env e = Binary.is_nan _ _ (fval env e).
 Proof.
-intros.
 induction e.
-{
-simpl. 
-destruct f; simpl; auto.
+{ simpl; auto.
 }
-{
-simpl. 
-destruct (env ty i); simpl; auto.
+{ simpl; auto.
 }
-{
-simpl.
-
-unfold cast_lub_r in *.
-unfold cast_lub_l in *.
-destruct (is_zero_expr env e2).
-{
-destruct (is_zero_expr env e1).
-{
-apply binary_float_eqb_eq in IHe1. 
-apply binary_float_eqb_eq in IHe2.
-simpl. apply binary_float_eqb_eq.
-rewrite  IHe1.
-rewrite  IHe2.
-set (ty := (type_lub (type_of_expr e1) (type_of_expr e2))) in *.
-destruct b.
-{
-destruct op.
-{
-simpl. unfold BPLUS, BINOP.
-set (x:=(cast ty (type_of_expr e1)
-     (Binary.B754_zero (fprec (type_of_expr e1)) (femax (type_of_expr e1))
-        (Binary.Bsign (fprec (type_of_expr e1)) (femax (type_of_expr e1)) (fval env e1)))))
-in *.
-set (y:=(cast ty (type_of_expr e2)
-     (Binary.B754_zero (fprec (type_of_expr e2)) (femax (type_of_expr e2))
-        (Binary.Bsign (fprec (type_of_expr e2)) (femax (type_of_expr e2)) (fval env e2)))))
-in *.
-pose proof 
-(Binary.Bplus_correct _ _
- (fprec_gt_0 ty) (fprec_lt_femax _) 
-(plus_nan _) Binary.mode_NE ) x y
-.
-pose proof type_lub_left (type_of_expr e1) (type_of_expr e2).
-pose proof cast_finite ty (type_of_expr e2).
-}
-{
-simpl. 
-
-
-destruct (env ty i); simpl; auto. 
-simpl in H. 
-
-Fixpoint is_nan_expr env (e: FPLang.expr): bool :=
-  match e with
-  Unop (Rounded1 SQRT None) e1 => 
-    let e1' := is_nan_expr e1 in 
-      eqb (Binary.Bsign _ _ (fval env e1')) false
-  | Binop (Rounded2 DIV None) e1 e2 => 
-    let e1' := is_nan_expr e1 in 
-    let e2' := is_nan_expr e2 in 
-    let b1 := eqb (Binary.is_finite_strict _ _ (fval env e2)) true in
-    let b2 := eqb (Binary.is_nan _ _ (fval env e1)) false in
-    b1 && b2
-  | _ => true
-end
-.
-
-  match e with
-    | Binop b e1 e2 =>
-      let e'1 := fshift_div env e1 in
-      let e'2 := fshift_div env e2 in
-      if binop_eqb b (Rounded2 DIV None) then
-      let ty := type_lub (type_of_expr e'1) (type_of_expr e'2) in
-      match (fcval_nonrec e'2) with
-            | Some c2' =>
-                let c2 := cast ty _ c2' in
-                match (Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) c2) with
-                  | Some z' => 
-                    let nan := (eqb (Binary.is_nan _ _ (fval env e'1)) false) in 
-                    let n1 := to_power_2_pos c2 in
-                    if (binary_float_eqb z' (B2 ty (Z.neg n1))) && nan
-                    then Unop (Exact1 (InvShift n1 true)) (Unop (CastTo ty None) e'1)
-                    else
-                    let n2 := to_inv_power_2 c2 in
-                    if (binary_float_eqb z' (B2 ty (Z.pos n2))) && nan
-                    then Unop (Exact1 (Shift (N.of_nat (Pos.to_nat n2)) true)) (Unop (CastTo ty None) e'1)
-                    else Binop b e'1 e'2
-                  | None => Binop b e'1 e'2
-                end
-             | None => Binop b e'1 e'2
-         end
-      else
-        Binop b e'1 e'2
-    | Unop b e => Unop b (fshift_div env e)
-    | _ => e
-  end.
-
-
+{ destruct b.
+  { destruct op.
+      { simpl. (*prove that cast maintains nan*)
 
 
 (* end - AEK additions for converting expressions withe exact division
