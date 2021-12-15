@@ -3169,6 +3169,32 @@ Proof.
   simpl in H0; auto.
 Qed.
 
+Lemma cast_inf tfrom tto:
+  type_le tfrom tto ->
+  forall f,
+  is_finite _ _ f = false ->
+  is_finite _ _ (cast tto tfrom f) = false.
+Proof.
+  unfold cast.
+  intros.
+  destruct (type_eq_dec tfrom tto).
+  {
+    subst. assumption.
+  }
+  destruct H;
+  destruct f.
+  {
+  simpl in H0; auto.
+  }
+  { 
+  simpl in H0; auto.
+  }
+  { 
+  simpl. auto.
+  }
+  simpl in H0; discriminate. 
+Qed.
+
 (* end - AEK additions for fshift_div correct *)
 
 Lemma Bmult_correct_comm:
