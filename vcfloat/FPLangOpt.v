@@ -1277,8 +1277,31 @@ Fixpoint is_nan_expr (env: forall ty, V -> ftype ty) (e: expr)
         |_ => is_nan_expr env e1 end
   end.
 
-Lemma is_nan_expr_correct env (e:FPLang.expr):
-is_nan_expr env e = Binary.is_nan _ _ (fval env e).
+Lemma is_nan_plus (env: forall ty, V -> ftype ty) (e1 e2:FPLang.expr):
+Binary.is_nan _ _ (fval env e1) = false -> 
+Binary.is_nan _ _ (fval env e2) = false -> 
+Binary.is_nan _ _ (fval env (Binop (Rounded2 PLUS None) e1 e2)) = false.
+Proof.
+Admitted.
+
+Lemma is_nan_minus (env: forall ty, V -> ftype ty) (e1 e2:FPLang.expr):
+Binary.is_nan _ _ (fval env e1) = false -> 
+Binary.is_nan _ _ (fval env e2) = false -> 
+Binary.is_nan _ _ (fval env (Binop (Rounded2 MINUS None) e1 e2)) = false.
+Proof.
+Admitted.
+
+Lemma is_nan_mult (env: forall ty, V -> ftype ty) (e1 e2:FPLang.expr):
+Binary.is_nan _ _ (fval env e1) = false -> 
+Binary.is_nan _ _ (fval env e2) = false -> 
+Binary.is_nan _ _ (fval env (Binop (Rounded2 MULT None) e1 e2)) = false.
+Proof.
+Admitted.
+
+Lemma is_nan_expr_correct_binop env (e1 e2:FPLang.expr):
+forall b : binop, 
+is_nan_expr env (Binop b e1 e2) = 
+Binary.is_nan _ _ (fval env (Binop b e1 e2)).
 Proof.
 induction e.
 { simpl; auto.
@@ -1393,6 +1416,8 @@ induction e.
             }
               unfold BPLUS, BINOP.
               symmetry in IHe1. symmetry in IHe2. 
+              simpl.
+symmetry. apply is_nan_plus; auto.
               pose proof type_lub_left (type_of_expr e1) (type_of_expr e2).
               pose proof type_lub_right (type_of_expr e1) (type_of_expr e2).
               set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
