@@ -1324,23 +1324,174 @@ induction e.
                 unfold BPLUS, BINOP.
                 symmetry in IHe1. symmetry in IHe2. 
                 pose proof type_lub_left (type_of_expr e1) (type_of_expr e2).
-                pose proof type_lub_right (type_of_expr e1) (type_of_expr e2).
                 set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
                 pose proof cast_is_nan (type_of_expr e1)
                 ty H (fval env e1) IHe1.
                 set (x:= cast ty (type_of_expr e1) (fval env e1)) in *.
                 set (y:= cast ty (type_of_expr e2) (fval env e2)) in *.
                 destruct x.
-                  { simpl in H1; discriminate.
+                  { simpl in H0; discriminate.
                   }
-                  { simpl in H1; discriminate.
+                  { simpl in H0; discriminate.
                   }
                   { cbv [Binary.Bplus]; simpl; auto.
                   }
-                  { simpl in H1; discriminate.
+                  { simpl in H0; discriminate.
                   }
+          }
+          { destruct (is_nan_expr env e2).
+            {
+              unfold BPLUS, BINOP.
+              symmetry in IHe1. symmetry in IHe2. 
+              pose proof type_lub_right (type_of_expr e1) (type_of_expr e2).
+              set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
+              pose proof cast_is_nan (type_of_expr e2)
+              ty H (fval env e2) IHe2.
+              set (x:= cast ty (type_of_expr e1) (fval env e1)) in *.
+              set (y:= cast ty (type_of_expr e2) (fval env e2)) in *.
+              destruct x. 
+                { destruct y.
+                  { simpl in H0; discriminate.
+                  }
+                  { simpl in H0; discriminate.
+                  }
+                  { cbv [Binary.Bplus]; simpl; auto.
+                  }
+                  { simpl in H0; discriminate.
+                  }
+                } 
+                { destruct y.
+                  { simpl in H0; discriminate.
+                  }
+                  { simpl in H0; discriminate.
+                  }
+                  { cbv [Binary.Bplus]; simpl; auto.
+                  }
+                  { simpl in H0; discriminate.
+                  }
+                }
+                { destruct y.
+                  { simpl in H0; discriminate.
+                  }
+                  { simpl in H0; discriminate.
+                  }
+                  { cbv [Binary.Bplus]; simpl; auto.
+                  }
+                  { simpl in H0; discriminate.
+                  }
+                }
+                { destruct y.
+                  { simpl in H0; discriminate.
+                  }
+                  { simpl in H0; discriminate.
+                  }
+                  { cbv [Binary.Bplus]; simpl; auto.
+                  }
+                  { simpl in H0; discriminate.
+                  }
+                }
+            }
+              unfold BPLUS, BINOP.
+              symmetry in IHe1. symmetry in IHe2. 
+              pose proof type_lub_left (type_of_expr e1) (type_of_expr e2).
+              pose proof type_lub_right (type_of_expr e1) (type_of_expr e2).
+              set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
+              destruct (fval env e1).
+              { 
+                set (x':=(Binary.B754_zero (fprec (type_of_expr e1)) (femax (type_of_expr e1)) s)) in *.
+                assert (Binary.is_finite (fprec (type_of_expr e1)) (femax (type_of_expr e1)) x' = true) by
+                  (simpl;auto).
+                pose proof cast_finite (type_of_expr e1) ty H x' H1.  
+                set (x:= cast ty (type_of_expr e1) x') in *.
+                destruct x. 
+                  { 
+                  destruct (fval env e2).
+                   {  
+                      set (y':=(Binary.B754_zero (fprec (type_of_expr e2)) (femax (type_of_expr e2)) s1)) in *.
+                      assert (Binary.is_finite (fprec (type_of_expr e2)) (femax (type_of_expr e2)) y' = true) by
+                        (simpl;auto).
+                      pose proof cast_finite (type_of_expr e2) ty H0 y' H3.  
+                      set (y:= cast ty (type_of_expr e2) y') in *.
+                      destruct y. 
+                        { cbv [Binary.Bplus]; simpl; destruct (eqb s0 s2); auto.
+                        }
+                        { simpl in H4; discriminate.
+                        }
+                        { simpl in H4; discriminate.
+                        }
+                        { cbv [Binary.Bplus]; simpl; auto. 
+                        }
+                    }
+                    {
+                      set (y':=(Binary.B754_infinity (fprec (type_of_expr e2)) (femax (type_of_expr e2)) s1)) in *.
+                      assert (Binary.is_finite (fprec (type_of_expr e2)) (femax (type_of_expr e2)) y' = false) by
+                        (simpl;auto).
+                      pose proof cast_not_is_nan (type_of_expr e2) ty H0 y' IHe2.  
+                      pose proof cast_inf (type_of_expr e2) ty H0 y' H3.  
+                      set (y:= cast ty (type_of_expr e2) y') in *.
+                      destruct y. 
+                        { simpl in H5; discriminate.
+                        }
+                        { cbv [Binary.Bplus]; simpl; auto.
+                        }
+                        { simpl in H4; discriminate.
+                        }
+                        { simpl in H5; discriminate.
+                        }
+                     } 
+                     { simpl in IHe2; discriminate. 
+                     }
+                     {
+                      set (y':=(Binary.B754_finite (fprec (type_of_expr e2)) (femax (type_of_expr e2)) s1 m e e0))in *.
+                      assert (Binary.is_finite (fprec (type_of_expr e2)) (femax (type_of_expr e2)) y' = true) by
+                        (simpl;auto).
+                      pose proof cast_finite (type_of_expr e2) ty H0 y' H3.  
+                      set (y:= cast ty (type_of_expr e2) y') in *.
+                      destruct y. 
+                        { cbv [Binary.Bplus]; simpl; destruct (eqb s0 s2); auto.
+                        }
+                        { simpl in H4; discriminate.
+                        }
+                        { simpl in H4; discriminate.
+                        }
+                        { cbv [Binary.Bplus]; simpl; auto. 
+                        }
+                      }
+                  }
+                  { simpl in H2; discriminate.
+                  }
+                  { simpl in H2; discriminate.
+                  } 
+                  destruct (fval env e2).
+                   {  
+                      set (y':=(Binary.B754_zero (fprec (type_of_expr e2)) (femax (type_of_expr e2)) s1)) in *.
+                      assert (Binary.is_finite (fprec (type_of_expr e2)) (femax (type_of_expr e2)) y' = true) by
+                        (simpl;auto).
+                      pose proof cast_finite (type_of_expr e2) ty H0 y' H3.  
+                      set (y:= cast ty (type_of_expr e2) y') in *.
+                      destruct y. 
+                        { cbv [Binary.Bplus]; simpl; destruct (eqb s0 s2); auto.
+                        }
+                        { simpl in H4; discriminate.
+                        }
+                        { simpl in H4; discriminate.
+                        }
+                        { pose proof Binary.Bplus_correct (fprec ty) (femax ty) 
+                            (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) Binary.mode_NE 
+                            (Binary.B754_finite (fprec ty) (femax ty) s0 m e e0)
+                            (Binary.B754_finite (fprec ty) (femax ty) s2 m0 e3 e4) H2 H4. 
+                            match goal with H: (if ?a then ?b else ?c) |- _ => destruct a end.
+                            { destruct H5 as (A & B & C). 
+                              pose proof is_finite_not_is_nan (fprec ty) 
+                                (Z.max (femax (type_of_expr e1)) (femax (type_of_expr e2)))
+                                (Binary.Bplus (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) 
+                                     (plus_nan ty) Binary.mode_NE (Binary.B754_finite (fprec ty) (femax ty) s0 m e e0)
+                                     (Binary.B754_finite (fprec ty) (femax ty) s2 m0 e3 e4)) B;
+                              auto.
+                            }
 
 
+  
 
 (* end - AEK additions for converting expressions withe exact division
 by powers of two. *)
