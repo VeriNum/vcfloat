@@ -3143,6 +3143,32 @@ Proof.
   typeclasses eauto.
 Qed.
 
+Lemma cast_is_nan tfrom tto:
+  type_le tfrom tto ->
+  forall f,
+  is_nan _ _ f = true ->
+  is_nan _ _ (cast tto tfrom f) = true.
+Proof.
+  unfold cast.
+  intros.
+  destruct (type_eq_dec tfrom tto).
+  {
+    subst. assumption.
+  }
+  destruct H;
+  destruct f.
+  {
+  simpl in H0; auto.
+  }
+  { 
+  simpl in H0; auto.
+  }
+  { 
+  simpl. auto.
+  }
+  simpl in H0; auto.
+Qed.
+
 (* end - AEK additions for fshift_div correct *)
 
 Lemma Bmult_correct_comm:
