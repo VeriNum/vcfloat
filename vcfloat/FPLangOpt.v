@@ -1266,11 +1266,11 @@ Fixpoint is_nan_expr (env: forall ty, V -> ftype ty) (e: expr)
         match b with (Rounded2 DIV None) => 
           let be1':= is_zero_expr env e1 in 
           let be2':= is_zero_expr env e2 in
-          be1' && be2'
+          be1' || be2'
           | _ => 
             let be1':= is_nan_expr env e1 in 
             let be2':= is_nan_expr env e2 in
-            be1' && be2' end
+            be1' || be2' end
     | Unop b e1 => 
         match b with (Rounded1 SQRT None) => 
         Rltb (rval env e) 0%R
@@ -1287,7 +1287,59 @@ induction e.
 }
 { destruct b.
   { destruct op.
-      { simpl. (*prove that cast maintains nan*)
+      { simpl. 
+        unfold cast_lub_r.
+        unfold cast_lub_l.
+        destruct (is_nan_expr env e1).
+          { destruct (is_nan_expr env e2).
+            {
+              unfold BPLUS, BINOP.
+              symmetry in IHe1. symmetry in IHe2. 
+              pose proof type_lub_left (type_of_expr e1) (type_of_expr e2).
+              pose proof type_lub_right (type_of_expr e1) (type_of_expr e2).
+              set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
+              pose proof cast_is_nan (type_of_expr e1)
+              ty H (fval env e1) IHe1.
+              pose proof cast_is_nan (type_of_expr e2)
+              ty H0 (fval env e2) IHe2.
+              set (x:= cast ty (type_of_expr e1) (fval env e1)) in *.
+              set (y:= cast ty (type_of_expr e2) (fval env e2)) in *.
+              destruct x.
+                { simpl in H1; discriminate.
+                }
+                { simpl in H1; discriminate.
+                }
+                { destruct y.
+                  { simpl in H2; discriminate.
+                  }
+                  { simpl in H2; discriminate.
+                  }
+                  { cbv [Binary.Bplus]; simpl; auto.
+                  }
+                    simpl in H2; discriminate.
+                }
+                { simpl in H1; discriminate.
+                }
+              }
+                unfold BPLUS, BINOP.
+                symmetry in IHe1. symmetry in IHe2. 
+                pose proof type_lub_left (type_of_expr e1) (type_of_expr e2).
+                pose proof type_lub_right (type_of_expr e1) (type_of_expr e2).
+                set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
+                pose proof cast_is_nan (type_of_expr e1)
+                ty H (fval env e1) IHe1.
+                set (x:= cast ty (type_of_expr e1) (fval env e1)) in *.
+                set (y:= cast ty (type_of_expr e2) (fval env e2)) in *.
+                destruct x.
+                  { simpl in H1; discriminate.
+                  }
+                  { simpl in H1; discriminate.
+                  }
+                  { cbv [Binary.Bplus]; simpl; auto.
+                  }
+                  { simpl in H1; discriminate.
+                  }
+
 
 
 (* end - AEK additions for converting expressions withe exact division
