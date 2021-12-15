@@ -1277,7 +1277,7 @@ Fixpoint is_nan_expr (env: forall ty, V -> ftype ty) (e: expr)
         |_ => is_nan_expr env e1 end
   end.
 
-Lemma not_is_nan_correct env (e:FPLang.expr):
+Lemma is_nan_expr_correct env (e:FPLang.expr):
 is_nan_expr env e = Binary.is_nan _ _ (fval env e).
 Proof.
 induction e.
