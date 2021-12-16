@@ -1250,12 +1250,11 @@ Qed.
 Require Import Reals.ROrderedType.
 
 Definition is_zero_expr (env: forall ty, V -> ftype ty) (e: FPLang.expr)
- : bool := Reqb (rval env e) 0%R.
-
-Definition Rltb (x y : R) := match total_order_T x y with
-                            | inleft (left _) => true
-                            | _ => false
-                            end.
+ : bool :=  
+match (fval env e) with
+| Binary.B754_zero _ _ b1 => true
+| _ => false
+end.
 
 Fixpoint is_nan_expr (env: forall ty, V -> ftype ty) (e: expr)
 {struct e}: bool := 
@@ -1273,7 +1272,7 @@ Fixpoint is_nan_expr (env: forall ty, V -> ftype ty) (e: expr)
             be1' || be2' end
     | Unop b e1 => 
         match b with (Rounded1 SQRT None) => 
-        Rltb (rval env e) 0%R
+          Binary.Bsign _ _ (fval env e)
         |_ => is_nan_expr env e1 end
   end.
 
