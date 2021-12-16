@@ -58,6 +58,7 @@ Import compcert.lib.IEEE754_extra.
 Import compcert.lib.Floats.
 Require Export vcfloat.LibTac.
 Require Export vcfloat.BigRAux.
+Set Bullet Behavior "Strict Subproofs". (* because LibTac screws it up *)
 
 Definition rounded_binop_eqb (r1 r2: rounded_binop): bool :=
   match r1, r2 with
@@ -471,7 +472,7 @@ Fixpoint fshift (e: FPLang.expr) {struct e}: FPLang.expr :=
       let e'2 := fshift e2 in
       if binop_eqb b (Rounded2 MULT None)
       then
-      let ty := type_lub (type_of_expr e'1) (type_of_expr e'2) in
+        let ty := type_lub (type_of_expr e'1) (type_of_expr e'2) in
         match fcval_nonrec e'1 with
           | Some c1' =>
             let c1 := cast ty _ c1' in
@@ -534,12 +535,9 @@ Proof.
         match goal with
             |- type_of_expr (if ?v then _ else _) = _ =>
             destruct v
-        end; simpl.
-        {
-          unfold Datatypes.id.
-          congruence.
-        }
-          congruence.
+        end; simpl;
+        unfold Datatypes.id;
+        congruence.
 }
       destruct (fcval_nonrec (fshift e2)).
  {
@@ -637,7 +635,7 @@ Proof.
           apply binary_float_eqb_eq in IHe2.
           subst.
           apply binary_float_eqb_eq in FEQ.
-                   rewrite <- FEQ.
+          rewrite <- FEQ.
           apply binary_float_eqb_eq.
           reflexivity.
         }
@@ -1276,11 +1274,96 @@ Fixpoint is_nan_expr (env: forall ty, V -> ftype ty) (e: expr)
         |_ => is_nan_expr env e1 end
   end.
 
+
+Lemma is_nan_normalize:
+  forall prec emax (H0: FLX.Prec_gt_0 prec) (H1 : (prec < emax)%Z)
+                   mode m e s, 
+  Binary.is_nan _ _ (Binary.binary_normalize prec emax H0 H1 mode m e s) = false.
+Proof.
+intros.
+unfold Binary.binary_normalize.
+destruct m; try reflexivity.
+-
+set (H2 := Binary.binary_round_correct _ _ _ _ _ _ _ _); clearbody H2.
+set (z := Binary.binary_round prec emax mode false p e) in *.
+destruct H2.
+cbv zeta in y.
+set (b := Rlt_bool _ _) in y.
+clearbody b.
+set (H2 := proj1 _).
+clearbody H2.
+destruct b.
++
+destruct y as [? [? ?]].
+destruct z; try discriminate; reflexivity.
++
+unfold Binary.binary_overflow in y.
+destruct (Binary.overflow_to_inf mode false);
+clearbody z; subst z; reflexivity.
+-
+set (H2 := Binary.binary_round_correct _ _ _ _ _ _ _ _); clearbody H2.
+set (z := Binary.binary_round prec emax mode true p e) in *.
+destruct H2.
+cbv zeta in y.
+set (b := Rlt_bool _ _) in y.
+clearbody b.
+set (H2 := proj1 _).
+clearbody H2.
+destruct b.
++
+destruct y as [? [? ?]].
+destruct z; try discriminate; reflexivity.
++
+unfold Binary.binary_overflow in y.
+destruct (Binary.overflow_to_inf mode true);
+clearbody z; subst z; reflexivity.
+Qed.
+
+Lemma is_nan_cast:
+  forall  t1 t2 x1,
+   Binary.is_nan (fprec t1) (femax t1) x1 = false ->
+  Binary.is_nan _ _ (cast t2 t1 x1) = false.
+Proof.
+intros.
+unfold cast.
+destruct (type_eq_dec _ _).
+subst t2.
+apply H.
+unfold Bconv.
+destruct x1; try discriminate; auto.
+apply is_nan_normalize.
+Qed.
+
 Lemma is_nan_plus (env: forall ty, V -> ftype ty) (e1 e2:FPLang.expr):
 Binary.is_nan _ _ (fval env e1) = false -> 
 Binary.is_nan _ _ (fval env e2) = false -> 
 Binary.is_nan _ _ (fval env (Binop (Rounded2 PLUS None) e1 e2)) = false.
 Proof.
+intros.
+simpl.
+set (x1 := fval env e1) in *; clearbody x1.
+set (x2 := fval env e2) in *; clearbody x2.
+set (t1 := type_of_expr e1) in *; clearbody t1.
+set (t2 := type_of_expr e2) in *; clearbody t2.
+unfold cast_lub_l, cast_lub_r.
+change (Z.max _ _) with (femax (type_lub t1 t2)).
+set (t := type_lub t1 t2).
+unfold BPLUS, BINOP.
+assert (Binary.is_nan _ _ (cast t t1 x1) = false) by (apply is_nan_cast; auto).
+assert (Binary.is_nan _ _ (cast t t2 x2) = false) by (apply is_nan_cast; auto).
+set (y1 := cast t t1 x1) in *; clearbody y1.
+set (y2 := cast t t2 x2) in *; clearbody y2.
+clearbody t.
+clear x1 H x2 H0 t1 t2.
+destruct y1; try discriminate; destruct y2; try discriminate; try reflexivity.
+unfold Binary.Bplus.
+destruct (eqb _ _); reflexivity.
+unfold Binary.Bplus.
+destruct (eqb _ _); try reflexivity.
+(*  OOPS!  Adding +infinity to -infinity is a nan *)
+admit.
+unfold Binary.Bplus.
+apply is_nan_normalize.
 Admitted.
 
 Lemma is_nan_minus (env: forall ty, V -> ftype ty) (e1 e2:FPLang.expr):
@@ -1297,18 +1380,37 @@ Binary.is_nan _ _ (fval env (Binop (Rounded2 MULT None) e1 e2)) = false.
 Proof.
 Admitted.
 
-Lemma is_nan_expr_correct_binop env (e1 e2:FPLang.expr):
+
+Lemma is_nan_expr_correct_binop (env: forall ty : type, V -> ftype ty) (e1 e2:FPLang.expr):
 forall b : binop, 
-is_nan_expr env (Binop b e1 e2) = 
-Binary.is_nan _ _ (fval env (Binop b e1 e2)).
+ b <> Rounded2 DIV None ->
+ Binary.is_nan (fprec (type_of_expr e1)) (femax (type_of_expr e1)) (fval env e1)
+  || Binary.is_nan (fprec (type_of_expr e2)) (femax (type_of_expr e2))  (fval env e2) =
+ Binary.is_nan (fprec (type_of_expr (Binop b e1 e2)))
+  (femax (type_of_expr (Binop b e1 e2))) (fval env (Binop b e1 e2)).
+Admitted.
+
+Lemma is_nan_expr_correct_unop (env: forall ty : type, V -> ftype ty)  (e: expr):
+forall u : unop, 
+ u <> Rounded1 SQRT None ->
+Binary.is_nan (fprec (type_of_expr e)) (femax (type_of_expr e)) (fval env e) =
+Binary.is_nan (fprec (type_of_expr (Unop u e)))
+  (femax (type_of_expr (Unop u e))) (fval env (Unop u e)).
 Proof.
 Admitted.
 
-Lemma is_nan_expr_correct_unop env (e1: expr):
-forall b : unop, 
-is_nan_expr env (Unop b e1) = 
-Binary.is_nan _ _ (fval env (Unop b e1)).
-Proof.
+Lemma is_nan_correct_sqrt (env: forall ty : type, V -> ftype ty)  (e: expr):
+Binary.Bsign (fprec (Datatypes.id (type_of_expr e)))
+  (femax (Datatypes.id (type_of_expr e))) (Bsqrt (type_of_expr e) (fval env e)) =
+Binary.is_nan (fprec (Datatypes.id (type_of_expr e)))
+  (femax (Datatypes.id (type_of_expr e))) (Bsqrt (type_of_expr e) (fval env e)).
+Admitted.
+
+Lemma is_nan_div_correct env (e1 e2: expr):
+is_zero_expr env e1 || is_zero_expr env e2 =
+Binary.is_nan (fprec (type_of_expr (Binop (Rounded2 DIV None) e1 e2)))
+  (femax (type_of_expr (Binop (Rounded2 DIV None) e1 e2)))
+  (fval env (Binop (Rounded2 DIV None) e1 e2)).
 Admitted.
 
 Lemma is_nan_expr_correct env (e: expr):
@@ -1316,18 +1418,35 @@ is_nan_expr env e =
 Binary.is_nan _ _ (fval env e).
 Proof. 
 induction e.
-{ simpl; auto.
-}
-{ simpl; auto.
-}   
-{ apply is_nan_expr_correct_binop.
-}
-{ apply is_nan_expr_correct_unop.
-}
+- simpl; auto.
+- simpl; auto.
+-
+ unfold is_nan_expr; fold is_nan_expr.
+ rewrite IHe1, IHe2; clear IHe1 IHe2.
+ pose proof (binop_eqb_eq b (Rounded2 DIV None)).
+ destruct (binop_eqb b (Rounded2 DIV None)).
+ +
+   rewrite (proj1 H) by auto.
+   apply is_nan_div_correct.
+ +
+    assert (b <> Rounded2 DIV None).
+    intro. subst. destruct H; auto.
+    rewrite <- is_nan_expr_correct_binop by auto.
+    destruct b; try congruence. destruct op, knowl; try congruence; auto.
+-
+  unfold is_nan_expr; fold is_nan_expr.
+  rewrite IHe; clear IHe.
+ pose proof (unop_eqb_eq u (Rounded1 SQRT None)).
+ destruct (unop_eqb u (Rounded1 SQRT None)).
+ +
+ rewrite (proj1 H) by auto.
+  apply is_nan_correct_sqrt.
+ +
+  assert (u <> Rounded1 SQRT None).
+  intro. subst. destruct H; auto.
+  rewrite <-  is_nan_expr_correct_unop by auto.
+  destruct u; try congruence. destruct op, knowl; try congruence; auto.
 Qed. 
-
-(* end - AEK additions for converting expressions with exact division
-by powers of two. *)
 
 (* Erasure of rounding annotations *)
 
