@@ -389,6 +389,44 @@ Proof.
        apply Z.eqb_eq. auto.
 Qed.
 
+Definition binary_float_equiv {prec1 emax1 prec2 emax2} (b1: binary_float prec1 emax1) (b2: binary_float prec2 emax2): bool :=
+(* equivalence that disregards nan payloads *) 
+  match b1, b2 with
+    | B754_zero _ _ b1, B754_zero _ _ b2 => Bool.eqb b1 b2
+    | B754_infinity _ _ b1, B754_infinity _ _ b2 => Bool.eqb b1 b2
+    | B754_nan _ _ b1 n1 _, B754_nan _ _ b2 n2 _ => true
+    | B754_finite _ _ b1 m1 e1 _, B754_finite _ _ b2 m2 e2 _ =>
+      Bool.eqb b1 b2 && Pos.eqb m1 m2 && Z.eqb e1 e2
+    | _, _ => false
+  end.
+
+Lemma binary_float_eqb_equiv prec emax (b1 b2: binary_float prec emax):
+   binary_float_eqb b1 b2 = true -> binary_float_equiv b1 b2 = true .
+Proof.
+  destruct b1; destruct b2; simpl;
+      (repeat rewrite andb_true_iff);
+      (try rewrite Bool.eqb_true_iff);
+      (try rewrite Pos.eqb_eq);
+      (try intuition congruence).
+Qed.
+
+Lemma binary_float_eq_equiv prec emax (b1 b2: binary_float prec emax):
+   b1 = b2 -> binary_float_equiv b1 b2 = true .
+Proof.
+intros.
+apply binary_float_eqb_eq in H. 
+apply binary_float_eqb_equiv in H; apply H.
+Qed.
+
+Lemma binary_float_equiv_eq prec emax (b1 b2: binary_float prec emax):
+   binary_float_equiv b1 b2 = true -> is_nan _ _ b1 =  false -> is_nan _ _ b2 = false -> b1 = b2.
+Proof.
+intros. 
+assert (binary_float_eqb b1 b2 = true). 
+- destruct b1; destruct b2; simpl in H; simpl; auto.
+- eapply binary_float_eqb_eq; apply H2.
+Qed.
+
 Inductive expr: Type :=
 | Const (ty: type) (f: ftype ty)
 | Var (ty: type) (i: V)
@@ -3094,87 +3132,93 @@ Proof.
   rewrite HMUL, HDIV in *; auto.
 Qed.
 
-Lemma cast_not_is_nan tfrom tto:
-  type_le tfrom tto ->
-  forall f,
-  is_nan _ _ f = false ->
-  is_nan _ _ (cast tto tfrom f) = false.
+
+Lemma is_nan_normalize:
+  forall prec emax (H0: FLX.Prec_gt_0 prec) (H1 : (prec < emax)%Z)
+                   mode m e s, 
+  Binary.is_nan _ _ (Binary.binary_normalize prec emax H0 H1 mode m e s) = false.
 Proof.
-  unfold cast.
-  intros.
-  destruct (type_eq_dec tfrom tto).
-  {
-    subst. assumption.
-  }
-  destruct H;
-  destruct f.
-  {
-  simpl. auto.
-  }
-  { 
-  simpl. auto.
-  }
-  { 
-  simpl. auto.
-  }
-  apply is_finite_not_is_nan. 
-  apply Bconv_widen_exact; auto with zarith.
-  typeclasses eauto.
+intros.
+unfold Binary.binary_normalize.
+destruct m; try reflexivity.
+-
+set (H2 := Binary.binary_round_correct _ _ _ _ _ _ _ _); clearbody H2.
+set (z := Binary.binary_round prec emax mode false p e) in *.
+destruct H2.
+cbv zeta in y.
+set (b := Rlt_bool _ _) in y.
+clearbody b.
+set (H2 := proj1 _).
+clearbody H2.
+destruct b.
++
+destruct y as [? [? ?]].
+destruct z; try discriminate; reflexivity.
++
+unfold Binary.binary_overflow in y.
+destruct (Binary.overflow_to_inf mode false);
+clearbody z; subst z; reflexivity.
+-
+set (H2 := Binary.binary_round_correct _ _ _ _ _ _ _ _); clearbody H2.
+set (z := Binary.binary_round prec emax mode true p e) in *.
+destruct H2.
+cbv zeta in y.
+set (b := Rlt_bool _ _) in y.
+clearbody b.
+set (H2 := proj1 _).
+clearbody H2.
+destruct b.
++
+destruct y as [? [? ?]].
+destruct z; try discriminate; reflexivity.
++
+unfold Binary.binary_overflow in y.
+destruct (Binary.overflow_to_inf mode true);
+clearbody z; subst z; reflexivity.
 Qed.
 
-Lemma cast_is_nan tfrom tto:
-  type_le tfrom tto ->
-  forall f,
-  is_nan _ _ f = true ->
-  is_nan _ _ (cast tto tfrom f) = true.
+Lemma is_nan_cast:
+  forall  t1 t2 x1,
+   is_nan _ _ x1 = false ->
+   is_nan _ _ (cast t2 t1 x1) = false.
 Proof.
-  unfold cast.
-  intros.
-  destruct (type_eq_dec tfrom tto).
-  {
-    subst. assumption.
-  }
-  destruct H;
-  destruct f.
-  {
-  simpl in H0; auto.
-  }
-  { 
-  simpl in H0; auto.
-  }
-  { 
-  simpl. auto.
-  }
-  simpl in H0; auto.
+intros.
+unfold cast.
+destruct (type_eq_dec _ _).
+subst t2.
+apply H.
+unfold Bconv.
+destruct x1; try discriminate; auto.
+apply is_nan_normalize.
+Qed.
+
+Lemma cast_is_nan :
+  forall t1 t2 x1,
+  is_nan _ _ x1 = true ->
+  is_nan _ _ (cast t1 t2 x1) = true.
+Proof.
+intros.
+unfold cast.
+destruct (type_eq_dec _ _).
+subst t2.
+apply H.
+unfold Bconv.
+destruct x1; try discriminate; auto.
 Qed.
 
 Lemma cast_inf tfrom tto:
-  type_le tfrom tto ->
   forall f,
   is_finite _ _ f = false ->
   is_finite _ _ (cast tto tfrom f) = false.
 Proof.
   unfold cast.
   intros.
-  destruct (type_eq_dec tfrom tto).
-  {
-    subst. assumption.
-  }
-  destruct H;
-  destruct f.
-  {
-  simpl in H0; auto.
-  }
-  { 
-  simpl in H0; auto.
-  }
-  { 
-  simpl. auto.
-  }
-  simpl in H0; discriminate. 
+destruct (type_eq_dec _ _).
+subst tto.
+apply H.
+unfold Bconv.
+destruct f; try discriminate; auto.
 Qed.
-
-(* end - AEK additions for fshift_div correct *)
 
 Lemma Bmult_correct_comm:
 forall (prec emax : Z) (prec_gt_0_ : FLX.Prec_gt_0 prec)
