@@ -61,7 +61,6 @@ Require Import Interval.Tactic.
 Set Bullet Behavior "Strict Subproofs". (* because Interval.Tactic screws it up *)
 Require vcfloat.Fprop_absolute.
 Global Unset Asymmetric Patterns. (* because "Require compcert..." sets it *)
-Require Export Relation_Definitions.
 
 
 Module MSET := MSetAVL.Make(Nat).
@@ -393,11 +392,10 @@ Qed.
 
 Definition binary_float_equiv {prec1 emax1 prec2 emax2} 
 (b1: binary_float prec1 emax1) (b2: binary_float prec2 emax2): Prop :=
-(* equivalence that disregards nan payloads *) 
   match b1, b2 with
     | B754_zero _ _ b1, B754_zero _ _ b2 => b1 = b2
     | B754_infinity _ _ b1, B754_infinity _ _ b2 =>  b1 = b2
-    | B754_nan _ _ b1 n1 _, B754_nan _ _ b2 n2 _ => b1 = b2
+    | B754_nan _ _ _ _ _, B754_nan _ _ _ _ _ => b1 = b1
     | B754_finite _ _ b1 m1 e1 _, B754_finite _ _ b2 m2 e2 _ =>
       b1 = b2 /\  m1 = m2 /\ e1 = e2
     | _, _ => ~ b1 = b1
@@ -460,6 +458,7 @@ destruct b1; destruct b2; destruct b3; simpl; auto.
 all: try (destruct H; destruct H0; reflexivity).    
 destruct H; destruct H0. subst. destruct H2; destruct H1; subst; auto. 
 Qed.
+
 
 Inductive expr: Type :=
 | Const (ty: type) (f: ftype ty)
