@@ -1004,18 +1004,78 @@ rewrite H0 in A; discriminate.
 } 
 clear EINV.
 simpl. 
-{ destruct (fval env e2); unfold binary_float_equiv in IHe2. 
--contradiction.
--contradiction.
-- rewrite IHe1; subst. 
-set (b1:= (Binary.B754_nan (fprec (type_of_expr e2)) 
-(femax (type_of_expr e2)) s1
-           pl e)) in *.
-set (b2:= (Binary.B754_nan (fprec (type_of_expr e2)) 
-(femax (type_of_expr e2)) s1
-           pl0 e0)) in *.
-assert (binary_float_equiv b1 b2) by (simpl;auto).
+{ destruct (fval env e2). 
+-unfold binary_float_equiv in IHe2; contradiction.
+-unfold binary_float_equiv in IHe2; contradiction.
+- rewrite <- IHe1. 
+unfold cast_lub_r.
+unfold cast_lub_l.
+set (t1:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
+set (b10:=(Binary.B754_nan (fprec (type_of_expr e2)) (femax (type_of_expr e2)) s1 pl0
+           e0)) in *.
+set (b00:=(Binary.B754_nan (fprec (type_of_expr e2)) (femax (type_of_expr e2)) s0 pl
+           e)) in *.
+assert (Binary.is_nan (fprec (type_of_expr e2)) (femax (type_of_expr e2)) b10 =
+    true) by (simpl;auto).
+assert (Binary.is_nan (fprec (type_of_expr e2)) (femax (type_of_expr e2)) b00 =
+    true) by (simpl;auto).
+pose proof cast_is_nan t1 (type_of_expr e2) b10 H.
+pose proof cast_is_nan t1 (type_of_expr e2) b00 H0.
+set (y:=(Binary.B754_zero (fprec (type_of_expr e1))
+          (femax (type_of_expr e1)) s)) in *.
+assert (Binary.is_finite _ _ y = true) by (simpl;auto).
+assert (type_le (type_of_expr e1) t1) by
+(apply type_lub_left).
+pose proof cast_finite (type_of_expr e1) t1 H4 y H3.
+repeat (
+match goal with |- context [cast ?a ?c ?d] =>
+ let b:= fresh "b" in 
+ set (b:= (cast a c d)) in * end
+).
+{ destruct b0; simpl in H2; try discriminate.
+{ destruct b1; simpl in H2; try discriminate.
+{ destruct b; simpl in H5; try discriminate.
+- set (b':=(Binary.B754_nan 
+  (fprec t1) (femax t1) s2 pl1 e3)) in *.
+set (b'':=(Binary.B754_nan 
+  (fprec t1) (femax t1) s3 pl2 e4)) in *.
+assert (binary_float_equiv b' b'') by 
+ (cbv [binary_float_equiv]; unfold b'; 
+ unfold b''; auto).
+unfold BDIV, BINOP; cbv [Binary.Bdiv]. 
+cbv [binary_float_equiv Binary.build_nan]; 
+unfold b'; unfold b''; auto.
+- set (b':=(Binary.B754_nan 
+  (fprec t1) (femax t1) s2 pl1 e3)) in *.
+set (b'':=(Binary.B754_nan 
+  (fprec t1) (femax t1) s3 pl2 e4)) in *.
+assert (binary_float_equiv b' b'') by 
+ (cbv [binary_float_equiv]; unfold b'; 
+ unfold b''; auto).
+unfold BDIV, BINOP; cbv [Binary.Bdiv]. 
+cbv [binary_float_equiv Binary.build_nan]; 
+unfold b'; unfold b''; auto.
+}
+}
+}
+- simpl in IHe2; contradiction.
+}
+}
+- { destruct (Bexact_inverse _ ) eqn:EINV. 
+{ match goal with
+|- binary_float_equiv (fval env (if ?b then _ else _)) _ =>
+destruct b eqn:FEQ
+end.
+- apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E).
+simpl. 
+unfold BDIV, BMULT, BINOP.
+cbv [Binary.Bdiv Binary.Bmult binary_float_equiv ].
+
+
+
 Admitted.
+
 
 Lemma fshift_div_correct env e:
   fval env (fshift_div env e) = eq_rect_r _ (fval env e) (fshift_type_div env e).
