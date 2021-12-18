@@ -61,6 +61,8 @@ Require Import Interval.Tactic.
 Set Bullet Behavior "Strict Subproofs". (* because Interval.Tactic screws it up *)
 Require vcfloat.Fprop_absolute.
 Global Unset Asymmetric Patterns. (* because "Require compcert..." sets it *)
+Require Export Relation_Definitions.
+
 
 Module MSET := MSetAVL.Make(Nat).
 
@@ -389,29 +391,32 @@ Proof.
        apply Z.eqb_eq. auto.
 Qed.
 
-Definition binary_float_equiv {prec1 emax1 prec2 emax2} (b1: binary_float prec1 emax1) (b2: binary_float prec2 emax2): bool :=
+Definition binary_float_equiv {prec1 emax1 prec2 emax2} 
+(b1: binary_float prec1 emax1) (b2: binary_float prec2 emax2): Prop :=
 (* equivalence that disregards nan payloads *) 
   match b1, b2 with
-    | B754_zero _ _ b1, B754_zero _ _ b2 => Bool.eqb b1 b2
-    | B754_infinity _ _ b1, B754_infinity _ _ b2 => Bool.eqb b1 b2
-    | B754_nan _ _ b1 n1 _, B754_nan _ _ b2 n2 _ => true
+    | B754_zero _ _ b1, B754_zero _ _ b2 => b1 = b2
+    | B754_infinity _ _ b1, B754_infinity _ _ b2 =>  b1 = b2
+    | B754_nan _ _ b1 n1 _, B754_nan _ _ b2 n2 _ => b1 = b2
     | B754_finite _ _ b1 m1 e1 _, B754_finite _ _ b2 m2 e2 _ =>
-      Bool.eqb b1 b2 && Pos.eqb m1 m2 && Z.eqb e1 e2
-    | _, _ => false
+      b1 = b2 /\  m1 = m2 /\ e1 = e2
+    | _, _ => ~ b1 = b1
   end.
 
 Lemma binary_float_eqb_equiv prec emax (b1 b2: binary_float prec emax):
-   binary_float_eqb b1 b2 = true -> binary_float_equiv b1 b2 = true .
+   binary_float_eqb b1 b2 = true -> binary_float_equiv b1 b2 .
 Proof.
   destruct b1; destruct b2; simpl;
       (repeat rewrite andb_true_iff);
       (try rewrite Bool.eqb_true_iff);
       (try rewrite Pos.eqb_eq);
       (try intuition congruence).
+      rewrite ?Z.eqb_eq; 
+      rewrite ?and_assoc; auto.  
 Qed.
 
 Lemma binary_float_eq_equiv prec emax (b1 b2: binary_float prec emax):
-   b1 = b2 -> binary_float_equiv b1 b2 = true .
+   b1 = b2 -> binary_float_equiv b1 b2.
 Proof.
 intros.
 apply binary_float_eqb_eq in H. 
@@ -419,12 +424,41 @@ apply binary_float_eqb_equiv in H; apply H.
 Qed.
 
 Lemma binary_float_equiv_eq prec emax (b1 b2: binary_float prec emax):
-   binary_float_equiv b1 b2 = true -> is_nan _ _ b1 =  false -> is_nan _ _ b2 = false -> b1 = b2.
+   binary_float_equiv b1 b2 -> is_nan _ _ b1 =  false -> is_nan _ _ b2 = false -> b1 = b2.
 Proof.
 intros. 
 assert (binary_float_eqb b1 b2 = true). 
 - destruct b1; destruct b2; simpl in H; simpl; auto.
-- eapply binary_float_eqb_eq; apply H2.
++ rewrite H; apply eqb_reflx.
++ rewrite H; apply eqb_reflx.
++ rewrite ?andb_true_iff. 
+destruct H; rewrite H.
+destruct H2; rewrite H2; rewrite H3; split. split; auto. 
+apply eqb_reflx. 
+apply Pos.eqb_eq; reflexivity.
+apply Z.eqb_eq; reflexivity.
+- apply binary_float_eqb_eq; apply H2. 
+Qed.
+
+Lemma binary_float_equiv_refl prec emax (b1: binary_float prec emax):
+     binary_float_equiv b1 b1.
+Proof.
+destruct b1; simpl; auto. Qed.
+
+Lemma binary_float_equiv_sym prec emax (b1 b2: binary_float prec emax):
+     binary_float_equiv b1 b2 -> binary_float_equiv b2 b1.
+Proof.
+intros.
+destruct b1; destruct b2; simpl; auto. 
+destruct H as (A & B & C); subst; auto. Qed.
+
+Lemma binary_float_equiv_trans prec emax (b1 b2 b3: binary_float prec emax):
+     binary_float_equiv b1 b2 -> binary_float_equiv b2 b3 -> binary_float_equiv b1 b3.
+Proof.
+intros.
+destruct b1; destruct b2; destruct b3; simpl; auto.
+all: try (destruct H; destruct H0; reflexivity).    
+destruct H; destruct H0. subst. destruct H2; destruct H1; subst; auto. 
 Qed.
 
 Inductive expr: Type :=
