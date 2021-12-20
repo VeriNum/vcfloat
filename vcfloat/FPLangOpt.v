@@ -989,8 +989,112 @@ rewrite FEQ in EINV.
 apply binary_float_equiv_sym.
 simpl; unfold cast_lub_l;
 unfold cast_lub_r. rewrite <- IHe2.
-{ apply Bdiv_mult_inverse_equiv2.
-(* prove lemma cast preserves equiv *)
+{ apply Bdiv_mult_inverse_equiv2; try apply EINV.
+- apply binary_float_equiv_sym.
+apply cast_preserves_bf_equiv2.
++ apply IHe1.
++ simpl; reflexivity.
+- apply cast_finite; simpl; auto.
+apply type_lub_right.
+- apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E). 
+apply is_finite_strict_finite in B; apply B.
+}
+- clear FEQ. { match goal with
+|- binary_float_equiv (fval env (if ?b then _ else _)) _ =>
+destruct b eqn:FEQ
+end.
+- rewrite ?andb_true_iff in FEQ; 
+unfold cast_lub_l;
+unfold cast_lub_r.
+apply binary_float_eqb_eq in FEQ.
+rewrite FEQ in EINV. 
+apply binary_float_equiv_sym.
+simpl; unfold cast_lub_l;
+rewrite ?positive_nat_N.  
+rewrite ?N2Z.inj_pos.
+unfold cast_lub_r. rewrite <- IHe2.
+{ apply Bdiv_mult_inverse_equiv2; try apply EINV.
+- apply binary_float_equiv_sym.
+apply cast_preserves_bf_equiv2.
++ apply IHe1.
++ simpl; reflexivity.
+- apply cast_finite; simpl; auto.
+apply type_lub_right.
+- apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E). 
+apply is_finite_strict_finite in B; apply B.
+}
+- simpl; unfold cast_lub_l;
+unfold cast_lub_r.
+{ apply binary_float_equiv_BDIV.
+- apply cast_preserves_bf_equiv2. 
++ apply IHe1.
++ simpl; reflexivity.
+- eapply cast_preserves_bf_equiv1. 
++ rewrite IHe2; apply binary_float_equiv_refl.
++ apply type_lub_right.
++ simpl; reflexivity.
+} } }
+- { match goal with                         (* IHe1 finite *)
+|- binary_float_equiv (fval env (if ?b then _ else _)) _ =>
+destruct b eqn:FEQ
+end.
+- rewrite ?andb_true_iff in FEQ; 
+unfold cast_lub_l;
+unfold cast_lub_r.
+apply binary_float_eqb_eq in FEQ.
+rewrite FEQ in EINV. 
+clear FEQ. 
+simpl in EINV.
+{ apply binary_float_equiv_eq in IHe1.
+- simpl. rewrite <- IHe1. rewrite <- IHe2. 
+apply binary_float_equiv_sym.
+{ apply Bdiv_mult_inverse_equiv; try apply EINV.
+- apply cast_finite; simpl; auto.
+apply type_lub_right.
+- apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E). 
+apply is_finite_strict_finite in B; apply B.
+}
+- simpl; reflexivity. 
+}
+- clear FEQ. { match goal with
+|- binary_float_equiv (fval env (if ?b then _ else _)) _ =>
+destruct b eqn:FEQ
+end.
+- rewrite ?andb_true_iff in FEQ; 
+unfold cast_lub_l;
+unfold cast_lub_r.
+apply binary_float_eqb_eq in FEQ.
+rewrite FEQ in EINV. 
+clear FEQ. 
+simpl in EINV.
+{ apply binary_float_equiv_eq in IHe1.
+- simpl. rewrite <- IHe1. rewrite <- IHe2. 
+rewrite ?positive_nat_N.  
+rewrite ?N2Z.inj_pos.
+apply binary_float_equiv_sym.
+{ apply Bdiv_mult_inverse_equiv; try apply EINV.
+- apply cast_finite; simpl; auto.
+apply type_lub_right.
+- apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E). 
+apply is_finite_strict_finite in B; apply B.
+}
+- simpl; reflexivity. 
+}
+- simpl; unfold cast_lub_l;
+apply binary_float_equiv_eq in IHe1.
+unfold cast_lub_r; clear FEQ. 
+{ apply binary_float_eq_equiv.
+- rewrite <- IHe1; rewrite <- IHe2.
+reflexivity.
+} simpl; reflexivity. 
+} } }
+-
+
+
 Admitted.
 
 Lemma fshift_div_correct env e:
