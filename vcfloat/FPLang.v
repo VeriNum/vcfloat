@@ -3295,6 +3295,47 @@ intros.
 } }
 Qed.
 
+Theorem Bdiv_mult_inverse_equiv2 ty:
+  forall x1 x2 y z: (Binary.binary_float (fprec ty) (femax ty)),
+  binary_float_equiv x1 x2 ->
+  is_finite _ _ y = true ->
+  is_finite _ _ z = true ->
+  Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
+  binary_float_equiv
+  (Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) mode_NE x1 y) 
+  (Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) mode_NE x2 z) .
+Proof.
+intros.
+assert (binary_float_equiv x1 x2) by apply H.
+{ destruct x1; destruct x2; simpl in H; try contradiction.
+- { subst; apply Bdiv_mult_inverse_equiv.
+- apply H0.
+- apply H1.
+- apply H2.
+}
+- { subst; apply Bdiv_mult_inverse_equiv.
+- apply H0.
+- apply H1.
+- apply H2.
+}
+- { destruct y; simpl in H0; try discriminate.
+- { destruct z; simpl in H1; try discriminate.
+- cbv [Bdiv Bmult build_nan binary_float_equiv]; reflexivity.
+- cbv [Bdiv Bmult build_nan binary_float_equiv]; reflexivity.
+} } 
+- { 
+{ apply binary_float_finite_equiv_eqb in H3.
+- apply binary_float_eqb_eq in H3. 
+rewrite H3. 
+{ apply Bdiv_mult_inverse_equiv.
+- apply H0.
+- apply H1.
+- apply H2.
+}
+- simpl. reflexivity.
+} } } 
+Qed.
+
 
 
 Lemma is_nan_normalize:
