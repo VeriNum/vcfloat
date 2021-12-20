@@ -862,72 +862,60 @@ simpl in E2; simpl in f; inversion E2; clear E2; subst.
 simpl in IHe2; cbn [type_of_expr]; intros; subst.
 { destruct (Bexact_inverse _ ) eqn:EINV. 
 - { destruct f. 
-- eapply exact_inverse in EINV. contradiction. 
+- eapply exact_inverse in EINV. contradiction.     (* IHe2 zero *)
 apply cast_inf_strict; simpl; auto.
-- eapply exact_inverse in EINV. contradiction. 
+- eapply exact_inverse in EINV. contradiction.     (* IHe2 inf *)
 apply cast_inf_strict; simpl; auto.
-- eapply exact_inverse in EINV. contradiction. 
+- eapply exact_inverse in EINV. contradiction.     (* IHe2 nan *)
 apply cast_inf_strict; simpl; auto.
-- { eapply binary_float_equiv_eq in IHe2.
+- { eapply binary_float_equiv_eq in IHe2.          (* IHe2 finite *)
 - { destruct (fcval_nonrec (fshift_div e1)) eqn:E1.
 - generalize (fshift_type_div e1).
 destruct (fshift_div e1); try discriminate.
 simpl in E1; simpl in f; inversion E1; clear E1; subst.
 simpl in IHe1; cbn [type_of_expr]; intros; subst.
-{ destruct f.
+{ destruct f.                                      (* IHe1 zero *)
 - { eapply binary_float_equiv_eq in IHe1.
 { match goal with
 |- binary_float_equiv (fval env (if ?b then _ else _)) _ =>
 destruct b eqn:FEQ
 end.
-- simpl. rewrite ?andb_true_iff in FEQ; 
+- rewrite ?andb_true_iff in FEQ; 
 unfold cast_lub_l;
 unfold cast_lub_r.
 apply binary_float_eqb_eq in FEQ.
 rewrite FEQ in EINV. 
-clear FEQ. 
-simpl in EINV.
-set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
-change (Z.max (femax (type_of_expr e1)) 
-(femax (type_of_expr e2))) with (femax ty) in *.
-apply binary_float_eq_equiv; symmetry.
-simpl; rewrite <- IHe1; rewrite <- IHe2.
-{ eapply Bdiv_mult_inverse_finite; auto.
-- simpl. apply cast_finite; simpl; auto;
-eapply type_lub_left.
-- simpl. apply cast_finite; simpl; auto.
+apply binary_float_equiv_sym.
+simpl; unfold cast_lub_l;
+unfold cast_lub_r. rewrite <- IHe1; rewrite <- IHe2.
+{ apply Bdiv_mult_inverse_equiv ; try apply EINV.
+- apply cast_finite; simpl; auto;
 eapply type_lub_right.
 - apply Bexact_inverse_correct in EINV.
 destruct EINV as (A & B & C & D & E). 
-apply is_finite_strict_finite in B; apply B.
+apply is_finite_strict_finite in B.  apply B.
 }
-- simpl in EINV; clear FEQ.
-{ match goal with
+- clear FEQ. { match goal with
 |- binary_float_equiv (fval env (if ?b then _ else _)) _ =>
 destruct b eqn:FEQ
 end.
--simpl. rewrite ?andb_true_iff in FEQ; 
+- rewrite ?andb_true_iff in FEQ; 
 unfold cast_lub_l;
 unfold cast_lub_r.
 apply binary_float_eqb_eq in FEQ.
 rewrite FEQ in EINV. 
-clear FEQ. 
-simpl in EINV.
-set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
-change (Z.max (femax (type_of_expr e1)) 
-(femax (type_of_expr e2))) with (femax ty) in *.
-apply binary_float_eq_equiv; symmetry.
-simpl; rewrite <- IHe1; rewrite <- IHe2.
+apply binary_float_equiv_sym.
+unfold BDIV, BMULT, BINOP. 
+simpl; unfold cast_lub_l;
+unfold cast_lub_r. rewrite <- IHe1; rewrite <- IHe2.
 rewrite ?positive_nat_N.  
 rewrite ?N2Z.inj_pos.
-{ eapply Bdiv_mult_inverse_finite; auto.
-- simpl. apply cast_finite; simpl; auto;
-eapply type_lub_left.
-- simpl. apply cast_finite; simpl; auto.
+{ apply Bdiv_mult_inverse_equiv ; try apply EINV.
+- apply cast_finite; simpl; auto;
 eapply type_lub_right.
 - apply Bexact_inverse_correct in EINV.
 destruct EINV as (A & B & C & D & E). 
-apply is_finite_strict_finite in B; apply B.
+apply is_finite_strict_finite in B.  apply B.
 }
 - simpl; unfold cast_lub_l;
 unfold cast_lub_r; clear FEQ. 
@@ -936,7 +924,163 @@ rewrite <- IHe1; rewrite <- IHe2.
 reflexivity. 
 } } simpl; reflexivity. 
 }
--
+- { match goal with
+|- binary_float_equiv (fval env (if ?b then _ else _)) _ =>
+destruct b eqn:FEQ
+end.
+- rewrite ?andb_true_iff in FEQ; 
+unfold cast_lub_l;
+unfold cast_lub_r.
+apply binary_float_eqb_eq in FEQ.
+rewrite FEQ in EINV. 
+clear FEQ. 
+simpl in EINV.
+{ apply binary_float_equiv_eq in IHe1.
+- simpl. rewrite <- IHe1. rewrite <- IHe2. 
+apply binary_float_equiv_sym.
+{ apply Bdiv_mult_inverse_equiv; try apply EINV.
+- apply cast_finite; simpl; auto.
+apply type_lub_right.
+- apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E). 
+apply is_finite_strict_finite in B; apply B.
+}
+- simpl; reflexivity.
+}
+- clear FEQ. { match goal with
+|- binary_float_equiv (fval env (if ?b then _ else _)) _ =>
+destruct b eqn:FEQ
+end.
+- rewrite ?andb_true_iff in FEQ; 
+unfold cast_lub_l;
+unfold cast_lub_r.
+apply binary_float_eqb_eq in FEQ.
+rewrite FEQ in EINV. 
+clear FEQ. 
+simpl in EINV.
+{ apply binary_float_equiv_eq in IHe1.
+- simpl. rewrite <- IHe1. rewrite <- IHe2. 
+rewrite ?positive_nat_N.  
+rewrite ?N2Z.inj_pos.
+apply binary_float_equiv_sym.
+{ apply Bdiv_mult_inverse_equiv; try apply EINV.
+- apply cast_finite; simpl; auto.
+apply type_lub_right.
+- apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E). 
+apply is_finite_strict_finite in B; apply B.
+}
+- simpl; reflexivity. 
+}
+- { apply binary_float_equiv_eq in IHe1.
+- simpl. rewrite <- IHe1. rewrite <- IHe2. 
+apply binary_float_eq_equiv; reflexivity.
+- simpl; reflexivity.
+} } }
+- { match goal with                              (* IHe1 nan *)
+|- binary_float_equiv (fval env (if ?b then _ else _)) _ =>
+destruct b eqn:FEQ
+end.
+- rewrite ?andb_true_iff in FEQ; 
+unfold cast_lub_l;
+unfold cast_lub_r.
+apply binary_float_eqb_eq in FEQ.
+rewrite FEQ in EINV. 
+apply binary_float_equiv_sym.
+simpl; unfold cast_lub_l;
+unfold cast_lub_r. rewrite <- IHe2.
+{ destruct (fval env e1); simpl in IHe1; try contradiction. 
+{ apply Bdiv_mult_inverse_equiv. try apply EINV.
+
+clear FEQ. 
+simpl in EINV.
+{destruct (fval env e1); cbv [binary_float_equiv] in IHe1; try contradiction; clear IHe1.
+set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
+
+
+set (b1:=
+        (Binary.B754_zero (fprec (type_of_expr e1)) (femax (type_of_expr e1)) s)) 
+in *.
+assert (Binary.is_finite _ _ b1 = true) by (simpl;auto).
+assert (type_le (type_of_expr e1) ty) by
+(apply type_lub_left).
+pose proof cast_finite (type_of_expr e1) ty H0 b1 H.
+set (b2:=
+        (Binary.B754_nan (fprec (type_of_expr e2)) (femax (type_of_expr e2)) s1 pl0 e0))
+in *. 
+assert (Binary.is_nan (fprec (type_of_expr e2)) (femax (type_of_expr e2)) b2 = true) 
+ by (simpl;auto).
+pose proof cast_is_nan ty (type_of_expr e2) b2 H2.
+set (b3:=
+        (Binary.B754_nan (fprec (type_of_expr e2)) (femax (type_of_expr e2)) s0 pl e))
+in *. 
+assert (Binary.is_nan (fprec (type_of_expr e2)) (femax (type_of_expr e2)) b3 = true) 
+ by (simpl;auto).
+pose proof cast_is_nan ty (type_of_expr e2) b3 H4.
+{ destruct (cast ty (type_of_expr e2) b2); simpl in H3; try discriminate.
+{ destruct (cast ty (type_of_expr e2) b3); simpl in H5; try discriminate.
+{ destruct (cast ty (type_of_expr e1) b1); simpl in H1; try discriminate.
+- unfold BDIV, BINOP. 
+cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
+- unfold BDIV, BINOP. 
+cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
+} } } } } } 
+
+
+
+{ apply Bdiv_mult_inverse_finite; try apply EINV. 
+- simpl. apply cast_finite; simpl; auto;
+eapply type_lub_right.
+- simpl. apply cast_finite; simpl; auto.
+eapply type_lub_right.
+- apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E). 
+apply is_finite_strict_finite in B; apply B.
+
+{ apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E). 
+set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
+change (Z.max (femax (type_of_expr e1)) 
+(femax (type_of_expr e2))) with (femax ty) in *.
+apply binary_float_eq_equiv; symmetry.
+rewrite <- IHe2.
+
+
+
+- simpl. rewrite ?binary_float_eqb_eq in FEQ.
+unfold cast_lub_r;
+unfold cast_lub_l.
+set (ty:=(type_lub (type_of_expr e1) (type_of_expr e2))) in *.
+change (Z.max (femax (type_of_expr e1)) (femax (type_of_expr e2))) with (femax ty) in *.
+pose proof type_lub_left (type_of_expr e1) (type_of_expr e2).
+rewrite <- IHe1 in *. clear IHe1.
+rewrite <- IHe2 in *; clear IHe2.
+set (x:=(cast ty (type_of_expr e2)
+ (Binary.B754_finite (fprec (type_of_expr e2)) 
+ (femax (type_of_expr e2)) s0 m e e0))) in *.
+assert (type_le (type_of_expr e1) ty) by
+(apply type_lub_left).
+assert (Binary.is_finite (fprec (type_of_expr e1)) (femax (type_of_expr e1))
+       (Binary.B754_zero (fprec (type_of_expr e1)) (femax (type_of_expr e1)) s) = true)
+by (simpl; auto).
+pose proof cast_finite (type_of_expr e1) ty H0
+ (Binary.B754_zero (fprec (type_of_expr e1)) 
+ (femax (type_of_expr e1)) s) H1.
+set (y:=(cast ty (type_of_expr e1)
+ (Binary.B754_zero (fprec (type_of_expr e1)) 
+ (femax (type_of_expr e1)) s))) in *.
+set (z:=(B2 ty (Z.neg (to_power_2_pos x)))) in *.
+rewrite FEQ in EINV; clear FEQ.
+assert (Bexact_inverse (fprec ty) (femax ty) 
+ (fprec_gt_0 ty) (fprec_lt_femax ty) x = Some z) by auto.
+apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E).
+assert (Binary.is_finite _ _ x=true) by (apply is_finite_strict_finite; auto) .
+assert (Binary.is_finite _ _ z=true) by (apply is_finite_strict_finite; auto) .
+pose proof Bdiv_mult_inverse_finite ty y x z H2 H4 H5 H3.
+unfold BMULT, BDIV, BINOP. 
+apply binary_float_eq_equiv; symmetry.
+apply H6.
 
 pose proof type_lub_left (type_of_expr e1) (type_of_expr e2).
 rewrite <- IHe1 in *. clear IHe1.
