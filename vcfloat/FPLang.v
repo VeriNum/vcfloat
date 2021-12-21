@@ -395,10 +395,10 @@ Definition binary_float_equiv {prec1 emax1 prec2 emax2}
   match b1, b2 with
     | B754_zero _ _ b1, B754_zero _ _ b2 => b1 = b2
     | B754_infinity _ _ b1, B754_infinity _ _ b2 =>  b1 = b2
-    | B754_nan _ _ _ _ _, B754_nan _ _ _ _ _ => b1 = b1
+    | B754_nan _ _ _ _ _, B754_nan _ _ _ _ _ => True
     | B754_finite _ _ b1 m1 e1 _, B754_finite _ _ b2 m2 e2 _ =>
       b1 = b2 /\  m1 = m2 /\ e1 = e2
-    | _, _ => ~ b1 = b1
+    | _, _ => False
   end.
 
 Lemma binary_float_equiv_refl prec emax (b1: binary_float prec emax):
