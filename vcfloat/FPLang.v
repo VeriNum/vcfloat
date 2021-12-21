@@ -401,6 +401,28 @@ Definition binary_float_equiv {prec1 emax1 prec2 emax2}
     | _, _ => ~ b1 = b1
   end.
 
+Lemma binary_float_equiv_refl prec emax (b1: binary_float prec emax):
+     binary_float_equiv b1 b1.
+Proof.
+destruct b1; simpl; auto. Qed.
+
+Lemma binary_float_equiv_sym prec emax (b1 b2: binary_float prec emax):
+     binary_float_equiv b1 b2 -> binary_float_equiv b2 b1.
+Proof.
+intros.
+destruct b1; destruct b2; simpl; auto. 
+destruct H as (A & B & C); subst; auto. Qed.
+
+Lemma binary_float_equiv_trans prec emax (b1 b2 b3: binary_float prec emax):
+  binary_float_equiv b1 b2 -> 
+  binary_float_equiv b2 b3 -> binary_float_equiv b1 b3.
+Proof. 
+intros.
+destruct b1; destruct b2; destruct b3; simpl; auto.
+all: try (destruct H; destruct H0; reflexivity).    
+destruct H; destruct H0. subst. destruct H2; destruct H1; subst; auto. 
+Qed.
+
 Lemma binary_float_eqb_equiv prec emax (b1 b2: binary_float prec emax):
    binary_float_eqb b1 b2 = true -> binary_float_equiv b1 b2 .
 Proof.
@@ -463,26 +485,6 @@ Proof.
       (try intuition congruence).
 Qed.
 
-Lemma binary_float_equiv_refl prec emax (b1: binary_float prec emax):
-     binary_float_equiv b1 b1.
-Proof.
-destruct b1; simpl; auto. Qed.
-
-Lemma binary_float_equiv_sym prec emax (b1 b2: binary_float prec emax):
-     binary_float_equiv b1 b2 -> binary_float_equiv b2 b1.
-Proof.
-intros.
-destruct b1; destruct b2; simpl; auto. 
-destruct H as (A & B & C); subst; auto. Qed.
-
-Lemma binary_float_equiv_trans prec emax (b1 b2 b3: binary_float prec emax):
-     binary_float_equiv b1 b2 -> binary_float_equiv b2 b3 -> binary_float_equiv b1 b3.
-Proof. 
-intros.
-destruct b1; destruct b2; destruct b3; simpl; auto.
-all: try (destruct H; destruct H0; reflexivity).    
-destruct H; destruct H0. subst. destruct H2; destruct H1; subst; auto. 
-Qed.
 
 Lemma binary_float_equiv_nan prec emax (b1 b2: binary_float prec emax):
 binary_float_equiv b1 b2 -> is_nan _ _ b1 = true -> is_nan _ _ b2 = true.
@@ -3487,7 +3489,6 @@ cbv [binary_float_equiv]; reflexivity.
 } }
 Qed. 
 
-
 Lemma binary_float_equiv_BDIV ty (b1 b2 b3 b4: binary_float (fprec ty) (femax ty)):
 binary_float_equiv b1 b2 ->
 binary_float_equiv b3 b4 ->
@@ -3495,76 +3496,125 @@ binary_float_equiv (BDIV ty b1 b3) (BDIV ty b2 b4).
 Proof.
 intros.
 destruct b1.
-- destruct b2; simpl in H; try contradiction; subst.
-destruct b3.
-+ destruct b4; simpl in H0; try contradiction.
-unfold BDIV, BMULT, BINOP.
-cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
-+ destruct b4; simpl in H0; try contradiction; subst.
-unfold BDIV, BMULT, BINOP.
-cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
-+ destruct b4; simpl in H0; try contradiction; subst.
-unfold BDIV, BMULT, BINOP.
-cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
-+ destruct b4; simpl in H0; try contradiction.
-destruct H0 as (H1 & H2 & H3); subst.
-unfold BDIV, BMULT, BINOP.
-cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
-
-- destruct b2; simpl in H; try contradiction; subst.
-destruct b3.
-+ destruct b4; simpl in H0; try contradiction; subst.
-unfold BDIV, BMULT, BINOP.
-cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
-+ destruct b4; simpl in H0; try contradiction; subst.
-unfold BDIV, BMULT, BINOP.
-cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
-+ destruct b4; simpl in H0; try contradiction; subst.
-unfold BDIV, BMULT, BINOP.
-cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
-+ destruct b4; simpl in H0; try contradiction.
-destruct H0 as (H1 & H2 & H3); subst.
-unfold BDIV, BMULT, BINOP.
-cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
-
-- destruct b2; simpl in H; try contradiction; subst.
-destruct b3.
-+ destruct b4; simpl in H0; try contradiction; subst.
-unfold BDIV, BMULT, BINOP.
-cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
-+ destruct b4; simpl in H0; try contradiction; subst.
-unfold BDIV, BMULT, BINOP.
-cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
-+ destruct b4; simpl in H0; try contradiction; subst.
-unfold BDIV, BMULT, BINOP.
-cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
-+ destruct b4; simpl in H0; try contradiction.
-destruct H0 as (H1 & H2 & H3); subst.
-unfold BDIV, BMULT, BINOP.
-cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
-
-- destruct b2; simpl in H; try contradiction; subst.
-destruct b3.
-+ destruct b4; simpl in H0; try contradiction.
-destruct H as (H1 & H2 & H3); subst.
-unfold BDIV, BMULT, BINOP.
-cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
-+ destruct b4; simpl in H0; try contradiction.
-destruct H as (H1 & H2 & H3); subst.
-unfold BDIV, BMULT, BINOP.
-cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
-+ destruct b4; simpl in H0; try contradiction.
-destruct H as (H1 & H2 & H3); subst.
-unfold BDIV, BMULT, BINOP.
-cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
-+ destruct b4; simpl in H0; try contradiction.
-destruct H as (H1 & H2 & H3); subst.
-destruct H0 as (H1 & H2 & H3); subst.
-apply binary_float_eq_equiv.
-unfold BDIV, BMULT, BINOP.
-cbv [Binary.Bdiv Binary.build_nan binary_float_equiv]; reflexivity.
+all : (destruct b3; destruct b4; try contradiction; try discriminate).
+all :
+match goal with 
+  |- context [
+binary_float_equiv (BDIV ?ty ?a ?b)
+ _] =>
+match a with 
+| B754_nan _ _ _ _ _ => destruct b2; try contradiction; try discriminate;
+    cbv [BDIV BINOP Bdiv build_nan binary_float_equiv]; try reflexivity
+  | _ => apply binary_float_equiv_eq in H; try rewrite <- H;
+  match b with 
+  | B754_nan _ _ _ _ _ => 
+      cbv [BDIV BINOP Bdiv build_nan binary_float_equiv]; try reflexivity
+  | _ => apply binary_float_equiv_eq in H0; try rewrite <- H0;
+          try apply binary_float_eq_equiv; try reflexivity
+end
+end
+end.
 Qed.
 
+Lemma binary_float_equiv_BOP ty (b1 b2 b3 b4: binary_float (fprec ty) (femax ty)):
+forall b: binop ,
+binary_float_equiv b1 b2 ->
+binary_float_equiv b3 b4 ->
+binary_float_equiv (fop_of_binop b ty b1 b3) (fop_of_binop b ty b2 b4).
+Proof.
+intros.
+destruct b1.
+all :
+match goal with 
+  |- context [
+binary_float_equiv (fop_of_binop ?bo ?ty ?a ?b)
+ _] =>
+match a with 
+| B754_zero _ _ _ => 
+apply binary_float_equiv_eq in H; try simpl; try reflexivity
+| B754_infinity _ _ _ => 
+apply binary_float_equiv_eq in H; try simpl; try reflexivity
+| B754_finite _ _ _ _ _ _ => 
+apply binary_float_equiv_eq in H; try simpl; try reflexivity
+| _ => try simpl
+end
+end.
+all :(
+destruct b2; simpl in H; try contradiction; try discriminate;
+destruct b3; destruct b4; try contradiction; try discriminate;
+match goal with 
+  |- context [ binary_float_equiv (fop_of_binop ?bo ?ty ?a ?b)  _] =>
+match a with 
+| B754_nan _ _ _ _ _  => try simpl
+| _ => try (rewrite H); 
+      match b with 
+      | B754_nan _ _ _ _ _ => try simpl
+      | _ => try (apply binary_float_equiv_eq in H);
+             try (rewrite H);
+             try (apply binary_float_equiv_eq in H0);
+             try (rewrite H0);
+             try (apply binary_float_eq_equiv); try reflexivity
+      end
+end
+end
+).
+
+all: (
+try (destruct b);
+try( cbv [fop_of_binop]);
+try destruct op;
+try (cbv [fop_of_rounded_binop]);
+try (cbv [fop_of_rounded_binop]);
+try(
+match goal with 
+|- context [ binary_float_equiv ((if ?m then ?op1 else ?op2)  ?ty ?a ?b) _] =>
+destruct m
+end;
+cbv [BPLUS BMINUS BDIV BMULT BINOP 
+Bplus Bminus Bdiv Bmult build_nan binary_float_equiv]);
+try (reflexivity)
+).
+Qed.
+
+Lemma binary_float_equiv_UOP ty (b1 b2: binary_float (fprec ty) (femax ty)):
+forall u: unop ,
+binary_float_equiv b1 b2 ->
+binary_float_equiv (fop_of_unop u ty b1) (fop_of_unop u ty b2).
+Proof.
+intros.
+destruct b1.
+all: (
+match goal with |- context [binary_float_equiv 
+(fop_of_unop ?u ?ty ?a) _]  =>
+match a with 
+| Binary.B754_nan _ _ _ _ _  => simpl 
+| _ => try apply binary_float_equiv_eq in H; try rewrite  <-H; 
+  try apply binary_float_eq_equiv; try reflexivity
+end
+end).
+destruct b2; try discriminate; try contradiction.
+try (destruct u).
+all: (
+try( cbv [fop_of_unop fop_of_exact_unop]);
+try destruct op;
+try destruct o;
+try destruct ltr;
+try (cbv [fop_of_rounded_unop]);
+try (cbv [Bsqrt Binary.Bsqrt build_nan]);
+try reflexivity
+).
++ destruct (B2 ty (Z.of_N pow)).
+all: try (
+ (cbv [ BMULT BINOP Bmult build_nan]);
+ reflexivity).
++ destruct (B2 ty (- Z.pos pow)) .
+all: try (
+ (cbv [ BMULT BINOP Bmult build_nan]);
+ reflexivity).
++ apply cast_preserves_bf_equiv2.
+- apply H.
+- simpl; reflexivity.
+Qed.
 
 Lemma Bmult_correct_comm:
 forall (prec emax : Z) (prec_gt_0_ : FLX.Prec_gt_0 prec)

@@ -845,8 +845,6 @@ Proof.
         congruence.
 Defined. 
 
-
-
 Lemma fshift_div_correct' env e:
  binary_float_equiv (fval env (fshift_div e)) (fval env e).
 Proof.
@@ -1070,10 +1068,10 @@ apply binary_float_eqb_eq in FEQ.
 rewrite FEQ in EINV. 
 clear FEQ. 
 simpl in EINV.
-{ apply binary_float_equiv_eq in IHe1.
-- simpl. rewrite <- IHe1. rewrite <- IHe2. 
 rewrite ?positive_nat_N.  
 rewrite ?N2Z.inj_pos.
+{ apply binary_float_equiv_eq in IHe1.
+- simpl. rewrite <- IHe1. rewrite <- IHe2. 
 apply binary_float_equiv_sym.
 { apply Bdiv_mult_inverse_equiv; try apply EINV.
 - apply cast_finite; simpl; auto.
@@ -1092,19 +1090,345 @@ unfold cast_lub_r; clear FEQ.
 reflexivity.
 } simpl; reflexivity. 
 } } }
--
+- { match goal with                  (*fcval_nonrec (fshift_div e1) = None*)       
+|- binary_float_equiv (fval env (if ?b then _ else _)) _ =>
+destruct b eqn:FEQ
+end.
+- simpl; rewrite ?andb_true_iff in FEQ; 
+unfold cast_lub_l;
+unfold cast_lub_r.
+apply binary_float_eqb_eq in FEQ.
+rewrite FEQ in EINV. 
+clear FEQ. 
+simpl in EINV.
+revert IHe1. revert EINV.
+generalize (fval env (fshift_div e1)).
+rewrite fshift_type_div.
+intros. 
+{ destruct f.                                      (* IHe1 zero *)
+- { eapply binary_float_equiv_eq in IHe1.
+-  apply binary_float_equiv_sym.
+simpl; unfold cast_lub_l;
+unfold cast_lub_r. rewrite <- IHe1; rewrite <- IHe2.
+{ apply Bdiv_mult_inverse_equiv ; try apply EINV.
+- apply cast_finite; simpl; auto;
+eapply type_lub_right.
+- apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E). 
+apply is_finite_strict_finite in B.  apply B.
+}
+- simpl; reflexivity.
+}
+- { eapply binary_float_equiv_eq in IHe1. (* IHe1 inf *)
+-  apply binary_float_equiv_sym.
+simpl; unfold cast_lub_l;
+unfold cast_lub_r. rewrite <- IHe1; rewrite <- IHe2.
+{ apply Bdiv_mult_inverse_equiv ; try apply EINV.
+- apply cast_finite; simpl; auto;
+eapply type_lub_right.
+- apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E). 
+apply is_finite_strict_finite in B.  apply B.
+}
+- simpl; reflexivity.
+}
+- apply binary_float_equiv_sym. (* IHe1 nan *)
+simpl; unfold cast_lub_l;
+unfold cast_lub_r. rewrite <- IHe2.
+{ apply Bdiv_mult_inverse_equiv2; try apply EINV.
+- apply binary_float_equiv_sym.
+apply cast_preserves_bf_equiv2.
++ apply IHe1.
++ simpl; reflexivity.
+- apply cast_finite; simpl; auto.
+apply type_lub_right.
+- apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E). 
+apply is_finite_strict_finite in B; apply B.
+}
+- { eapply binary_float_equiv_eq in IHe1. (* IHe1 fin *)
+-  apply binary_float_equiv_sym.
+simpl; unfold cast_lub_l;
+unfold cast_lub_r. rewrite <- IHe1; rewrite <- IHe2.
+{ apply Bdiv_mult_inverse_equiv ; try apply EINV.
+- apply cast_finite; simpl; auto;
+eapply type_lub_right.
+- apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E). 
+apply is_finite_strict_finite in B.  apply B.
+}
+- simpl; reflexivity.
+} }
+- clear FEQ. { match goal with
+|- binary_float_equiv (fval env (if ?b then _ else _)) _ =>
+destruct b eqn:FEQ
+end.
+- simpl; rewrite ?andb_true_iff in FEQ; 
+unfold cast_lub_l;
+unfold cast_lub_r.
+apply binary_float_eqb_eq in FEQ.
+rewrite FEQ in EINV. 
+clear FEQ. 
+simpl in EINV.
+revert IHe1. revert EINV.
+generalize (fval env (fshift_div e1)).
+rewrite fshift_type_div.
+intros. 
+{ destruct f.                                      (* IHe1 zero *)
+- { eapply binary_float_equiv_eq in IHe1.
+-  apply binary_float_equiv_sym.
+simpl; unfold cast_lub_l;
+unfold cast_lub_r. rewrite <- IHe1; rewrite <- IHe2.
+rewrite ?positive_nat_N.  
+rewrite ?N2Z.inj_pos.
+{ apply Bdiv_mult_inverse_equiv ; try apply EINV.
+- apply cast_finite; simpl; auto;
+eapply type_lub_right.
+- apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E). 
+apply is_finite_strict_finite in B.  apply B.
+}
+- simpl; reflexivity.
+}
+- { eapply binary_float_equiv_eq in IHe1. (* IHe1 inf *)
+-  apply binary_float_equiv_sym.
+simpl; unfold cast_lub_l;
+unfold cast_lub_r. rewrite <- IHe1; rewrite <- IHe2.
+{ rewrite ?positive_nat_N.  
+rewrite ?N2Z.inj_pos. 
+apply Bdiv_mult_inverse_equiv ; try apply EINV.
+- apply cast_finite; simpl; auto;
+eapply type_lub_right.
+- apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E).
+apply is_finite_strict_finite in B.  apply B.
+}
+- simpl; reflexivity.
+}
+- apply binary_float_equiv_sym. (* IHe1 nan *)
+simpl; unfold cast_lub_l;
+unfold cast_lub_r. rewrite <- IHe2.
+rewrite ?positive_nat_N.  
+rewrite ?N2Z.inj_pos. 
+{ apply Bdiv_mult_inverse_equiv2; try apply EINV.
+- apply binary_float_equiv_sym.
+apply cast_preserves_bf_equiv2.
++ apply IHe1.
++ simpl; reflexivity.
+- apply cast_finite; simpl; auto.
+apply type_lub_right.
+- apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E).
+rewrite ?positive_nat_N.  
+rewrite ?N2Z.inj_pos.  
+apply is_finite_strict_finite in B; apply B.
+}
+- { eapply binary_float_equiv_eq in IHe1. (* IHe1 fin *)
+-  apply binary_float_equiv_sym.
+simpl; unfold cast_lub_l;
+unfold cast_lub_r. rewrite <- IHe1; rewrite <- IHe2.
+rewrite ?positive_nat_N.  
+rewrite ?N2Z.inj_pos. 
+{ apply Bdiv_mult_inverse_equiv ; try apply EINV.
+- apply cast_finite; simpl; auto;
+eapply type_lub_right.
+- apply Bexact_inverse_correct in EINV.
+destruct EINV as (A & B & C & D & E). 
+rewrite ?positive_nat_N.  
+rewrite ?N2Z.inj_pos. 
+apply is_finite_strict_finite in B.  apply B.
+}
+- simpl; reflexivity.
+} }
+- simpl; 
+unfold cast_lub_l;
+unfold cast_lub_r.
+clear FEQ. 
+clear EINV.
+revert IHe1. 
+generalize (fval env (fshift_div e1)).
+repeat rewrite fshift_type_div.
+intros.
+{ destruct f.                                      (* IHe1 zero *)
+- { apply binary_float_equiv_eq in IHe1.
+- rewrite <- IHe1; rewrite <- IHe2.
+{ apply binary_float_equiv_BDIV.
+- apply cast_preserves_bf_equiv1. 
++ simpl; reflexivity.
++ apply type_lub_left.
++ simpl; reflexivity.
+- eapply cast_preserves_bf_equiv1. 
++ apply binary_float_eq_equiv; reflexivity. 
++ apply type_lub_right.
++ simpl; reflexivity.
+} 
+-simpl; reflexivity.
+}
+- { apply binary_float_equiv_BDIV.
+- apply cast_preserves_bf_equiv2. 
++ apply IHe1.
++ simpl; reflexivity.
+- eapply cast_preserves_bf_equiv1. 
++ apply binary_float_eq_equiv. apply IHe2. 
++ apply type_lub_right.
++ simpl; reflexivity.
+}
+- { apply binary_float_equiv_BDIV.
+- apply cast_preserves_bf_equiv2. 
++ apply IHe1.
++ simpl; reflexivity.
+- eapply cast_preserves_bf_equiv1. 
++ apply binary_float_eq_equiv. apply IHe2. 
++ apply type_lub_right.
++ simpl; reflexivity.
+}
+- { apply binary_float_equiv_BDIV.
+- apply cast_preserves_bf_equiv1. 
++ apply IHe1.
++ apply type_lub_left.
++ simpl; reflexivity.
+- eapply cast_preserves_bf_equiv1. 
++ apply binary_float_eq_equiv. apply IHe2. 
++ apply type_lub_right.
++ simpl; reflexivity.
+} } } } }
+- simpl; reflexivity.
+} }
+- revert IHe1 IHe2.
+simpl.
+generalize (fval env (fshift_div  e1)).
+generalize (fval env (fshift_div  e2)).
+repeat rewrite fshift_type_div.
+intros.
+unfold cast_lub_l;
+unfold cast_lub_r.
+apply binary_float_equiv_BDIV.
++ {destruct f0.
+- apply cast_preserves_bf_equiv1. 
++ apply IHe1.
++ apply type_lub_left.
++ simpl; reflexivity.
+- apply cast_preserves_bf_equiv2.
++ apply IHe1.
++ simpl; reflexivity.
+- apply cast_preserves_bf_equiv2.
++ apply IHe1.
++ simpl; reflexivity.
+- apply cast_preserves_bf_equiv1. 
++ apply IHe1.
++ apply type_lub_left.
++ simpl; reflexivity.
+}
++ {destruct f.
+- apply cast_preserves_bf_equiv1. 
++ apply IHe2.
++ apply type_lub_right.
++ simpl; reflexivity.
+- apply cast_preserves_bf_equiv2.
++ apply IHe2.
++ simpl; reflexivity.
+- apply cast_preserves_bf_equiv2.
++ apply IHe2.
++ simpl; reflexivity.
+- apply cast_preserves_bf_equiv1. 
++ apply IHe2.
++ apply type_lub_right.
++ simpl; reflexivity.
+} }
+- simpl.
+unfold cast_lub_l; unfold cast_lub_r. 
+revert IHe2 IHe1.
+simpl.
+generalize (fval env (fshift_div  e1)).
+generalize (fval env (fshift_div  e2)).
+repeat rewrite fshift_type_div.
+intros. 
+apply binary_float_equiv_BDIV.
++ {destruct f0.
+- apply cast_preserves_bf_equiv1. 
++ apply IHe1.
++ apply type_lub_left.
++ simpl; reflexivity.
+- apply cast_preserves_bf_equiv2.
++ apply IHe1.
++ simpl; reflexivity.
+- apply cast_preserves_bf_equiv2.
++ apply IHe1.
++ simpl; reflexivity.
+- apply cast_preserves_bf_equiv1. 
++ apply IHe1.
++ apply type_lub_left.
++ simpl; reflexivity.
+}
++ {destruct f.
+- apply cast_preserves_bf_equiv1. 
++ apply IHe2.
++ apply type_lub_right.
++ simpl; reflexivity.
+- apply cast_preserves_bf_equiv2.
++ apply IHe2.
++ simpl; reflexivity.
+- apply cast_preserves_bf_equiv2.
++ apply IHe2.
++ simpl; reflexivity.
+- apply cast_preserves_bf_equiv1. 
++ apply IHe2.
++ apply type_lub_right.
++ simpl; reflexivity.
+} }
+- revert IHe1 IHe2.
+simpl.
+generalize (fval env (fshift_div e1)).
+generalize (fval env (fshift_div e2)).
+repeat rewrite fshift_type_div.
+intros.
+unfold cast_lub_l; unfold cast_lub_r.  
+apply binary_float_equiv_BOP.
++ destruct f0.
+all : (
+match goal with |- context [binary_float_equiv (cast ?t1 ?t2 ?a)
+  (cast ?t1 ?t2 ?b)] =>
+match a with 
+| Binary.B754_nan _ _ _ _ _  => apply cast_preserves_bf_equiv2
+| Binary.B754_infinity _ _ _  => apply cast_preserves_bf_equiv2
+| _ => apply cast_preserves_bf_equiv1; try (apply type_lub_right); 
+try (apply type_lub_left)
+end;
+try (simpl; reflexivity);
+try apply IHe1
+end).
++ destruct f.
+all : (
+match goal with |- context [binary_float_equiv (cast ?t1 ?t2 ?a)
+  (cast ?t1 ?t2 ?b)] =>
+match a with 
+| Binary.B754_nan _ _ _ _ _  => apply cast_preserves_bf_equiv2
+| Binary.B754_infinity _ _ _  => apply cast_preserves_bf_equiv2
+| _ => apply cast_preserves_bf_equiv1; try (apply type_lub_right); 
+try (apply type_lub_left)
+end;
+try (simpl; reflexivity);
+try apply IHe2
+end).
+}
+-simpl.
+revert IHe.
+generalize (fval env (fshift_div e)).
+rewrite fshift_type_div.
+intros.
+apply binary_float_equiv_UOP; apply IHe.
+}
+Qed.
 
-
-Admitted.
-
+(*
 Lemma fshift_div_correct env e:
-  fval env (fshift_div env e) = eq_rect_r _ (fval env e) (fshift_type_div env e).
+  fval env (fshift_div e) = eq_rect_r _ (fval env e) (fshift_type_div e).
 Proof.
   apply binary_float_eqb_eq.
   apply binary_float_eqb_eq_strong.
   apply fshift_div_correct'.
 Qed.
-
+*)
 
 Definition is_zero_expr (env: forall ty, V -> ftype ty) (e: FPLang.expr)
  : bool :=  
