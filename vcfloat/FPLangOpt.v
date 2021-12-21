@@ -318,6 +318,16 @@ Proof.
   subst.
   assumption.
 Qed.
+
+Lemma binary_float_eqb_equiv_strong ty1 ty2 (e1: ftype ty1) (e2: ftype ty2):
+  binary_float_equiv e1 e2 ->
+  forall EQ: ty1 = ty2,
+    binary_float_equiv e1 (eq_rect_r _ e2 EQ).
+Proof.
+  intros.
+  subst.
+  assumption.
+Qed.
         
 Lemma fcval_correct env e:
   fval env (fcval e) = eq_rect_r _ (fval env e) (fcval_type e).
@@ -983,15 +993,17 @@ intros.
 apply binary_float_equiv_UOP; apply IHe.
 Qed.
 
-(*
+
 Lemma fshift_div_correct env e:
+  Binary.is_nan _ _ (fval env (fshift_div e)) = false -> 
   fval env (fshift_div e) = eq_rect_r _ (fval env e) (fshift_type_div e).
 Proof.
-  apply binary_float_eqb_eq.
-  apply binary_float_eqb_eq_strong.
-  apply fshift_div_correct'.
+  intros.
+  apply binary_float_equiv_eq. 
+  - apply binary_float_eqb_equiv_strong. apply fshift_div_correct'.
+  - apply H. 
 Qed.
-*)
+
 
 Definition is_zero_expr (env: forall ty, V -> ftype ty) (e: FPLang.expr)
  : bool :=  
