@@ -55,8 +55,10 @@ the real-number semantics of floating-point computations.
 Require Export vcfloat.FPLang.
 Import RAux.
 Import compcert.lib.IEEE754_extra.
+Import compcert.lib.Floats.
 Require Export vcfloat.LibTac.
 Require Export vcfloat.BigRAux.
+Set Bullet Behavior "Strict Subproofs". (* because LibTac screws it up *)
 
 Definition rounded_binop_eqb (r1 r2: rounded_binop): bool :=
   match r1, r2 with
@@ -316,6 +318,16 @@ Proof.
   subst.
   assumption.
 Qed.
+
+Lemma binary_float_eqb_equiv_strong ty1 ty2 (e1: ftype ty1) (e2: ftype ty2):
+  binary_float_equiv e1 e2 ->
+  forall EQ: ty1 = ty2,
+    binary_float_equiv e1 (eq_rect_r _ e2 EQ).
+Proof.
+  intros.
+  subst.
+  assumption.
+Qed.
         
 Lemma fcval_correct env e:
   fval env (fcval e) = eq_rect_r _ (fval env e) (fcval_type e).
@@ -536,20 +548,13 @@ Proof.
         end; simpl;
         unfold Datatypes.id;
         congruence.
-      }
+}
       destruct (fcval_nonrec (fshift e2)).
-      {
-        revert IHe2 f. 
-        generalize (fshift e2).
-        intros until 1.
-        rewrite IHe2.
-        intros.
-        simpl.
+ {
         match goal with
             |- type_of_expr (if ?v then _ else _) = _ =>
             destruct v
-        end;
-          simpl.
+        end; simpl.
         {
           unfold Datatypes.id.
           congruence.
@@ -557,18 +562,22 @@ Proof.
         match goal with
             |- type_of_expr (if ?v then _ else _) = _ =>
             destruct v
-        end; simpl;
+        end; simpl.
+        {
         unfold Datatypes.id;
         congruence.
       }
-      simpl.
-      congruence.
+        congruence.
+      }
+        simpl.
+        congruence.
+}
+    simpl.
+    congruence.
     }
     simpl.
     congruence.
-  }
-  congruence.
-Defined. (* needed because of eq_rect_r *)
+Defined. 
 
 Lemma fshift_correct' env e:
  binary_float_eqb (fval env (fshift e)) (fval env e) = true.
@@ -625,6 +634,7 @@ Proof.
         end;
           simpl.
         {
+          unfold Datatypes.id.
           unfold cast_lub_l.
           unfold cast_lub_r.
           revert IHe2.
@@ -754,6 +764,387 @@ Proof.
   apply binary_float_eqb_eq_strong.
   apply fshift_correct'.
 Qed.
+
+Definition to_power_2_pos {prec emax} (x: Binary.binary_float prec emax) :=
+  let y := B2BigQ x in
+  let '(q, r) := BigZ.div_eucl (Bnum y) (BigZ.Pos (Bden y)) in
+  Pos.of_nat (blog (BigZ.of_Z 2) O q (Z.to_nat emax))
+.
+
+Fixpoint fshift_div (e: FPLang.expr) {struct e}: FPLang.expr :=
+  match e with
+    | Binop b e1 e2 =>
+      let e'1 := fshift_div e1 in
+      let e'2 := fshift_div e2 in
+      if binop_eqb b (Rounded2 DIV None) then
+      let ty := type_lub (type_of_expr e'1) (type_of_expr e'2) in
+      match (fcval_nonrec e'2) with
+            | Some c2' =>
+                let c2 := cast ty _ c2' in
+                match (Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) c2) with
+                  | Some z' => 
+                    let n1 := to_power_2_pos c2 in
+                    if binary_float_eqb z' (B2 ty (Z.neg n1))
+                    then Unop (Exact1 (InvShift n1 true)) (Unop (CastTo ty None) e'1)
+                    else
+                    let n2 := to_inv_power_2 c2 in
+                    if binary_float_eqb z' (B2 ty (Z.pos n2))
+                    then Unop (Exact1 (Shift (N.of_nat (Pos.to_nat n2)) true)) (Unop (CastTo ty None) e'1)
+                    else Binop b e'1 e'2
+                  | None => Binop b e'1 e'2
+                end
+             | None => Binop b e'1 e'2
+         end
+      else
+        Binop b e'1 e'2
+    | Unop b e => Unop b (fshift_div e)
+    | _ => e
+  end.
+
+
+Lemma fshift_type_div e:
+  type_of_expr (fshift_div e) = type_of_expr e.
+Proof.
+  induction e; simpl; auto; try congruence.
+  destruct (binop_eqb b (Rounded2 DIV None)) eqn:EQ; [ | simpl; congruence].
+  apply binop_eqb_eq in EQ.
+  subst.
+  simpl.
+  destruct (fcval_nonrec (fshift_div e2)); [ | simpl; congruence].
+  revert IHe2 f. 
+  generalize (fshift_div e2).
+  intros until 1.
+  rewrite IHe2.
+  intros.
+  simpl.
+  destruct (Bexact_inverse _ ); [ | simpl; congruence]. 
+  repeat (match goal with
+              |- type_of_expr (if ?v then _ else _) = _ => destruct v
+          end;
+          simpl; [ unfold Datatypes.id;  congruence | ]).
+  congruence.
+Defined. 
+
+Local Lemma binary_float_equiv_refl : forall prec emax x, 
+   @binary_float_equiv prec emax prec emax x x.
+Proof. intros. destruct x; hnf; try reflexivity. repeat split; reflexivity. Qed.
+Local Hint Resolve binary_float_equiv_refl : vcfloat.
+
+Local Hint Resolve type_lub_left type_lub_right : vcfloat.
+
+Local Hint Extern 2 (Binary.is_finite _ _ _ = true) => 
+   match goal with EINV: Bexact_inverse _ _ _ _ _ = Some _ |- _ =>
+             apply is_finite_strict_finite; 
+         apply (Bexact_inverse_correct _ _ _ _ _ _ EINV)
+   end : vcfloat.
+
+Local Hint Resolve cast_preserves_bf_equiv : vcfloat.
+Local Hint Resolve binary_float_eq_equiv : vcfloat.
+Local Ltac inv  H := inversion H; clear H; subst.
+
+Local Ltac destruct_bfe := 
+    match goal with
+       |- context [if binary_float_eqb ?b ?c then _ else _] =>
+           is_var b; 
+            destruct (binary_float_eqb b c) eqn:FEQ; 
+             [rewrite ?andb_true_iff in FEQ; 
+              apply binary_float_eqb_eq in FEQ; subst b 
+              | clear FEQ]
+      end.
+
+Local Lemma binary_float_eqb_lem1:
+  forall prec emax b c {A} (y z: A) (P: A -> Prop) ,
+    (b=c -> P y) -> P z ->
+    P (if @binary_float_eqb prec emax prec emax b c then y else z).
+Proof.
+intros.
+ destruct (binary_float_eqb b c) eqn:H1.
+ apply H. apply binary_float_eqb_eq. auto. auto.
+Qed.
+
+Local Ltac binary_float_eqb_cases := 
+  let H := fresh in 
+  apply binary_float_eqb_lem1; [intro H; rewrite H in *; clear H | ].
+
+Local Lemma Bmult_div_inverse_equiv ty:
+  forall x y z: (Binary.binary_float (fprec ty) (femax ty)),
+  Binary.is_finite _ _ y = true ->
+  Binary.is_finite _ _ z = true ->
+  Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
+  binary_float_equiv
+  (Binary.Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) Binary.mode_NE x z) 
+  (Binary.Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) Binary.mode_NE x y) .
+Proof. intros. apply binary_float_equiv_sym; apply Bdiv_mult_inverse_equiv; auto. Qed.
+
+Theorem Bmult_div_inverse_equiv2 ty:
+  forall x1 x2 y z: (Binary.binary_float (fprec ty) (femax ty)),
+  binary_float_equiv x1 x2 ->
+  Binary.is_finite _ _ y = true ->
+  Binary.is_finite _ _ z = true ->
+  Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
+  binary_float_equiv
+  (Binary.Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) Binary.mode_NE x2 z)
+  (Binary.Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) Binary.mode_NE x1 y) .
+Proof. intros. apply binary_float_equiv_sym; apply Bdiv_mult_inverse_equiv2; auto. Qed.
+
+Lemma fshift_div_correct' env e:
+ binary_float_equiv (fval env (fshift_div e)) (fval env e).
+Proof.
+induction e; cbn [fshift_div]; auto with vcfloat; unfold fval; fold (fval env);
+try (set (x1 := fval env e1) in *; clearbody x1);
+try (set (x2 := fval env e2) in *; clearbody x2).
+- (* binop case *)
+ destruct (binop_eqb b (Rounded2 DIV None)) eqn:ISDIV.
+ + apply binop_eqb_eq in ISDIV; subst.
+    destruct (fcval_nonrec (fshift_div e2)) eqn:E2.
+    -- generalize (fshift_type_div e2).
+     destruct (fshift_div e2); try discriminate.
+     simpl in f. inv E2.
+     simpl in IHe2; cbn [type_of_expr]; intros; subst.
+     destruct (Bexact_inverse _ ) eqn:EINV. 
+     ** destruct f;
+          try (apply binary_float_equiv_eq in IHe2; [ subst | reflexivity]);
+          try solve [eapply exact_inverse in EINV;
+                            [ contradiction| apply cast_inf_strict; simpl; auto]].
+          rewrite positive_nat_N.
+           { destruct (fcval_nonrec (fshift_div e1)) eqn:E1.
+             - generalize (fshift_type_div e1).
+                 destruct (fshift_div e1); try discriminate.
+                   simpl in f; inv E1.
+                   simpl in IHe1; cbn [type_of_expr]; intros; subst.
+                   destruct f;
+                   try (apply binary_float_equiv_eq in IHe1; [ subst | reflexivity]);
+                   repeat binary_float_eqb_cases; auto with vcfloat.
+                + apply Bmult_div_inverse_equiv ; auto with vcfloat.
+                + apply Bmult_div_inverse_equiv ; auto with vcfloat.
+                + apply Bmult_div_inverse_equiv; auto with vcfloat.
+                + apply Bmult_div_inverse_equiv; auto with vcfloat.
+                + apply Bmult_div_inverse_equiv2; auto with vcfloat.
+                    apply binary_float_equiv_sym.
+                    apply cast_preserves_bf_equiv; auto with vcfloat.
+                + apply Bmult_div_inverse_equiv2; auto with vcfloat.
+                    apply binary_float_equiv_sym.
+                    apply cast_preserves_bf_equiv; auto with vcfloat.
+                + simpl; unfold cast_lub_l, cast_lub_r.
+                    apply binary_float_equiv_BDIV; auto with vcfloat.
+                + apply Bmult_div_inverse_equiv; auto with vcfloat.
+                + apply Bmult_div_inverse_equiv; auto with vcfloat.
+              -  repeat binary_float_eqb_cases; auto with vcfloat.
+               + simpl; unfold cast_lub_l, cast_lub_r.
+                   revert EINV IHe1.
+                   generalize (fval env (fshift_div e1)).
+                   rewrite fshift_type_div.
+                   intros.
+                   destruct f;
+                   try (apply binary_float_equiv_eq in IHe1; [ subst | reflexivity]).
+                  * apply Bmult_div_inverse_equiv ; auto with vcfloat.
+                  * apply Bmult_div_inverse_equiv ; auto with vcfloat.
+                  * apply Bmult_div_inverse_equiv2; auto with vcfloat.
+                  * apply Bmult_div_inverse_equiv ; auto with vcfloat.
+               + simpl; unfold cast_lub_l, cast_lub_r.
+                   revert EINV IHe1.
+                   generalize (fval env (fshift_div e1)).
+                   rewrite fshift_type_div.
+                   intros.
+                   destruct f;
+                   try (apply binary_float_equiv_eq in IHe1; [ subst | reflexivity]).
+                  * apply Bmult_div_inverse_equiv ; auto with vcfloat.
+                  * apply Bmult_div_inverse_equiv ; auto with vcfloat.
+                  * apply Bmult_div_inverse_equiv2; auto with vcfloat.
+                  * apply Bmult_div_inverse_equiv ; auto with vcfloat.
+                 + simpl; unfold cast_lub_l, cast_lub_r.
+                     clear EINV.
+                     revert IHe1. 
+                     generalize (fval env (fshift_div e1)).
+                     rewrite !fshift_type_div.
+                     intros.
+                     destruct f;
+                     try (apply binary_float_equiv_eq in IHe1; [ subst | reflexivity]);
+                     apply binary_float_equiv_BDIV; auto with vcfloat.
+          }
+
+    ** simpl; unfold cast_lub_l, cast_lub_r. 
+         revert IHe1 IHe2.
+         generalize (fval env (fshift_div  e1)).
+         generalize (fval env (fshift_div  e2)).
+         rewrite !fshift_type_div.
+         intros.
+         apply binary_float_equiv_BDIV; auto with vcfloat.
+   -- simpl; unfold cast_lub_l, cast_lub_r. 
+         revert IHe1 IHe2.
+         generalize (fval env (fshift_div  e1)).
+         generalize (fval env (fshift_div  e2)).
+         rewrite !fshift_type_div.
+         intros.
+         apply binary_float_equiv_BDIV; auto with vcfloat.
+ + simpl; unfold cast_lub_l, cast_lub_r. 
+         revert IHe1 IHe2.
+         generalize (fval env (fshift_div  e1)).
+         generalize (fval env (fshift_div  e2)).
+         rewrite !fshift_type_div.
+         intros.
+     apply binary_float_equiv_BOP; auto with vcfloat.
+- (* unop case *)
+ simpl.
+revert IHe.
+generalize (fval env (fshift_div e)).
+rewrite fshift_type_div.
+intros.
+apply binary_float_equiv_UOP; apply IHe.
+Qed.
+
+
+Lemma fshift_div_correct env e:
+  Binary.is_nan _ _ (fval env (fshift_div e)) = false -> 
+  fval env (fshift_div e) = eq_rect_r _ (fval env e) (fshift_type_div e).
+Proof.
+  intros.
+  apply binary_float_equiv_eq. 
+  - apply binary_float_eqb_equiv_strong. apply fshift_div_correct'.
+  - apply H. 
+Qed.
+
+
+Definition is_zero_expr (env: forall ty, V -> ftype ty) (e: FPLang.expr)
+ : bool :=  
+match (fval env e) with
+| Binary.B754_zero _ _ b1 => true
+| _ => false
+end.
+
+Fixpoint is_nan_expr (env: forall ty, V -> ftype ty) (e: expr)
+{struct e}: bool := 
+  match e with
+    | Const ty f => Binary.is_nan _ _ f
+    | Var ty i => Binary.is_nan _ _ (env ty i)
+    | Binop b e1 e2 =>
+        match b with (Rounded2 DIV None) => 
+          let be1':= is_zero_expr env e1 in 
+          let be2':= is_zero_expr env e2 in
+          be1' || be2'
+          | _ => 
+            let be1':= is_nan_expr env e1 in 
+            let be2':= is_nan_expr env e2 in
+            be1' || be2' end
+    | Unop b e1 => 
+        match b with (Rounded1 SQRT None) => 
+          Binary.Bsign _ _ (fval env e)
+        |_ => is_nan_expr env e1 end
+  end.
+
+Lemma is_nan_plus (env: forall ty, V -> ftype ty) (e1 e2:FPLang.expr):
+Binary.is_nan _ _ (fval env e1) = false -> 
+Binary.is_nan _ _ (fval env e2) = false -> 
+Binary.is_nan _ _ (fval env (Binop (Rounded2 PLUS None) e1 e2)) = false.
+Proof.
+intros.
+simpl.
+set (x1 := fval env e1) in *; clearbody x1.
+set (x2 := fval env e2) in *; clearbody x2.
+set (t1 := type_of_expr e1) in *; clearbody t1.
+set (t2 := type_of_expr e2) in *; clearbody t2.
+unfold cast_lub_l, cast_lub_r.
+change (Z.max _ _) with (femax (type_lub t1 t2)).
+set (t := type_lub t1 t2).
+unfold BPLUS, BINOP.
+assert (Binary.is_nan _ _ (cast t t1 x1) = false) by (apply is_nan_cast; auto).
+assert (Binary.is_nan _ _ (cast t t2 x2) = false) by (apply is_nan_cast; auto).
+set (y1 := cast t t1 x1) in *; clearbody y1.
+set (y2 := cast t t2 x2) in *; clearbody y2.
+clearbody t.
+clear x1 H x2 H0 t1 t2.
+destruct y1; try discriminate; destruct y2; try discriminate; try reflexivity.
+unfold Binary.Bplus.
+destruct (eqb _ _); reflexivity.
+unfold Binary.Bplus.
+destruct (eqb _ _); try reflexivity.
+(*  OOPS!  Adding +infinity to -infinity is a nan *)
+admit.
+unfold Binary.Bplus.
+apply is_nan_normalize.
+Admitted.
+
+Lemma is_nan_minus (env: forall ty, V -> ftype ty) (e1 e2:FPLang.expr):
+Binary.is_nan _ _ (fval env e1) = false -> 
+Binary.is_nan _ _ (fval env e2) = false -> 
+Binary.is_nan _ _ (fval env (Binop (Rounded2 MINUS None) e1 e2)) = false.
+Proof.
+Admitted.
+
+Lemma is_nan_mult (env: forall ty, V -> ftype ty) (e1 e2:FPLang.expr):
+Binary.is_nan _ _ (fval env e1) = false -> 
+Binary.is_nan _ _ (fval env e2) = false -> 
+Binary.is_nan _ _ (fval env (Binop (Rounded2 MULT None) e1 e2)) = false.
+Proof.
+Admitted.
+
+
+Lemma is_nan_expr_correct_binop (env: forall ty : type, V -> ftype ty) (e1 e2:FPLang.expr):
+forall b : binop, 
+ b <> Rounded2 DIV None ->
+ Binary.is_nan (fprec (type_of_expr e1)) (femax (type_of_expr e1)) (fval env e1)
+  || Binary.is_nan (fprec (type_of_expr e2)) (femax (type_of_expr e2))  (fval env e2) =
+ Binary.is_nan (fprec (type_of_expr (Binop b e1 e2)))
+  (femax (type_of_expr (Binop b e1 e2))) (fval env (Binop b e1 e2)).
+Admitted.
+
+Lemma is_nan_expr_correct_unop (env: forall ty : type, V -> ftype ty)  (e: expr):
+forall u : unop, 
+ u <> Rounded1 SQRT None ->
+Binary.is_nan (fprec (type_of_expr e)) (femax (type_of_expr e)) (fval env e) =
+Binary.is_nan (fprec (type_of_expr (Unop u e)))
+  (femax (type_of_expr (Unop u e))) (fval env (Unop u e)).
+Proof.
+Admitted.
+
+Lemma is_nan_correct_sqrt (env: forall ty : type, V -> ftype ty)  (e: expr):
+Binary.Bsign (fprec (Datatypes.id (type_of_expr e)))
+  (femax (Datatypes.id (type_of_expr e))) (Bsqrt (type_of_expr e) (fval env e)) =
+Binary.is_nan (fprec (Datatypes.id (type_of_expr e)))
+  (femax (Datatypes.id (type_of_expr e))) (Bsqrt (type_of_expr e) (fval env e)).
+Admitted.
+
+Lemma is_nan_div_correct env (e1 e2: expr):
+is_zero_expr env e1 || is_zero_expr env e2 =
+Binary.is_nan (fprec (type_of_expr (Binop (Rounded2 DIV None) e1 e2)))
+  (femax (type_of_expr (Binop (Rounded2 DIV None) e1 e2)))
+  (fval env (Binop (Rounded2 DIV None) e1 e2)).
+Admitted.
+
+Lemma is_nan_expr_correct env (e: expr):
+is_nan_expr env e = 
+Binary.is_nan _ _ (fval env e).
+Proof. 
+induction e.
+- simpl; auto.
+- simpl; auto.
+-
+ unfold is_nan_expr; fold is_nan_expr.
+ rewrite IHe1, IHe2; clear IHe1 IHe2.
+ pose proof (binop_eqb_eq b (Rounded2 DIV None)).
+ destruct (binop_eqb b (Rounded2 DIV None)).
+ +
+   rewrite (proj1 H) by auto.
+   apply is_nan_div_correct.
+ +
+    assert (b <> Rounded2 DIV None).
+    intro. subst. destruct H; auto.
+    rewrite <- is_nan_expr_correct_binop by auto.
+    destruct b; try congruence. destruct op, knowl; try congruence; auto.
+-
+  unfold is_nan_expr; fold is_nan_expr.
+  rewrite IHe; clear IHe.
+ pose proof (unop_eqb_eq u (Rounded1 SQRT None)).
+ destruct (unop_eqb u (Rounded1 SQRT None)).
+ +
+ rewrite (proj1 H) by auto.
+  apply is_nan_correct_sqrt.
+ +
+  assert (u <> Rounded1 SQRT None).
+  intro. subst. destruct H; auto.
+  rewrite <-  is_nan_expr_correct_unop by auto.
+  destruct u; try congruence. destruct op, knowl; try congruence; auto.
+Qed. 
 
 (* Erasure of rounding annotations *)
 

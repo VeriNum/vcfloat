@@ -54,12 +54,14 @@ VCFloat: core and annotated languages for floating-point operations.
 Require Import Lia Lra.
 From vcfloat Require Export RAux.
 From Flocq Require Import Binary Bits Core.
-From compcert Require Import lib.IEEE754_extra.
+From compcert Require Import lib.IEEE754_extra lib.Floats.
 Require compcert.lib.Maps.  
 Require Coq.MSets.MSetAVL.
 Require Import Interval.Tactic.
+Set Bullet Behavior "Strict Subproofs". (* because Interval.Tactic screws it up *)
 Require vcfloat.Fprop_absolute.
 Global Unset Asymmetric Patterns. (* because "Require compcert..." sets it *)
+
 
 Module MSET := MSetAVL.Make(Nat).
 
@@ -386,6 +388,122 @@ Proof.
       destruct x; destruct y; intuition congruence.
    + inversion H; clear H; subst; split; auto.
        apply Z.eqb_eq. auto.
+Qed.
+
+Definition binary_float_equiv {prec1 emax1 prec2 emax2} 
+(b1: binary_float prec1 emax1) (b2: binary_float prec2 emax2): Prop :=
+  match b1, b2 with
+    | B754_zero _ _ b1, B754_zero _ _ b2 => b1 = b2
+    | B754_infinity _ _ b1, B754_infinity _ _ b2 =>  b1 = b2
+    | B754_nan _ _ _ _ _, B754_nan _ _ _ _ _ => True
+    | B754_finite _ _ b1 m1 e1 _, B754_finite _ _ b2 m2 e2 _ =>
+      b1 = b2 /\  m1 = m2 /\ e1 = e2
+    | _, _ => False
+  end.
+
+Lemma binary_float_equiv_refl prec emax (b1: binary_float prec emax):
+     binary_float_equiv b1 b1.
+Proof.
+destruct b1; simpl; auto. Qed.
+
+Lemma binary_float_equiv_sym prec emax (b1 b2: binary_float prec emax):
+     binary_float_equiv b1 b2 -> binary_float_equiv b2 b1.
+Proof.
+intros.
+destruct b1; destruct b2; simpl; auto. 
+destruct H as (A & B & C); subst; auto. Qed.
+
+Lemma binary_float_equiv_trans prec emax (b1 b2 b3: binary_float prec emax):
+  binary_float_equiv b1 b2 -> 
+  binary_float_equiv b2 b3 -> binary_float_equiv b1 b3.
+Proof. 
+intros.
+destruct b1; destruct b2; destruct b3; simpl; auto.
+all: try (destruct H; destruct H0; reflexivity).    
+destruct H; destruct H0. subst. destruct H2; destruct H1; subst; auto. 
+Qed.
+
+Lemma binary_float_eqb_equiv prec emax (b1 b2: binary_float prec emax):
+   binary_float_eqb b1 b2 = true -> binary_float_equiv b1 b2 .
+Proof.
+  destruct b1; destruct b2; simpl;
+      (repeat rewrite andb_true_iff);
+      (try rewrite Bool.eqb_true_iff);
+      (try rewrite Pos.eqb_eq);
+      (try intuition congruence).
+      rewrite ?Z.eqb_eq; 
+      rewrite ?and_assoc; auto.  
+Qed.
+
+Lemma binary_float_finite_equiv_eqb prec emax (b1 b2: binary_float prec emax):
+is_finite prec emax b1  = true -> 
+binary_float_equiv b1 b2 -> binary_float_eqb b1 b2 = true .
+Proof.
+  destruct b1; destruct b2; simpl;
+      (repeat rewrite andb_true_iff);
+      (try rewrite Bool.eqb_true_iff);
+      (try rewrite Pos.eqb_eq);
+      (try intuition congruence).
+      rewrite ?Z.eqb_eq; 
+      rewrite ?and_assoc; auto.  
+Qed.
+
+Lemma binary_float_eq_equiv prec emax (b1 b2: binary_float prec emax):
+   b1 = b2 -> binary_float_equiv b1 b2.
+Proof.
+intros.
+apply binary_float_eqb_eq in H. 
+apply binary_float_eqb_equiv in H; apply H.
+Qed.
+
+Lemma binary_float_equiv_eq prec emax (b1 b2: binary_float prec emax):
+   binary_float_equiv b1 b2 -> is_nan _ _ b1 =  false -> b1 = b2.
+Proof.
+intros. 
+assert (binary_float_eqb b1 b2 = true). 
+- destruct b1; destruct b2; simpl in H; simpl; auto.
++ rewrite H; apply eqb_reflx.
++ rewrite H; apply eqb_reflx.
++ rewrite ?andb_true_iff. 
+destruct H; rewrite H.
+destruct H1; rewrite H1; rewrite H2; split. split; auto. 
+apply eqb_reflx. 
+apply Pos.eqb_eq; reflexivity.
+apply Z.eqb_eq; reflexivity.
+- apply binary_float_eqb_eq; apply H1. 
+Qed.
+
+Lemma binary_float_inf_equiv_eqb prec emax (b1 b2: binary_float prec emax):
+is_finite prec emax b1  = false -> 
+is_nan prec emax b1  = false -> 
+binary_float_equiv b1 b2 -> binary_float_eqb b1 b2 = true .
+Proof.
+  destruct b1; destruct b2; simpl;
+      (repeat rewrite andb_true_iff);
+      (try rewrite Bool.eqb_true_iff);
+      (try rewrite Pos.eqb_eq);
+      (try intuition congruence).
+Qed.
+
+
+Lemma binary_float_equiv_nan prec emax (b1 b2: binary_float prec emax):
+binary_float_equiv b1 b2 -> is_nan _ _ b1 = true -> is_nan _ _ b2 = true.
+Proof. 
+intros.
+destruct b1; simpl in H0; try discriminate.
+destruct b2; simpl in H; try contradiction.
+simpl; reflexivity.
+Qed.
+
+Lemma exact_inverse (prec emax : Z) 
+(prec_gt_0_ : FLX.Prec_gt_0 prec)
+(Hmax : (prec < emax)%Z) :
+forall (b1 b2: Binary.binary_float prec emax),
+is_finite_strict prec emax b1 = false -> 
+Bexact_inverse prec emax prec_gt_0_ Hmax b1 = Some b2 -> False.
+Proof. 
+intros. 
+apply Bexact_inverse_correct in H0; destruct H0; rewrite H0 in H; discriminate.
 Qed.
 
 Inductive expr: Type :=
@@ -902,6 +1020,7 @@ Proof.
 Qed.
 
 Definition B2 ty e := FF2B_gen (fprec ty) (femax ty) (F2 (fprecp ty) e).
+Definition B2_opp ty e := BOPP ty (B2 ty e).
 
 Lemma B2_finite ty e:
   (3 - femax ty <= e + 1 <= femax ty)%Z ->
@@ -3051,6 +3170,434 @@ Proof.
   lia.
 Qed.
 
+Theorem Bdiv_mult_inverse_finite ty:
+  forall x y z: (Binary.binary_float (fprec ty) (femax ty)),
+  is_finite _ _ x = true ->
+  is_finite _ _ y = true ->
+  is_finite _ _ z = true ->
+  Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
+  Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) mode_NE x y =
+  Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) mode_NE x z .
+Proof.
+  intros.
+  destruct (Bexact_inverse_correct _ _ _ _ _ _ H2) as (A & B & C & D & E).
+  assert (HMUL :=Binary.Bmult_correct (fprec ty)  (femax ty) 
+                     (fprec_gt_0 ty) (fprec_lt_femax ty) (mult_nan ty) mode_NE x z).
+  assert (HDIV := Binary.Bdiv_correct  (fprec ty)  (femax ty)  
+                    (fprec_gt_0 ty) (fprec_lt_femax ty) (div_nan ty) mode_NE x y D).
+ unfold Rdiv in HDIV.
+ rewrite <- C in HDIV.
+ destruct Rlt_bool.
+ -
+  destruct HMUL as (P & Q & R). 
+  destruct HDIV as (S & T & U).
+  assert (Binary.is_finite  (fprec ty) (femax ty)
+               (Binary.Bmult (fprec ty) (femax ty)  (fprec_gt_0 ty) (fprec_lt_femax ty) 
+                   (mult_nan ty) mode_NE x z) = true) 
+   by  (rewrite Q; auto;  rewrite ?andb_true_iff; auto).
+  assert (Binary.is_finite (fprec ty) (femax ty)
+              (Binary.Bdiv (fprec ty) (femax ty)  (fprec_gt_0 ty) (fprec_lt_femax ty) 
+                   (div_nan ty) mode_NE x y) = true)
+    by (rewrite T; auto).
+  apply Binary.B2R_Bsign_inj; auto;
+  rewrite ?S, ?R, ?U, ?E; auto; apply is_finite_not_is_nan; auto.
+- 
+  pose proof Binary.B2FF_inj _ _
+       (Binary.Bdiv (fprec ty) (femax ty) (fprec_gt_0 ty) 
+            (fprec_lt_femax ty) (div_nan ty) mode_NE x y)
+      (Binary.Bmult (fprec ty) (femax ty) (fprec_gt_0 ty) 
+            (fprec_lt_femax ty) (mult_nan ty) mode_NE x z).
+  rewrite E in HMUL.
+  rewrite HMUL, HDIV in *; auto.
+Qed.
+
+Theorem Bdiv_mult_inverse_nan ty:
+  forall x y z: (Binary.binary_float (fprec ty) (femax ty)),
+  is_nan _ _ x = false ->
+  is_finite _ _ y = true ->
+  is_finite _ _ z = true ->
+  Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
+  Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) mode_NE x y =
+  Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) mode_NE x z .
+Proof.
+  intros.
+  destruct (Bexact_inverse_correct _ _ _ _ _ _ H2) as (A & B & C & D & E).
+  assert (HMUL :=Binary.Bmult_correct (fprec ty)  (femax ty) 
+                     (fprec_gt_0 ty) (fprec_lt_femax ty) (mult_nan ty) mode_NE x z).
+  assert (HDIV := Binary.Bdiv_correct  (fprec ty)  (femax ty)  
+                    (fprec_gt_0 ty) (fprec_lt_femax ty) (div_nan ty) mode_NE x y D).
+ unfold Rdiv in HDIV.
+ rewrite <- C in HDIV.
+ destruct Rlt_bool.
+ -
+  destruct HMUL as (P & Q & R). 
+  destruct HDIV as (S & T & U).
+  { destruct x; simpl in H; try discriminate.
+-
+set (x:= (B754_zero (fprec ty) (femax ty) s)) in *.
+ assert (Binary.is_finite  (fprec ty) (femax ty)
+               (Binary.Bmult (fprec ty) (femax ty)  (fprec_gt_0 ty) (fprec_lt_femax ty) 
+                   (mult_nan ty) mode_NE x z) = true) 
+   by  (rewrite Q; auto;  rewrite ?andb_true_iff; auto).
+  assert (Binary.is_finite (fprec ty) (femax ty)
+              (Binary.Bdiv (fprec ty) (femax ty)  (fprec_gt_0 ty) (fprec_lt_femax ty) 
+                   (div_nan ty) mode_NE x y) = true)
+    by (rewrite T; auto).
+  apply Binary.B2R_Bsign_inj; auto;
+  rewrite ?S, ?R, ?U, ?E; auto; apply is_finite_not_is_nan; auto.
+-
+{destruct y; simpl in A; try discriminate. 
+{destruct z; simpl in B; try discriminate. 
+cbv [Bdiv]; simpl; simpl in E; subst; auto.
+} }
+- { apply Bdiv_mult_inverse_finite.
+- simpl; reflexivity.
+- apply H0.
+- apply H1.
+- apply H2.
+} }
+- 
+  pose proof Binary.B2FF_inj _ _
+       (Binary.Bdiv (fprec ty) (femax ty) (fprec_gt_0 ty) 
+            (fprec_lt_femax ty) (div_nan ty) mode_NE x y)
+      (Binary.Bmult (fprec ty) (femax ty) (fprec_gt_0 ty) 
+            (fprec_lt_femax ty) (mult_nan ty) mode_NE x z).
+  rewrite E in HMUL.
+  rewrite HMUL, HDIV in *; auto.
+Qed.
+
+Theorem Bdiv_mult_inverse_equiv ty:
+  forall x y z: (Binary.binary_float (fprec ty) (femax ty)),
+  is_finite _ _ y = true ->
+  is_finite _ _ z = true ->
+  Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
+  binary_float_equiv
+  (Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) mode_NE x y) 
+  (Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) mode_NE x z) .
+Proof.
+intros.
+{ destruct x.
+- apply binary_float_eq_equiv.
+{ apply Bdiv_mult_inverse_finite.
+- simpl; reflexivity.
+- apply H.
+- apply H0.
+- apply H1.
+}
+- apply binary_float_eq_equiv. 
+{ apply Bdiv_mult_inverse_nan.
+- simpl; reflexivity.
+- apply H.
+- apply H0.
+- apply H1.
+}
+- {destruct y; try simpl in H; try discriminate.
+{destruct z; try simpl in H0; try discriminate.
+- cbv [Bdiv Bmult Binary.build_nan binary_float_equiv]. reflexivity.
+- cbv [Bdiv Bmult Binary.build_nan binary_float_equiv]. reflexivity.
+}
+}
+- apply binary_float_eq_equiv.  
+{ apply Bdiv_mult_inverse_finite.
+- simpl; reflexivity.
+- apply H.
+- apply H0.
+- apply H1.
+} }
+Qed.
+
+Theorem Bdiv_mult_inverse_equiv2 ty:
+  forall x1 x2 y z: (Binary.binary_float (fprec ty) (femax ty)),
+  binary_float_equiv x1 x2 ->
+  is_finite _ _ y = true ->
+  is_finite _ _ z = true ->
+  Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
+  binary_float_equiv
+  (Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) mode_NE x1 y) 
+  (Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) mode_NE x2 z) .
+Proof.
+intros.
+assert (binary_float_equiv x1 x2) by apply H.
+{ destruct x1; destruct x2; simpl in H; try contradiction.
+- { subst; apply Bdiv_mult_inverse_equiv.
+- apply H0.
+- apply H1.
+- apply H2.
+}
+- { subst; apply Bdiv_mult_inverse_equiv.
+- apply H0.
+- apply H1.
+- apply H2.
+}
+- { destruct y; simpl in H0; try discriminate.
+- { destruct z; simpl in H1; try discriminate.
+- cbv [Bdiv Bmult build_nan binary_float_equiv]; reflexivity.
+- cbv [Bdiv Bmult build_nan binary_float_equiv]; reflexivity.
+} } 
+- { 
+{ apply binary_float_finite_equiv_eqb in H3.
+- apply binary_float_eqb_eq in H3. 
+rewrite H3. 
+{ apply Bdiv_mult_inverse_equiv.
+- apply H0.
+- apply H1.
+- apply H2.
+}
+- simpl. reflexivity.
+} } } 
+Qed.
+
+
+
+Lemma is_nan_normalize:
+  forall prec emax (H0: FLX.Prec_gt_0 prec) (H1 : (prec < emax)%Z)
+                   mode m e s, 
+  Binary.is_nan _ _ (Binary.binary_normalize prec emax H0 H1 mode m e s) = false.
+Proof.
+intros.
+unfold Binary.binary_normalize.
+destruct m; try reflexivity.
+-
+set (H2 := Binary.binary_round_correct _ _ _ _ _ _ _ _); clearbody H2.
+set (z := Binary.binary_round prec emax mode false p e) in *.
+destruct H2.
+cbv zeta in y.
+set (b := Rlt_bool _ _) in y.
+clearbody b.
+set (H2 := proj1 _).
+clearbody H2.
+destruct b.
++
+destruct y as [? [? ?]].
+destruct z; try discriminate; reflexivity.
++
+unfold Binary.binary_overflow in y.
+destruct (Binary.overflow_to_inf mode false);
+clearbody z; subst z; reflexivity.
+-
+set (H2 := Binary.binary_round_correct _ _ _ _ _ _ _ _); clearbody H2.
+set (z := Binary.binary_round prec emax mode true p e) in *.
+destruct H2.
+cbv zeta in y.
+set (b := Rlt_bool _ _) in y.
+clearbody b.
+set (H2 := proj1 _).
+clearbody H2.
+destruct b.
++
+destruct y as [? [? ?]].
+destruct z; try discriminate; reflexivity.
++
+unfold Binary.binary_overflow in y.
+destruct (Binary.overflow_to_inf mode true);
+clearbody z; subst z; reflexivity.
+Qed.
+
+Lemma is_nan_cast:
+  forall  t1 t2 x1,
+   is_nan _ _ x1 = false ->
+   is_nan _ _ (cast t2 t1 x1) = false.
+Proof.
+intros.
+unfold cast.
+destruct (type_eq_dec _ _).
+subst t2.
+apply H.
+unfold Bconv.
+destruct x1; try discriminate; auto.
+apply is_nan_normalize.
+Qed.
+
+Lemma cast_is_nan :
+  forall t1 t2 x1,
+  is_nan _ _ x1 = true ->
+  is_nan _ _ (cast t1 t2 x1) = true.
+Proof.
+intros.
+unfold cast.
+destruct (type_eq_dec _ _).
+subst t2.
+apply H.
+unfold Bconv.
+destruct x1; try discriminate; auto.
+Qed.
+
+Lemma cast_inf tfrom tto:
+  forall f,
+  is_finite _ _ f = false ->
+  is_finite _ _ (cast tto tfrom f) = false.
+Proof.
+  unfold cast.
+  intros.
+destruct (type_eq_dec _ _).
+subst tto.
+apply H.
+unfold Bconv.
+destruct f; try discriminate; auto.
+Qed.
+
+Lemma cast_inf_strict tfrom tto:
+  forall f,
+  is_finite_strict _ _ f = false ->
+  is_finite_strict _ _ (cast tto tfrom f) = false.
+Proof.
+  unfold cast.
+  intros.
+destruct (type_eq_dec _ _).
+subst tto.
+apply H.
+unfold Bconv.
+destruct f; try discriminate; auto.
+Qed.
+
+Lemma cast_preserves_bf_equiv tfrom tto (b1 b2: Binary.binary_float (fprec tfrom) (femax tfrom)) :
+  binary_float_equiv b1 b2 -> 
+  binary_float_equiv (cast tto tfrom b1) (cast tto tfrom b2).
+Proof.
+intros.
+destruct b1, b2; simpl; inversion H; clear H; subst; auto;
+try solve [apply binary_float_eq_equiv; auto].
+-
+unfold cast; simpl.
+destruct (type_eq_dec tfrom tto); auto.
+unfold eq_rect.
+destruct e1.
+reflexivity.
+reflexivity.
+-
+destruct H1; subst m0 e1.
+unfold cast; simpl.
+destruct (type_eq_dec tfrom tto); subst; auto.
+unfold eq_rect.
+simpl. split; auto.
+apply binary_float_eq_equiv.
+f_equal.
+Qed.
+
+Lemma binary_float_equiv_BDIV ty (b1 b2 b3 b4: binary_float (fprec ty) (femax ty)):
+binary_float_equiv b1 b2 ->
+binary_float_equiv b3 b4 ->
+binary_float_equiv (BDIV ty b1 b3) (BDIV ty b2 b4).
+Proof.
+intros.
+destruct b1.
+all : (destruct b3; destruct b4; try contradiction; try discriminate).
+all :
+match goal with 
+  |- context [
+binary_float_equiv (BDIV ?ty ?a ?b)
+ _] =>
+match a with 
+| B754_nan _ _ _ _ _ => destruct b2; try contradiction; try discriminate;
+    cbv [BDIV BINOP Bdiv build_nan binary_float_equiv]; try reflexivity
+  | _ => apply binary_float_equiv_eq in H; try rewrite <- H;
+  match b with 
+  | B754_nan _ _ _ _ _ => 
+      cbv [BDIV BINOP Bdiv build_nan binary_float_equiv]; try reflexivity
+  | _ => apply binary_float_equiv_eq in H0; try rewrite <- H0;
+          try apply binary_float_eq_equiv; try reflexivity
+end
+end
+end.
+Qed.
+
+Lemma binary_float_equiv_BOP ty (b1 b2 b3 b4: binary_float (fprec ty) (femax ty)):
+forall b: binop ,
+binary_float_equiv b1 b2 ->
+binary_float_equiv b3 b4 ->
+binary_float_equiv (fop_of_binop b ty b1 b3) (fop_of_binop b ty b2 b4).
+Proof.
+intros.
+destruct b1.
+all :
+match goal with 
+  |- context [
+binary_float_equiv (fop_of_binop ?bo ?ty ?a ?b)
+ _] =>
+match a with 
+| B754_zero _ _ _ => 
+apply binary_float_equiv_eq in H; try simpl; try reflexivity
+| B754_infinity _ _ _ => 
+apply binary_float_equiv_eq in H; try simpl; try reflexivity
+| B754_finite _ _ _ _ _ _ => 
+apply binary_float_equiv_eq in H; try simpl; try reflexivity
+| _ => try simpl
+end
+end.
+all :(
+destruct b2; simpl in H; try contradiction; try discriminate;
+destruct b3; destruct b4; try contradiction; try discriminate;
+match goal with 
+  |- context [ binary_float_equiv (fop_of_binop ?bo ?ty ?a ?b)  _] =>
+match a with 
+| B754_nan _ _ _ _ _  => try simpl
+| _ => try (rewrite H); 
+      match b with 
+      | B754_nan _ _ _ _ _ => try simpl
+      | _ => try (apply binary_float_equiv_eq in H);
+             try (rewrite H);
+             try (apply binary_float_equiv_eq in H0);
+             try (rewrite H0);
+             try (apply binary_float_eq_equiv); try reflexivity
+      end
+end
+end
+).
+
+all: (
+try (destruct b);
+try( cbv [fop_of_binop]);
+try destruct op;
+try (cbv [fop_of_rounded_binop]);
+try (cbv [fop_of_rounded_binop]);
+try(
+match goal with 
+|- context [ binary_float_equiv ((if ?m then ?op1 else ?op2)  ?ty ?a ?b) _] =>
+destruct m
+end;
+cbv [BPLUS BMINUS BDIV BMULT BINOP 
+Bplus Bminus Bdiv Bmult build_nan binary_float_equiv]);
+try (reflexivity)
+).
+Qed.
+
+Lemma binary_float_equiv_UOP ty (b1 b2: binary_float (fprec ty) (femax ty)):
+forall u: unop ,
+binary_float_equiv b1 b2 ->
+binary_float_equiv (fop_of_unop u ty b1) (fop_of_unop u ty b2).
+Proof.
+intros.
+destruct b1.
+all: (
+match goal with |- context [binary_float_equiv 
+(fop_of_unop ?u ?ty ?a) _]  =>
+match a with 
+| Binary.B754_nan _ _ _ _ _  => simpl 
+| _ => try apply binary_float_equiv_eq in H; try rewrite  <-H; 
+  try apply binary_float_eq_equiv; try reflexivity
+end
+end).
+destruct b2; try discriminate; try contradiction.
+try (destruct u).
+all: (
+try( cbv [fop_of_unop fop_of_exact_unop]);
+try destruct op;
+try destruct o;
+try destruct ltr;
+try (cbv [fop_of_rounded_unop]);
+try (cbv [Bsqrt Binary.Bsqrt build_nan]);
+try reflexivity
+).
++ destruct (B2 ty (Z.of_N pow)).
+all: try (
+ (cbv [ BMULT BINOP Bmult build_nan]);
+ reflexivity).
++ destruct (B2 ty (- Z.pos pow)) .
+all: try (
+ (cbv [ BMULT BINOP Bmult build_nan]);
+ reflexivity).
++ apply cast_preserves_bf_equiv; auto.
+Qed.
 
 Lemma Bmult_correct_comm:
 forall (prec emax : Z) (prec_gt_0_ : FLX.Prec_gt_0 prec)

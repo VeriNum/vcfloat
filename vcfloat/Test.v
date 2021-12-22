@@ -301,15 +301,16 @@ match goal with |- eval_cond2 (mk_env ?bmap ?vmap) _ _ =>
   rewrite ?power_RZ_inv  in * by lra;
    rewrite <- ?powerRZ_add in * by lra;
    simpl Z.add;
- repeat
+repeat
   match goal with |- context [mk_env bmap vmap ?ty ?v'] =>
        match goal with H: Maps.PTree.get ?v vmap = _ |- _ =>
          change (mk_env bmap vmap ty v') with (mk_env bmap vmap ty v);
          let x := fresh "x" in set (x := mk_env _ vmap _ v); 
-         hnf in x; (* ; rewrite H in x;  *)
+         hnf in x; 
         let jj := fresh "jj" in 
          set (jj := Maps.PTree.get v vmap) in *; clearbody jj; subst jj;
-             compute in x; subst x
+             compute in x; subst x;
+         try (cbv in H; inversion H; clear H; subst)
   end end;
  repeat change (B2R (fprec ?x) _) with (FT2R x);
  try apply lesseq_less_or_eq;
