@@ -195,11 +195,26 @@ Proof.
   destruct s1; destruct s2; simpl; intuition congruence.
 Qed.
 
+Definition option_eqb {A} (f: A -> A -> bool) (x y: option A): bool :=
+ match x, y with 
+ | Some x', Some y' => f x' y'
+ | None, None => true
+ | _, _ => false
+ end.
+
+Lemma option_eqb_true_iff: forall {A} {f: A -> A -> bool}
+   (H: forall a b, f a b = true <-> a=b)
+   x y,
+   option_eqb f x y = true <-> x=y.
+Proof.
+intros.
+destruct x,y; simpl; auto; rewrite ?H; split; congruence.
+Qed.
+
 Definition calling_convention_eqb s1 s2 :=
-  andb (Bool.eqb (AST.cc_vararg s1) (AST.cc_vararg s2))
+  andb (option_eqb Z.eqb (AST.cc_vararg s1) (AST.cc_vararg s2))
        (andb (Bool.eqb (AST.cc_unproto s1) (AST.cc_unproto s2))
-            (Bool.eqb (AST.cc_structret s1) (AST.cc_structret s2)))
-.
+            (Bool.eqb (AST.cc_structret s1) (AST.cc_structret s2))).
 
 Lemma calling_convention_eqb_eq s1 s2:
   calling_convention_eqb s1 s2 = true <-> s1 = s2.
@@ -208,6 +223,7 @@ Proof.
   destruct s1; destruct s2; simpl.
   repeat rewrite Bool.andb_true_iff.
   repeat rewrite Bool.eqb_true_iff.
+  rewrite (option_eqb_true_iff Z.eqb_eq).
   intuition congruence.
 Qed.
 

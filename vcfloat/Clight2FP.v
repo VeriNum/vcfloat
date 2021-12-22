@@ -61,7 +61,7 @@ Require Export vcfloat.cverif.ClightFacts.
 Section WITHNANS.
 Context {NANS: Nans}.
 
-Fixpoint static_float_type (c: Ctypes.type): option FPLang.type :=
+Definition static_float_type (c: Ctypes.type): option FPLang.type :=
   match c with
     | Ctypes.Tfloat Ctypes.F32 _ => Some Tsingle
     | Ctypes.Tfloat Ctypes.F64 _ => Some Tdouble
