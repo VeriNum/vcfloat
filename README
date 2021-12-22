@@ -1,7 +1,8 @@
 VCFloat: A Unified Coq Framework for Verifying C Programs with
 Floating-Point Computations
 
-Version 1.0 (2015-12-04)
+Version 1.0 (2015-12-04) Initial release
+Version 1.1 (2021-12-22) Update to Coq 8.13, CompCert 3.9, new optimizations.
 
 Copyright (C) 2015 Reservoir Labs Inc.
 All rights reserved.
@@ -17,11 +18,10 @@ For more technical information on VCFloat, you can read Sections 1 to
 4 of our paper published at ACM/SIGPLAN Certified Programs and Proofs
 (CPP) 2016:
 
-Tahina Ramananandro, Paul Mountcastle, Benoit Meister and Richard
-Lethin.
-A Unified Coq Framework for Verifying C Programs with Floating-Point
-Computations
+Tahina Ramananandro, Paul Mountcastle, Benoit Meister and Richard Lethin.
+A Unified Coq Framework for Verifying C Programs with Floating-Point Computations
 
+Subsequent maintenance and additions by Andrew W. Appel and Ariel Kellison.
 
 Summary of directories (each of which corresponds to its logical path
 with the same names where each path separator is replaced with . ):
@@ -47,41 +47,42 @@ Most interesting files:
   2016 paper (to be replayed interactively under ProofGeneral-Coq or
   CoqIDE)
 
-VCFloat requires Coq 8.5beta2.
+VCFloat requires Coq 8.13.
 
+VCFloat depends on the following further external libraries, accessed
+from opam, from the Coq Platform, or (deprecated method) automatically
+downloaded from their official sources and built during VCFloat's
+building process:
 
-VCFloat depends on the following further external libraries, which are
-automatically downloaded from their official sources and built during
-VCFloat's building process:
+- CompCert 3.9 (from AbsInt's GitHub at
+  https://github.com/AbsInt/CompCert.git), or from opam
 
-- Reservoir Labs Inc. R-CoqLib version 1.0 (from Reservoir Labs'
-  GitHub at http://github.com/reservoirlabs/rcoqlib )
+- Ssreflect 1.5 or later, e.g. from opam
 
-- CompCert 2.4 (from AbsInt's GitHub at
-  https://github.com/AbsInt/CompCert.git , commit 5dd15440). VCFloat
-  contains a patch from this commit (patches/compcert.patch),
-  distributed under the GNU General Public License, version 3.0 or (at
-  your option) any later version.
+- Mathematical Components (MathComp) 1.5 or later  (opam)
 
-- Ssreflect 1.5 (from its official website at
-  http://ssr.msr-inria.inria.fr/FTP/ssreflect-1.5.coq85beta2.tar.gz )
+- Flocq 3.4 (from INRIA GForge at
+  https://gforge.inria.fr/git/flocq/flocq.git, or from opam)
 
-- Mathematical Components (MathComp) 1.5 (from its official website at
-  http://ssr.msr-inria.inria.fr/FTP/mathcomp-1.5.coq85beta2.tar.gz )
-
-- Flocq 2.4.0 (from INRIA GForge at
-  https://gforge.inria.fr/git/flocq/flocq.git , commit bcbcde24)
-
-- Coq-Interval 2.0.0 (from INRIA GForge at
-  https://scm.gforge.inria.fr/anonscm/git/coq-interval/coq-interval.git
-  , commit 81f1f918). VCFloat contains a patch from this commit
-  (patches/interval.patch), distributed under CeCILL-C, version 1.0.
+- Coq-Interval 4.3.0 (from INRIA GForge at
+  https://scm.gforge.inria.fr/anonscm/git/coq-interval/coq-interval.git,
+    or opam).
 
 See ACKS for copyright and licensing information about those external
 libraries.
 
 
-Usage: assuming that you already have a standard installation of Coq
+Usage method 1:
+Use the Coq Platform (https://github.com/coq/platform)
+to ensure that Coq has access to all the above-named packages.
+Then
+ 1. cd into the vcfloat directory
+ 2. make depend
+ 3. make
+
+Usage method 2: without using Coq Platform or opam
+(deprecated; not recently tested)
+Assuming that you already have a standard installation of Coq
 8.5beta2, GNU make, GNU autoconf, GNU automake, and git.
 
   0. Fetch the external libraries mentioned above, by running the
