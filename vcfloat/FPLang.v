@@ -652,11 +652,41 @@ Proof.
   unfold type_le; auto with zarith.
 Qed.
 
-Definition type_lub t1 t2 := TYPE _ _ (type_lub_lt _ _ _ _ (fprec_lt_femax_bool t1) (fprec_lt_femax_bool t2)) (type_lub_neq_one _ _ (fprecp_not_one_bool t1) (fprecp_not_one_bool t2)).
+Definition type_lub' t1 t2 := TYPE _ _ (type_lub_lt _ _ _ _ (fprec_lt_femax_bool t1) (fprec_lt_femax_bool t2)) (type_lub_neq_one _ _ (fprecp_not_one_bool t1) (fprecp_not_one_bool t2)).
+
+Definition type_lub t1 t2 :=
+  (* we need this version so that it can compute more efficiently in the
+   common cases, otherwise proofs blow up. *)
+ if type_leb t1 t2 then t2 else if type_leb t2 t1 then t1 else type_lub' t1 t2.
+
+Lemma type_lub'_eq:
+ forall t1 t2, type_lub' t1 t2 = type_lub t1 t2.
+Proof.
+intros.
+unfold type_lub.
+pose proof (type_leb_le t1 t2).
+destruct (type_leb t1 t2).
+destruct (proj1 H (eq_refl _)).
+unfold fprec in *.
+apply type_ext'.
+unfold fprec, type_lub'; simpl; lia.
+simpl; lia. 
+clear H.
+pose proof (type_leb_le t2 t1).
+destruct (type_leb t2 t1).
+destruct (proj1 H (eq_refl _)).
+unfold fprec in *.
+apply type_ext'.
+unfold fprec, type_lub'; simpl; lia.
+simpl; lia.
+auto.
+Qed. 
+
 
 Lemma type_lub_left t1 t2: type_le t1 (type_lub t1 t2).
 Proof.
-  unfold type_lub.
+  rewrite <- type_lub'_eq.
+  unfold type_lub'.
   unfold type_le.
   simpl.
   unfold fprec.
@@ -671,7 +701,8 @@ Qed.
 
 Lemma type_lub_right t1 t2: type_le t2 (type_lub t1 t2).
 Proof.
-  unfold type_lub.
+  rewrite <- type_lub'_eq.
+  unfold type_lub'.
   unfold type_le.
   simpl.
   unfold fprec.
