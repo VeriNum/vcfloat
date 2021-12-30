@@ -366,6 +366,17 @@ Definition binary_float_eqb {prec1 emax1 prec2 emax2} (b1: binary_float prec1 em
     | _, _ => false
   end.
 
+Lemma binary_float_eqb_eq_rect_r:
+ forall ty1 ty2 (a b: binary_float (fprec ty1) (femax ty1))
+  (H: ty2=ty1),
+@binary_float_eqb (fprec ty1) (femax ty1) (fprec ty2) (femax ty2) 
+  a (@eq_rect_r type ty1 ftype b ty2 H) = 
+  binary_float_eqb a b.
+Proof.
+intros. subst ty2.
+reflexivity.
+Qed.
+
 Lemma binary_float_eqb_eq prec emax (b1 b2: binary_float prec emax):
   binary_float_eqb b1 b2 = true <-> b1 = b2.
 Proof.
@@ -2846,6 +2857,7 @@ Proof.
   lra.
 Qed.
 
+(* AEK 12/21 : see all_no_overflow below *)
 Lemma is_finite_no_overflow prec emax f:
   is_finite prec emax f = true ->
   Rabs (Binary.B2R _ _ f) < Raux.bpow Zaux.radix2 emax.
@@ -2875,6 +2887,12 @@ Proof.
     lra.
   }
   apply IZR_ge. lia.
+Qed.
+
+Lemma all_no_overflow prec emax f:
+  Rabs (Binary.B2R prec emax f) < Raux.bpow Zaux.radix2 emax.
+Proof.
+apply abs_B2R_lt_emax.
 Qed.
 
 Lemma Rabs_lt_pos: forall x : R, 0 < Rabs x -> x <> 0.
