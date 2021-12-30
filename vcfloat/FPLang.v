@@ -401,14 +401,6 @@ Proof.
        apply Z.eqb_eq. auto.
 Qed.
 
-Lemma binary_float_eqb_eq_rect_r:
-  forall t1 t2 (f1 f2 : binary_float (fprec t2) (femax t2))
-  (H : t1 = t2),
-  @binary_float_eqb (fprec t1) (femax t1) (fprec t2) 
-    (femax t2) (@eq_rect_r type t2 ftype f1 t1 H) f2 = 
-  binary_float_eqb f1 f2.
-Proof.
-intros; subst t2; reflexivity. Qed.
 
 Lemma binary_float_eqb_sym prec emax (b1 b2: binary_float prec emax):
   binary_float_eqb b1 b2 = true ->
