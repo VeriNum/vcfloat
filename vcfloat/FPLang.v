@@ -424,6 +424,20 @@ intros; destruct b1; destruct b2; simpl; simpl in H; auto.
   congruence.
 Qed. 
 
+Lemma binary_float_eqb_is_finite {prec1 emax1 prec2 emax2} 
+  (b1: binary_float prec1 emax1) (b2: binary_float prec2 emax2):
+    is_finite _ _ b1 = true -> binary_float_eqb b1 b2 = true -> 
+    is_finite _ _ b2 = true.
+Proof.
+intros.
+destruct b1; destruct b2; try discriminate; try contradiction; 
+simpl in H0. 
++ rewrite eqb_true_iff in H0; subst; assumption.
++ repeat rewrite andb_true_iff in H0. repeat destruct H0.
+  rewrite Z.eqb_eq in H1; rewrite Pos.eqb_eq in H2; 
+  rewrite eqb_true_iff in H0; subst; assumption.
+Qed.
+
 
 Definition binary_float_equiv {prec1 emax1 prec2 emax2} 
 (b1: binary_float prec1 emax1) (b2: binary_float prec2 emax2): Prop :=
