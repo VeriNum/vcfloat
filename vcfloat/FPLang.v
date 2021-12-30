@@ -2863,44 +2863,6 @@ Proof.
   lra.
 Qed.
 
-(* AEK 12/21 : see all_no_overflow below *)
-Lemma is_finite_no_overflow prec emax f:
-  is_finite prec emax f = true ->
-  Rabs (Binary.B2R _ _ f) < Raux.bpow Zaux.radix2 emax.
-Proof.
-  destruct f; simpl; try congruence; intros _.
-  {
-    rewrite Rabs_R0.
-    apply Raux.bpow_gt_0.
-  }
-  unfold Defs.F2R.
-  simpl.
-  rewrite Rabs_mult.
-  apply Binary.bounded_lt_emax in e0.
-  unfold Defs.F2R in e0.
-  simpl in e0.
-  rewrite <- abs_IZR.
-  rewrite Zaux.abs_cond_Zopp.
-  rewrite abs_IZR.
-  simpl.
-  rewrite Rabs_right.
-  {
-    rewrite Rabs_right.
-    {
-      assumption.
-    }
-    generalize (Raux.bpow_ge_0 Zaux.radix2 e).
-    lra.
-  }
-  apply IZR_ge. lia.
-Qed.
-
-Lemma all_no_overflow prec emax f:
-  Rabs (Binary.B2R prec emax f) < Raux.bpow Zaux.radix2 emax.
-Proof.
-apply abs_B2R_lt_emax.
-Qed.
-
 Lemma Rabs_lt_pos: forall x : R, 0 < Rabs x -> x <> 0.
 Proof.
   intros.
@@ -3207,7 +3169,6 @@ Lemma Bdiv_beta_no_overflow ty (x: ftype ty) n:
   Rabs (B2R _ _ x / Raux.bpow Zaux.radix2 (Z.pos n)) < Raux.bpow Zaux.radix2 (femax ty).
 Proof.
   intros.
-  apply is_finite_no_overflow in H.
   unfold Rdiv.
   rewrite Rabs_mult.
   rewrite <- Raux.bpow_opp.
@@ -3218,7 +3179,7 @@ Proof.
     {
       apply Raux.bpow_gt_0.
     }
-    eassumption.
+    apply abs_B2R_lt_emax.
   }
   rewrite <- Raux.bpow_plus.
   apply Raux.bpow_le.
@@ -4061,13 +4022,19 @@ Proof.
             auto.
           }
           exfalso.
-          apply is_finite_no_overflow in F1.
-          apply is_finite_no_overflow in F2.
-          rewrite <- V1 in F1.
-          rewrite <- V2 in F2.
-          apply Raux.Rabs_lt_inv in F1.
-          apply Raux.Rabs_lt_inv in F2.
-          generalize (sterbenz_no_overflow _ _ _ F1 F2 H1 H1').
+          pose proof 
+          (abs_B2R_lt_emax _ _
+            (cast (type_lub (type_of_expr e1) (type_of_expr e2)) 
+                  (type_of_expr e1) (fval env e1))).
+          pose proof 
+          (abs_B2R_lt_emax _ _
+            (cast (type_lub (type_of_expr e1) (type_of_expr e2)) 
+                  (type_of_expr e2) (fval env e2))).
+          rewrite <- V1 in H3.
+          rewrite <- V2 in H4.
+          apply Raux.Rabs_lt_inv in H3.
+          apply Raux.Rabs_lt_inv in H4.
+          generalize (sterbenz_no_overflow _ _ _ H3 H4 H1 H1').
           clear K.
           intro K.
           apply Raux.Rabs_lt in K.
@@ -4122,8 +4089,9 @@ Proof.
         destruct zero_left.
         {
           rewrite V1 in ZERO.
-          generalize (is_finite_no_overflow _ _ _ F2).
-          intro NO_OVER.
+          pose proof (abs_B2R_lt_emax _ _
+          (cast (type_lub (type_of_expr e1) (type_of_expr e2)) 
+            (type_of_expr e2) (fval env e2))).
           destruct minus.
           {
             generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
@@ -4165,8 +4133,9 @@ Proof.
           apply generic_format_B2R.          
         }
         rewrite V2 in ZERO.
-        generalize (is_finite_no_overflow _ _ _ F1).
-        intro NO_OVER.
+        pose proof (abs_B2R_lt_emax _ _
+        (cast (type_lub (type_of_expr e1) (type_of_expr e2)) 
+          (type_of_expr e1) (fval env e1))).
         destruct minus.
         {
           generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
