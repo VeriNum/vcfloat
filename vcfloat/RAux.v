@@ -200,6 +200,19 @@ Proof.
   ring.
 Qed.
 
+Lemma Rminus_le x y:
+x - y <= 0 -> x<=y.
+Proof.
+  nra.
+Qed.
+
+Lemma Rminus_plus_le_minus x y z:
+x + y <= z -> x <= z - y.
+Proof.
+intros.
+nra.
+Qed.
+
 Lemma Rabs_triang1 a b u v:
   Rabs a <= u ->
   Rabs b <= v ->
@@ -583,7 +596,7 @@ Proof.
 Qed.
 
 (* Square root *)
-
+Search "sqrt".
 Lemma sqrt_pos_strict x:
   0 < x ->
   0 < sqrt x.
@@ -948,6 +961,18 @@ Proof.
   }
   assumption.
 Qed.
+
+Lemma sqrt_succ_le : 
+forall n: R,
+0 <= n ->
+sqrt(n) < sqrt(n+1).
+Proof.
+intros.
+assert (0 <= n+1) by nra.
+assert (n < n+1) by nra.
+pose proof sqrt_lt_1 n (n+1) H H0 H1; apply H2.
+Qed.
+
 
 Lemma eq_le_le x y:
   x = y ->
