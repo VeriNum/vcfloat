@@ -3,7 +3,7 @@
  license (GNU GPL v3 or later) as the rest of VCFloat.
 *)
 
-From vcfloat Require Import FPLang FPLangOpt FPSolve.
+From vcfloat Require Import FPLang FPLangOpt FPSolve RAux.
 Require Import compcert.common.AST compcert.common.Values.
 Require Import compcert.lib.Floats.
 Import Binary.
@@ -45,36 +45,6 @@ Definition errors_bounded {MSHIFT}
 
 Open Scope R_scope.
 
-Definition sqrt_of_one : @expr AST.ident := Unop (Rounded1 SQRT None) (Const Tsingle (B2 _ 0)).
-
-Definition _x : AST.ident := 5%positive.
-Definition _v : AST.ident := 7%positive.
-
-Definition h :=  B2 Tsingle (-5).
-Definition half := B2 Tsingle (-1).
-
-Definition F (x: @expr AST.ident) : @expr AST.ident :=
-   Unop (Exact1 Opp) x.
-
-Definition leapfrog_x : @expr AST.ident :=
- Binop (Rounded2 PLUS None) 
-  (Binop (Rounded2 PLUS None) (Var Tsingle _x) 
-         (Binop (Rounded2 MULT None) (Const Tsingle h) (Var Tsingle _v)))
-  (Binop (Rounded2 MULT None)
-   (Binop (Rounded2 MULT None)
-     (Const Tsingle half) 
-     (Binop (Rounded2 MULT None) (Const Tsingle h)  (Const Tsingle h)))
-   (F (Var Tsingle _x))).
-
-Lemma power_RZ_inv: forall x y, x <> 0 -> Rinv (powerRZ x y) = powerRZ x (-y).
-Proof.
-intros.
-destruct y; simpl; auto.
-apply Rinv_1.
-apply Rinv_involutive.
-apply pow_nonzero.
-auto.
-Qed.
 
 Definition FT2R (t: type) : ftype t -> R := B2R (fprec t) (femax t).
 
@@ -226,7 +196,7 @@ Qed.
 Ltac prepare_assumptions_about_free_variables :=
 match goal with
   H: List.Forall (boundsmap_denote_pred ?vmap) (Maps.PTree.elements ?bmap)
-  |- List.Forall (eval_cond2 (mk_env ?bmap ?vmap) ?s )?p
+  |- _
   => 
 repeat
  (let j := fresh "j" in let t := fresh "t" in let i' := fresh "i'" in 
@@ -271,9 +241,6 @@ match goal with |- List.Forall (eval_cond2 _ ?M) _ =>
 end;
 repeat (apply List.Forall_cons; try apply List.Forall_nil).
 
-Lemma lesseq_less_or_eq:
- forall x y : R,  x <= y -> x < y \/ x = y.
-Proof. intros. lra. Qed.
 
 Ltac solve_one_eval_cond2 := 
 match goal with |- eval_cond2 (mk_env ?bmap ?vmap) _ _ =>
@@ -287,7 +254,10 @@ match goal with |- eval_cond2 (mk_env ?bmap ?vmap) _ _ =>
  repeat 
   (let H := fresh in intros ? H;
    simpl in H; cbv beta iota delta [error_bound Tsingle Tdouble fprec] in H;
-   simpl in H);
+simpl in H;
+rewrite ?IZR_Zpower_pos in H;
+rewrite ?mul_hlf_powerRZ in H);
+
  match goal with |- context [reval _ _ (mget ?M)] =>
    let m := fresh "m" in set (m:=M); compute in m;
     unfold reval;
@@ -300,23 +270,22 @@ match goal with |- eval_cond2 (mk_env ?bmap ?vmap) _ _ =>
  rewrite ?Pos2Z.inj_pow_pos, ? IZR_Zpower_pos in *;
   rewrite ?power_RZ_inv  in * by lra;
    rewrite <- ?powerRZ_add in * by lra;
-   simpl Z.add;
+   simpl Z.add ;
 repeat
-  match goal with |- context [mk_env bmap vmap ?ty ?v'] =>
-       match goal with H: Maps.PTree.get ?v vmap = _ |- _ =>
-         change (mk_env bmap vmap ty v') with (mk_env bmap vmap ty v);
-         let x := fresh "x" in set (x := mk_env _ vmap _ v); 
-         hnf in x; 
-        let jj := fresh "jj" in 
-         set (jj := Maps.PTree.get v vmap) in *; clearbody jj; subst jj;
-             compute in x; subst x;
+  match goal with |- context [mk_env ?bmap' ?vmap' ?ty ?v'] =>
+       match goal with H: Maps.PTree.get ?v vmap' = _ |- _ =>
+         change (mk_env bmap' vmap' ty v') with (mk_env bmap' vmap' ty v);
+         let x := fresh "x" in set (x := mk_env _ vmap' _ v); 
+         hnf in x;
+             compute in x; subst x; 
          try (cbv in H; inversion H; clear H; subst)
-  end end;
+  end end; 
  repeat change (B2R (fprec ?x) _) with (FT2R x);
  try apply lesseq_less_or_eq;
- rewrite ?Rmult_1_l;
- try interval
+ rewrite ?Rmult_1_l
 end.
+
+
 
 Ltac prove_exists_rndval_with_cond_result := 
 match goal with
@@ -341,83 +310,67 @@ rewrite list_forall_Forall
 end;
 prepare_assumptions_about_free_variables;
 solve_all_eval_cond2;
-solve_one_eval_cond2.
+solve_one_eval_cond2
+.
 
-Definition optimize {V: Type} {NANS: Nans} (e: expr) : expr :=
-  @fshift V NANS (@fcval V NANS e).
-
-Lemma optimize_type {V: Type}{NANS: Nans}: 
-   forall e: expr, @type_of_expr V (optimize e) = @type_of_expr V e.
-Proof.
+Lemma finite_env (bmap: boundsmap) (vmap: valmap):
+      boundsmap_denote bmap vmap ->
+forall ty i, is_finite (fprec ty) (femax ty) ((env_ vmap) ty i) = true.
+Proof. 
 intros.
-apply (eq_trans (fshift_type (fcval e)) (@fcval_type V NANS e)) .
+ unfold  env_.
+ specialize (H i).
+ destruct (Maps.PTree.get i bmap) as [[t i' lo hi]|],
+    (Maps.PTree.get i vmap) as [v|]; auto.
+ destruct H as [x [_ [? [? ?]]]].
+ destruct v; simpl in *; auto.
+ assert (t=Tdouble) by (inversion H; subst; auto). subst.
+ assert (f=x) by (inversion H; clear H; subst; apply Eqdep.EqdepTheory.inj_pair2 in H4; subst; auto).
+ subst.
+ destruct (type_eq_dec ty Tdouble); [ | reflexivity].
+ subst; auto.
+ assert (t=Tsingle) by (inversion H; subst; auto). subst.
+ assert (f=x) by (inversion H; clear H; subst; apply Eqdep.EqdepTheory.inj_pair2 in H4; subst; auto).
+ subst.
+ destruct (type_eq_dec ty Tsingle); [ | reflexivity].
+ subst; auto.
+Qed.
+
+Definition list_to_bound_env (bindings: list  (AST.ident * Test.varinfo)) 
+  (bindings2: list  (AST.ident * Values.val)) : (forall ty : type, AST.ident -> ftype ty) .
+pose (bm := Maps.PTree_Properties.of_list bindings).
+pose (vm := Maps.PTree_Properties.of_list bindings2). 
+intros ty i.
+destruct (Maps.PTree.get i bm) as [[t i' lo hi]|] eqn:?H.
+destruct (type_eq_dec ty t).
+subst.
+destruct (Maps.PTree.get i vm).
+destruct (type_eq_dec (Test.ftype_of_val v) t).
+subst.
+apply (Test.fval_of_val v).
+apply (B754_zero (fprec t) (femax t) true).
+apply (B754_zero (fprec t) (femax t) true).
+apply (B754_zero (fprec ty) (femax ty) true).
+apply (B754_zero (fprec ty) (femax ty) true).
 Defined.
 
-Definition optimize_correct {V: Type} {NANS: Nans}: 
-  forall env e,  (fval env (optimize e)) = eq_rect_r ftype (fval env e) (@optimize_type V NANS e).
-Proof.
-intros.
-unfold optimize.
-rewrite fshift_correct.
-rewrite (@fcval_correct V NANS env).
-unfold eq_rect_r.
-rewrite rew_compose.
-f_equal.
-rewrite <- eq_trans_sym_distr.
-f_equal.
-Qed.
 
-Lemma binary_float_eqb_eq_rect_r:
- forall ty1 ty2 (a b: binary_float (fprec ty2) (femax ty2))
-  (H: ty1=ty2),
-@binary_float_eqb (fprec ty1) (femax ty1) (fprec ty2) (femax ty2) 
-  (@eq_rect_r type ty2 ftype a ty1 H) b = 
-  binary_float_eqb a b.
-Proof.
-intros. subst ty2.
-reflexivity.
-Qed.
-
-Definition optimize_correct' {V: Type} {NANS: Nans}:
-  forall env e, 
-   binary_float_eqb (fval env (@optimize V NANS e)) (fval env e) = true.
-Proof.
-intros.
-rewrite optimize_correct.
-rewrite binary_float_eqb_eq_rect_r.
-apply binary_float_eqb_eq. auto.
-Qed.
-
-Lemma experiment1: 
-   let e := leapfrog_x in 
-   let bmap := Maps.PTree.set _v {|var_type:=Tsingle; var_name:=_v; var_lobound:=-1; var_hibound:=1|}
-                       (Maps.PTree.set _x {|var_type:=Tsingle; var_name:=_x; var_lobound:=-1; var_hibound:=1|}
-                         (Maps.PTree.empty _)) in 
-   forall vmap : valmap,
-      boundsmap_denote bmap vmap ->
-  exists r: rexpr, exists si2 : nat, exists (s : Maps.PMap.t (type * rounding_knowledge)),
-   rndval_with_cond_result  (env_ vmap) e r si2 s.
-Proof.
-intros ? ?.
- prove_exists_rndval_with_cond_result.
-Qed.
-
-Lemma experiment2: 
-   let e := leapfrog_x in 
-   let bmap := Maps.PTree.set _v {|var_type:=Tsingle; var_name:=_v; var_lobound:=-1; var_hibound:=1|}
-                       (Maps.PTree.set _x {|var_type:=Tsingle; var_name:=_x; var_lobound:=-1; var_hibound:=1|}
-                         (Maps.PTree.empty _)) in 
-   forall vmap : valmap,
-      boundsmap_denote bmap vmap ->
-  exists r: rexpr, exists si2 : nat, exists (s : Maps.PMap.t (type * rounding_knowledge)),
-   rndval_with_cond_result  (env_ vmap) (optimize e) r si2 s.
-Proof.
-intros ? ?.
- set (e' := optimize e). compute in e'.
- fold Tsingle in e'.
- change (Var Tsingle 5%positive) with (Var Tsingle _x) in e'.
- change (Var Tsingle 7%positive) with (Var Tsingle _v) in e'.
- clear e.
- prove_exists_rndval_with_cond_result.
-Abort.
-
+Ltac rndval_inversion :=
+  match goal with 
+    H0: (rndval_with_cond 0 (mempty (Tsingle, Normal)) ?ex = (?r, (?si, ?s), ?p)) |- _ =>
+      let m := fresh "m" in set (m:=rndval_with_cond 0 (mempty (Tsingle, Normal)) ex) in H0; 
+      let H:= fresh  in 
+      let H1:= fresh  in 
+      let H2:= fresh  in 
+      let H3:= fresh  in 
+      assert (r = fst (fst (m))) as H by ( 
+        replace m with (r, (si, s), p) by auto; auto);
+      assert (si = fst (snd (fst (m)))) as H1 by (
+        replace m with (r, (si, s), p) by auto; auto);
+      assert (s = snd (snd (fst (m)))) as H2 by (
+        replace m with (r, (si, s), p) by auto; auto);
+      assert (p =  snd (m)) as H3 by (
+        replace m with (r, (si, s), p) by auto; auto);
+      compute in H, H1 ,H2 ,H3
+end
+.
