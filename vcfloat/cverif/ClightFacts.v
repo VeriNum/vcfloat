@@ -117,9 +117,9 @@ Lemma eval_expr_lvalue_impl ge env m tenv1 tenv2
      eval_expr ge env tenv1 m e v ->
      eval_expr ge env tenv2 m e v)
   /\
-  (forall e b o,
-     eval_lvalue ge env tenv1 m e b o ->
-     eval_lvalue ge env tenv2 m e b o).
+  (forall e b o bf,
+     eval_lvalue ge env tenv1 m e b o bf ->
+     eval_lvalue ge env tenv2 m e b o bf).
 Proof.
   apply eval_expr_lvalue_ind; try (intros; econstructor; eauto; fail).
 Qed.
@@ -440,11 +440,11 @@ Lemma subst_expr_correct tenv i:
             subst_expr i e' e1 = Some e2 ->
             eval_expr ge lenv tenv m e2 v
       ) /\ (
-        forall e1 l o,
-          eval_lvalue ge lenv (Maps.PTree.set i v' tenv) m e1 l o ->
+        forall e1 l o bf,
+          eval_lvalue ge lenv (Maps.PTree.set i v' tenv) m e1 l o bf ->
           forall e2,
             subst_expr i e' e1 = Some e2 ->
-            eval_lvalue ge lenv tenv m e2 l o
+            eval_lvalue ge lenv tenv m e2 l o bf
       ).
 Proof.
   intros.
@@ -552,7 +552,7 @@ Proof.
     destruct (subst_expr i e' a) eqn:SUBST; try congruence.
     inversion 1; subst.
     apply subst_expr_type in SUBST.
-    econstructor; eauto.
+    eapply eval_Efield_union; eauto.
     rewrite SUBST.
     eassumption.
   }
@@ -1027,18 +1027,37 @@ Proof.
   }
 Qed.
 
-Fixpoint PTree_filter2 {A : Type} (pred : AST.ident -> A -> bool) (m : Maps.PTree.t A) {struct m} :
+Fixpoint PTree_filter2' {A : Type} (pred : AST.ident -> A -> bool) (m : Maps.PTree.tree' A) {struct m} :
   Maps.PTree.t A :=
   match m with
-  | Maps.PTree.Leaf => Maps.PTree.Leaf
-  | Maps.PTree.Node l o r =>
-      let o' :=
-        match o with
-        | Some x => if pred xH x then o else None
-        | None => None
-        end in
-      Maps.PTree.Node' (PTree_filter2 (fun i => pred (xO i)) l) o' (PTree_filter2 (fun i => pred (xI i)) r)
-  end.
+  | Maps.PTree.Node001 r => Maps.PTree.Node Maps.PTree.Empty None 
+                                               (PTree_filter2' (compose pred xI) r)
+  | Maps.PTree.Node010 x => Maps.PTree.Node Maps.PTree.Empty 
+                                                 (if pred xH x then Some x else None)
+                                                   Maps.PTree.Empty 
+  | Maps.PTree.Node011 x r => Maps.PTree.Node Maps.PTree.Empty
+                                                (if pred xH x then Some x else None)
+                                               (PTree_filter2' (compose pred xI) r)
+  | Maps.PTree.Node100 l => Maps.PTree.Node 
+                                               (PTree_filter2' (compose pred xO) l)
+                                                   None Maps.PTree.Empty
+  | Maps.PTree.Node101 l r => Maps.PTree.Node 
+                                               (PTree_filter2' (compose pred xO) l)
+                                                   None  (PTree_filter2' (compose pred xI) r)
+  | Maps.PTree.Node110 l x => Maps.PTree.Node 
+                                               (PTree_filter2' (compose pred xO) l)
+                                                   (if pred xH x then Some x else None) Maps.PTree.Empty
+  | Maps.PTree.Node111 l x r => Maps.PTree.Node 
+                                               (PTree_filter2' (compose pred xO) l)
+                                                   (if pred xH x then Some x else None) 
+                                               (PTree_filter2' (compose pred xI) r)
+ end.
+
+Definition PTree_filter2 {A : Type} (pred : AST.ident -> A -> bool) (m : Maps.PTree.t A) :=
+ match m with 
+ | Maps.PTree.Empty => Maps.PTree.Empty
+ | Maps.PTree.Nodes m => PTree_filter2' pred m
+ end.
 
 Lemma PTree_gfilter2 {A} (m: _ A):
   forall pred i,
@@ -1048,25 +1067,21 @@ Lemma PTree_gfilter2 {A} (m: _ A):
       | None => None
     end.
 Proof.
-  induction m; simpl.
-  {
-    replace (Maps.PTree.Leaf) with (Maps.PTree.empty A) by reflexivity.
-    intros.
-    rewrite Maps.PTree.gempty.
-    reflexivity.
-  }
-  intros.
-  rewrite Maps.PTree.gnode'.
-  destruct i; simpl; auto.
-  {
-    rewrite IHm2.
-    auto.
-  }
-  {
-    rewrite IHm1.
-    auto.
-  }
-  destruct o; auto.
+ destruct m as [ |m]; auto.
+ unfold Maps.PTree.get, PTree_filter2.
+ induction m; destruct i; intros;
+ try fold (compose pred xO i);
+ try fold (compose pred xI i); 
+  try (etransitivity ;  [ | apply (IHm (compose pred xO))]);
+  try (etransitivity ;  [ | apply (IHm (compose pred xI))]);
+  try (etransitivity ;  [ | apply (IHm1 (compose pred xO))]);
+  try (etransitivity ;  [ | apply (IHm1 (compose pred xI))]);
+  try (etransitivity ;  [ | apply (IHm2 (compose pred xO))]);
+  try (etransitivity ;  [ | apply (IHm2 (compose pred xI))]);
+ simpl.
+all: try (destruct (PTree_filter2' _ _); simpl; auto).
+all: try (destruct (pred xH _); simpl; auto).
+all: try (destruct (PTree_filter2' _ _); simpl; auto).
 Qed.
 
 Lemma PTree_elements_correct {T: Type} (P: _ -> T -> Prop) m:
