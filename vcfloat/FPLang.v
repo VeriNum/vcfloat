@@ -224,6 +224,7 @@ Inductive rounded_binop: Type :=
 Inductive rounding_knowledge: Type :=
 | Normal
 | Denormal
+| uNormal
 .
 
 Inductive binop: Type :=
@@ -247,6 +248,7 @@ Inductive unop: Type :=
 | Rounded1 (op: rounded_unop) (knowl: option rounding_knowledge)
 | Exact1 (o: exact_unop)
 | CastTo (ty: type) (knowl: option rounding_knowledge)
+| uInvShift (pow: positive) (ltr: bool) (knowl: option rounding_knowledge) (* divide by power of two that introduces underflow *)
 .
 
 Class VarType (V: Type): Type := 
@@ -366,6 +368,17 @@ Definition binary_float_eqb {prec1 emax1 prec2 emax2} (b1: binary_float prec1 em
     | _, _ => false
   end.
 
+Lemma binary_float_eqb_eq_rect_r:
+ forall ty1 ty2 (a b: binary_float (fprec ty1) (femax ty1))
+  (H: ty2=ty1),
+@binary_float_eqb (fprec ty1) (femax ty1) (fprec ty2) (femax ty2) 
+  a (@eq_rect_r type ty1 ftype b ty2 H) = 
+  binary_float_eqb a b.
+Proof.
+intros. subst ty2.
+reflexivity.
+Qed.
+
 Lemma binary_float_eqb_eq prec emax (b1 b2: binary_float prec emax):
   binary_float_eqb b1 b2 = true <-> b1 = b2.
 Proof.
@@ -389,6 +402,44 @@ Proof.
    + inversion H; clear H; subst; split; auto.
        apply Z.eqb_eq. auto.
 Qed.
+
+
+Lemma binary_float_eqb_sym prec emax (b1 b2: binary_float prec emax):
+  binary_float_eqb b1 b2 = true ->
+  binary_float_eqb b2 b1 = true. 
+Proof.
+intros; destruct b1; destruct b2; simpl; simpl in H; auto. 
++ rewrite <- H. apply eqb_sym.
++ rewrite <- H. apply eqb_sym.
++ rewrite andb_true_iff in H; rewrite andb_true_iff; 
+  destruct H as (A & B); split. 
+  rewrite <- A; apply eqb_sym.
+  rewrite Pos.eqb_eq. rewrite Pos.eqb_eq in B;
+  congruence.
++ repeat rewrite andb_true_iff in H. 
+  repeat rewrite andb_true_iff. 
+  destruct H as (A & C); destruct A as (A & B); repeat split. 
+  rewrite <- A; apply eqb_sym.
+  rewrite Pos.eqb_eq. rewrite Pos.eqb_eq in B;
+  congruence.
+  rewrite Z.eqb_eq. rewrite Z.eqb_eq in C;
+  congruence.
+Qed. 
+
+Lemma binary_float_eqb_is_finite {prec1 emax1 prec2 emax2} 
+  (b1: binary_float prec1 emax1) (b2: binary_float prec2 emax2):
+    is_finite _ _ b1 = true -> binary_float_eqb b1 b2 = true -> 
+    is_finite _ _ b2 = true.
+Proof.
+intros.
+destruct b1; destruct b2; try discriminate; try contradiction; 
+simpl in H0. 
++ rewrite eqb_true_iff in H0; subst; assumption.
++ repeat rewrite andb_true_iff in H0. repeat destruct H0.
+  rewrite Z.eqb_eq in H1; rewrite Pos.eqb_eq in H2; 
+  rewrite eqb_true_iff in H0; subst; assumption.
+Qed.
+
 
 Definition binary_float_equiv {prec1 emax1 prec2 emax2} 
 (b1: binary_float prec1 emax1) (b2: binary_float prec2 emax2): Prop :=
@@ -551,6 +602,7 @@ Definition Rop_of_unop (r: unop): R -> R :=
     | Rounded1 op _ => Rop_of_rounded_unop op
     | Exact1 op => Rop_of_exact_unop op
     | CastTo _ _ => id
+    | uInvShift pow _ _ => Rmult (Raux.bpow Zaux.radix2 (- Z.pos pow))
   end.
 
 Definition B2F {prec emax} (f : binary_float prec emax):
@@ -1077,6 +1129,13 @@ Definition fop_of_unop (r: unop):
       | Rounded1 o _ => fop_of_rounded_unop o
       | Exact1 o => fop_of_exact_unop o
       | CastTo tto _ => cast tto
+      | uInvShift n b r => 
+        if b
+        then
+          (fun ty x => BMULT ty x (B2 ty (- Z.pos n)))
+        else
+          (fun ty => BMULT ty (B2 ty (- Z.pos n)))
+
     end.
 
 Fixpoint fval (env: forall ty, V -> ftype ty) (e: expr) {struct e}:
@@ -1416,10 +1475,17 @@ Definition make_rounding
                  )
           , (S d, es1)
         )
-
-      | Some Denormal =>
+      | Some Denormal => 
         let e := si in
         let es1 := mset shift e (ty, Denormal) in
+        (
+          RBinop Tree.Add x
+                 (RAtom (RError e))
+          , (S e, es1)
+        )
+      | Some uNormal => 
+        let e := si in
+        let es1 := mset shift e (ty, uNormal) in
         (
           RBinop Tree.Add x
                  (RAtom (RError e))
@@ -1495,7 +1561,7 @@ Definition error_bound ty k :=
   / 2 * Raux.bpow Zaux.radix2
   match k with
     | Normal => (- fprec ty + 1)
-    | Denormal =>  (3 - femax ty - fprec ty)
+    | _ =>  (3 - femax ty - fprec ty)   (* Denormal, uNormal *)
   end.
 
 Lemma error_bound_nonneg ty k:
@@ -1510,8 +1576,8 @@ Definition error_bound' ty k :=
   match k with
     | Normal => / 2 * Raux.bpow Zaux.radix2
  (- fprec ty + 1)
-    | Denormal => / 2 * Raux.bpow Zaux.radix2
- (3 - femax ty - fprec ty)
+    | _ => / 2 * Raux.bpow Zaux.radix2 (* Denormal, uNormal *)
+ (3 - femax ty - fprec ty) 
   end.
 
 Lemma error_bound'_correct ty k:
@@ -1522,11 +1588,11 @@ Qed.
 
 Definition rounding_cond ty k x :=
   match k with
-    | None => True
     | Some Normal =>
       Raux.bpow Zaux.radix2 (3 - femax ty - 1) <= Rabs x
     | Some Denormal =>
       Rabs x < Raux.bpow Zaux.radix2 (3 - femax ty)
+    | _ => True (* None, Some uNormal *) 
   end.
 
 Lemma make_rounding_correct
@@ -1555,139 +1621,140 @@ Lemma make_rounding_correct
     (forall i ty' k,
        mget shift' i = (ty', k) ->
        Rabs (errors2 i) <= error_bound ty' k)
-.
-Proof.
-  unfold make_rounding, rounding_cond.
+.  
+
+Proof. 
+unfold make_rounding, rounding_cond.
+intros.
+destruct kn.
+- (* Some kn *)
+destruct r.
++ (* Normal *)
+replace (3 - femax ty - 1)%Z with (3 - femax ty - fprec ty + fprec ty - 1)%Z in H2 by ring.
+generalize (Relative.relative_error_N_FLT_ex _ _ _ (fprec_gt_0 _) choice _ H2).
+destruct 1 as (eps & Heps & Hround).
+pose (errors2 := fun i => if Nat.eq_dec i si
+                          then eps
+                          else errors1 i
+     ).
+exists errors2.
+split.
+--
+  unfold errors2.
   intros.
-  destruct kn.
-  {
-    destruct r.
-    {
-      replace (3 - femax ty - 1)%Z with (3 - femax ty - fprec ty + fprec ty - 1)%Z in H2 by ring.
-      generalize (Relative.relative_error_N_FLT_ex _ _ _ (fprec_gt_0 _) choice _ H2).
-      destruct 1 as (eps & Heps & Hround).
-      pose (errors2 := fun i => if Nat.eq_dec i si
-                                then eps
-                                else errors1 i
-           ).
-      exists errors2.
-      split.
-      {
-        unfold errors2.
-        intros.
-        destruct (Nat.eq_dec i si); auto.
-        lia.
-      }
-      inversion H; clear H; subst.
-      simpl reval.
-      rewrite Rmult_1_l.
-      split.
-      {
-        rewrite <- (reval_error_ext errors1).
-        {
-          unfold errors2.
-          destruct (Nat.eq_dec si si); congruence.
-        }
-        intros.
-        unfold errors2.
-        destruct (Nat.eq_dec i si); auto.
-        exfalso.
-        lia.
-      }
-      intros until i.
-      rewrite (mget_set Nat.eq_dec).
-      intros.
-      unfold errors2.
-      destruct (Nat.eq_dec i si); auto.
-      inversion H; subst.
-      assumption.
-    }
-    replace (3 - femax ty)%Z with (3 - femax ty - fprec ty + fprec ty)%Z in H2 by ring.
-    generalize (Fprop_absolute.absolute_error_N_FLT _ _ (fprec_gt_0 _) _ choice _ H2).
-    destruct 1 as (eps & Heps & Hround).
-    pose (errors2 := fun i => if Nat.eq_dec i si
-                              then eps
-                              else errors1 i
-         ).
-    exists errors2.    
-    split.
-    {
-      unfold errors2.
-      intros.
-      destruct (Nat.eq_dec i si); auto.
-      lia.
-    }
-    inversion H; clear H; subst.
-    simpl reval.
-    split.
-    {
-      rewrite <- (reval_error_ext errors1).
-      {
-        unfold errors2.
-        destruct (Nat.eq_dec si si); congruence.
-      }
-      intros.
-      unfold errors2.
-      destruct (Nat.eq_dec i si); auto.
-      lia.      
-    }
-    intros until i.
-    rewrite (mget_set Nat.eq_dec).
-    intros.
+  destruct (Nat.eq_dec i si); auto.
+  lia.
+--
+inversion H; clear H; subst.
+simpl reval.
+rewrite Rmult_1_l.
+split.
++++
+  rewrite <- (reval_error_ext errors1).
+---
     unfold errors2.
-    destruct (Nat.eq_dec i si); auto.
-    inversion H; subst.
-    auto.
-  }
-  generalize (Relative.error_N_FLT Zaux.radix2 (3 - femax ty - fprec ty) (fprec ty) (fprec_gt_0 _)  choice (reval x env errors1)).
-  destruct 1 as (eps & eta & Heps & Heta & _ & Hround).
-  pose (errors2 := fun i => if Nat.eq_dec i (S (si))
-                            then eta
-                            else
-                              if Nat.eq_dec i si
-                              then eps
-                              else  errors1 i
-       ).
-  exists errors2.
-  split.
-  {
-    unfold errors2.
-    intros.
-    destruct (Nat.eq_dec i (S si)); try lia.
-    destruct (Nat.eq_dec i si); try lia.
-    auto.
-  }
-  inversion H; clear H; subst.
-  simpl reval.
-  rewrite Rmult_1_l.
-  split.
-  {    
-    rewrite <- (reval_error_ext errors1).
-    {
-      unfold errors2.
-      destruct (Nat.eq_dec si (S si)); try (exfalso; lia).
-      destruct (Nat.eq_dec si si); try congruence.
-      destruct (Nat.eq_dec (S si) (S si)); congruence.
-    }
-    intros.
-    unfold errors2.
-    destruct (Nat.eq_dec i (S si)); try lia.
-    destruct (Nat.eq_dec i si); try lia.
-    auto.
-  }
-  intros until i.
-  repeat rewrite (mget_set Nat.eq_dec).
+    destruct (Nat.eq_dec si si); congruence.
+---
   intros.
   unfold errors2.
-  destruct (Nat.eq_dec i (S si)).
-  {
-    inversion H; subst.
-    assumption.
-  }
   destruct (Nat.eq_dec i si); auto.
+  exfalso.
+  lia.
++++
+intros until i.
+rewrite (mget_set Nat.eq_dec).
+intros.
+unfold errors2.
+destruct (Nat.eq_dec i si); auto.
+inversion H; subst.
+assumption.
++ (* Denormal *)
+replace (3 - femax ty)%Z with (3 - femax ty - fprec ty + fprec ty)%Z in H2 by ring.
+generalize (Fprop_absolute.absolute_error_N_FLT _ _ (fprec_gt_0 _) _ choice _ H2).
+destruct 1 as (eps & Heps & Hround).
+pose (errors2 := fun i => if Nat.eq_dec i si
+                          then eps
+                          else errors1 i
+     ).
+exists errors2.    
+split.
+--
+  unfold errors2.
+  intros.
+  destruct (Nat.eq_dec i si); auto.
+  lia.
+--
+inversion H; clear H; subst.
+simpl reval.
+split.
+
+  rewrite <- (reval_error_ext errors1).
+++
+    unfold errors2.
+    destruct (Nat.eq_dec si si); congruence.
+++
+  intros.
+  unfold errors2.
+  destruct (Nat.eq_dec i si); auto.
+  lia.      
+++
+intros until i.
+rewrite (mget_set Nat.eq_dec).
+intros.
+unfold errors2.
+destruct (Nat.eq_dec i si); auto.
+inversion H; subst.
+auto.
++ (* uNormal *) admit. 
+- generalize (Relative.error_N_FLT Zaux.radix2 (3 - femax ty - fprec ty) (fprec ty) (fprec_gt_0 _)  choice (reval x env errors1)).
+destruct 1 as (eps & eta & Heps & Heta & _ & Hround).
+pose (errors2 := fun i => if Nat.eq_dec i (S (si))
+                          then eta
+                          else
+                            if Nat.eq_dec i si
+                            then eps
+                            else  errors1 i
+     ).
+exists errors2.
+split.
+{
+  unfold errors2.
+  intros.
+  destruct (Nat.eq_dec i (S si)); try lia.
+  destruct (Nat.eq_dec i si); try lia.
+  auto.
+}
+inversion H; clear H; subst.
+simpl reval.
+rewrite Rmult_1_l.
+split.
+{    
+  rewrite <- (reval_error_ext errors1).
+  {
+    unfold errors2.
+    destruct (Nat.eq_dec si (S si)); try (exfalso; lia).
+    destruct (Nat.eq_dec si si); try congruence.
+    destruct (Nat.eq_dec (S si) (S si)); congruence.
+  }
+  intros.
+  unfold errors2.
+  destruct (Nat.eq_dec i (S si)); try lia.
+  destruct (Nat.eq_dec i si); try lia.
+  auto.
+}
+intros until i.
+repeat rewrite (mget_set Nat.eq_dec).
+intros.
+unfold errors2.
+destruct (Nat.eq_dec i (S si)).
+{
   inversion H; subst.
   assumption.
-Qed.
+}
+destruct (Nat.eq_dec i si); auto.
+inversion H; subst.
+assumption.
+Admitted.
 
 Definition Rbinop_of_rounded_binop o :=
   match o with
@@ -1758,6 +1825,8 @@ Definition rnd_of_unop
                       (RUnop (Runop_of_rounded_unop o) r)
       | Exact1 o => (Runop_of_exact_unop ty o r, (si, shift))
       | CastTo ty' k => rnd_of_cast si shift ty ty' k r
+      | uInvShift n _ k => make_rounding si shift k ty
+              ((RBinop Tree.Mul (RAtom (RConst (B2F (B2 ty (- Z.pos n)))))) r)
     end.
 
 Fixpoint rndval 
@@ -1890,7 +1959,12 @@ Proof.
   {
     inversion_clear 1; auto with arith.
   }
+{
   apply rnd_of_cast_shift_incr.
+}
+  {
+    apply make_rounding_shift_incr.
+  }
 Qed.
 
 Lemma rnd_of_unop_shift_le si  shift ty u r1 y si' shift':
@@ -1906,8 +1980,14 @@ Proof.
     inversion H; clear H; subst; simpl.
     destruct o; simpl; auto.
   }
+{
   eapply rnd_of_cast_shift_le; eauto.
+}
+{
+    eapply make_rounding_shift_le; eauto.
+}
 Qed.
+
 
 Lemma rnd_of_unop_shift_unchanged si  shift ty u r1 y si' shift':
   rnd_of_unop si shift ty u r1 = (y, (si', shift')) ->
@@ -1921,7 +2001,12 @@ Proof.
   {
     inversion_clear 1; auto with arith.
   }
+{
   apply rnd_of_cast_shift_unchanged.
+}
+  {
+    apply make_rounding_shift_unchanged.
+  }
 Qed.
 
 Lemma rndval_shift_incr x:
@@ -2310,11 +2395,11 @@ Definition is_div o :=
 
 Definition rounding_cond_ast ty k x: list cond :=
   match k with
-    | None => nil
     | Some Normal =>
       (RBinop Tree.Sub (RUnop Tree.Abs x) (RAtom (RConst (Defs.Float _ 1 (3 - femax ty - 1)))), false) :: nil
     | Some Denormal =>
       (RBinop Tree.Sub (RAtom (RConst (Defs.Float _ 1 (3 - femax ty)))) (RUnop Tree.Abs x), true) :: nil
+    | _ => nil (*None, uNormal *)
   end.
 
 Lemma rounding_cond_ast_shift ty k x e b:
@@ -2347,7 +2432,7 @@ Proof.
   unfold rounding_cond.
   destruct knowl; auto;
   cbn -[Zminus] in * |- *  .
-  destruct r0.
+  destruct r0;  auto.
   {
     specialize (H0 _ (or_introl _ (refl_equal _))).
     cbn -[Zminus] in *.
@@ -2419,6 +2504,8 @@ Proof.
   destruct 1; try contradiction.
   Opaque Zminus. inversion H; clear H; subst. Transparent Zminus.
   reflexivity.
+{ simpl; intros; contradiction.
+}
 Qed.
 
 Lemma rnd_of_binop_with_cond_shift_cond si shift ty o r1 r2 r' si' shift' cond:
@@ -2565,7 +2652,13 @@ Definition rnd_of_unop_with_cond
            | _ => nil
          end)
       | CastTo ty' k => rnd_of_cast_with_cond si shift ty ty' k r1
+     | uInvShift n _ k =>
+        let rs := make_rounding si shift k ty
+              ((RBinop Tree.Mul (RAtom (RConst (B2F (B2 ty (- Z.pos n)))))) r1) in
+        let '(r, _) := rs in
+        (rs, nil)
     end.
+
 
 Lemma rnd_of_unop_with_cond_shift_cond si shift ty o r1 r' si' shift' cond:
   rnd_of_unop_with_cond si shift ty o r1 = ((r', (si', shift')), cond) ->
@@ -2615,7 +2708,7 @@ Proof.
     assumption.
   }
   apply rnd_of_cast_with_cond_shift_cond.
-Qed.
+Admitted.
 
 Fixpoint rndval_with_cond
          si
@@ -2673,8 +2766,10 @@ Proof.
                       (RUnop (Runop_of_rounded_unop op) r1)
       ); simpl; auto.
   }
+{
   apply rnd_of_cast_with_cond_left.
-Qed.
+}
+Admitted.
 
 Lemma rndval_with_cond_left e:
   forall si shift,
@@ -2812,37 +2907,6 @@ Lemma sterbenz_no_overflow A x y:
 .
 Proof.
   lra.
-Qed.
-
-Lemma is_finite_no_overflow prec emax f:
-  is_finite prec emax f = true ->
-  Rabs (Binary.B2R _ _ f) < Raux.bpow Zaux.radix2 emax.
-Proof.
-  destruct f; simpl; try congruence; intros _.
-  {
-    rewrite Rabs_R0.
-    apply Raux.bpow_gt_0.
-  }
-  unfold Defs.F2R.
-  simpl.
-  rewrite Rabs_mult.
-  apply Binary.bounded_lt_emax in e0.
-  unfold Defs.F2R in e0.
-  simpl in e0.
-  rewrite <- abs_IZR.
-  rewrite Zaux.abs_cond_Zopp.
-  rewrite abs_IZR.
-  simpl.
-  rewrite Rabs_right.
-  {
-    rewrite Rabs_right.
-    {
-      assumption.
-    }
-    generalize (Raux.bpow_ge_0 Zaux.radix2 e).
-    lra.
-  }
-  apply IZR_ge. lia.
 Qed.
 
 Lemma Rabs_lt_pos: forall x : R, 0 < Rabs x -> x <> 0.
@@ -3151,7 +3215,6 @@ Lemma Bdiv_beta_no_overflow ty (x: ftype ty) n:
   Rabs (B2R _ _ x / Raux.bpow Zaux.radix2 (Z.pos n)) < Raux.bpow Zaux.radix2 (femax ty).
 Proof.
   intros.
-  apply is_finite_no_overflow in H.
   unfold Rdiv.
   rewrite Rabs_mult.
   rewrite <- Raux.bpow_opp.
@@ -3162,7 +3225,7 @@ Proof.
     {
       apply Raux.bpow_gt_0.
     }
-    eassumption.
+    apply abs_B2R_lt_emax.
   }
   rewrite <- Raux.bpow_plus.
   apply Raux.bpow_le.
@@ -3597,6 +3660,10 @@ all: try (
  (cbv [ BMULT BINOP Bmult build_nan]);
  reflexivity).
 + apply cast_preserves_bf_equiv; auto.
++ destruct (B2 ty (- Z.pos pow)) .
+all: try (
+ (cbv [ BMULT BINOP Bmult build_nan]);
+ reflexivity).
 Qed.
 
 Lemma Bmult_correct_comm:
@@ -4005,13 +4072,19 @@ Proof.
             auto.
           }
           exfalso.
-          apply is_finite_no_overflow in F1.
-          apply is_finite_no_overflow in F2.
-          rewrite <- V1 in F1.
-          rewrite <- V2 in F2.
-          apply Raux.Rabs_lt_inv in F1.
-          apply Raux.Rabs_lt_inv in F2.
-          generalize (sterbenz_no_overflow _ _ _ F1 F2 H1 H1').
+          pose proof 
+          (abs_B2R_lt_emax _ _
+            (cast (type_lub (type_of_expr e1) (type_of_expr e2)) 
+                  (type_of_expr e1) (fval env e1))).
+          pose proof 
+          (abs_B2R_lt_emax _ _
+            (cast (type_lub (type_of_expr e1) (type_of_expr e2)) 
+                  (type_of_expr e2) (fval env e2))).
+          rewrite <- V1 in H3.
+          rewrite <- V2 in H4.
+          apply Raux.Rabs_lt_inv in H3.
+          apply Raux.Rabs_lt_inv in H4.
+          generalize (sterbenz_no_overflow _ _ _ H3 H4 H1 H1').
           clear K.
           intro K.
           apply Raux.Rabs_lt in K.
@@ -4066,8 +4139,9 @@ Proof.
         destruct zero_left.
         {
           rewrite V1 in ZERO.
-          generalize (is_finite_no_overflow _ _ _ F2).
-          intro NO_OVER.
+          pose proof (abs_B2R_lt_emax _ _
+          (cast (type_lub (type_of_expr e1) (type_of_expr e2)) 
+            (type_of_expr e2) (fval env e2))).
           destruct minus.
           {
             generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
@@ -4109,8 +4183,9 @@ Proof.
           apply generic_format_B2R.          
         }
         rewrite V2 in ZERO.
-        generalize (is_finite_no_overflow _ _ _ F1).
-        intro NO_OVER.
+        pose proof (abs_B2R_lt_emax _ _
+        (cast (type_lub (type_of_expr e1) (type_of_expr e2)) 
+          (type_of_expr e1) (fval env e1))).
         destruct minus.
         {
           generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
@@ -4391,6 +4466,7 @@ Proof.
       lra.
     }
 
+{
     (* invshift *)
     cbn -[Zminus] in * |- *.
     rewrite F2R_eq.
@@ -4438,6 +4514,7 @@ Proof.
     rewrite <- V1.
     lra.
   }
+}
 
   (* cast *)
   simpl.
@@ -4524,7 +4601,9 @@ Proof.
   simpl in H1.
   lra.
 
-Qed.
+(* uInvShift *)
+
+Admitted.
 
 End WITHMAP.
 
