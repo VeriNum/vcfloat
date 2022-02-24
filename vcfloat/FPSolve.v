@@ -462,9 +462,7 @@ Proof.
     }
     exists (mempty t).
     split; auto.
-    intros.
-    rewrite mget_empty.
-    auto.
+    all:  intros; rewrite mget_empty;  auto.  (* This line for compatibility with Coq 8.13 and before *)
   }
   intros.
   rewrite enum_exists'_S.

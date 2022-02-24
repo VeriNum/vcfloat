@@ -79,6 +79,7 @@ Definition rounding_knowledge_eqb (r1 r2: rounding_knowledge): bool :=
   match r1, r2 with
     | Normal, Normal => true
     | Denormal, Denormal => true
+    | uNormal, uNormal => true
     | _, _ => false
   end.
 
@@ -86,7 +87,7 @@ Lemma rounding_knowledge_eqb_eq r1 r2:
   (rounding_knowledge_eqb r1 r2 = true <-> r1 = r2).
 Proof.
   destruct r1; destruct r2; simpl; try intuition congruence.
-Admitted.
+Qed.
 
 Export Bool.
 
@@ -135,13 +136,13 @@ Definition exact_unop_eqb u1 u2 :=
 Lemma exact_unop_eqb_eq u1 u2:
   (exact_unop_eqb u1 u2 = true <-> u1 = u2).
 Proof.
-  destruct u1; destruct u2; simpl; (try intuition congruence).
+  destruct u1; destruct u2; simpl; (try intuition congruence);
   rewrite Bool.andb_true_iff;
   (try rewrite Pos.eqb_eq);
   (try rewrite N.eqb_eq);
   rewrite Bool.eqb_true_iff;
   intuition congruence.
-Admitted.
+Qed.
 
 Definition unop_eqb u1 u2 :=
   match u1, u2 with
@@ -159,21 +160,26 @@ Lemma unop_eqb_eq u1 u2:
   (unop_eqb u1 u2 = true <-> u1 = u2).
 Proof.
   destruct u1; destruct u2; simpl; (try intuition congruence).
-  {
+-
     rewrite andb_true_iff.
     rewrite rounded_unop_eqb_eq.
     rewrite (option_eqb_eq rounding_knowledge_eqb_eq).
     intuition congruence.
-  }
-  {
+-
     rewrite exact_unop_eqb_eq.
     intuition congruence.
-  }
+-
   rewrite andb_true_iff.
   rewrite type_eqb_eq.
   rewrite (option_eqb_eq rounding_knowledge_eqb_eq).
   intuition congruence.
-Admitted.
+-
+  rewrite !andb_true_iff, eqb_true_iff, Pos.eqb_eq.
+  rewrite (option_eqb_eq rounding_knowledge_eqb_eq).
+  split.
+  + intros [[? ?] ?]. subst knowl0 ltr0 pow0. auto.
+  + intro. inversion H; clear H; subst; auto.
+Qed.
 
 Section WITHVARS.
 Context {V} `{VARS: VarType V}.

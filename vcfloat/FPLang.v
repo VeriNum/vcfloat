@@ -1209,6 +1209,8 @@ Local Program Instance compcert_map:
     mset m t u := Maps.PMap.set (index_of_tr t) u m;
     mempty := @Maps.PMap.init _
   }.
+Solve All Obligations with (try apply Maps.PMap.gi). 
+   (* Need this line for compatibility with CompCert 3.9 and before and/or Coq 8.13 and before *)
 Next Obligation.
     rewrite Maps.PMap.gsspec.
     destruct (Coqlib.peq (index_of_tr t') (index_of_tr t)).
@@ -1218,9 +1220,6 @@ Next Obligation.
     }
     rewrite <- index_of_tr_correct in n.
     destruct (m_T_eq_dec t' t); congruence.
-Defined.
-Next Obligation.
- apply Maps.PMap.gi.
 Defined.
 
 End COMPCERTMAPS.
@@ -1627,133 +1626,93 @@ Proof.
 unfold make_rounding, rounding_cond.
 intros.
 destruct kn.
-- (* Some kn *)
+- (* kn = Some *)
 destruct r.
-+ (* Normal *)
-replace (3 - femax ty - 1)%Z with (3 - femax ty - fprec ty + fprec ty - 1)%Z in H2 by ring.
-generalize (Relative.relative_error_N_FLT_ex _ _ _ (fprec_gt_0 _) choice _ H2).
-destruct 1 as (eps & Heps & Hround).
-pose (errors2 := fun i => if Nat.eq_dec i si
-                          then eps
-                          else errors1 i
-     ).
-exists errors2.
-split.
---
-  unfold errors2.
-  intros.
-  destruct (Nat.eq_dec i si); auto.
-  lia.
---
-inversion H; clear H; subst.
-simpl reval.
-rewrite Rmult_1_l.
-split.
-+++
-  rewrite <- (reval_error_ext errors1).
----
+ + (* Normal *)
+  replace (3 - femax ty - 1)%Z with (3 - femax ty - fprec ty + fprec ty - 1)%Z in H2 by ring.
+  generalize (Relative.relative_error_N_FLT_ex _ _ _ (fprec_gt_0 _) choice _ H2).
+  destruct 1 as (eps & Heps & Hround).
+  pose (errors2 i := if Nat.eq_dec i si  then eps else errors1 i).
+  exists errors2.
+  split; [ | split].
+  * unfold errors2; intros; destruct (Nat.eq_dec i si); auto; lia.
+  * inversion H; clear H; subst.
+    simpl reval.
+    rewrite Rmult_1_l.
+    rewrite <- (reval_error_ext errors1).
+   --
+     unfold errors2.
+     destruct (Nat.eq_dec si si); congruence.
+   --  intros; unfold errors2; destruct (Nat.eq_dec i si); auto; exfalso; lia.
+  * inversion H; clear H; subst.
+    simpl reval.
+    intros until i.
+    rewrite (mget_set Nat.eq_dec).
+    intros.
     unfold errors2.
-    destruct (Nat.eq_dec si si); congruence.
----
-  intros.
-  unfold errors2.
-  destruct (Nat.eq_dec i si); auto.
-  exfalso.
-  lia.
-+++
-intros until i.
-rewrite (mget_set Nat.eq_dec).
-intros.
-unfold errors2.
-destruct (Nat.eq_dec i si); auto.
-inversion H; subst.
-assumption.
-+ (* Denormal *)
-replace (3 - femax ty)%Z with (3 - femax ty - fprec ty + fprec ty)%Z in H2 by ring.
-generalize (Fprop_absolute.absolute_error_N_FLT _ _ (fprec_gt_0 _) _ choice _ H2).
-destruct 1 as (eps & Heps & Hround).
-pose (errors2 := fun i => if Nat.eq_dec i si
-                          then eps
-                          else errors1 i
-     ).
-exists errors2.    
-split.
---
-  unfold errors2.
-  intros.
-  destruct (Nat.eq_dec i si); auto.
-  lia.
---
-inversion H; clear H; subst.
-simpl reval.
-split.
-
+    destruct (Nat.eq_dec i si); auto.
+    inversion H; subst.
+    assumption.
+ + (* Denormal *)
+  replace (3 - femax ty)%Z with (3 - femax ty - fprec ty + fprec ty)%Z in H2 by ring.
+  generalize (Fprop_absolute.absolute_error_N_FLT _ _ (fprec_gt_0 _) _ choice _ H2).
+  destruct 1 as (eps & Heps & Hround).
+  pose (errors2 i := if Nat.eq_dec i si then eps else errors1 i).
+  exists errors2.    
+  split; [ | split].
+  * unfold errors2; intros; destruct (Nat.eq_dec i si); auto; lia.
+  * inversion H; clear H; subst. simpl reval.
+    rewrite <- (reval_error_ext errors1).
+   -- unfold errors2; destruct (Nat.eq_dec si si); congruence.
+   -- intros; unfold errors2; destruct (Nat.eq_dec i si); auto; lia.
+  * inversion H; clear H; subst. simpl reval.
+     intros until i.
+     rewrite (mget_set Nat.eq_dec).
+     intros.
+     unfold errors2.
+     destruct (Nat.eq_dec i si); auto.
+     inversion H; subst.
+     auto.
+ + (* uNormal *)
+  replace (3 - femax ty - 1)%Z with (3 - femax ty - fprec ty + fprec ty - 1)%Z in H2 by ring.
+  admit.
+-  (* kn = None *)
+ generalize (Relative.error_N_FLT Zaux.radix2 (3 - femax ty - fprec ty) (fprec ty) (fprec_gt_0 _)  choice (reval x env errors1)).
+ destruct 1 as (eps & eta & Heps & Heta & _ & Hround).
+ pose (errors2 i := if Nat.eq_dec i (S (si)) then eta
+                          else if Nat.eq_dec i si then eps else  errors1 i).
+ exists errors2.
+ split; [ | split].
+ + 
+   unfold errors2.
+   intros; destruct (Nat.eq_dec i (S si)); try lia; destruct (Nat.eq_dec i si); try lia; auto.
+ + inversion H; clear H; subst.
+    simpl reval.
+    rewrite Rmult_1_l.     
   rewrite <- (reval_error_ext errors1).
-++
-    unfold errors2.
-    destruct (Nat.eq_dec si si); congruence.
-++
-  intros.
-  unfold errors2.
-  destruct (Nat.eq_dec i si); auto.
-  lia.      
-++
-intros until i.
-rewrite (mget_set Nat.eq_dec).
-intros.
-unfold errors2.
-destruct (Nat.eq_dec i si); auto.
-inversion H; subst.
-auto.
-+ (* uNormal *) admit. 
-- generalize (Relative.error_N_FLT Zaux.radix2 (3 - femax ty - fprec ty) (fprec ty) (fprec_gt_0 _)  choice (reval x env errors1)).
-destruct 1 as (eps & eta & Heps & Heta & _ & Hround).
-pose (errors2 := fun i => if Nat.eq_dec i (S (si))
-                          then eta
-                          else
-                            if Nat.eq_dec i si
-                            then eps
-                            else  errors1 i
-     ).
-exists errors2.
-split.
-{
-  unfold errors2.
-  intros.
-  destruct (Nat.eq_dec i (S si)); try lia.
-  destruct (Nat.eq_dec i si); try lia.
-  auto.
-}
-inversion H; clear H; subst.
-simpl reval.
-rewrite Rmult_1_l.
-split.
-{    
-  rewrite <- (reval_error_ext errors1).
-  {
+  *
     unfold errors2.
     destruct (Nat.eq_dec si (S si)); try (exfalso; lia).
     destruct (Nat.eq_dec si si); try congruence.
     destruct (Nat.eq_dec (S si) (S si)); congruence.
-  }
+  *
+   intros.
+   unfold errors2.
+   destruct (Nat.eq_dec i (S si)); try lia.
+   destruct (Nat.eq_dec i si); try lia.
+   auto.
+ +
+   inversion H; clear H; subst.
+    simpl reval.
+  intros until i.
+  repeat rewrite (mget_set Nat.eq_dec).
   intros.
   unfold errors2.
-  destruct (Nat.eq_dec i (S si)); try lia.
-  destruct (Nat.eq_dec i si); try lia.
-  auto.
-}
-intros until i.
-repeat rewrite (mget_set Nat.eq_dec).
-intros.
-unfold errors2.
-destruct (Nat.eq_dec i (S si)).
-{
-  inversion H; subst.
-  assumption.
-}
-destruct (Nat.eq_dec i si); auto.
-inversion H; subst.
-assumption.
+  destruct (Nat.eq_dec i (S si)).
+  * inversion H; subst; assumption.
+  * destruct (Nat.eq_dec i si); auto.
+     inversion H; subst.
+    assumption.
 Admitted.
 
 Definition Rbinop_of_rounded_binop o :=
