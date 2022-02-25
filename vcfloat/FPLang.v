@@ -1209,7 +1209,7 @@ Local Program Instance compcert_map:
     mset m t u := Maps.PMap.set (index_of_tr t) u m;
     mempty := @Maps.PMap.init _
   }.
-Solve All Obligations with (try apply Maps.PMap.gi). 
+Solve Obligations with (intros; try apply Maps.PMap.gi). 
    (* Need this line for compatibility with CompCert 3.9 and before and/or Coq 8.13 and before *)
 Next Obligation.
     rewrite Maps.PMap.gsspec.
@@ -3699,9 +3699,7 @@ Theorem rndval_with_cond_correct env (Henv: forall ty i, is_finite _ _ (env ty i
 .
 Proof.
   induction e; intros.
-
-  {
-    (* const *)
+-  (* const *)
     simpl in *.
     inversion H0; clear H0; subst.
     simpl.
@@ -3712,17 +3710,11 @@ Proof.
     symmetry.
     rewrite F2R_eq.
     apply B2F_F2R_B2R.
-  }
-
-  {
-    (* var *)
+- (* var *)
     simpl in *.
     inversion H0; clear H0; subst.
     eauto.
-  }
-
-  {
-    (* binop *)
+-  (* binop *)
     simpl in *.
     destruct (rndval_with_cond si shift e1) as [[r1 [si1 s1]] p1] eqn:EQ1.
     destruct (rndval_with_cond si1 s1 e2) as [[r2 [si2_ s2]] p2] eqn:EQ2.
@@ -3731,9 +3723,8 @@ Proof.
     rewrite andb_true_iff in H.
     destruct H.
 
-    generalize (rndval_with_cond_left e1 si shift).
-    rewrite EQ1.
-    intro K1.
+    assert (K1 := rndval_with_cond_left e1 si shift).
+    rewrite EQ1 in K1.
     symmetry in K1.
     simpl in K1.
     generalize (rndval_with_cond_left e2 si1 s1).
@@ -3760,9 +3751,7 @@ Proof.
           eapply rnd_of_binop_shift_unchanged; eauto.
           eapply lt_le_trans; [ eassumption | ].
           etransitivity.
-          {
-            eapply rndval_with_cond_shift_cond; [ | eassumption ] ; eauto.
-          }
+          eapply rndval_with_cond_shift_cond; [ | eassumption ] ; eauto.
           eapply rndval_shift_incr; eauto.
         }
         eapply rndval_shift_unchanged; eauto.
@@ -3807,13 +3796,10 @@ Proof.
     symmetry in V1.
     symmetry in V2.
 
-    rewrite <- (reval_error_ext errors1_2) in V1.
-    {
-
-      destruct b.
-
-      {
-        (* rounded binary operator *)
+    rewrite <- (reval_error_ext errors1_2) in V1
+     by (intros; apply E2; eapply lt_le_trans; [ eassumption | eapply rndval_shift_le; eauto]).
+    destruct b.
+   + (* rounded binary operator *)
         simpl.
         simpl in EQ.
         destruct (
@@ -3832,10 +3818,7 @@ Proof.
           intros.
           apply Nat.max_lub.
           {
-            eapply le_trans.
-            {
-              eapply rndval_shift_le; eauto.
-            }
+            eapply le_trans; [ eapply rndval_shift_le; eauto | ].
             eapply rndval_shift_incr; eauto.
           }
           eapply rndval_shift_le; eauto.
@@ -3845,10 +3828,7 @@ Proof.
         assert (L: rounding_cond (type_lub (type_of_expr e1) (type_of_expr e2)) knowl
                             (reval (RBinop (Rbinop_of_rounded_binop op) r1 r2) env errors1_2)).
         {
-          eapply rounding_cond_ast_correct.
-          {
-            eassumption.
-          }
+          eapply rounding_cond_ast_correct; [ eassumption | ].
           intros.
           eapply (eval_cond1_preserved s).
           {
@@ -3862,40 +3842,20 @@ Proof.
             eapply lt_le_trans; eauto.
             etransitivity; try eassumption.
             apply Max.max_lub; eauto using rndval_shift_le.
-            etransitivity.
-            {
-              eapply rndval_shift_le; eauto.
-            }
+            etransitivity; [ eapply rndval_shift_le; eauto | ].
             eapply rndval_shift_incr; eauto.
           }
-          eapply H1.
-          apply in_or_app.
-          left.
-          apply in_or_app.
-          right.
-          right.
-          assumption.
+          eapply H1. apply in_or_app. left. apply in_or_app. right. right. assumption.
         }
         specialize (K _ L (fun x : Z => negb (Z.even x))).
         clear L.
         destruct K as (errors2 & E & R & EB).
         assert (W1: reval r1 env errors2 = reval r1 env errors1_2). {
           apply reval_error_ext.
-(*
-        assert (
-        refine (let L1 := _ in _ (reval_error_ext errors2 env errors1_2 r1 L1)).
-        {
-*)
           intros.
           apply E.
-          eapply lt_le_trans.
-          {
-            eassumption.
-          }
-          etransitivity.
-          {
-            eapply rndval_shift_le; eauto.
-          }
+          eapply lt_le_trans; [ eassumption | ].
+          etransitivity; [ eapply rndval_shift_le; eauto | ].
           eapply rndval_shift_incr; eauto.
         }
 
@@ -3903,10 +3863,7 @@ Proof.
           apply reval_error_ext.
           intros.
           apply E.
-          eapply lt_le_trans.
-          {
-            eassumption.
-          }
+          eapply lt_le_trans; [ eassumption | ].
           eapply rndval_shift_le; eauto.
         }
         rewrite <- W1, <- W2 in *.
@@ -3919,7 +3876,7 @@ Proof.
           simpl.
           congruence.
         }
-        rewrite W in * |- *.
+        rewrite W in * |- *. clear W.
 
         assert (L : forall i : rexpr * bool,
              In i (if is_div op then (RUnop Tree.Abs r2, true) :: nil else nil) ->
@@ -3959,30 +3916,18 @@ Proof.
         etransitivity.
         {
           eapply E.
-          eapply lt_le_trans.
-          {
-            eassumption.
-          }
-          etransitivity.
-          {
-            eapply rndval_shift_incr; eauto.
-          }
+          eapply lt_le_trans; [ eassumption | ].
+          etransitivity; [ eapply rndval_shift_incr; eauto | ].
           eapply rndval_shift_incr; eauto.
         }
         etransitivity.
         {
           eapply E2.
-          eapply lt_le_trans.
-          {
-            eassumption.
-          }
+          eapply lt_le_trans; [ eassumption | ].
           eapply rndval_shift_incr; eauto.
         }
         eauto.
-      }
-
-      {
-        (* Sterbenz *)      
+    + (* Sterbenz *)      
         simpl.
         simpl in EQ.
         inversion EQ; clear EQ; subst.
@@ -4022,10 +3967,7 @@ Proof.
             etransitivity.
             {
               eapply E2.
-              eapply lt_le_trans.
-              {
-                eassumption.
-              }
+              eapply lt_le_trans; [ eassumption | ].
               eapply rndval_shift_incr; eauto.
             }
             auto.
@@ -4050,19 +3992,11 @@ Proof.
           contradiction.
         }
         apply Sterbenz.sterbenz; try typeclasses eauto.
-        {
-          rewrite V1.
-          apply generic_format_B2R.
-        }
-        {
-          rewrite V2.
-          apply generic_format_B2R.
-        }
-        lra.
-      }
+        * rewrite V1. apply generic_format_B2R.
+        * rewrite V2. apply generic_format_B2R.
+        * lra.
 
-      {
-        (* plus zero *)
+    + (* plus zero *)
         simpl.
         simpl in EQ.
         inversion EQ; clear EQ; subst.
@@ -4072,31 +4006,24 @@ Proof.
         specialize (H1 _ EB2).        
         exists errors1_2.
         split.
-        {
+        *
           intros.
           etransitivity.
           {
             eapply E2.
-            eapply lt_le_trans.
-            {
-              eassumption.
-            }
+            eapply lt_le_trans; [ eassumption | ].
             eapply rndval_shift_incr; eauto.
           }
           eauto.
-        }
-        split; auto.
-        assert (reval (if zero_left then r1 else r2) env errors1_2 = 0) as ZERO.
-        {
+        * split; auto.
+         assert (reval (if zero_left then r1 else r2) env errors1_2 = 0) as ZERO.
+         {
           rewrite <- Rabs_zero_iff.
-          apply Rle_antisym.
-          {
-            lra.
-          }
+          apply Rle_antisym; [lra | ].
           apply Rabs_pos.
-        }
-        destruct zero_left.
-        {
+         }
+         destruct zero_left.
+         {
           rewrite V1 in ZERO.
           pose proof (abs_B2R_lt_emax _ _
           (cast (type_lub (type_of_expr e1) (type_of_expr e2)) 
@@ -4182,18 +4109,8 @@ Proof.
           intuition.
         }
         apply generic_format_B2R.          
-      }
-    }
-    intros.
-    apply E2.
-    eapply lt_le_trans.
-    {
-      eassumption.
-    }
-    eapply rndval_shift_le; eauto.
-  }
 
-  (* unop *)
+- (* unop *)
   simpl in *.
   destruct (rndval_with_cond si shift e) as [[r1 [si1 s1]] p1] eqn:EQ1.
   destruct (rnd_of_unop_with_cond si1 s1 (type_of_expr e) u r1) as [rs p_] eqn:EQ.
@@ -4230,9 +4147,7 @@ Proof.
   destruct IHe as (errors1_1 & E1 & EB1 & F1 & V1).
 
   destruct u.
-  {
-
-    (* rounded unary operator *)
+ + (* rounded unary operator *)
     simpl.
     simpl in EQ.
     unfold Datatypes.id in *.
@@ -4242,10 +4157,8 @@ Proof.
                       (RUnop (Runop_of_rounded_unop op) r1)
       ) eqn:ROUND.
     inversion EQ; clear EQ; subst.
-    simpl.
 
-    generalize (make_rounding_correct _ _ _ _ _ _ _ _ ROUND).
-    intro K.
+    assert (K := make_rounding_correct _ _ _ _ _ _ _ _ ROUND).
     simpl max_error_var in K.
     assert (L:  (max_error_var r1 <= si1)%nat).
     {
@@ -4255,10 +4168,7 @@ Proof.
     assert (L': rounding_cond (type_of_expr e) knowl
       (reval (RUnop (Runop_of_rounded_unop op) r1) env errors1_1)).
     {
-      eapply rounding_cond_ast_correct.
-      {
-        eassumption.
-      }
+      eapply rounding_cond_ast_correct; [ eassumption | ].
       intros.
       eapply (eval_cond1_preserved s).
       {
@@ -4286,10 +4196,7 @@ Proof.
       apply reval_error_ext.
       intros.
       apply E.
-      eapply lt_le_trans.
-      {
-        eassumption.
-      }
+      eapply lt_le_trans; [ eassumption | ].
       eapply rndval_shift_le; eauto.
     }
     rewrite <- W1 in V1.
@@ -4303,7 +4210,7 @@ Proof.
       simpl.
       congruence.
     }
-    rewrite W in * |- *.
+    rewrite W in * |- *. clear W.
 
    assert (L : forall i : rexpr * bool,
      In i (if is_sqrt op then (r1, false) :: nil else nil) ->
@@ -4329,17 +4236,12 @@ Proof.
     etransitivity.
     {
       eapply E.
-      eapply lt_le_trans.
-      {
-        eassumption.
-      }
+      eapply lt_le_trans; [eassumption | ].
       eapply rndval_shift_incr; eauto.
     }
     eauto.
-  }
 
-  {
-    (* exact unary operator *)
+ + (* exact unary operator *)
 
     simpl.
     cbn -[Zminus] in EQ.
@@ -4354,28 +4256,23 @@ Proof.
 
     destruct o.
 
-    {
-      (* abs *)
+   * (* abs *)
       simpl in * |- *.
       unfold BABS.
       rewrite is_finite_Babs.
       split; auto.
       rewrite B2R_Babs.
       congruence.
-    }
 
-    {
-      (* opp *)
+   * (* opp *)
       simpl in * |- * .
       unfold BOPP.
       rewrite is_finite_Bopp.
       split; auto.
       rewrite B2R_Bopp.
       congruence.
-    }
 
-    {
-      (* shift *)
+   * (* shift *)
       cbn -[Zminus] in * |- *.
       rewrite F2R_eq.
       rewrite <- B2F_F2R_B2R.
@@ -4384,18 +4281,12 @@ Proof.
       generalize (B2_finite (type_of_expr e) (Z.of_N pow) H).
       intro B2_FIN.
       generalize
-        (
-          (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.of_N pow)) (fval env e))
-        ).
+          (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.of_N pow)) (fval env e)).
       generalize
-        (
-          (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.of_N pow)) (fval env e))
-        ).
+         (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.of_N pow)) (fval env e)).
       rewrite Rmult_comm.
       replace (Z.of_N (pow + 1)) with (Z.of_N pow + 1)%Z in H by (rewrite N2Z.inj_add; simpl; ring).
-      generalize (B2_correct _ _ H).
-      repeat rewrite B2R_correct.
-      intro K.
+      assert (K := B2_correct _ _ H).
       rewrite K.
       rewrite FLT_format_mult_beta_n; try typeclasses eauto.
       rewrite F1.
@@ -4423,10 +4314,8 @@ Proof.
       rewrite K in H1.
       rewrite Rmult_comm.
       lra.
-    }
 
-{
-    (* invshift *)
+  * (* invshift *)
     cbn -[Zminus] in * |- *.
     rewrite F2R_eq.
     rewrite <- B2F_F2R_B2R.
@@ -4472,10 +4361,8 @@ Proof.
     cbn -[Zminus] in H1.
     rewrite <- V1.
     lra.
-  }
-}
 
-  (* cast *)
+ + (* cast *)
   simpl.
   simpl in *.
   unfold cast.
@@ -4559,8 +4446,8 @@ Proof.
   specialize (H1 _ EB).
   simpl in H1.
   lra.
-
-(* uInvShift *)
+ + (* uInvShift *)
+  admit.
 
 Admitted.
 

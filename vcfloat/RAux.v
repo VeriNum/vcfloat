@@ -672,7 +672,6 @@ Proof.
 Qed.
 
 (* Square root *)
-Search "sqrt".
 Lemma sqrt_pos_strict x:
   0 < x ->
   0 < sqrt x.
