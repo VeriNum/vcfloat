@@ -82,6 +82,7 @@ Qed.
 Lemma type_lub_comm a b:
   type_lub a b = type_lub b a.
 Proof.
+  rewrite <- !type_lub'_eq.
   apply type_ext; simpl; eauto using Pos.max_comm, Z.max_comm.
 Qed.
 
@@ -89,6 +90,7 @@ Lemma type_lub_r a b:
   type_le a b ->
   type_lub a b = b.
 Proof.
+  rewrite <- !type_lub'_eq.
   inversion 1.
   apply type_ext; simpl; eauto using Pos.max_r, Z.max_r.
 Qed.
@@ -96,6 +98,7 @@ Qed.
 Lemma type_lub_id a:
   type_lub a a = a.
 Proof.
+  rewrite <- !type_lub'_eq.
   apply type_ext; simpl; eauto using Pos.max_id, Z.max_id.
 Qed.
 
