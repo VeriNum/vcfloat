@@ -3000,6 +3000,46 @@ Proof.
   contradiction.
 Qed.
 
+(*
+
+Lemma B2_finite' ty e:
+  (e + 1 <= femax ty)%Z ->
+  is_finite _ _ (B2 ty e) = true.
+Proof.
+  unfold B2.
+  intros.
+  destruct (Z_lt_le_dec (e+1) (3 - femax ty)).
+2: rewrite (FF2B_gen_correct _ _ _ (F2_valid_binary _ _ (conj l H))); reflexivity.
+ assert (e < 2-femax ty)%Z by lia.
+ rewrite FF2B_gen_correct.
+ rewrite FF
+Search FF2B_gen.
+ clear H l.
+ unfold F2. 
+ unfold FF2B_gen.
+ destruct (valid_binary _ _ _) eqn:?H.
+Qed.
+
+*)
+
+Lemma uInvShift_accuracy: 
+ forall (pow : positive) (ltr : bool) (ty : type) (x : ftype ty) 
+  (F1 : is_finite (fprec ty) (femax ty) x = true),
+ Rabs (B2R (fprec ty) (femax ty) (fop_of_unop (uInvShift pow ltr) ty x) -
+      F2R radix2 (B2F (B2 ty (Z.neg pow))) * B2R (fprec ty) (femax ty) x) <=
+  / 2 * bpow radix2 (3 - femax ty - fprec ty).
+Admitted.
+
+Lemma uInvShift_finite: 
+ forall (pow : positive) (ltr : bool) (ty : type) (x : ftype ty) 
+  (F1 : is_finite (fprec ty) (femax ty) x = true),
+ is_finite (fprec (type_of_unop (uInvShift pow ltr) ty)) (femax (type_of_unop (uInvShift pow ltr) ty))
+  (fop_of_unop (uInvShift pow ltr) ty x) = true.
+  (* This isn't quite provable.  It will be necessary to change the definition of B2
+    so that if "pow" is greater than (femax ty - 2), then B2 ty (Z.neg pow) gives F754_zero
+   instead of an invalid F754_finite number *)
+Admitted.
+
 Lemma rndval_with_cond_correct_uInvShift:
 forall (env : forall x : type, V -> binary_float (fprec x) (femax x))
  (Henv : forall (ty : type) (i : V),  is_finite (fprec ty) (femax ty) (env ty i) = true)
@@ -3021,7 +3061,6 @@ forall (env : forall x : type, V -> binary_float (fprec x) (femax x))
  (H1 : forall i : cond, In i (p_ ++ p1) -> eval_cond1 env s i) 
  (H2 : forall (i : nat) (ty : type) (k : rounding_knowledge),
      mget shift i = (ty, k) -> Rabs (errors1 i) <= error_bound ty k)
- (K1 : rndval si shift e = (r1, (si1, s1)))
  (K_ : rnd_of_unop si1 s1 (type_of_expr e) (uInvShift pow ltr) r1 = (r, (si2, s))),
 exists errors2 : nat -> R,
   (forall i : nat, (i < si)%nat -> errors2 i = errors1 i) /\
@@ -3034,9 +3073,64 @@ exists errors2 : nat -> R,
   B2R (fprec (type_of_unop (uInvShift pow ltr) (type_of_expr e)))
     (femax (type_of_unop (uInvShift pow ltr) (type_of_expr e)))
     (fop_of_unop (uInvShift pow ltr) (type_of_expr e) (fval env e)).
-
-Admitted.
-
+Proof.
+intros.
+assert (K1 := rndval_with_cond_left e si shift); rewrite EQ1 in K1; simpl in K1; symmetry in K1.
+inversion EQ; clear EQ; subst.
+set (op := RBinop Tree.Mul _) in *.
+set (s := mset s1 si1 (type_of_expr e, Denormal)) in *.
+pose (eps :=
+  B2R (fprec (type_of_expr e)) (femax (type_of_expr e))
+    (fop_of_unop (uInvShift pow ltr) (type_of_expr e) (fval env e)) -
+  F2R radix2 (B2F (B2 (type_of_expr e) (Z.neg pow))) * reval r1 env errors1_1).
+pose (errors2 i := if Nat.eq_dec i si1  then eps else errors1_1 i).
+exists errors2.
+split; [ | split; [ | split]].
+-
+intros. unfold errors2.
+destruct (Nat.eq_dec i si1); auto.
+pose proof (rndval_shift_incr _ _ _ _ _ _ K1). lia.
+-
+subst errors2.
+simpl.
+intros.
+subst s; simpl in H.
+rewrite (mget_set Nat.eq_dec) in H.
+destruct (Nat.eq_dec i si1). inversion H; clear H; subst.
+ +
+  unfold error_bound.
+  subst eps.
+  rewrite V1.
+ apply uInvShift_accuracy; auto.
+ +
+  clear eps.
+  destruct (le_lt_dec si i).
+ *
+  apply EB1; auto.
+ *  rewrite E1 by auto. apply H2.
+   rewrite <- H.
+   symmetry; eapply rndval_shift_unchanged; eauto.
+- apply uInvShift_finite; auto.
+-
+ subst op. unfold reval; fold reval.
+ replace (reval r1 env errors2) with (reval r1 env errors1_1).
+2:{
+   apply reval_error_ext; intros.
+   unfold errors2.
+ destruct (Nat.eq_dec i si1); auto.
+  subst i.
+  pose proof (rndval_shift_le _ _ _ _ _ _ K1). lia.
+}
+  subst errors2.
+  subst eps.
+  rewrite V1.
+  simpl.
+  destruct (Nat.eq_dec si1 si1) as [ _ |]; [ | congruence].
+  set (a := F2R _ _).
+  set (b := B2R _ _ _).
+  set (c := B2R _ _ _).
+  ring.
+Qed.
 
 Theorem rndval_with_cond_correct env (Henv: forall ty i, is_finite _ _ (env ty i) = true) e:
   expr_valid e = true ->
