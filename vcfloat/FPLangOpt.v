@@ -79,7 +79,6 @@ Definition rounding_knowledge_eqb (r1 r2: rounding_knowledge): bool :=
   match r1, r2 with
     | Normal, Normal => true
     | Denormal, Denormal => true
-    | uNormal, uNormal => true
     | _, _ => false
   end.
 
@@ -151,8 +150,8 @@ Definition unop_eqb u1 u2 :=
     | Exact1 o1, Exact1 o2 => exact_unop_eqb o1 o2
     | CastTo ty1 k1, CastTo ty2 k2 =>
       type_eqb ty1 ty2 && option_eqb rounding_knowledge_eqb k1 k2
-    | uInvShift p1 b1 k1, uInvShift p2 b2 k2 =>  
-      Pos.eqb p1 p2 && Bool.eqb b1 b2 && option_eqb rounding_knowledge_eqb k1 k2
+    | uInvShift p1 b1, uInvShift p2 b2 =>  
+      Pos.eqb p1 p2 && Bool.eqb b1 b2
     | _, _ => false
   end.
 
@@ -175,9 +174,8 @@ Proof.
   intuition congruence.
 -
   rewrite !andb_true_iff, eqb_true_iff, Pos.eqb_eq.
-  rewrite (option_eqb_eq rounding_knowledge_eqb_eq).
   split.
-  + intros [[? ?] ?]. subst knowl0 ltr0 pow0. auto.
+  + intros [? ?]. subst ltr0 pow0. auto.
   + intro. inversion H; clear H; subst; auto.
 Qed.
 
