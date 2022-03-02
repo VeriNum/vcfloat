@@ -361,13 +361,19 @@ Proof.
   apply bool_true_elim.
 Qed.
 
-Definition F2 prec e :=
-  let p := Pos.pred prec in
+Definition F2 prec emax e  :=
+if Z_lt_le_dec (e+1) (3 - emax)
+ then F754_zero false
+ else let p := Pos.pred prec in
   F754_finite false (2 ^ p) (e - Z.pos p).
 
-Lemma F2R_F2 prec e:
-  FF2R Zaux.radix2 (F2 prec e) = Raux.bpow Zaux.radix2 e.
+Lemma F2R_F2 prec emax e:
+   (3 - emax <= e + 1)%Z ->
+  FF2R Zaux.radix2 (F2 prec emax e) = Raux.bpow Zaux.radix2 e.
 Proof.
+  unfold F2.
+ destruct (Z_lt_le_dec _ _); [lia | ].
+ intros _.
   simpl.
   unfold Defs.F2R.
   simpl Defs.Fnum.
@@ -384,12 +390,16 @@ Qed.
 
 Lemma F2_valid_binary_gen prec emax e:
   (Z.pos prec < emax)%Z ->
-  (3 - emax <= e + 1 <= emax)%Z ->
+  (e + 1 <= emax)%Z ->
   prec <> 1%positive ->
-  valid_binary (Z.pos prec) emax (F2 prec e) = true.
+  valid_binary (Z.pos prec) emax (F2 prec emax e) = true.
 Proof.
   intros.
   unfold valid_binary.
+  unfold F2.
+  destruct (Z_lt_le_dec _ _); auto.
+  rename H0 into H0'.
+  assert (H0 := conj l H0'). clear l H0'.
   apply bounded_canonical_lt_emax.
   { constructor. }
   { assumption.  }
@@ -435,27 +445,36 @@ Proof.
 Qed.
 
 Lemma F2_valid_binary ty e:
-  (3 - femax ty <= e + 1 <= femax ty)%Z ->
-  valid_binary (fprec ty) (femax ty) (F2 (fprecp ty) e) = true.
+  (e + 1 <= femax ty)%Z ->
+  valid_binary (fprec ty) (femax ty) (F2 (fprecp ty) (femax ty) e) = true.
 Proof.
   intros.
+  destruct (Z_lt_le_dec (e+1) (3 - (femax ty))).
+-
+  unfold F2. 
+  destruct (Z_lt_le_dec (e+1) (3 - (femax ty))); try lia.
+  reflexivity.
+-
   apply F2_valid_binary_gen.
   { apply fprec_lt_femax. }
   { assumption. }
   apply fprecp_not_one.
 Qed.
 
-Definition B2 ty e := FF2B_gen (fprec ty) (femax ty) (F2 (fprecp ty) e).
+Definition B2 ty e := FF2B_gen (fprec ty) (femax ty) (F2 (fprecp ty) (femax ty) e).
 Definition B2_opp ty e := BOPP ty (B2 ty e).
 
 Lemma B2_finite ty e:
-  (3 - femax ty <= e + 1 <= femax ty)%Z ->
+  (e + 1 <= femax ty)%Z ->
   is_finite _ _ (B2 ty e) = true.
 Proof.
   unfold B2.
   intros.
   rewrite (FF2B_gen_correct _ _ _ (F2_valid_binary _ _ H)).
-  reflexivity.
+  set (j := F2_valid_binary _ _ _). clearbody j. revert j.
+  destruct (F2 _ _ _) eqn:?H; intros; auto;
+  elimtype False; clear - H0; unfold F2 in H0;
+  destruct (Z_lt_le_dec _ _) in H0; inversion H0.
 Qed.
 
 Lemma B2_correct ty e:
@@ -464,9 +483,10 @@ Lemma B2_correct ty e:
 Proof.
   intros.
   unfold B2.
-  rewrite (FF2B_gen_correct _ _ _ (F2_valid_binary _ _ H)).
+  rewrite (FF2B_gen_correct _ _ _ (F2_valid_binary _ _ (proj2 H))).
   rewrite B2R_FF2B.
   apply F2R_F2.
+  destruct H; auto.
 Qed.
 
 Definition fop_of_exact_unop (r: exact_unop)
@@ -2537,9 +2557,10 @@ Proof.
   lia.
 Qed.
 
-Lemma Bdiv_beta_no_overflow ty (x: ftype ty) n:
+Lemma Bdiv_beta_no_overflow' ty (x: ftype ty) n:
   is_finite _ _ x = true ->
-  Rabs (B2R _ _ x / Raux.bpow Zaux.radix2 (Z.pos n)) < Raux.bpow Zaux.radix2 (femax ty).
+  (n >= 0)%Z ->
+  Rabs (B2R _ _ x / Raux.bpow Zaux.radix2 n) < Raux.bpow Zaux.radix2 (femax ty).
 Proof.
   intros.
   unfold Rdiv.
@@ -2556,8 +2577,16 @@ Proof.
   }
   rewrite <- Raux.bpow_plus.
   apply Raux.bpow_le.
-  generalize (Pos2Z.is_nonneg n).
   lia.
+Qed.
+
+Lemma Bdiv_beta_no_overflow ty (x: ftype ty) n:
+  is_finite _ _ x = true ->
+  Rabs (B2R _ _ x / Raux.bpow Zaux.radix2 (Z.pos n)) < Raux.bpow Zaux.radix2 (femax ty).
+Proof.
+  intros.
+  apply Bdiv_beta_no_overflow'; auto.
+ lia.
 Qed.
 
 Theorem Bdiv_mult_inverse_finite ty:
@@ -3000,27 +3029,50 @@ Proof.
   contradiction.
 Qed.
 
-(*
 
-Lemma B2_finite' ty e:
-  (e + 1 <= femax ty)%Z ->
-  is_finite _ _ (B2 ty e) = true.
+Lemma B2_zero: 
+  forall (ty : type) (e : Z),
+  (e+1 < 3 - (femax ty))%Z -> (B2 ty e) = B754_zero (fprec ty) (femax ty) false.
 Proof.
-  unfold B2.
-  intros.
-  destruct (Z_lt_le_dec (e+1) (3 - femax ty)).
-2: rewrite (FF2B_gen_correct _ _ _ (F2_valid_binary _ _ (conj l H))); reflexivity.
- assert (e < 2-femax ty)%Z by lia.
- rewrite FF2B_gen_correct.
- rewrite FF
-Search FF2B_gen.
- clear H l.
- unfold F2. 
- unfold FF2B_gen.
- destruct (valid_binary _ _ _) eqn:?H.
+intros.
+destruct (B2 ty e) eqn:?H; auto.
+unfold B2, F2 in H0; 
+destruct (Z_lt_le_dec (e + 1) (3 - femax ty)); [ | lia];
+inversion H0; auto.
+all:
+elimtype False;
+unfold B2, F2 in H0;
+destruct (Z_lt_le_dec (e + 1) (3 - femax ty)); [ | lia];
+inversion H0.
 Qed.
 
-*)
+Lemma F2R_B2F:
+ forall ty x, 
+    is_finite (fprec ty) (femax ty) x = true ->
+    F2R radix2 (B2F x) = B2R (fprec ty) (femax ty) x.
+Proof.
+intros.
+unfold F2R, B2R.
+unfold B2F.
+destruct x; auto; lra.
+Qed.
+
+Lemma uInvShift_finite_aux:
+ forall (pow : positive) (ty : type) (x : ftype ty),
+   is_finite (fprec ty) (femax ty) x = true ->
+  Rabs (round radix2 (FLT_exp (3 - femax ty - fprec ty) (fprec ty)) (round_mode mode_NE)
+     (B2R (fprec ty) (femax ty) x * / bpow radix2 (Z.pos pow))) < bpow radix2 (femax ty).
+Admitted.
+
+Lemma uInvShift_accuracy_aux:
+  forall ty x pow, 
+    is_finite (fprec ty) (femax ty) x = true ->
+  Rabs (round radix2 (FLT_exp (3 - femax ty - fprec ty) (fprec ty)) (round_mode mode_NE)
+        (B2R (fprec ty) (femax ty) x * bpow radix2 (- Z.pos pow)) -
+            bpow radix2 (- Z.pos pow) * B2R (fprec ty) (femax ty) x) <=
+         / 2 * bpow radix2 (3 - femax ty - fprec ty).
+Admitted.
+
 
 Lemma uInvShift_accuracy: 
  forall (pow : positive) (ltr : bool) (ty : type) (x : ftype ty) 
@@ -3028,17 +3080,103 @@ Lemma uInvShift_accuracy:
  Rabs (B2R (fprec ty) (femax ty) (fop_of_unop (uInvShift pow ltr) ty x) -
       F2R radix2 (B2F (B2 ty (Z.neg pow))) * B2R (fprec ty) (femax ty) x) <=
   / 2 * bpow radix2 (3 - femax ty - fprec ty).
-Admitted.
+Proof.
+intros.
+assert (is_finite (fprec ty) (femax ty) (B2 ty (Z.neg pow)) = true). {
+  apply B2_finite.
+  pose proof (fprec_lt_femax ty).
+  pose proof (fprec_gt_0 ty).
+  red in H0.
+  lia.
+} 
+simpl fop_of_unop.
+destruct ltr.
+-
+   destruct  (Z_lt_le_dec ((Z.neg pow) + 1) (3 - femax ty)).
+  + rewrite (B2_zero ty (Z.neg pow)) in * by auto.
+     simpl B2R. clear H l.
+    unfold BMULT, BINOP.
+    pose proof (bpow_gt_0 radix2 (3 - femax ty - fprec ty)).
+    set (j := bpow radix2 _) in *. clearbody j.
+    destruct x; try discriminate; simpl; rewrite ?Rmult_0_l, Rminus_0_r, Rabs_R0; lra.     
+  +
+    assert (H2 := Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 ty (Z.neg pow)) x).
+    rewrite Rmult_comm in H2. 
+    unfold BMULT, BINOP.
+    rewrite F2R_B2F by auto.
+    rewrite (B2_correct ty (Z.neg pow) ltac:(lia)) in *.
+    replace (Z.neg pow) with (- Z.pos pow)%Z in * |- * by reflexivity.
+    match type of H2 with if ?A then _ else _ => assert (H4: A=true) end;
+    [ clear H2 | rewrite H4 in H2; clear H4]. 
+  * apply Rlt_bool_true.
+   apply  uInvShift_finite_aux; auto.
+  * destruct H2 as [H2 _].
+    rewrite H2. clear H2.
+    apply uInvShift_accuracy_aux; auto.
+- 
+   destruct  (Z_lt_le_dec ((Z.neg pow) + 1) (3 - femax ty)).
+  + rewrite (B2_zero ty (Z.neg pow)) in * by auto.
+     simpl B2R. clear H l.
+    unfold BMULT, BINOP.
+    pose proof (bpow_gt_0 radix2 (3 - femax ty - fprec ty)).
+    set (j := bpow radix2 _) in *. clearbody j.
+    destruct x; try discriminate; simpl; rewrite ?Rmult_0_l, Rminus_0_r, Rabs_R0; lra.     
+  +
+    assert (H2 := Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 ty (Z.neg pow)) x).
+    rewrite Rmult_comm in H2. 
+    unfold BMULT, BINOP.
+    rewrite F2R_B2F by auto.
+    rewrite (B2_correct ty (Z.neg pow) ltac:(lia)) in *.
+    replace (Z.neg pow) with (- Z.pos pow)%Z in * |- * by reflexivity.
+    match type of H2 with if ?A then _ else _ => assert (H4: A=true) end;
+    [ clear H2 | rewrite H4 in H2; clear H4]. 
+  * apply Rlt_bool_true.
+   apply  uInvShift_finite_aux; auto.
+  * destruct H2 as [H2 _].
+    rewrite H2. clear H2.
+    apply uInvShift_accuracy_aux; auto.
+Qed.
 
 Lemma uInvShift_finite: 
  forall (pow : positive) (ltr : bool) (ty : type) (x : ftype ty) 
   (F1 : is_finite (fprec ty) (femax ty) x = true),
  is_finite (fprec (type_of_unop (uInvShift pow ltr) ty)) (femax (type_of_unop (uInvShift pow ltr) ty))
   (fop_of_unop (uInvShift pow ltr) ty x) = true.
-  (* This isn't quite provable.  It will be necessary to change the definition of B2
-    so that if "pow" is greater than (femax ty - 2), then B2 ty (Z.neg pow) gives F754_zero
-   instead of an invalid F754_finite number *)
-Admitted.
+Proof.
+intros.
+simpl.
+pose proof (fprec_lt_femax ty).
+pose proof (fprec_gt_0 ty).
+red in H0.
+pose proof (B2_finite ty (Z.neg pow) ltac:(lia)).
+unfold BMULT, BINOP.
+destruct ltr; destruct  (Z_lt_le_dec ((Z.neg pow) + 1) (3 - femax ty));
+  unfold Datatypes.id.
+- rewrite (B2_zero _ _ l); unfold Bmult. destruct x; auto.
+- 
+    pose proof (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 ty (Z.neg pow)) x).
+    rewrite Rmult_comm in H2. 
+    pose proof (B2_correct ty (Z.neg pow) ltac:(lia)).
+   rewrite H3 in H2.
+    replace (Z.neg pow) with (- Z.pos pow)%Z in * |- * by reflexivity.   
+    rewrite F1, H1, Raux.bpow_opp in H2. simpl andb in H2.
+    match type of H2 with if ?A then _ else _ => assert (H4: A=true) end;
+    [ clear H2 | rewrite H4 in H2; apply H2].
+     apply Rlt_bool_true.
+   apply  uInvShift_finite_aux; auto.
+- rewrite (B2_zero _ _ l); unfold Bmult. destruct x; auto.
+- 
+    pose proof (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 ty (Z.neg pow)) x).
+    rewrite Rmult_comm in H2. 
+    pose proof (B2_correct ty (Z.neg pow) ltac:(lia)).
+   rewrite H3 in H2.
+    replace (Z.neg pow) with (- Z.pos pow)%Z in * |- * by reflexivity.   
+    rewrite F1, H1, Raux.bpow_opp in H2. simpl andb in H2.
+    match type of H2 with if ?A then _ else _ => assert (H4: A=true) end;
+    [ clear H2 | rewrite H4 in H2; apply H2].
+     apply Rlt_bool_true.
+   apply  uInvShift_finite_aux; auto.
+Qed.
 
 Lemma rndval_with_cond_correct_uInvShift:
 forall (env : forall x : type, V -> binary_float (fprec x) (femax x))
@@ -3736,7 +3874,7 @@ Proof.
       rewrite <- B2F_F2R_B2R.
       rewrite Z.leb_le in H.
       apply center_Z_correct in H.
-      generalize (B2_finite (type_of_expr e) (Z.of_N pow) H).
+      generalize (B2_finite (type_of_expr e) (Z.of_N pow) (proj2 H)).
       intro B2_FIN.
       generalize
           (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.of_N pow)) (fval env e)).
@@ -3779,7 +3917,7 @@ Proof.
     rewrite <- B2F_F2R_B2R.
     rewrite Z.leb_le in H.
     apply center_Z_correct in H.
-    assert (B2_FIN := B2_finite (type_of_expr e) (Z.neg pow) H).
+    assert (B2_FIN := B2_finite (type_of_expr e) (Z.neg pow) (proj2 H)).
     generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.neg pow)) (fval env e)).
     generalize (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.neg pow)) (fval env e)).
     rewrite Rmult_comm.
