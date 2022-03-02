@@ -98,7 +98,7 @@ Inductive exact_unop: Type :=
 .
 
 Inductive unop: Type :=
-| Rounded1 (op: rounded_unop) (knowl: option rounding_knowledge)
+| Rounded1 (op: rounded_unop) (knowl:  option rounding_knowledge)
 | Exact1 (o: exact_unop)
 | CastTo (ty: type) (knowl: option rounding_knowledge)
 | uInvShift (pow: positive) (ltr: bool) (* divide by power of two that may introduce underflow *)
@@ -109,6 +109,21 @@ Class VarType (V: Type): Type :=
     var_eqb: V -> V -> bool;
     var_eqb_eq: forall v1 v2, var_eqb v1 v2 = true <-> v1 = v2
   }.
+
+
+Inductive rounding_knowledge': Type :=
+| Unknown'
+| Normal'
+| Denormal'
+| Denormal2' (* specially for uInvShift *)
+.
+
+Definition round_knowl_denote (r: option rounding_knowledge) :=
+ match r with
+ | None => Unknown'
+ | Some Normal => Normal'
+ | Some Denormal => Denormal'
+ end.
 
 Section WITHVAR.
 
@@ -827,27 +842,39 @@ Definition fone: Defs.float Zaux.radix2 :=
     Defs.Fexp := 0
   |}.
 
+
 Lemma F2R_fone: F2R _ fone = 1.
 Proof.
   simpl. ring.
 Qed.
 
+Definition ftwo: Defs.float Zaux.radix2 :=
+  {|
+    Defs.Fnum := 1;
+    Defs.Fexp := 1
+  |}.
+
+Lemma F2R_ftwo: F2R _ ftwo = 2.
+Proof.
+ unfold F2R, ftwo. ring_simplify. reflexivity.
+Qed.
+
 Section WITHMAP.
 
-Context {MSHIFT} {MAP: Map nat (type * rounding_knowledge) MSHIFT}.
+Context {MSHIFT} {MAP: Map nat (type * rounding_knowledge') MSHIFT}.
 
 Definition make_rounding
            (si: nat)
            (shift: MSHIFT)
-           (kn: option rounding_knowledge) (ty: type) (x: rexpr):
+           (kn:  rounding_knowledge') (ty: type) (x: rexpr):
   (rexpr * (nat * MSHIFT))
   :=
     match kn with
-      | None =>
+      | Unknown' =>
         let d := si in
-        let es1 := mset shift d (ty, Normal) in
+        let es1 := mset shift d (ty, Normal') in
         let e := S d in
-        let es2 := mset es1 e (ty, Denormal) in
+        let es2 := mset es1 e (ty, Denormal') in
         (
           RBinop Tree.Add
                  (RBinop Tree.Mul x
@@ -858,9 +885,9 @@ Definition make_rounding
           , (S e, es2)
         )
 
-      | Some Normal =>
+      | Normal' =>
         let d := si in
-        let es1 := mset shift d (ty, Normal) in
+        let es1 := mset shift d (ty, Normal') in
         (
           RBinop Tree.Mul x
                  (RBinop Tree.Add (RAtom (RConst fone))
@@ -868,9 +895,17 @@ Definition make_rounding
                  )
           , (S d, es1)
         )
-      | Some Denormal => 
+      | Denormal' => 
         let e := si in
-        let es1 := mset shift e (ty, Denormal) in
+        let es1 := mset shift e (ty, Denormal') in
+        (
+          RBinop Tree.Add x
+                 (RAtom (RError e))
+          , (S e, es1)
+        )
+      | Denormal2' => 
+        let e := si in
+        let es1 := mset shift e (ty, Denormal2') in
         (
           RBinop Tree.Add x
                  (RAtom (RError e))
@@ -888,11 +923,7 @@ Lemma make_rounding_shift_incr
 .
 Proof.
   unfold make_rounding.
-  destruct kn.
-  {
-    destruct r;
-    inversion 1; subst; auto with arith.
-  }
+  destruct kn;
   inversion 1; subst; auto with arith.
 Qed.
 
@@ -907,18 +938,15 @@ Lemma make_rounding_shift_unchanged
 Proof.
   unfold make_rounding.
   destruct kn.
-  {
-    destruct r;
-    inversion 1; subst; intros;
-    rewrite (mget_set eq_nat_dec);
-    destruct (Nat.eq_dec i si); auto;
-    exfalso; lia.
-  }
   inversion 1; subst; intros.
   repeat rewrite (mget_set eq_nat_dec).
   destruct (Nat.eq_dec i (S si)); auto;
   destruct (Nat.eq_dec i si); auto;
   exfalso; lia.
+all: try (    inversion 1; subst; intros;
+    rewrite (mget_set eq_nat_dec);
+    destruct (Nat.eq_dec i si); auto;
+    exfalso; lia).
 Qed.
 
 Lemma make_rounding_shift_le
@@ -931,12 +959,7 @@ Lemma make_rounding_shift_le
     (max_error_var y <= si')%nat.
 Proof.
   unfold make_rounding.
-  destruct kn.
-  {
-    destruct r;
-    inversion 1; subst; simpl; intros;
-    apply Max.max_lub; auto with arith.
-  }
+  destruct kn;
   inversion 1; subst; simpl; intros;
   repeat (apply Max.max_lub; auto with arith).
 Qed.
@@ -944,8 +967,10 @@ Qed.
 Definition error_bound ty k :=
   / 2 * Raux.bpow Zaux.radix2
   match k with
-    | Normal => (- fprec ty + 1)
-    | _ =>  (3 - femax ty - fprec ty)   (* Denormal, None *)
+    | Unknown' => 0
+    | Normal' => (- fprec ty + 1)
+    | Denormal' =>  (3 - femax ty - fprec ty)
+    | Denormal2' =>  (1 + (3 - femax ty - fprec ty))
   end.
 
 Lemma error_bound_nonneg ty k:
@@ -958,37 +983,44 @@ Qed.
 
 Definition error_bound' ty k :=
   match k with
-    | Normal => / 2 * Raux.bpow Zaux.radix2
- (- fprec ty + 1)
-    | _ => / 2 * Raux.bpow Zaux.radix2 (* Denormal, one  *)
- (3 - femax ty - fprec ty) 
+    | Unknown' => /2
+    | Normal' => / 2 * Raux.bpow Zaux.radix2 (- fprec ty + 1)
+    | Denormal' => / 2 * Raux.bpow Zaux.radix2 (3 - femax ty - fprec ty) 
+    | Denormal2' => Raux.bpow Zaux.radix2 (3 - femax ty - fprec ty) 
   end.
 
 Lemma error_bound'_correct ty k:
   error_bound' ty k = error_bound ty k.
 Proof.
-  destruct k; reflexivity.
+  destruct k; try reflexivity;
+  unfold error_bound', error_bound.
+  simpl. lra.
+  rewrite bpow_plus.
+ rewrite <- Rmult_assoc.
+ rewrite Rinv_l. lra.
+ simpl. lra.
 Qed.
 
 Definition rounding_cond ty k x :=
   match k with
-    | Some Normal =>
+    | Unknown' => True
+    | Normal' =>
       Raux.bpow Zaux.radix2 (3 - femax ty - 1) <= Rabs x
-    | Some Denormal =>
+    | Denormal' =>
       Rabs x < Raux.bpow Zaux.radix2 (3 - femax ty)
-    | None => True 
+    | Denormal2' => True
   end.
 
 Lemma make_rounding_correct
       si shift kn ty x y si' shift':
-  make_rounding si shift kn ty x = (y, (si', shift')) ->
+  make_rounding si shift (round_knowl_denote kn) ty x = (y, (si', shift')) ->
   (max_error_var x <= si)%nat ->
   forall errors1,
     (forall i ty k,
        mget shift i = (ty, k) ->
        Rabs (errors1 i) <= error_bound ty k) ->
   forall env,
-    rounding_cond ty kn (reval x env errors1) ->
+    rounding_cond ty (round_knowl_denote kn) (reval x env errors1) ->
   forall choice,
   exists errors2,
     (forall i,
@@ -1010,10 +1042,8 @@ Lemma make_rounding_correct
 Proof. 
 unfold make_rounding, rounding_cond.
 intros.
-destruct kn.
-- (* kn = Some *)
-destruct r.
- + (* Normal *)
+destruct kn as [ [ | ] | ]; unfold round_knowl_denote in H2.
+- (* Normal *)
   replace (3 - femax ty - 1)%Z with (3 - femax ty - fprec ty + fprec ty - 1)%Z in H2 by ring.
   generalize (Relative.relative_error_N_FLT_ex _ _ _ (fprec_gt_0 _) choice _ H2).
   destruct 1 as (eps & Heps & Hround).
@@ -1038,7 +1068,7 @@ destruct r.
     destruct (Nat.eq_dec i si); auto.
     inversion H; subst.
     assumption.
- + (* Denormal *)
+ - (* Denormal *)
   replace (3 - femax ty)%Z with (3 - femax ty - fprec ty + fprec ty)%Z in H2 by ring.
   generalize (Fprop_absolute.absolute_error_N_FLT _ _ (fprec_gt_0 _) _ choice _ H2).
   destruct 1 as (eps & Heps & Hround).
@@ -1058,7 +1088,7 @@ destruct r.
      destruct (Nat.eq_dec i si); auto.
      inversion H; subst.
      auto.
--  (* kn = None *)
+-  (* None *)
  generalize (Relative.error_N_FLT Zaux.radix2 (3 - femax ty - fprec ty) (fprec ty) (fprec_gt_0 _)  choice (reval x env errors1)).
  destruct 1 as (eps & eta & Heps & Heta & _ & Hround).
  pose (errors2 i := if Nat.eq_dec i (S (si)) then eta
@@ -1124,7 +1154,7 @@ Definition rnd_of_binop
               r1
           ), (si, shift))       
       | Rounded2 o' k => 
-        make_rounding si shift k ty                      
+        make_rounding si shift (round_knowl_denote k) ty                      
                       (RBinop (Rbinop_of_rounded_binop o') r1 r2)
     end.
 
@@ -1132,7 +1162,7 @@ Definition rnd_of_cast
            si
            (shift: MSHIFT)
            (tyfrom tyto: type)
-           (k: option rounding_knowledge)
+           (k: rounding_knowledge')
            (r: rexpr) :=
   if type_leb tyfrom tyto
   then
@@ -1162,15 +1192,12 @@ Definition rnd_of_unop
   :=
     match o with
       | Rounded1 o k =>
-        make_rounding si shift k ty
+        make_rounding si shift (round_knowl_denote k) ty
                       (RUnop (Runop_of_rounded_unop o) r)
       | Exact1 o => (Runop_of_exact_unop ty o r, (si, shift))
-      | CastTo ty' k => rnd_of_cast si shift ty ty' k r
+      | CastTo ty' k => rnd_of_cast si shift ty ty' (round_knowl_denote k) r
       | uInvShift n _ => 
-       (* The result of a uInvShift is not necessarily in the Denormal
-           range, but the error bound is just an additive epsilon 
-           so we can abuse "make_rounding" in this way: *)
-           make_rounding si shift (Some Denormal) ty
+           make_rounding si shift Denormal2' ty
               ((RBinop Tree.Mul (RAtom (RConst (B2F (B2 ty (- Z.pos n)))))) r)
     end.
 
@@ -1305,7 +1332,7 @@ Proof.
 - (* CastTo *)
   apply rnd_of_cast_shift_incr.
 - (* uInvShift *)
-  apply (make_rounding_shift_incr _ _ (Some Denormal)).
+  apply (make_rounding_shift_incr _ _ Denormal2').
 Qed.
 
 Lemma rnd_of_unop_shift_le si  shift ty u r1 y si' shift':
@@ -1322,7 +1349,7 @@ Proof.
 - (* CastTo *)
   eapply rnd_of_cast_shift_le; eauto.
 - (* uInvShift *)
-    eapply (make_rounding_shift_le _ _ (Some Denormal)); eauto.
+    eapply (make_rounding_shift_le _ _ Denormal2'); eauto.
 Qed.
 
 Lemma rnd_of_unop_shift_unchanged si  shift ty u r1 y si' shift':
@@ -1338,7 +1365,7 @@ Proof.
 - (* CastTo *)
   apply rnd_of_cast_shift_unchanged.
 - (* uInvShift *)
-    apply (make_rounding_shift_unchanged _ _ (Some Denormal)).
+    apply (make_rounding_shift_unchanged _ _ Denormal2').
 Qed.
 
 Lemma rndval_shift_incr x:
@@ -1465,19 +1492,28 @@ Proof.
 intros.
 hnf in H.
 specialize (H (fun _ => 0)).
-match type of H with ?A -> _ => assert A end.
+match type of H with ?A -> _ => assert A end;
+  [ |  apply H in H0; simpl in H0; lra].
 intros. unfold error_bound. destruct k.
+- 
+simpl.
+rewrite Rabs_R0.
+lra.
+-
 pose proof (bpow_gt_0 radix2 (Z.pos_sub 1 (fprecp ty'))).
 set (j := bpow _ _) in *. clearbody j.
 rewrite Rabs_pos_eq by lra.
 lra.
+-
 pose proof (bpow_gt_0 radix2 (3 - femax ty' - fprec ty')).
 set (j := bpow _ _) in *. clearbody j.
 rewrite Rabs_pos_eq by lra.
 lra.
-apply H in H0.
-simpl in H0.
+-
+rewrite Rabs_R0.
+apply Rmult_le_pos.
 lra.
+apply Rlt_le. apply bpow_gt_0.
 Qed.
 
 Lemma eval_cond1_preserved m1 m2 env c:
@@ -1745,11 +1781,12 @@ Definition is_div o :=
 
 Definition rounding_cond_ast ty k x: list cond :=
   match k with
-    | Some Normal =>
+    | Normal' =>
       (RBinop Tree.Sub (RUnop Tree.Abs x) (RAtom (RConst (Defs.Float _ 1 (3 - femax ty - 1)))), false) :: nil
-    | Some Denormal =>
+    | Denormal' =>
       (RBinop Tree.Sub (RAtom (RConst (Defs.Float _ 1 (3 - femax ty)))) (RUnop Tree.Abs x), true) :: nil
-    | None => nil 
+    | Denormal2' => nil
+    | Unknown' => nil 
   end.
 
 Lemma rounding_cond_ast_shift ty k x e b:
@@ -1757,8 +1794,7 @@ Lemma rounding_cond_ast_shift ty k x e b:
   (max_error_var e <= max_error_var x)%nat.
 Proof.
   Opaque Zminus.
-  destruct k; simpl; try tauto.
-  destruct r;
+  destruct k; simpl; try tauto;
     intro K;
     inversion K; try contradiction;
     clear K;
@@ -1780,15 +1816,14 @@ Lemma rounding_cond_ast_correct m env ty knowl r errors:
 Proof.
   intros.
   unfold rounding_cond.
-  destruct knowl; auto;
+  destruct knowl; auto.
+ -
   cbn -[Zminus] in * |- *  .
-  destruct r0;  auto.
-  {
     specialize (H0 _ (or_introl _ (refl_equal _))).
     cbn -[Zminus] in *.
     specialize (H0 _ H).
     lra.
-  }
+ -
   specialize (H0 _ (or_introl _ (refl_equal _))).
   cbn -[Zminus] in *.
   specialize (H0 _ H).
@@ -1831,11 +1866,11 @@ Definition rnd_of_binop_with_cond
         )
       | Rounded2 o' k =>
         let ru := RBinop (Rbinop_of_rounded_binop o') r1 r2 in
-        let rs := make_rounding si shift k ty ru in
+        let rs := make_rounding si shift (round_knowl_denote k) ty ru in
         let '(r, _) := rs in
         (rs,
          (if is_div o' then (RUnop Tree.Abs r2, true) :: nil else nil)
-           ++ no_overflow ty r :: rounding_cond_ast ty k ru)
+           ++ no_overflow ty r :: rounding_cond_ast ty (round_knowl_denote k) ru)
     end.
 
 Lemma rounding_cond_ast_shift_cond ty k r e b:
@@ -1844,13 +1879,12 @@ Lemma rounding_cond_ast_shift_cond ty k r e b:
 Proof.
   unfold rounding_cond_ast.
   destruct k; try contradiction.
-  destruct r0.
-  {
+-
     destruct 1; try contradiction.
     Opaque Zminus. inversion H; clear H; subst. Transparent Zminus.
     simpl.
     apply Max.max_0_r.
-  }
+-
   destruct 1; try contradiction.
   Opaque Zminus. inversion H; clear H; subst. Transparent Zminus.
   reflexivity.
@@ -1867,7 +1901,7 @@ Proof.
   destruct o; simpl.
   {
     destruct (
-        make_rounding si shift knowl ty
+        make_rounding si shift (round_knowl_denote knowl) ty
                       (RBinop (Rbinop_of_rounded_binop op) r1 r2)
     ) eqn:EQ.
     intro K.
@@ -1929,7 +1963,7 @@ Definition rnd_of_cast_with_cond
            si
            (shift: MSHIFT)
            (tyfrom tyto: type)
-           (k: option rounding_knowledge)
+           (k: rounding_knowledge')
            (r: rexpr) :=
   if type_leb tyfrom tyto
   then
@@ -1985,12 +2019,12 @@ Definition rnd_of_unop_with_cond
     match o with
       | Rounded1 o k =>
         let ru := RUnop (Runop_of_rounded_unop o) r1 in
-        let rs := make_rounding si shift k ty ru in
+        let rs := make_rounding si shift (round_knowl_denote k) ty ru in
         let '(r, _) := rs in
         (rs, (if is_sqrt o
               then
                 (r1, false) :: nil
-              else nil) ++ rounding_cond_ast ty k ru)
+              else nil) ++ rounding_cond_ast ty (round_knowl_denote k) ru)
       | Exact1 o => 
         let ru := Runop_of_exact_unop ty o r1 in
         ((ru, (si, shift)), 
@@ -1999,10 +2033,10 @@ Definition rnd_of_unop_with_cond
            | InvShift n _ => (RBinop Tree.Sub (RUnop Tree.Abs r1) (RAtom (RConst (Defs.Float _ 1 (3 - femax ty + Z.pos n - 1)))), false) :: nil
            | _ => nil
          end)
-      | CastTo ty' k => rnd_of_cast_with_cond si shift ty ty' k r1
+      | CastTo ty' k => rnd_of_cast_with_cond si shift ty ty' (round_knowl_denote k) r1
      | uInvShift n _ =>
         let ru := RBinop Tree.Mul (RAtom (RConst (B2F (B2 ty (- Z.pos n))))) r1 in
-        let rs := make_rounding si shift (Some Denormal) ty ru in
+        let rs := make_rounding si shift Denormal2' ty ru in
         let '(r, _) := rs in
         (rs, nil)
     end.
@@ -2017,7 +2051,7 @@ Proof.
   destruct o; cbn -[Zminus].
 - (* Rounded1 *)
     destruct (
-        make_rounding si shift knowl ty (RUnop (Runop_of_rounded_unop op) r1)
+        make_rounding si shift (round_knowl_denote knowl) ty (RUnop (Runop_of_rounded_unop op) r1)
       ) as [r'1 [si'1 shift'1]] eqn:EQ.
     intro K.
     inversion K; clear K; subst.
@@ -2086,7 +2120,7 @@ Proof.
   unfold rnd_of_binop_with_cond, rnd_of_binop.
   destruct o; simpl; auto.
   destruct (
-make_rounding si shift knowl ty
+make_rounding si shift (round_knowl_denote knowl) ty
          (RBinop (Rbinop_of_rounded_binop op) r1 r2)
     ); simpl; auto.
 Qed.
@@ -2111,7 +2145,7 @@ Proof.
   destruct o; simpl; auto.
 - (* Rounded1 *)
     destruct (
-        make_rounding si shift knowl ty
+        make_rounding si shift (round_knowl_denote knowl) ty
                       (RUnop (Runop_of_rounded_unop op) r1)
       ); simpl; auto.
 - (* CastTo *)
@@ -2264,7 +2298,7 @@ Proof.
 Qed.
 
 Theorem fop_of_rounded_binop_correct op shift errors
-        (Herr: forall i (ty' : type) (k : rounding_knowledge),
+        (Herr: forall i (ty' : type) (k : rounding_knowledge'),
                  mget shift i = (ty', k) ->
                  Rabs (errors i) <= error_bound ty' k)
         ty e1
@@ -2349,7 +2383,7 @@ Proof.
 Qed.
 
 Theorem fop_of_rounded_unop_correct op shift errors
-        (Herr: forall (i : nat) (ty' : type) (k : rounding_knowledge),
+        (Herr: forall (i : nat) (ty' : type) (k : rounding_knowledge'),
                  mget shift i = (ty', k) ->
                  Rabs (errors i) <= error_bound ty' k)
         ty e1
@@ -3057,12 +3091,65 @@ unfold B2F.
 destruct x; auto; lra.
 Qed.
 
+Ltac spec H := match type of H with ?A -> _ => 
+  let H1 := fresh in assert (H1:A); [ | specialize (H H1); clear H1]
+end.
+
 Lemma uInvShift_finite_aux:
  forall (pow : positive) (ty : type) (x : ftype ty),
    is_finite (fprec ty) (femax ty) x = true ->
   Rabs (round radix2 (FLT_exp (3 - femax ty - fprec ty) (fprec ty)) (round_mode mode_NE)
      (B2R (fprec ty) (femax ty) x * / bpow radix2 (Z.pos pow))) < bpow radix2 (femax ty).
-Admitted.
+Proof.
+intros.
+unfold round_mode.
+pose proof (bpow_gt_0 radix2 (Z.pos pow)).
+rewrite <- round_NE_abs by (apply FLT_exp_valid; apply fprec_gt_0).
+rewrite Rabs_mult, Rabs_Rinv by lra.
+rewrite (Rabs_right (bpow _ _)) by lra.
+assert (bpow radix2 (femax ty - 1) < bpow radix2 (femax ty - 1 + 1)).
+rewrite bpow_plus.
+simpl bpow.
+pose proof (bpow_gt_0 radix2 (femax ty - 1)).
+lra.
+replace (femax ty - 1 + 1)%Z with (femax ty) in H1 by lia.
+match goal with |- ?A < _ => assert (A <= bpow radix2 (femax ty - 1)) end;
+ [ | lra].
+clear H1.
+apply round_le_generic.
+apply FLT_exp_valid; apply fprec_gt_0.
+apply valid_rnd_N.
+apply generic_format_FLT_bpow.
+apply fprec_gt_0.
+  pose proof (fprec_lt_femax ty).
+  pose proof (fprec_gt_0 ty).
+  red in H2.
+  lia.
+assert (Rabs (B2R (fprec ty) (femax ty) x) <= bpow radix2 (femax ty)). {
+  pose proof (abs_B2R_lt_emax _ _ x). lra.
+}
+replace (Z.pos pow) with (1 + (Z.pos pow - 1))%Z by lia.
+rewrite bpow_plus.
+assert (bpow radix2 0 <= bpow radix2 (Z.pos pow - 1)).
+apply bpow_le. lia.
+unfold bpow at 1 in H2.
+change (bpow radix2 1) with 2.
+set (j := bpow radix2 (Z.pos pow - 1)) in *. clearbody j.
+rewrite Rinv_mult_distr by lra.
+replace (femax ty - 1)%Z with (femax ty + -(1))%Z by lia.
+rewrite bpow_plus, bpow_opp.
+rewrite bpow_1.
+change (IZR radix2) with 2.
+rewrite (Rmult_comm _ (/ j)).
+rewrite <- Rmult_assoc.
+set (y := Rabs _) in *.
+assert (0 <= y) by apply Rabs_pos.
+apply Rmult_le_compat_r.
+lra.
+assert (y * /j <= y * 1); [ | lra].
+apply Rmult_le_compat_l; try lra.
+apply Rle_Rinv in H2; lra.
+Qed.
 
 Lemma uInvShift_accuracy_aux:
   forall ty x pow, 
@@ -3070,16 +3157,87 @@ Lemma uInvShift_accuracy_aux:
   Rabs (round radix2 (FLT_exp (3 - femax ty - fprec ty) (fprec ty)) (round_mode mode_NE)
         (B2R (fprec ty) (femax ty) x * bpow radix2 (- Z.pos pow)) -
             bpow radix2 (- Z.pos pow) * B2R (fprec ty) (femax ty) x) <=
-         / 2 * bpow radix2 (3 - femax ty - fprec ty).
-Admitted.
-
+           bpow radix2 (3 - femax ty - fprec ty).
+Proof.
+intros.
+ destruct (Rle_lt_dec
+    (bpow radix2 (3 - femax ty + Z.pos pow - 1))
+    (Rabs (B2R (fprec ty) (femax ty) x))).
+-
+rewrite bpow_opp.
+rewrite FLT_format_div_beta_1; auto.
+2: apply valid_rnd_N.
+rewrite Rmult_comm.
+unfold Rdiv.
+rewrite Rminus_eq_0, Rabs_R0.
+pose proof (bpow_gt_0 radix2 (3 - femax ty - fprec ty)). lra.
+-
+rewrite (Rmult_comm (bpow _ _)).
+unfold round_mode.
+eapply Rle_trans.
+apply error_le_ulp_round.
+apply FLT_exp_valid; apply fprec_gt_0.
+apply fexp_monotone.
+apply valid_rnd_N.
+unfold ulp.
+set (emin := (3 - _ - _)%Z).
+match goal with |- context  [Req_bool ?A ?B] =>
+  set (a := A)
+end.
+pose proof (Req_bool_spec a 0).
+destruct H0.
++
+subst a.
+destruct (negligible_exp_FLT emin (fprec ty)) as [z [? ?]].
+rewrite H1.
+unfold FLT_exp.
+pose proof (fprec_gt_0 ty). red in H3.
+rewrite Z.max_r by lia.
+lra.
++
+rewrite <- ulp_neq_0 by auto.
+rewrite ulp_FLT_small.
+lra.
+apply fprec_gt_0.
+subst a.
+rewrite <- round_NE_abs by (apply FLT_exp_valid; apply fprec_gt_0).
+rewrite Rabs_mult.
+rewrite (Rabs_right (bpow _ _)) by (apply Rgt_ge; apply bpow_gt_0).
+apply Rle_lt_trans with (round  radix2 (FLT_exp emin (fprec ty)) ZnearestE (bpow radix2 (emin + fprec ty - 1))).
+ *
+ apply round_le.
+ apply FLT_exp_valid; apply fprec_gt_0.
+ apply valid_rnd_N.
+ replace (emin + fprec ty - 1)%Z
+  with ((3 - femax ty + Z.pos pow - 1) + (- Z.pos pow))%Z by lia.
+ rewrite bpow_plus.
+ apply Rmult_le_compat_r.
+ apply Rlt_le. apply bpow_gt_0.
+ lra.
+ *
+  apply Rle_lt_trans with (bpow radix2 (emin + fprec ty - 1)).
+  apply round_le_generic.
+ apply FLT_exp_valid; apply fprec_gt_0.
+ apply valid_rnd_N.
+ apply generic_format_bpow.
+ unfold FLT_exp. 
+ rewrite Z.max_l by lia.
+ ring_simplify.
+ pose proof (fprec_gt_0 ty). red in H1; lia.
+ apply bpow_le. lia.
+ replace (bpow radix2 (emin + fprec ty))%Z
+   with (bpow radix2 (emin + fprec ty - 1 + 1))%Z by (f_equal; lia).
+ rewrite bpow_plus.
+ change (bpow radix2 1) with 2.
+ pose proof (bpow_gt_0 radix2 (emin + fprec ty - 1) ). lra.
+Qed.
 
 Lemma uInvShift_accuracy: 
  forall (pow : positive) (ltr : bool) (ty : type) (x : ftype ty) 
   (F1 : is_finite (fprec ty) (femax ty) x = true),
  Rabs (B2R (fprec ty) (femax ty) (fop_of_unop (uInvShift pow ltr) ty x) -
       F2R radix2 (B2F (B2 ty (Z.neg pow))) * B2R (fprec ty) (femax ty) x) <=
-  / 2 * bpow radix2 (3 - femax ty - fprec ty).
+   bpow radix2 (3 - femax ty - fprec ty).
 Proof.
 intros.
 assert (is_finite (fprec ty) (femax ty) (B2 ty (Z.neg pow)) = true). {
@@ -3185,7 +3343,7 @@ forall (env : forall x : type, V -> binary_float (fprec x) (femax x))
  (ltr : bool) (e : expr) (si : nat) (r1 : rexpr) (s1 : MSHIFT)
  (errors1 errors1_1 : nat -> R)
  (E1 : forall i : nat, (i < si)%nat -> errors1_1 i = errors1 i)
- (EB1 : forall (i : nat) (ty' : type) (k : rounding_knowledge),
+ (EB1 : forall (i : nat) (ty' : type) (k : rounding_knowledge'),
       mget s1 i = (ty', k) -> Rabs (errors1_1 i) <= error_bound ty' k)
  (F1 : is_finite (fprec (type_of_expr e)) (femax (type_of_expr e)) (fval env e) = true)
  (V1 : reval r1 env errors1_1 =
@@ -3197,12 +3355,12 @@ forall (env : forall x : type, V -> binary_float (fprec x) (femax x))
   (EQ : rnd_of_unop_with_cond si1 s1 (type_of_expr e) (uInvShift pow ltr) r1 =
      (r, (si2, s), p_))
  (H1 : forall i : cond, In i (p_ ++ p1) -> eval_cond1 env s i) 
- (H2 : forall (i : nat) (ty : type) (k : rounding_knowledge),
+ (H2 : forall (i : nat) (ty : type) (k : rounding_knowledge'),
      mget shift i = (ty, k) -> Rabs (errors1 i) <= error_bound ty k)
  (K_ : rnd_of_unop si1 s1 (type_of_expr e) (uInvShift pow ltr) r1 = (r, (si2, s))),
 exists errors2 : nat -> R,
   (forall i : nat, (i < si)%nat -> errors2 i = errors1 i) /\
-  (forall (i : nat) (ty' : type) (k : rounding_knowledge),
+  (forall (i : nat) (ty' : type) (k : rounding_knowledge'),
    mget s i = (ty', k) -> Rabs (errors2 i) <= error_bound ty' k) /\
   is_finite (fprec (type_of_unop (uInvShift pow ltr) (type_of_expr e)))
     (femax (type_of_unop (uInvShift pow ltr) (type_of_expr e)))
@@ -3216,7 +3374,7 @@ intros.
 assert (K1 := rndval_with_cond_left e si shift); rewrite EQ1 in K1; simpl in K1; symmetry in K1.
 inversion EQ; clear EQ; subst.
 set (op := RBinop Tree.Mul _) in *.
-set (s := mset s1 si1 (type_of_expr e, Denormal)) in *.
+set (s := mset s1 si1 (type_of_expr e, Denormal')) in *.
 pose (eps :=
   B2R (fprec (type_of_expr e)) (femax (type_of_expr e))
     (fop_of_unop (uInvShift pow ltr) (type_of_expr e) (fval env e)) -
@@ -3239,6 +3397,10 @@ destruct (Nat.eq_dec i si1). inversion H; clear H; subst.
   unfold error_bound.
   subst eps.
   rewrite V1.
+ rewrite bpow_plus.
+ rewrite <- Rmult_assoc.
+ change (bpow radix2 1) with 2.
+ rewrite Rinv_l, Rmult_1_l by lra.
  apply uInvShift_accuracy; auto.
  +
   clear eps.
@@ -3399,7 +3561,7 @@ Proof.
         simpl.
         simpl in EQ.
         destruct (
-            make_rounding si2_ s2 knowl
+            make_rounding si2_ s2 (round_knowl_denote knowl)
                           (type_lub (type_of_expr e1) (type_of_expr e2))
                           (RBinop (Rbinop_of_rounded_binop op) r1 r2)
           ) eqn:ROUND.
@@ -3421,7 +3583,7 @@ Proof.
         }
         specialize (K L _ EB2).
         clear L.
-        assert (L: rounding_cond (type_lub (type_of_expr e1) (type_of_expr e2)) knowl
+        assert (L: rounding_cond (type_lub (type_of_expr e1) (type_of_expr e2)) (round_knowl_denote knowl)
                             (reval (RBinop (Rbinop_of_rounded_binop op) r1 r2) env errors1_2)).
         {
           eapply rounding_cond_ast_correct; [ eassumption | ].
@@ -3748,7 +3910,7 @@ Proof.
     simpl in EQ.
     unfold Datatypes.id in *.
     destruct (
-        make_rounding si1 s1 knowl
+        make_rounding si1 s1 (round_knowl_denote knowl)
                       (type_of_expr e)
                       (RUnop (Runop_of_rounded_unop op) r1)
       ) eqn:ROUND.
@@ -3761,7 +3923,7 @@ Proof.
       intros.
       eapply rndval_shift_le; eauto.
     }
-    assert (L': rounding_cond (type_of_expr e) knowl
+    assert (L': rounding_cond (type_of_expr e) (round_knowl_denote knowl)
       (reval (RUnop (Runop_of_rounded_unop op) r1) env errors1_1)).
     {
       eapply rounding_cond_ast_correct; [ eassumption | ].
@@ -3985,7 +4147,7 @@ Proof.
     rewrite <- V1 in K.
     eauto.
   }
-  destruct (make_rounding si1 s1 knowl ty r1) eqn:ROUND.
+  destruct (make_rounding si1 s1 (round_knowl_denote knowl) ty r1) eqn:ROUND.
   inversion EQ; clear EQ; subst.
   generalize (make_rounding_correct _ _ _ _ _ _ _ _ ROUND).
   intro K.
@@ -3993,7 +4155,7 @@ Proof.
   {
     eapply rndval_shift_le; eauto.
   }
-  assert (L': rounding_cond ty knowl (reval r1 env errors1_1)).
+  assert (L': rounding_cond ty (round_knowl_denote knowl) (reval r1 env errors1_1)).
   {
     eapply rounding_cond_ast_correct.
     {

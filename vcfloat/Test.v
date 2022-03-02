@@ -37,7 +37,7 @@ Definition env_all_finite {V} (env: environ) :=
         is_finite (fprec ty) (femax ty) (env ty i) = true.
 
 Definition errors_bounded {MSHIFT} 
-     {MAP : Map nat (type * rounding_knowledge) MSHIFT}
+     {MAP : Map nat (type * rounding_knowledge') MSHIFT}
     (shift: MSHIFT) (errors: nat -> R) := 
    forall i ty k,
          mget shift i = (ty, k) ->
@@ -146,7 +146,7 @@ Lemma calculate_rndval:
       expr_valid e = true ->
       boundsmap_denote bmap vmap ->
   forall r si2 s p,
-   rndval_with_cond 0 (mempty  (Tsingle, Normal)) e = (r,(si2,s),p) ->
+   rndval_with_cond 0 (mempty  (Tsingle, Normal')) e = (r,(si2,s),p) ->
    list_forall (eval_cond2 (mk_env bmap vmap) s) p ->
    rndval_with_cond_result  (env_ vmap) e r si2 s.
 Proof.
@@ -298,7 +298,7 @@ match goal with
 let H := fresh in intros ?vmap H;
 let H0 := fresh "H0" in 
 let r := fresh "r" in let si2 := fresh "si2" in let s := fresh "s" in let p := fresh "p" in 
-destruct (rndval_with_cond O (mempty  (Tsingle, Normal)) e) as [[r [si2 s]] p] eqn:H0;
+destruct (rndval_with_cond O (mempty  (Tsingle, Normal')) e) as [[r [si2 s]] p] eqn:H0;
 exists r,si2,s;
 let H1 := fresh "H1" in 
 assert (H1: expr_valid e = true) by reflexivity;
