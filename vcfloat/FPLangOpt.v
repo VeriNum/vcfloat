@@ -114,12 +114,19 @@ Qed.
 Definition rounded_unop_eqb u1 u2 :=
   match u1, u2 with
     | SQRT, SQRT => true
+    | InvShift p1 b1, InvShift p2 b2 => Pos.eqb p1 p2 && Bool.eqb b1 b2
+    | _, _ => false
   end.
 
 Lemma rounded_unop_eqb_eq u1 u2:
   (rounded_unop_eqb u1 u2 = true <-> u1 = u2).
 Proof.
-  destruct u1; destruct u2; simpl; intuition congruence.
+  destruct u1; destruct u2; simpl; try intuition congruence.
+  rewrite Bool.andb_true_iff;
+  (try rewrite Pos.eqb_eq);
+  (try rewrite N.eqb_eq);
+  rewrite Bool.eqb_true_iff;
+  intuition congruence.
 Qed.
 
 
@@ -128,7 +135,6 @@ Definition exact_unop_eqb u1 u2 :=
     | Abs, Abs => true
     | Opp, Opp => true
     | Shift p1 b1, Shift p2 b2  => N.eqb p1 p2 && Bool.eqb b1 b2
-    | InvShift p1 b1, InvShift p2 b2 => Pos.eqb p1 p2 && Bool.eqb b1 b2
     | _, _ => false
   end.
 
@@ -150,8 +156,6 @@ Definition unop_eqb u1 u2 :=
     | Exact1 o1, Exact1 o2 => exact_unop_eqb o1 o2
     | CastTo ty1 k1, CastTo ty2 k2 =>
       type_eqb ty1 ty2 && option_eqb rounding_knowledge_eqb k1 k2
-    | uInvShift p1 b1, uInvShift p2 b2 =>  
-      Pos.eqb p1 p2 && Bool.eqb b1 b2
     | _, _ => false
   end.
 
@@ -172,11 +176,6 @@ Proof.
   rewrite type_eqb_eq.
   rewrite (option_eqb_eq rounding_knowledge_eqb_eq).
   intuition congruence.
--
-  rewrite !andb_true_iff, eqb_true_iff, Pos.eqb_eq.
-  split.
-  + intros [? ?]. subst ltr0 pow0. auto.
-  + intro. inversion H; clear H; subst; auto.
 Qed.
 
 Section WITHVARS.
@@ -498,7 +497,7 @@ Fixpoint fshift (e: FPLang.expr) {struct e}: FPLang.expr :=
             else
               let n := to_inv_power_2 c1 in
               if binary_float_eqb c1 (B2 ty (- Z.pos n))
-              then Unop (Exact1 (InvShift n false)) (Unop (CastTo ty None) e'2)
+              then Unop (Rounded1 (InvShift n false) None) (Unop (CastTo ty None) e'2)
               else Binop b e'1 e'2
           | None =>
             match fcval_nonrec e'2 with
@@ -510,7 +509,7 @@ Fixpoint fshift (e: FPLang.expr) {struct e}: FPLang.expr :=
                 else
                   let n := to_inv_power_2 c2 in
                   if binary_float_eqb c2 (B2 ty (- Z.pos n))
-                  then Unop (Exact1 (InvShift n true)) (Unop (CastTo ty None) e'1)
+                  then Unop (Rounded1 (InvShift n true) None) (Unop (CastTo ty None) e'1)
                   else Binop b e'1 e'2
               | None => Binop b e'1 e'2
             end                  
@@ -791,7 +790,7 @@ Fixpoint fshift_div (e: FPLang.expr) {struct e}: FPLang.expr :=
                   | Some z' => 
                     let n1 := to_power_2_pos c2 in
                     if binary_float_eqb z' (B2 ty (Z.neg n1))
-                    then Unop (Exact1 (InvShift n1 true)) (Unop (CastTo ty None) e'1)
+                    then Unop (Rounded1 (InvShift n1 true) None) (Unop (CastTo ty None) e'1)
                     else
                     let n2 := to_inv_power_2 c2 in
                     if binary_float_eqb z' (B2 ty (Z.pos n2))

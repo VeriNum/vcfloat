@@ -1042,7 +1042,7 @@ Ltac rnd_of_unop_with_cond_solve
               let j1 := fresh in
               (assert (
                    list_forall (eval_cond2 env s)
-                               (if is_sqrt o' then (r1, false) :: nil else nil)
+                               ((r1, false) :: nil)
                  )
                 as j1
                   by (list_forall_eval_cond2_solve t));

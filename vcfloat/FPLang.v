@@ -88,20 +88,19 @@ Inductive binop: Type :=
 
 Inductive rounded_unop: Type :=
 | SQRT
+| InvShift (pow: positive) (ltr: bool) (* divide by power of two *)
 .
 
 Inductive exact_unop: Type :=
 | Abs
 | Opp
 | Shift (pow: N) (ltr: bool) (* multiply by power of two never introduces rounding *)
-| InvShift (pow: positive) (ltr: bool) (* divide by power of two may introduce gradual underflow *)
 .
 
 Inductive unop: Type :=
 | Rounded1 (op: rounded_unop) (knowl:  option rounding_knowledge)
 | Exact1 (o: exact_unop)
 | CastTo (ty: type) (knowl: option rounding_knowledge)
-| uInvShift (pow: positive) (ltr: bool) (* divide by power of two that may introduce underflow *)
 .
 
 Class VarType (V: Type): Type := 
@@ -158,6 +157,7 @@ Definition Rop_of_binop (r: binop): R -> R -> R :=
 Definition Rop_of_rounded_unop (r: rounded_unop): R -> R :=
   match r with
     | SQRT => R_sqrt.sqrt
+    | InvShift pow _ => Rmult (Raux.bpow Zaux.radix2 (- Z.pos pow))
   end.
 
 Definition Rop_of_exact_unop (r: exact_unop): R -> R :=
@@ -166,7 +166,6 @@ Definition Rop_of_exact_unop (r: exact_unop): R -> R :=
     | Opp => Ropp
     | Shift pow b =>
       Rmult (Raux.bpow Zaux.radix2 (Z.of_N pow))
-    | InvShift pow _ => Rmult (Raux.bpow Zaux.radix2 (- Z.pos pow))
   end.
 
 Definition Rop_of_unop (r: unop): R -> R :=
@@ -174,17 +173,14 @@ Definition Rop_of_unop (r: unop): R -> R :=
     | Rounded1 op _ => Rop_of_rounded_unop op
     | Exact1 op => Rop_of_exact_unop op
     | CastTo _ _ => id
-    | uInvShift pow _ => Rmult (Raux.bpow Zaux.radix2 (- Z.pos pow))
   end.
 
 Fixpoint rval (env: forall ty, V -> ftype ty) (e: expr) {struct e}: R :=
   match e with
     | Const ty f => B2R (fprec ty) (femax ty) f
     | Var ty i => B2R (fprec ty) (femax ty) (env ty i)
-    | Binop b e1 e2 =>
-      Rop_of_binop b (rval env e1) (rval env e2)
-    | Unop b e =>
-      Rop_of_unop b (rval env e)
+    | Binop b e1 e2 =>  Rop_of_binop b (rval env e1) (rval env e2)
+    | Unop b e => Rop_of_unop b (rval env e)
   end.
 
 Context {NANS: Nans}.
@@ -269,7 +265,7 @@ Definition unop_valid ty (u: unop): bool :=
   match u with
     | Exact1 (Shift p _) => 
       Z.leb 0 (center_Z (3 - femax ty) (Z.of_N p + 1) (femax ty))
-    | Exact1 (InvShift p _) =>
+    | Rounded1 (InvShift p _) _ =>
       Z.leb 0 (center_Z (3 - (femax ty)) (- Z.pos p + 1) (femax ty))
     | _ => true
   end.
@@ -315,21 +311,6 @@ Definition fop_of_binop (r: binop):
     end.
 
 Definition Bsqrt ty := Bsqrt _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (sqrt_nan ty) mode_NE.
-
-Definition rounded_unop_precond (r: rounded_unop):
-  R -> Prop :=
-  match r with
-    | SQRT => Rle 0
-  end.
-
-Definition fop_of_rounded_unop (r: rounded_unop):
-  forall ty,
-    binary_float (fprec ty) (femax ty) ->
-    binary_float (fprec ty) (femax ty)
-  :=
-    match r with
-      | SQRT => Bsqrt
-    end.
 
 Inductive FF2B_gen_spec (prec emax: Z) (x: full_float): binary_float prec emax -> Prop :=
   | FF2B_gen_spec_invalid (Hx: valid_binary prec emax x = false):
@@ -504,6 +485,19 @@ Proof.
   destruct H; auto.
 Qed.
 
+Definition fop_of_rounded_unop (r: rounded_unop):
+  forall ty,
+    binary_float (fprec ty) (femax ty) ->
+    binary_float (fprec ty) (femax ty)
+  :=
+    match r with
+      | SQRT => Bsqrt
+      | InvShift n b => 
+        if b
+        then (fun ty x => BMULT ty x (B2 ty (- Z.pos n)))
+        else (fun ty => BMULT ty (B2 ty (- Z.pos n)))
+    end.
+
 Definition fop_of_exact_unop (r: exact_unop)
   := 
     match r with
@@ -515,12 +509,6 @@ Definition fop_of_exact_unop (r: exact_unop)
           (fun ty x => BMULT ty x (B2 ty (Z.of_N n)))
         else
           (fun ty => BMULT ty (B2 ty (Z.of_N n)))
-      | InvShift n b => 
-        if b
-        then
-          (fun ty x => BMULT ty x (B2 ty (- Z.pos n)))
-        else
-          (fun ty => BMULT ty (B2 ty (- Z.pos n)))
     end.
 
 Definition fop_of_unop (r: unop):
@@ -538,13 +526,6 @@ Definition fop_of_unop (r: unop):
       | Rounded1 o _ => fop_of_rounded_unop o
       | Exact1 o => fop_of_exact_unop o
       | CastTo tto _ => cast tto
-      | uInvShift n b => 
-        if b
-        then
-          (fun ty x => BMULT ty x (B2 ty (- Z.pos n)))
-        else
-          (fun ty => BMULT ty (B2 ty (- Z.pos n)))
-
     end.
 
 Fixpoint fval (env: forall ty, V -> ftype ty) (e: expr) {struct e}:
@@ -1171,9 +1152,10 @@ Definition rnd_of_cast
     make_rounding si shift k tyto r
 .
 
-Definition Runop_of_rounded_unop o :=
+Definition Runop_of_rounded_unop ty o :=
   match o with
-    | SQRT => Tree.Sqrt
+    | SQRT => RUnop Tree.Sqrt
+    | InvShift n _ => RBinop Tree.Mul (RAtom (RConst (B2F (B2 ty (- Z.pos n)))))
   end.
 
 Definition Runop_of_exact_unop ty o :=
@@ -1181,7 +1163,6 @@ Definition Runop_of_exact_unop ty o :=
     | Abs => RUnop Tree.Abs
     | Opp => RUnop Tree.Neg
     | Shift n _ => RBinop Tree.Mul (RAtom (RConst (B2F (B2 ty (Z.of_N n)))))
-    | InvShift n _ => RBinop Tree.Mul (RAtom (RConst (B2F (B2 ty (- Z.pos n)))))
   end.
 
 Definition rnd_of_unop
@@ -1191,14 +1172,16 @@ Definition rnd_of_unop
            (o: unop) (r: rexpr)
   :=
     match o with
-      | Rounded1 o k =>
-        make_rounding si shift (round_knowl_denote k) ty
-                      (RUnop (Runop_of_rounded_unop o) r)
-      | Exact1 o => (Runop_of_exact_unop ty o r, (si, shift))
-      | CastTo ty' k => rnd_of_cast si shift ty ty' (round_knowl_denote k) r
-      | uInvShift n _ => 
+      | Rounded1 (InvShift n ltr) (Some Normal) =>
+                  (Runop_of_rounded_unop ty (InvShift n ltr) r, (si, shift))
+      | Rounded1 (InvShift n _) _ =>
            make_rounding si shift Denormal2' ty
               ((RBinop Tree.Mul (RAtom (RConst (B2F (B2 ty (- Z.pos n)))))) r)
+      | Rounded1 o k =>
+        make_rounding si shift (round_knowl_denote k) ty
+                      (Runop_of_rounded_unop ty o r)
+      | Exact1 o => (Runop_of_exact_unop ty o r, (si, shift))
+      | CastTo ty' k => rnd_of_cast si shift ty ty' (round_knowl_denote k) r
     end.
 
 Fixpoint rndval 
@@ -1326,13 +1309,18 @@ Lemma rnd_of_unop_shift_incr si shift ty u r1 y si' shift':
 Proof.
   destruct u; simpl.
 - (* Rounded1 *)
+  destruct op.
+ +
      apply make_rounding_shift_incr.
+ + destruct knowl as [ [ | ] | ].
+  * (* Some Normal *)
+   inversion_clear 1; auto with arith.
+  *  apply (make_rounding_shift_incr _ _ Denormal2').
+  *  apply (make_rounding_shift_incr _ _ Denormal2').
 - (* Exact1 *)
    inversion_clear 1; auto with arith.
 - (* CastTo *)
   apply rnd_of_cast_shift_incr.
-- (* uInvShift *)
-  apply (make_rounding_shift_incr _ _ Denormal2').
 Qed.
 
 Lemma rnd_of_unop_shift_le si  shift ty u r1 y si' shift':
@@ -1342,14 +1330,18 @@ Lemma rnd_of_unop_shift_le si  shift ty u r1 y si' shift':
 Proof.
   destruct u; simpl; intros.
 - (* Rounded1 *)
-    eapply make_rounding_shift_le; eauto.
+ destruct op.
+ + eapply make_rounding_shift_le; eauto.
+ + destruct knowl as [ [ | ] | ].
+  * (* Some Normal *)
+    inversion H; clear H; subst; simpl. auto.
+  * eapply (make_rounding_shift_le _ _ Denormal2'); eauto.
+  * eapply (make_rounding_shift_le _ _ Denormal2'); eauto.
 - (* Exact1 *)
     inversion H; clear H; subst; simpl.
     destruct o; simpl; auto.
 - (* CastTo *)
   eapply rnd_of_cast_shift_le; eauto.
-- (* uInvShift *)
-    eapply (make_rounding_shift_le _ _ Denormal2'); eauto.
 Qed.
 
 Lemma rnd_of_unop_shift_unchanged si  shift ty u r1 y si' shift':
@@ -1359,13 +1351,17 @@ Lemma rnd_of_unop_shift_unchanged si  shift ty u r1 y si' shift':
 Proof.
   destruct u; simpl.
 - (* Rounded1 *)
-    apply make_rounding_shift_unchanged.
+  destruct op.
+ + apply make_rounding_shift_unchanged.
+ + destruct knowl as [ [ | ] | ].
+  * (* Some Normal *)
+        inversion_clear 1; auto with arith.
+  * apply (make_rounding_shift_unchanged _ _ Denormal2').
+  * apply (make_rounding_shift_unchanged _ _ Denormal2').
 - (* Exact1 *)
     inversion_clear 1; auto with arith.
 - (* CastTo *)
   apply rnd_of_cast_shift_unchanged.
-- (* uInvShift *)
-    apply (make_rounding_shift_unchanged _ _ Denormal2').
 Qed.
 
 Lemma rndval_shift_incr x:
@@ -2005,11 +2001,6 @@ Proof.
   lia.
 Qed.
 
-Definition is_sqrt o :=
-  match o with
-    | SQRT => true
-  end.
-
 Definition rnd_of_unop_with_cond
            si
            (shift: MSHIFT)
@@ -2017,28 +2008,28 @@ Definition rnd_of_unop_with_cond
            (o: unop) (r1: rexpr)
   :=
     match o with
-      | Rounded1 o k =>
-        let ru := RUnop (Runop_of_rounded_unop o) r1 in
+      | Rounded1 (InvShift n ltr) (Some Normal) =>
+        let ru := Runop_of_rounded_unop ty  (InvShift n ltr) r1 in
+        ((ru, (si, shift)), 
+            (RBinop Tree.Sub (RUnop Tree.Abs r1) (RAtom (RConst (Defs.Float _ 1 (3 - femax ty + Z.pos n - 1)))), false) :: nil)
+      | Rounded1 (InvShift n _) _ =>
+        let ru := RBinop Tree.Mul (RAtom (RConst (B2F (B2 ty (- Z.pos n))))) r1 in
+        let rs := make_rounding si shift Denormal2' ty ru in
+        let '(r, _) := rs in
+        (rs, nil)
+      | Rounded1 op k =>
+        let ru := Runop_of_rounded_unop ty op r1 in
         let rs := make_rounding si shift (round_knowl_denote k) ty ru in
         let '(r, _) := rs in
-        (rs, (if is_sqrt o
-              then
-                (r1, false) :: nil
-              else nil) ++ rounding_cond_ast ty (round_knowl_denote k) ru)
+        (rs, (r1, false) :: rounding_cond_ast ty (round_knowl_denote k) ru)
       | Exact1 o => 
         let ru := Runop_of_exact_unop ty o r1 in
         ((ru, (si, shift)), 
          match o with
            | Shift _ _ => no_overflow ty ru :: nil
-           | InvShift n _ => (RBinop Tree.Sub (RUnop Tree.Abs r1) (RAtom (RConst (Defs.Float _ 1 (3 - femax ty + Z.pos n - 1)))), false) :: nil
            | _ => nil
          end)
       | CastTo ty' k => rnd_of_cast_with_cond si shift ty ty' (round_knowl_denote k) r1
-     | uInvShift n _ =>
-        let ru := RBinop Tree.Mul (RAtom (RConst (B2F (B2 ty (- Z.pos n))))) r1 in
-        let rs := make_rounding si shift Denormal2' ty ru in
-        let '(r, _) := rs in
-        (rs, nil)
     end.
 
 Lemma rnd_of_unop_with_cond_shift_cond si shift ty o r1 r' si' shift' cond:
@@ -2050,17 +2041,16 @@ Lemma rnd_of_unop_with_cond_shift_cond si shift ty o r1 r' si' shift' cond:
 Proof.
   destruct o; cbn -[Zminus].
 - (* Rounded1 *)
+ destruct op.
+ + (* SQRT *)
     destruct (
-        make_rounding si shift (round_knowl_denote knowl) ty (RUnop (Runop_of_rounded_unop op) r1)
+        make_rounding si shift (round_knowl_denote knowl) ty (Runop_of_rounded_unop ty SQRT r1)
       ) as [r'1 [si'1 shift'1]] eqn:EQ.
     intro K.
     inversion K; clear K; subst.
     intros.
-    apply in_app_or in H0.
     destruct H0.
     {
-      destruct (is_sqrt op); try contradiction.
-      destruct H0; try contradiction.
       inversion H0; clear H0; subst.
       eapply make_rounding_shift_incr in EQ.
       lia.
@@ -2070,6 +2060,19 @@ Proof.
     simpl.
     apply make_rounding_shift_incr in EQ.
     lia.
+ + (* InvShift *)
+    destruct knowl as [ [ | ] | ].
+  * (* Some Normal *)
+    intro K.
+    inversion K; clear K; subst.
+    intros.
+    destruct H0; try contradiction.
+    inversion H0; clear H0; subst.
+    simpl.
+    rewrite Max.max_0_r.
+    assumption.
+  * intros. inversion H; clear H; subst. inversion H1.
+  * intros. inversion H; clear H; subst. inversion H1.
 - (* Exact1 *)
     intro K.
     inversion K; clear K; subst.
@@ -2080,17 +2083,8 @@ Proof.
       inversion H0; clear H0; subst.
       simpl.
       assumption.
-   + (* InvShift *)
-    destruct H0; try contradiction.
-    inversion H0; clear H0; subst.
-    simpl.
-    rewrite Max.max_0_r.
-    assumption.
 - (* CastTo *)
   apply rnd_of_cast_with_cond_shift_cond.
-- (* uInvShift *)
-  intros.
-  inversion H; clear H; subst. inversion H1.
 Qed.
 
 Fixpoint rndval_with_cond
@@ -2144,10 +2138,14 @@ Proof.
   unfold rnd_of_unop_with_cond, rnd_of_unop.
   destruct o; simpl; auto.
 - (* Rounded1 *)
+ destruct op.
+ + (* SQRT *)
     destruct (
         make_rounding si shift (round_knowl_denote knowl) ty
-                      (RUnop (Runop_of_rounded_unop op) r1)
+                      (Runop_of_rounded_unop ty SQRT r1)
       ); simpl; auto.
+ + (* InvShift *)
+    destruct knowl as [ [ | ] | ]; simpl; auto.
 - (* CastTo *)
   apply rnd_of_cast_with_cond_left.
 Qed.
@@ -2380,79 +2378,6 @@ Proof.
     congruence.
   }
   auto.
-Qed.
-
-Theorem fop_of_rounded_unop_correct op shift errors
-        (Herr: forall (i : nat) (ty' : type) (k : rounding_knowledge'),
-                 mget shift i = (ty', k) ->
-                 Rabs (errors i) <= error_bound ty' k)
-        ty e1
-        (F1: is_finite _ _ e1 = true)
-        env r1
-        (V1: reval r1 env errors =
-             B2R _ _ e1)
-        r
-        (V_: reval r env errors =
-            Generic_fmt.round Zaux.radix2
-                                    (FLT.FLT_exp
-                                       (3 - femax ty - fprec ty)
-                                       (fprec ty)
-                                    )
-                                    (Generic_fmt.Znearest (fun x : Z => negb (Z.even x)))
-                                    (reval (RUnop (Runop_of_rounded_unop op) r1) env errors))
-        (COND:
-           (forall i,
-              In i ((if is_sqrt op
-                     then (r1, false) :: nil
-                     else nil)) ->
-              eval_cond1 env shift i))
-:
-  is_finite _ _ (fop_of_rounded_unop op ty e1) = true /\
-  B2R _ _ (fop_of_rounded_unop op ty e1) =
-  reval r env errors.
-Proof.
-  intros.
-  rewrite V_ in * |- *.
-  clear r V_.
-  repeat rewrite B2R_correct in *.
-  destruct op;
-    cbn -[Zminus] in * |- * ;
-    rewrite V1 in * |- *.
-    (* sqrt *)
-    generalize (Bsqrt_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (sqrt_nan _) mode_NE e1).
-    destruct 1 as (? & ? & _).
-    split; auto.
-    specialize (COND _ (or_introl _ (refl_equal _))).
-    simpl in COND.
-    specialize (COND _ Herr).
-    rewrite V1 in COND.
-    clear r1 V1.
-    destruct e1; auto.
-    destruct s; auto.
-    exfalso.
-    revert COND.
-    clear.
-    simpl.
-    clear e0.
-    unfold Defs.F2R.
-    simpl.
-    assert (0 < INR (Pos.to_nat m) * Raux.bpow Zaux.radix2 e).
-    {
-      apply Rmult_lt_0_compat.
-      {
-        apply pos_INR_nat_of_P.
-      }
-      apply Raux.bpow_gt_0.
-    }
-   rewrite INR_IZR_INZ in H.
-   intro.
-   replace (IZR (Z.neg m)) with (- IZR (Z.of_nat (Pos.to_nat m))) in COND.
-   lra.
-   rewrite <- opp_IZR.
-   f_equal.
-   rewrite <- Pos2Z.opp_pos.
-   f_equal.
-   apply positive_nat_Z.
 Qed.
 
 Lemma FLT_format_mult_beta_n_aux beta emin prec n
@@ -2999,19 +2924,15 @@ try (cbv [fop_of_rounded_unop]);
 try (cbv [Bsqrt Binary.Bsqrt build_nan]);
 try reflexivity
 ).
++ destruct (B2 ty (- Z.pos pow)) .
+all: try (
+ (cbv [ BMULT BINOP Bmult build_nan]);
+ reflexivity).
 + destruct (B2 ty (Z.of_N pow)).
 all: try (
  (cbv [ BMULT BINOP Bmult build_nan]);
  reflexivity).
-+ destruct (B2 ty (- Z.pos pow)) .
-all: try (
- (cbv [ BMULT BINOP Bmult build_nan]);
- reflexivity).
 + apply cast_preserves_bf_equiv; auto.
-+ destruct (B2 ty (- Z.pos pow)) .
-all: try (
- (cbv [ BMULT BINOP Bmult build_nan]);
- reflexivity).
 Qed.
 
 Lemma Bmult_correct_comm:
@@ -3095,7 +3016,7 @@ Ltac spec H := match type of H with ?A -> _ =>
   let H1 := fresh in assert (H1:A); [ | specialize (H H1); clear H1]
 end.
 
-Lemma uInvShift_finite_aux:
+Lemma InvShift_finite_aux:
  forall (pow : positive) (ty : type) (x : ftype ty),
    is_finite (fprec ty) (femax ty) x = true ->
   Rabs (round radix2 (FLT_exp (3 - femax ty - fprec ty) (fprec ty)) (round_mode mode_NE)
@@ -3151,7 +3072,7 @@ apply Rmult_le_compat_l; try lra.
 apply Rle_Rinv in H2; lra.
 Qed.
 
-Lemma uInvShift_accuracy_aux:
+Lemma InvShift_accuracy_aux:
   forall ty x pow, 
     is_finite (fprec ty) (femax ty) x = true ->
   Rabs (round radix2 (FLT_exp (3 - femax ty - fprec ty) (fprec ty)) (round_mode mode_NE)
@@ -3232,14 +3153,15 @@ apply Rle_lt_trans with (round  radix2 (FLT_exp emin (fprec ty)) ZnearestE (bpow
  pose proof (bpow_gt_0 radix2 (emin + fprec ty - 1) ). lra.
 Qed.
 
-Lemma uInvShift_accuracy: 
+Lemma InvShift_accuracy: 
  forall (pow : positive) (ltr : bool) (ty : type) (x : ftype ty) 
   (F1 : is_finite (fprec ty) (femax ty) x = true),
- Rabs (B2R (fprec ty) (femax ty) (fop_of_unop (uInvShift pow ltr) ty x) -
+ Rabs (B2R (fprec ty) (femax ty) (fop_of_rounded_unop (InvShift pow ltr) ty x) -
       F2R radix2 (B2F (B2 ty (Z.neg pow))) * B2R (fprec ty) (femax ty) x) <=
    bpow radix2 (3 - femax ty - fprec ty).
 Proof.
 intros.
+unfold fop_of_unop.
 assert (is_finite (fprec ty) (femax ty) (B2 ty (Z.neg pow)) = true). {
   apply B2_finite.
   pose proof (fprec_lt_femax ty).
@@ -3247,7 +3169,7 @@ assert (is_finite (fprec ty) (femax ty) (B2 ty (Z.neg pow)) = true). {
   red in H0.
   lia.
 } 
-simpl fop_of_unop.
+simpl fop_of_rounded_unop.
 destruct ltr.
 -
    destruct  (Z_lt_le_dec ((Z.neg pow) + 1) (3 - femax ty)).
@@ -3267,10 +3189,10 @@ destruct ltr.
     match type of H2 with if ?A then _ else _ => assert (H4: A=true) end;
     [ clear H2 | rewrite H4 in H2; clear H4]. 
   * apply Rlt_bool_true.
-   apply  uInvShift_finite_aux; auto.
+   apply  InvShift_finite_aux; auto.
   * destruct H2 as [H2 _].
     rewrite H2. clear H2.
-    apply uInvShift_accuracy_aux; auto.
+    apply InvShift_accuracy_aux; auto.
 - 
    destruct  (Z_lt_le_dec ((Z.neg pow) + 1) (3 - femax ty)).
   + rewrite (B2_zero ty (Z.neg pow)) in * by auto.
@@ -3289,17 +3211,16 @@ destruct ltr.
     match type of H2 with if ?A then _ else _ => assert (H4: A=true) end;
     [ clear H2 | rewrite H4 in H2; clear H4]. 
   * apply Rlt_bool_true.
-   apply  uInvShift_finite_aux; auto.
+   apply  InvShift_finite_aux; auto.
   * destruct H2 as [H2 _].
     rewrite H2. clear H2.
-    apply uInvShift_accuracy_aux; auto.
+    apply InvShift_accuracy_aux; auto.
 Qed.
 
-Lemma uInvShift_finite: 
+Lemma InvShift_finite: 
  forall (pow : positive) (ltr : bool) (ty : type) (x : ftype ty) 
   (F1 : is_finite (fprec ty) (femax ty) x = true),
- is_finite (fprec (type_of_unop (uInvShift pow ltr) ty)) (femax (type_of_unop (uInvShift pow ltr) ty))
-  (fop_of_unop (uInvShift pow ltr) ty x) = true.
+ is_finite (fprec ty) (femax ty) (fop_of_rounded_unop (InvShift pow ltr) ty x) = true.
 Proof.
 intros.
 simpl.
@@ -3321,7 +3242,7 @@ destruct ltr; destruct  (Z_lt_le_dec ((Z.neg pow) + 1) (3 - femax ty));
     match type of H2 with if ?A then _ else _ => assert (H4: A=true) end;
     [ clear H2 | rewrite H4 in H2; apply H2].
      apply Rlt_bool_true.
-   apply  uInvShift_finite_aux; auto.
+   apply  InvShift_finite_aux; auto.
 - rewrite (B2_zero _ _ l); unfold Bmult. destruct x; auto.
 - 
     pose proof (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 ty (Z.neg pow)) x).
@@ -3333,7 +3254,76 @@ destruct ltr; destruct  (Z_lt_le_dec ((Z.neg pow) + 1) (3 - femax ty));
     match type of H2 with if ?A then _ else _ => assert (H4: A=true) end;
     [ clear H2 | rewrite H4 in H2; apply H2].
      apply Rlt_bool_true.
-   apply  uInvShift_finite_aux; auto.
+   apply  InvShift_finite_aux; auto.
+Qed.
+
+Theorem fop_of_rounded_unop_correct shift errors
+        (Herr: forall (i : nat) (ty' : type) (k : rounding_knowledge'),
+                 mget shift i = (ty', k) ->
+                 Rabs (errors i) <= error_bound ty' k)
+        ty e1
+        (F1: is_finite _ _ e1 = true)
+        env r1
+        (V1: reval r1 env errors =
+             B2R _ _ e1)
+        r
+        (V_: reval r env errors =
+            Generic_fmt.round Zaux.radix2
+                                    (FLT.FLT_exp
+                                       (3 - femax ty - fprec ty)
+                                       (fprec ty)
+                                    )
+                                    (Generic_fmt.Znearest (fun x : Z => negb (Z.even x)))
+                                    (reval (Runop_of_rounded_unop ty SQRT r1) env errors))
+        (COND:
+           (forall i,
+              In i ((r1, false) :: nil) ->
+              eval_cond1 env shift i))
+:
+  is_finite _ _ (fop_of_rounded_unop SQRT ty e1) = true /\
+  B2R _ _ (fop_of_rounded_unop SQRT ty e1) =
+  reval r env errors.
+Proof.
+  intros.
+  rewrite V_ in * |- *.
+  clear r V_.
+  repeat rewrite B2R_correct in *.
+    cbn -[Zminus] in * |- * ;
+    rewrite V1 in * |- *.
+    generalize (Bsqrt_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (sqrt_nan _) mode_NE e1).
+    destruct 1 as (? & ? & _).
+    split; auto.
+    specialize (COND _ (or_introl _ (refl_equal _))).
+    simpl in COND.
+    specialize (COND _ Herr).
+    rewrite V1 in COND.
+    clear r1 V1.
+    destruct e1; auto.
+    destruct s; auto.
+    exfalso.
+    revert COND.
+    clear.
+    simpl.
+    clear e0.
+    unfold Defs.F2R.
+    simpl.
+    assert (0 < INR (Pos.to_nat m) * Raux.bpow Zaux.radix2 e).
+    {
+      apply Rmult_lt_0_compat.
+      {
+        apply pos_INR_nat_of_P.
+      }
+      apply Raux.bpow_gt_0.
+    }
+   rewrite INR_IZR_INZ in H.
+   intro.
+   replace (IZR (Z.neg m)) with (- IZR (Z.of_nat (Pos.to_nat m))) in COND.
+   lra.
+   rewrite <- opp_IZR.
+   f_equal.
+   rewrite <- Pos2Z.opp_pos.
+   f_equal.
+   apply positive_nat_Z.
 Qed.
 
 Lemma rndval_with_cond_correct_uInvShift:
@@ -3352,23 +3342,21 @@ forall (env : forall x : type, V -> binary_float (fprec x) (femax x))
  (shift : MSHIFT) (r : rexpr) (si2 : nat) (s : MSHIFT) (si1 : nat) (p1 : list cond) 
  (EQ1 : rndval_with_cond si shift e = (r1, (si1, s1), p1))
  (p_ : list (rexpr * bool))
-  (EQ : rnd_of_unop_with_cond si1 s1 (type_of_expr e) (uInvShift pow ltr) r1 =
+  (EQ : rnd_of_unop_with_cond si1 s1 (type_of_expr e) (Rounded1 (InvShift pow ltr) None) r1 =
      (r, (si2, s), p_))
  (H1 : forall i : cond, In i (p_ ++ p1) -> eval_cond1 env s i) 
  (H2 : forall (i : nat) (ty : type) (k : rounding_knowledge'),
      mget shift i = (ty, k) -> Rabs (errors1 i) <= error_bound ty k)
- (K_ : rnd_of_unop si1 s1 (type_of_expr e) (uInvShift pow ltr) r1 = (r, (si2, s))),
+ (K_ : rnd_of_unop si1 s1 (type_of_expr e) (Rounded1 (InvShift pow ltr) None) r1 = (r, (si2, s))),
 exists errors2 : nat -> R,
   (forall i : nat, (i < si)%nat -> errors2 i = errors1 i) /\
   (forall (i : nat) (ty' : type) (k : rounding_knowledge'),
    mget s i = (ty', k) -> Rabs (errors2 i) <= error_bound ty' k) /\
-  is_finite (fprec (type_of_unop (uInvShift pow ltr) (type_of_expr e)))
-    (femax (type_of_unop (uInvShift pow ltr) (type_of_expr e)))
-    (fop_of_unop (uInvShift pow ltr) (type_of_expr e) (fval env e)) = true /\
+  is_finite (fprec (type_of_expr e)) (femax (type_of_expr e))
+    (fop_of_unop (Rounded1 (InvShift pow ltr) None) (type_of_expr e) (fval env e)) = true /\
   reval r env errors2 =
-  B2R (fprec (type_of_unop (uInvShift pow ltr) (type_of_expr e)))
-    (femax (type_of_unop (uInvShift pow ltr) (type_of_expr e)))
-    (fop_of_unop (uInvShift pow ltr) (type_of_expr e) (fval env e)).
+  B2R (fprec (type_of_expr e)) (femax (type_of_expr e))
+    (fop_of_unop (Rounded1 (InvShift pow ltr) None) (type_of_expr e) (fval env e)).
 Proof.
 intros.
 assert (K1 := rndval_with_cond_left e si shift); rewrite EQ1 in K1; simpl in K1; symmetry in K1.
@@ -3377,7 +3365,7 @@ set (op := RBinop Tree.Mul _) in *.
 set (s := mset s1 si1 (type_of_expr e, Denormal')) in *.
 pose (eps :=
   B2R (fprec (type_of_expr e)) (femax (type_of_expr e))
-    (fop_of_unop (uInvShift pow ltr) (type_of_expr e) (fval env e)) -
+    (fop_of_unop (Rounded1 (InvShift pow ltr) None) (type_of_expr e) (fval env e)) -
   F2R radix2 (B2F (B2 (type_of_expr e) (Z.neg pow))) * reval r1 env errors1_1).
 pose (errors2 i := if Nat.eq_dec i si1  then eps else errors1_1 i).
 exists errors2.
@@ -3401,7 +3389,7 @@ destruct (Nat.eq_dec i si1). inversion H; clear H; subst.
  rewrite <- Rmult_assoc.
  change (bpow radix2 1) with 2.
  rewrite Rinv_l, Rmult_1_l by lra.
- apply uInvShift_accuracy; auto.
+ apply InvShift_accuracy; auto.
  +
   clear eps.
   destruct (le_lt_dec si i).
@@ -3410,7 +3398,7 @@ destruct (Nat.eq_dec i si1). inversion H; clear H; subst.
  *  rewrite E1 by auto. apply H2.
    rewrite <- H.
    symmetry; eapply rndval_shift_unchanged; eauto.
-- apply uInvShift_finite; auto.
+- apply InvShift_finite; auto.
 -
  subst op. unfold reval; fold reval.
  replace (reval r1 env errors2) with (reval r1 env errors1_1).
@@ -3907,12 +3895,13 @@ Proof.
   destruct u.
  + (* rounded unary operator *)
     simpl.
+  destruct op.
+  * (* SQRT *)
     simpl in EQ.
     unfold Datatypes.id in *.
     destruct (
         make_rounding si1 s1 (round_knowl_denote knowl)
-                      (type_of_expr e)
-                      (RUnop (Runop_of_rounded_unop op) r1)
+                      (type_of_expr e) (RUnop Tree.Sqrt r1)
       ) eqn:ROUND.
     inversion EQ; clear EQ; subst.
 
@@ -3924,7 +3913,7 @@ Proof.
       eapply rndval_shift_le; eauto.
     }
     assert (L': rounding_cond (type_of_expr e) (round_knowl_denote knowl)
-      (reval (RUnop (Runop_of_rounded_unop op) r1) env errors1_1)).
+      (reval (RUnop Tree.Sqrt r1)env errors1_1)).
     {
       eapply rounding_cond_ast_correct; [ eassumption | ].
       intros.
@@ -3941,7 +3930,6 @@ Proof.
       eapply H1.
       apply in_or_app.
       left.
-      apply in_or_app.
       right.
       assumption.
     }
@@ -3960,9 +3948,9 @@ Proof.
     rewrite <- W1 in V1.
 
     assert (
-        reval (RUnop (Runop_of_rounded_unop op) r1) env errors1_1
+        reval (RUnop Tree.Sqrt r1) env errors1_1
         =
-        reval (RUnop (Runop_of_rounded_unop op) r1) env errors2
+        reval (RUnop Tree.Sqrt r1) env errors2
       ) as W.
     {
       simpl.
@@ -3971,17 +3959,15 @@ Proof.
     rewrite W in * |- *. clear W.
 
    assert (L : forall i : rexpr * bool,
-     In i (if is_sqrt op then (r1, false) :: nil else nil) ->
+     In i ((r1, false) :: nil) ->
      eval_cond1 env s i).
     {
       intros.
       apply H1.
       apply in_or_app.
-      left.
-      apply in_or_app.
-      auto.
+      left.   destruct H3. left; auto. destruct H3.
     }
-    assert (K := fop_of_rounded_unop_correct _ _ _ EB 
+    assert (K := fop_of_rounded_unop_correct _ _ EB 
                                              _ _ F1
                                              _ _ V1
                                              _ R L).
@@ -3998,6 +3984,65 @@ Proof.
       eapply rndval_shift_incr; eauto.
     }
     eauto.
+  * (* InvShift *)
+   destruct knowl as [ [ | ] | ].
+  -- (* Normal *)
+    simpl.
+    cbn -[Zminus] in EQ.
+    unfold Datatypes.id in *.
+    Opaque Zminus.
+    inversion EQ; clear EQ; subst.
+    Transparent Zminus.
+
+    exists errors1_1.
+    split; auto.
+    split; auto.
+    cbn -[Zminus] in * |- *.
+    rewrite F2R_eq.
+    rewrite <- B2F_F2R_B2R.
+    rewrite Z.leb_le in H.
+    apply center_Z_correct in H.
+    assert (B2_FIN := B2_finite (type_of_expr e) (Z.neg pow) (proj2 H)).
+    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.neg pow)) (fval env e)).
+    generalize (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.neg pow)) (fval env e)).
+    rewrite Rmult_comm.
+    generalize (B2_correct _ (Z.neg pow) H).
+    repeat rewrite B2R_correct.
+    intro K.
+    rewrite K.
+    replace (Z.neg pow) with (- Z.pos pow)%Z in * |- * by reflexivity.   
+    rewrite Raux.bpow_opp.
+    rewrite FLT_format_div_beta_1; try typeclasses eauto.
+    {
+      unfold Rdiv.
+      rewrite <- Raux.bpow_opp.
+      rewrite F1.
+      rewrite B2_FIN.
+      simpl andb.
+      rewrite Raux.Rlt_bool_true.
+      {
+        unfold BMULT, BINOP.
+        destruct 1 as (LC & ? & ?).
+        destruct 1 as (L & ? & ?).
+        destruct ltr; split; auto; rewrite V1.
+        {
+          rewrite LC.
+          ring.
+        }
+        rewrite L.
+        ring.
+      }
+      rewrite Raux.bpow_opp.
+      apply Bdiv_beta_no_overflow.
+      assumption.
+    }
+    specialize (H1 _ (or_introl _ (refl_equal _))).
+    specialize (H1 _ EB1).
+    cbn -[Zminus] in H1.
+    rewrite <- V1.
+    lra.
+  -- eapply rndval_with_cond_correct_uInvShift; eassumption.
+  -- eapply rndval_with_cond_correct_uInvShift; eassumption.
 
  + (* exact unary operator *)
 
@@ -4072,52 +4117,6 @@ Proof.
       rewrite K in H1.
       rewrite Rmult_comm.
       lra.
-
-  * (* invshift *)
-    cbn -[Zminus] in * |- *.
-    rewrite F2R_eq.
-    rewrite <- B2F_F2R_B2R.
-    rewrite Z.leb_le in H.
-    apply center_Z_correct in H.
-    assert (B2_FIN := B2_finite (type_of_expr e) (Z.neg pow) (proj2 H)).
-    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.neg pow)) (fval env e)).
-    generalize (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.neg pow)) (fval env e)).
-    rewrite Rmult_comm.
-    generalize (B2_correct _ (Z.neg pow) H).
-    repeat rewrite B2R_correct.
-    intro K.
-    rewrite K.
-    replace (Z.neg pow) with (- Z.pos pow)%Z in * |- * by reflexivity.   
-    rewrite Raux.bpow_opp.
-    rewrite FLT_format_div_beta_1; try typeclasses eauto.
-    {
-      unfold Rdiv.
-      rewrite <- Raux.bpow_opp.
-      rewrite F1.
-      rewrite B2_FIN.
-      simpl andb.
-      rewrite Raux.Rlt_bool_true.
-      {
-        unfold BMULT, BINOP.
-        destruct 1 as (LC & ? & ?).
-        destruct 1 as (L & ? & ?).
-        destruct ltr; split; auto; rewrite V1.
-        {
-          rewrite LC.
-          ring.
-        }
-        rewrite L.
-        ring.
-      }
-      rewrite Raux.bpow_opp.
-      apply Bdiv_beta_no_overflow.
-      assumption.
-    }
-    specialize (H1 _ (or_introl _ (refl_equal _))).
-    specialize (H1 _ EB1).
-    cbn -[Zminus] in H1.
-    rewrite <- V1.
-    lra.
 
  + (* cast *)
   simpl.
@@ -4203,8 +4202,6 @@ Proof.
   specialize (H1 _ EB).
   simpl in H1.
   lra.
- + (* uInvShift *)
- eapply rndval_with_cond_correct_uInvShift; eassumption.
 Qed.
 
 End WITHMAP.
