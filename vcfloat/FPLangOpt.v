@@ -52,6 +52,7 @@ VCFloat: helpers for correct optimization of rounding error terms in
 the real-number semantics of floating-point computations.
 **)
 
+Require Export vcfloat.Float_lemmas.
 Require Export vcfloat.FPLang.
 Import RAux.
 Import compcert.lib.IEEE754_extra.
