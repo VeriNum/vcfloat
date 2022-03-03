@@ -141,12 +141,14 @@ specialize (H i).
  destruct (type_eq_dec _ _); simpl in *; auto.
 Qed.
 
+Definition empty_shiftmap := mempty (Tsingle, Normal').
+
 Lemma calculate_rndval:
   forall (bmap: boundsmap) (vmap: valmap) (e: @expr AST.ident),
       expr_valid e = true ->
       boundsmap_denote bmap vmap ->
   forall r si2 s p,
-   rndval_with_cond 0 (mempty  (Tsingle, Normal')) e = (r,(si2,s),p) ->
+   rndval_with_cond 0 empty_shiftmap e = (r,(si2,s),p) ->
    list_forall (eval_cond2 (mk_env bmap vmap) s) p ->
    rndval_with_cond_result  (env_ vmap) e r si2 s.
 Proof.
@@ -357,8 +359,8 @@ Defined.
 
 Ltac rndval_inversion :=
   match goal with 
-    H0: (rndval_with_cond 0 (mempty (Tsingle, Normal')) ?ex = (?r, (?si, ?s), ?p)) |- _ =>
-      let m := fresh "m" in set (m:=rndval_with_cond 0 (mempty (Tsingle, Normal')) ex) in H0; 
+    H0: (rndval_with_cond 0 empty_shiftmap ?ex = (?r, (?si, ?s), ?p)) |- _ =>
+      let m := fresh "m" in set (m:=rndval_with_cond 0 empty_shiftmap ex) in H0; 
       let H:= fresh  in 
       let H1:= fresh  in 
       let H2:= fresh  in 
