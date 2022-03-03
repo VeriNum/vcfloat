@@ -9,9 +9,9 @@ Require Import compcert.lib.Floats.
 Import Binary.
 Import FPSolve.
 
-Definition shiftmap := Maps.PMap.t (type * rounding_knowledge).
+Definition shiftmap := Maps.PMap.t (type * rounding_knowledge').
 
-Instance shifts_MAP: Map nat (type * rounding_knowledge) shiftmap.
+Instance shifts_MAP: Map nat (type * rounding_knowledge') shiftmap.
 apply compcert_map. apply map_nat.
 Defined.
 
@@ -292,7 +292,7 @@ match goal with
  |- forall vmap: valmap,
      boundsmap_denote ?bmap vmap ->
   exists
-  (r : rexpr) (si2 : nat) (s : Maps.PMap.t (type * rounding_knowledge)),
+  (r : rexpr) (si2 : nat) (s : Maps.PMap.t (type * rounding_knowledge')),
   rndval_with_cond_result (env_ vmap) ?e r si2 s
  =>
 let H := fresh in intros ?vmap H;
@@ -357,8 +357,8 @@ Defined.
 
 Ltac rndval_inversion :=
   match goal with 
-    H0: (rndval_with_cond 0 (mempty (Tsingle, Normal)) ?ex = (?r, (?si, ?s), ?p)) |- _ =>
-      let m := fresh "m" in set (m:=rndval_with_cond 0 (mempty (Tsingle, Normal)) ex) in H0; 
+    H0: (rndval_with_cond 0 (mempty (Tsingle, Normal')) ?ex = (?r, (?si, ?s), ?p)) |- _ =>
+      let m := fresh "m" in set (m:=rndval_with_cond 0 (mempty (Tsingle, Normal')) ex) in H0; 
       let H:= fresh  in 
       let H1:= fresh  in 
       let H2:= fresh  in 
