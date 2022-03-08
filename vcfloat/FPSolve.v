@@ -54,7 +54,7 @@ and their correctness proofs.
 **)
 
 Require Import Lia.
-From vcfloat Require Export FPLang FPLangOpt.
+From vcfloat Require Export FPLang Rounding FPLangOpt.
 Require compcert.common.AST compcert.common.Values.
 Require Import compcert.lib.Floats.
 Import Binary.

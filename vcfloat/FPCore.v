@@ -672,8 +672,9 @@ Proof.
   typeclasses eauto.
 Qed.
 
-Definition BINOP (op: ltac:( let t := type of Bplus in exact t ) ) op_nan
-           ty := op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (op_nan ty) mode_NE.
+Definition BINOP (op: ltac:( let t := type of Bplus in exact t ) ) op_nan ty 
+    : ftype ty -> ftype ty -> ftype ty 
+    := op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (op_nan ty) mode_NE.
 
 Definition BPLUS := BINOP Bplus plus_nan.
 Definition BMINUS := BINOP Bminus plus_nan. (* NOTE: must be same as the one used for plus *)
