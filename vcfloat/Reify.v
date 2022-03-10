@@ -163,45 +163,6 @@ Ltac unfold_float_ops_for_equality :=
         let b' := unfold_corresponding constr:(a=b) in change (a=b')
   end.
 
-Module TEST.
-Import ListNotations.
-
-
-Local Open Scope float32_scope.
-
-Section WITHNANS.
-Context {NANS: Nans}.
-
-
-Definition h := 1 / 32.
-
-Definition _x : ident := 1%positive.
-Definition _v : ident := 2%positive.
-
-Definition leapfrog_env (x v : ftype Tsingle) : forall ty, ident -> ftype ty.
-intros t i.
-destruct (type_eq_dec t Tsingle).
-subst.
-exact (match i with 1%positive => x | 2%positive => v | _ => 0%F32 end).
-apply (B754_zero _ _ false).
-Defined.
-
-Definition F (x : ftype Tsingle ) : ftype Tsingle := (-x)%F32.
-
-Definition leapfrog_step ( ic : ftype Tsingle * ftype Tsingle) : ftype Tsingle * ftype Tsingle :=
-  let x  := fst ic in let v:= snd ic in 
-  let x' := (x + h * v) + ((1/2) * (h * h)) * F x in
-  let v' :=  v +  (1/2 * h) * (F x + F x') in 
-  (x', v').
-
-Definition leapfrog_stepx x v := fst (leapfrog_step (x,v)).
-Definition leapfrog_stepv x v := snd (leapfrog_step (x,v)).
-
-Definition x' := ltac:(let e' := 
-  HO_reify_float_expr constr:([_x; _v]) leapfrog_stepx in exact e').
-Definition v' := ltac:(let e' := 
-  HO_reify_float_expr constr:([_x; _v]) leapfrog_stepv in exact e').
-
 Ltac unfold_reflect :=
  match goal with |- context [fval ?A ?B] =>
    pattern (fval A B);
@@ -219,31 +180,4 @@ Ltac unfold_reflect :=
    subst X; cbv beta
   end
  end.
-
-Lemma reflect_reify_x : forall x v, fval (leapfrog_env x v) x' = leapfrog_stepx x v.
-Proof.
-intros.
-unfold x'.
-unfold leapfrog_stepx, leapfrog_step, F,  fst, snd.
-assert (H:bool) by apply true; destruct H.  (* artificial way to get two subgoals *)
--
-  Time reflexivity.  (* 0.01 sec *)
--
-   (* Demonstration that unfold_reflect doesn't make things any faster (or much slower). *)
-   Time unfold_reflect. (* 0.02 secs *)
-   Time reflexivity. (* 0.006 sec *)
-   (* Therefore, use unfold_reflect if you wish to, for clarity, not for performance *)
-Qed.
-
-Lemma reflect_reify_v : forall x v, fval (leapfrog_env x v) v' = leapfrog_stepv x v.
-Proof.
-intros.
-unfold v'.
-(* without this line, things are much 
-slower: *) unfold leapfrog_stepv, leapfrog_step, F,  fst, snd.
-Time reflexivity.
-Qed.
-
-End WITHNANS.
-End TEST.
 

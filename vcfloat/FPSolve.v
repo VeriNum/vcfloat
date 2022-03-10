@@ -394,7 +394,7 @@ Lemma rndval_with_cond_correct_1:
          (r : rexpr) (si2 : nat)
          (s : Maps.PMap.t (type * rounding_knowledge')) 
          (p : list cond),
-       rndval_with_cond si shift e = (r, (si2, s), p) ->
+       rndval_with_cond' si shift e = (r, (si2, s), p) ->
        (forall i : cond, List.In i p -> eval_cond1 env s i) ->
        forall errors1 : nat -> R,
        (forall (i : nat) (ty : type) (k : rounding_knowledge'),
@@ -412,7 +412,7 @@ Lemma rndval_with_cond_correct_1:
 Proof.
   intros.
   subst.
-  eapply rndval_with_cond_correct; eauto.
+  eapply rndval_with_cond_correct'; eauto.
 Qed.
 
 Fixpoint enum_exists' {T: Type} t (P: nat -> T -> Prop) (Q: _ -> Prop) (m n: nat) {struct n}: Prop :=
@@ -593,7 +593,7 @@ Lemma rndval_with_cond_correct:
          (r : rexpr) (si2 : nat)
          (s : Maps.PMap.t (type * rounding_knowledge')) 
          (p : list cond),
-       rndval_with_cond O (mempty (Tsingle, Normal'))  e = (r, (si2, s), p) ->
+       rndval_with_cond' O (mempty (Tsingle, Normal'))  e = (r, (si2, s), p) ->
        list_forall (eval_cond2 env s) p ->
        rndval_with_cond_result env e r si2 s.
 Proof.
@@ -1281,7 +1281,7 @@ Definition annotated_float_expr {V: Type} nv z :=
    (fun z' r si shift t =>
       expr_valid z' = true /\
       FPLangOpt.erase z' = z /\
-      rndval_with_cond O (mempty (Tsingle, Normal')) z' = ((r, (si, shift)), t) /\
+      rndval_with_cond' O (mempty (Tsingle, Normal')) z' = ((r, (si, shift)), t) /\
       list_forall (eval_cond2 (V := V) nv shift) t)
 .
 

@@ -481,14 +481,8 @@ Definition to_inv_power_2 {prec emax} (x: Binary.binary_float prec emax) :=
   Pos.of_nat (blog (BigZ.of_Z 2) O q (Z.to_nat emax))
 .
 
-Fixpoint fshift (e: FPLang.expr) {struct e}: FPLang.expr :=
-  match e with
-    | Binop b e1 e2 =>
-      let e'1 := fshift e1 in
-      let e'2 := fshift e2 in
-      if binop_eqb b (Rounded2 MULT None)
-      then
-        let ty := type_lub (type_of_expr e'1) (type_of_expr e'2) in
+Definition fshift_mult (e'1 e'2: expr) :=
+   let ty := type_lub (type_of_expr e'1) (type_of_expr e'2) in
         match fcval_nonrec e'1 with
           | Some c1' =>
             let c1 := cast ty _ c1' in
@@ -499,7 +493,7 @@ Fixpoint fshift (e: FPLang.expr) {struct e}: FPLang.expr :=
               let n := to_inv_power_2 c1 in
               if binary_float_eqb c1 (B2 ty (- Z.pos n))
               then Unop (Rounded1 (InvShift n false) None) (Unop (CastTo ty None) e'2)
-              else Binop b e'1 e'2
+              else Binop (Rounded2 MULT None) e'1 e'2
           | None =>
             match fcval_nonrec e'2 with
               | Some c2' =>
@@ -511,12 +505,19 @@ Fixpoint fshift (e: FPLang.expr) {struct e}: FPLang.expr :=
                   let n := to_inv_power_2 c2 in
                   if binary_float_eqb c2 (B2 ty (- Z.pos n))
                   then Unop (Rounded1 (InvShift n true) None) (Unop (CastTo ty None) e'1)
-                  else Binop b e'1 e'2
-              | None => Binop b e'1 e'2
+                  else Binop (Rounded2 MULT None) e'1 e'2
+              | None => Binop (Rounded2 MULT None) e'1 e'2
             end                  
-        end
-      else
-        Binop b e'1 e'2
+        end.
+
+Fixpoint fshift (e: FPLang.expr) {struct e}: FPLang.expr :=
+  match e with
+    | Binop b e1 e2 =>
+      let e'1 := fshift e1 in
+      let e'2 := fshift e2 in
+      if binop_eqb b (Rounded2 MULT None)
+      then fshift_mult e'1 e'2
+      else Binop b e'1 e'2
     | Unop b e => Unop b (fshift e)
     | _ => e
   end.
@@ -524,7 +525,7 @@ Fixpoint fshift (e: FPLang.expr) {struct e}: FPLang.expr :=
 Lemma fshift_type e:
   type_of_expr (fshift e) = type_of_expr e.
 Proof.
-  induction e; simpl; auto.
+  induction e; simpl; auto; unfold fshift_mult.
   {
     destruct (binop_eqb b (Rounded2 MULT None)) eqn:EQ.
     {
@@ -588,7 +589,7 @@ Defined.
 Lemma fshift_correct' env e:
  binary_float_eqb (fval env (fshift e)) (fval env e) = true.
 Proof.
-  induction e; simpl.
+  induction e; simpl; unfold fshift_mult.
   {
     apply binary_float_eqb_eq. reflexivity.
   }
