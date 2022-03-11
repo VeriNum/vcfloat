@@ -53,6 +53,9 @@ Ltac find_type prec emax :=
 Definition Zconst (t: type) : Z -> ftype t :=
   BofZ (fprec t) (femax t) (Pos2Z.is_pos (fprecp t)) (fprec_lt_femax t).
 
+Definition Norm {T} (x: T) := x.
+Definition Denorm {T} (x: T) := x.
+
 Ltac reify_float_expr E :=
  match E with
  | placeholder32 ?i => constr:(@Var ident Tsingle i)
@@ -60,12 +63,28 @@ Ltac reify_float_expr E :=
  | Zconst ?t ?z => constr:(@Const ident t (Zconst t z))
  | BPLUS _ ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident (Rounded2 PLUS None) a' b')
+ | Norm (BPLUS _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+                                      constr:(@Binop ident (Rounded2 PLUS (Some Normal)) a' b')
+ | Denorm (BPLUS _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+                                      constr:(@Binop ident (Rounded2 PLUS (Some Denormal)) a' b')
  | BMINUS _ ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident (Rounded2 MINUS None) a' b')
+ | Norm (BMINUS _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+                                      constr:(@Binop ident (Rounded2 MINUS (Some Normal)) a' b')
+ | Denorm (BMINUS _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+                                      constr:(@Binop ident (Rounded2 MINUS (Some Denormal)) a' b')
  | BMULT _ ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident (Rounded2 MULT None) a' b')
+ | Norm (BMULT _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+                                      constr:(@Binop ident (Rounded2 MULT (Some Normal)) a' b')
+ | Denorm (BMULT _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+                                      constr:(@Binop ident (Rounded2 MULT (Some Denormal)) a' b')
  | BDIV _ ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident (Rounded2 DIV None) a' b')
+ | Norm (BDIV _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+                                      constr:(@Binop ident (Rounded2 DIV (Some Normal)) a' b')
+ | Denorm (BDIV _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+                                      constr:(@Binop ident (Rounded2 DIV (Some Denormal)) a' b')
  | BOPP _ ?a => let a' := reify_float_expr a in 
                                       constr:(@Unop ident (Exact1 Opp) a')
  | BABS _ ?a => let a' := reify_float_expr a in 

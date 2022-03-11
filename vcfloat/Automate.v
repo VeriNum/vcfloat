@@ -614,26 +614,55 @@ destruct (evenlog' p); simpl in *.
 lia.
 Qed.
 
+Definition cleanup_Fnum' f e := 
+ let (f1,e1) := evenlog f in
+ let e' := (e+e1)%Z
+  in match e' with 
+      | Zpos _ =>   IZR (f1 * Z.pow 2 e')%Z
+      | Z0 => IZR f1
+      | Zneg p => IZR f1 / IZR (Z.pow 2 (Zpos p))
+     end.
+
 Lemma cleanup_Fnum:
-  forall f e,
- F2R radix2 {| Defs.Fnum := f; Defs.Fexp := e |} =
-  (IZR (fst (evenlog f)) * powerRZ 2 (e+snd (evenlog f))%Z)%R.
+  forall f e, F2R radix2 {| Defs.Fnum := f; Defs.Fexp := e |} = cleanup_Fnum' f e.
 Proof.
 intros.
+unfold cleanup_Fnum'.
 pose proof (evenlog_e f).
 pose proof (evenlog_nonneg f).
 destruct (evenlog f) as [r n].
 simpl in *.
-subst.
-rewrite mult_IZR.
+subst f.
+destruct (e+n)%Z eqn:?H.
+- rewrite mult_IZR. 
+rewrite (IZR_Zpower radix2) by auto.
+rewrite Rmult_assoc.
+rewrite <- bpow_plus.
+rewrite Z.add_comm.
+rewrite H.
+apply Rmult_1_r.
+-
+rewrite <- H.
+rewrite !mult_IZR.
 rewrite Rmult_assoc.
 f_equal.
-rewrite powerRZ_add by lra.
-rewrite Rmult_comm.
+rewrite  (IZR_Zpower radix2) by auto.
+rewrite <- bpow_plus.
+rewrite  <- (IZR_Zpower radix2) by lia.
+rewrite Z.add_comm.
+reflexivity.
+-
+rewrite !mult_IZR.
+unfold Rdiv.
+rewrite Rmult_assoc.
 f_equal.
-apply bpow_powerRZ.
-rewrite (IZR_Zpower radix2) by auto.
-apply bpow_powerRZ.
+rewrite  !(IZR_Zpower radix2) by auto.
+rewrite <- bpow_plus.
+rewrite Z.add_comm.
+rewrite H.
+change (Z.neg p) with (Z.opp (Z.pos p)).
+rewrite bpow_opp.
+reflexivity.
 Qed.
 
 Definition roundoff_error_bound {NANS: Nans} (vm: valmap) (e: expr) (err: R):=
@@ -695,6 +724,7 @@ cbv beta iota zeta delta [
        let u := constr:(env_ a b c) in let v := eval hnf in u in change u with v in H3
    end;
 change (Build_radix _ _) with radix2 in H3;
+ (* Don't do this stuff, any rewrites in H3 make Qed blow up
 repeat 
 match type of H3 with
  context [ F2R radix2  {| Defs.Fnum := ?f; Defs.Fexp := ?e |} ] =>
@@ -704,6 +734,7 @@ match type of H3 with
       rewrite H in H3; clear H
 end;
 rewrite ?Rmult_1_l in H3;
+*)
 change (type_of_expr _) with Tsingle in *;
 change (type_of_expr _) with Tdouble in *;
 fold (@FT2R Tsingle) in *;
@@ -712,11 +743,11 @@ repeat (let E := fresh "E" in
             assert (E := Forall_inv H0); simpl in E;
           match type of E with
            |  Rle (Rabs ?a) (error_bound _ Normal') => 
-                let d := fresh "delta" in set (d := a) in *; clearbody d
+                let d := fresh "d" in set (d := a) in *; clearbody d
            |  Rle (Rabs ?a) (error_bound _ Denormal') => 
-                let d := fresh "eps" in set (d := a) in *; clearbody d
+                let d := fresh "e" in set (d := a) in *; clearbody d
            |  Rle (Rabs ?a) (error_bound _ Denormal2') => 
-                   let d := fresh "eps" in set (d := a) in *; clearbody d
+                   let d := fresh "e" in set (d := a) in *; clearbody d
            end;
            unfold error_bound in E;
            simpl bpow in E;
@@ -728,6 +759,36 @@ match type of H0 with Forall _ nil => clear H0 end;
 clear errors;
 fold e in H3;
 revert H3; intro.
+
+Ltac prove_IZR_neq :=
+ change R0 with 0%R; 
+ let H := fresh in intro H; apply eq_IZR in H; discriminate H.
+
+Lemma powerRZ_compute:
+ forall b i, powerRZ (IZR (Zpos b)) (Zpos i)  = IZR (Z.pos (Pos.pow b i)).
+Proof.
+intros.
+unfold powerRZ.
+rewrite pow_IZR.
+f_equal.
+rewrite Pos2Z.inj_pow.
+f_equal.
+apply positive_nat_Z.
+Qed.
+
+Ltac compute_powerRZ := 
+change (powerRZ ?b (Z.neg ?x)) with (powerRZ b (Z.opp (Z.pos x))) in *;
+rewrite <- power_RZ_inv in *
+  by (let H := fresh  in intro H; apply eq_IZR in H; discriminate H);
+rewrite powerRZ_compute in *;
+repeat match goal with
+ | |- context [Pos.pow ?a ?b] =>
+  let x := constr:(Pos.pow a b) in let y := eval compute in x in
+  change x with y in *
+ | H: context [Pos.pow ?a ?b] |- _ =>
+  let x := constr:(Pos.pow a b) in let y := eval compute in x in
+  change x with y in *
+end.
 
 Ltac prove_roundoff_bound2 :=
  match goal with P: prove_rndval _ _ _ |- prove_roundoff_bound _ _ _ _ =>
@@ -741,7 +802,6 @@ Ltac prove_roundoff_bound2 :=
  match goal with e := _ : ftype _ |- _ =>
      change (fval _ _) with e; clearbody e
  end;
-
  (* unfold rval *)
  match goal with |- context [rval ?env ?x] =>
    let a := constr:(rval env x) in let b := eval hnf in a in change a with b
@@ -754,14 +814,12 @@ Ltac prove_roundoff_bound2 :=
 
  (* incorporate the equation above the line *)
 match goal with H: _ = @FT2R _ _ |- _ => rewrite <- H; clear H end;
-
-  (* Perform all env lookups *)
+ (* Perform all env lookups *)
  repeat 
     match goal with
     | |- context [env_ ?a ?b ?c] =>
        let u := constr:(env_ a b c) in let v := eval hnf in u in change u with v
    end;
-
  (* Clean up all FT2R constants *)
  repeat match goal with
  | |- context [@FT2R ?t (b32_B754_finite ?s ?m ?e ?H)] =>
@@ -774,16 +832,13 @@ match goal with H: _ = @FT2R _ _ |- _ => rewrite <- H; clear H end;
   simpl in j; subst j
  end;
  rewrite <- !(F2R_eq radix2);
- repeat 
-  match goal  with
-   |- context [ F2R radix2  {| Defs.Fnum := ?f; Defs.Fexp := ?e |} ] =>
-     let H := fresh in assert (H := cleanup_Fnum f e);
-      simpl Z.add in H; simpl fst in H; 
-      change (powerRZ _ 0) with 1%R in H;
-      rewrite H; clear H
+ (* clean up all   F2R radix2 {| Defs.Fnum := _; Defs.Fexp := _ |}   *)
+ rewrite ?cleanup_Fnum;
+ repeat match goal with |- context [cleanup_Fnum' ?f ?e] =>
+  let x := constr:(cleanup_Fnum' f e) in
+  let y := eval cbv - [Rdiv IZR] in x in
+  change x with y
  end;
- rewrite ?Rmult_1_l;
-
  (* Abstract all FT2R variables *)
  repeat 
   match goal with |- context [@FT2R ?t ?e] =>
@@ -791,11 +846,10 @@ match goal with H: _ = @FT2R _ _ |- _ => rewrite <- H; clear H end;
      let e' := fresh e in
      set (e' := @FT2R Tsingle e) in *; clearbody e'; clear e; rename e' into e
   end;
-
- (* simplify using some powerRZ rewrites *)
- rewrite !neg_powerRZ by lra;
- rewrite <- !powerRZ_add by lra;
- simpl Z.add.
+ (* clean up all powerRZ expressions *)
+ compute_powerRZ;
+ (* field simplify *)
+ match goal with |- context [Rabs ?a <= _] => field_simplify a end.
 
 Ltac prove_roundoff_bound :=
  match goal with |- prove_roundoff_bound ?bm ?vm ?e _ =>

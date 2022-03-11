@@ -108,9 +108,9 @@ Qed.
   a "varinfo", which gives its (floating-point) and its lower and upper bound. *)
 
 (** First we make an association list.  This one says that 
-   -1.0 <= x <= 1.0   and   -1.0 <= v <= 1.0  *)
+   -2.0 <= x <= 2.0   and   -2.0 <= v <= 2.0  *)
 Definition leapfrog_bmap_list : list varinfo := 
-  [ Build_varinfo Tsingle _x (-1)  1 ;  Build_varinfo Tsingle _v (-1)  1 ].
+  [ Build_varinfo Tsingle _x (-2)  2 ;  Build_varinfo Tsingle _v (-2)  2 ].
 
 (** Then we calculate an efficient lookup table, the "boundsmap". *)
 Definition leapfrog_bmap : boundsmap :=
@@ -121,7 +121,7 @@ Definition leapfrog_bmap : boundsmap :=
 Lemma prove_roundoff_bound_x:
   forall x v : ftype Tsingle,
   prove_roundoff_bound leapfrog_bmap (leapfrog_vmap x v) x' 
-    (powerRZ 10 (-5)).
+    (/ 4066241).
 Proof.
 intros.
 prove_roundoff_bound.
@@ -151,20 +151,31 @@ prove_roundoff_bound.
     crunches that down to a proof obligation that should be solvable
     by the interval tactic *)
   prove_roundoff_bound2.
-   Fail interval.  (* But unfortunately "interval" doesn't solve it. *)
-Abort.
+  match goal with |- context [Rabs ?a <= _] =>
+    interval_intro (Rabs a) with (i_bisect x, i_bisect v, i_depth 15);
+    eapply Rle_trans; [apply H | clear]
+  end.
+  nra.
+Qed.
+
+Axiom admit : forall (P: Prop), P.
 
 Lemma prove_roundoff_bound_v:
   forall x v : ftype Tsingle,
   prove_roundoff_bound leapfrog_bmap (leapfrog_vmap x v) v' 
-    (powerRZ 10 (-5)).
+    (/ 7655753).
 Proof.
 intros.
 prove_roundoff_bound.
 - abstract (prove_rndval; interval).
-- prove_roundoff_bound2.
-   Fail interval.
-Abort.
+-
+  prove_roundoff_bound2.
+  match goal with |- context [Rabs ?a <= _] =>
+    interval_intro (Rabs a) with (i_bisect x, i_bisect v, i_depth 15);
+    eapply Rle_trans; [apply H | clear]
+  end.
+  nra.
+Qed.
 
 End WITHNANS.
 
