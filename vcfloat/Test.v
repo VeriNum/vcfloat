@@ -121,7 +121,7 @@ Definition leapfrog_bmap : boundsmap :=
 Lemma prove_roundoff_bound_x:
   forall x v : ftype Tsingle,
   prove_roundoff_bound leapfrog_bmap (leapfrog_vmap x v) x' 
-    (/ 4066241).
+    (/ 4068166).
 Proof.
 intros.
 prove_roundoff_bound.
@@ -151,30 +151,28 @@ prove_roundoff_bound.
     crunches that down to a proof obligation that should be solvable
     by the interval tactic *)
   prove_roundoff_bound2.
-  match goal with |- context [Rabs ?a <= _] =>
-    interval_intro (Rabs a) with (i_bisect x, i_bisect v, i_depth 15);
-    eapply Rle_trans; [apply H | clear]
-  end.
-  nra.
-Qed.
+ match goal with |- Rabs ?a <= _ => field_simplify a end. (* improves the bound *)
 
-Axiom admit : forall (P: Prop), P.
+ (* Right now, just "interval" would solve the goal.
+  but to see how we guess the bound to use, try this instead: *)
+  match goal with |- Rabs ?a <= _ => interval_intro (Rabs a) end.
+ eapply Rle_trans; [apply H | clear].
+ eapply roundoff_bound_hack; [lia|lia|lia|compute; reflexivity|].
+ lia.
+Qed.
 
 Lemma prove_roundoff_bound_v:
   forall x v : ftype Tsingle,
   prove_roundoff_bound leapfrog_bmap (leapfrog_vmap x v) v' 
-    (/ 7655753).
+    (/ 7662902).
 Proof.
 intros.
 prove_roundoff_bound.
 - abstract (prove_rndval; interval).
 -
   prove_roundoff_bound2.
-  match goal with |- context [Rabs ?a <= _] =>
-    interval_intro (Rabs a) with (i_bisect x, i_bisect v, i_depth 15);
-    eapply Rle_trans; [apply H | clear]
-  end.
-  nra.
+ match goal with |- Rabs ?a <= _ => field_simplify a end.
+ interval.
 Qed.
 
 End WITHNANS.

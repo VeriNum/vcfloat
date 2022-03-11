@@ -847,13 +847,42 @@ match goal with H: _ = @FT2R _ _ |- _ => rewrite <- H; clear H end;
      set (e' := @FT2R Tsingle e) in *; clearbody e'; clear e; rename e' into e
   end;
  (* clean up all powerRZ expressions *)
- compute_powerRZ;
- (* field simplify *)
+ compute_powerRZ.
+ (* Don't do field simplify , it can blow things up, and the interval tactic
+   doesn't actually need it.
  match goal with |- context [Rabs ?a <= _] => field_simplify a end.
+*)
 
 Ltac prove_roundoff_bound :=
  match goal with |- prove_roundoff_bound ?bm ?vm ?e _ =>
   assert (P: prove_rndval bm vm e)
  end.
+
+Lemma roundoff_bound_hack:
+  forall i j k, 
+    (0 < i)%Z -> (0 < j)%Z -> (0 < k)%Z ->
+    forall u,
+    (Z.div j i = u)%Z ->
+    (u >= k)%Z ->
+    (IZR i / IZR j <= / (IZR k))%R.
+Proof.
+intros.
+subst u. rename H3 into H2.
+pose proof (IZR_lt _ _ H).
+pose proof (IZR_lt _ _ H0).
+pose proof (IZR_lt _ _ H1).
+rewrite <- Rinv_Rdiv by lra.
+apply Rinv_le. lra.
+apply Rcomplements.Rle_div_r.
+lra.
+rewrite <- mult_IZR.
+apply IZR_le.
+pose proof (Zmod_eq j i ltac:(lia)).
+assert (j/i * i = j - j mod i)%Z by lia.
+apply Zmult_ge_compat_r with (p:=i) in H2; [ | lia].
+rewrite H7 in H2.
+pose proof (Z.mod_bound_pos j i ltac:(lia) ltac:(lia)).
+lia.
+Qed.
 
 
