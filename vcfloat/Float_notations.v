@@ -316,7 +316,7 @@ Definition format_float_num prec emax
        (Hprecmax: prec < emax)
    (goal: binary_float prec emax)
    (d: Decimal.int) (e: Z) : option Number.number :=
- let dec_precision := Z.to_nat (1 + prec * 100 / 332) in 
+ let dec_precision := Z.to_nat (2 + prec * 100 / 332) in 
  let e' := e + (len_int d-1) in
  let f := format_float_num' prec emax prec_gt_0 Hprecmax goal  in
  List.fold_left choose_least_ugly
@@ -556,6 +556,7 @@ Check 1e-20.
 Close Scope float32_scope.
 
 Open Scope float64_scope.
+Import List.
 
 Check 0.0.
 Check 0.
@@ -573,6 +574,7 @@ Check 1e100.
 Fail Check 1e1000.
 Check 1e20.
 Check 1e-20.
+Check 3.0104791538616437e-006.
 
 Close Scope float64_scope.
 
