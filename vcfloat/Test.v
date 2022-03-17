@@ -116,6 +116,56 @@ Definition leapfrog_bmap_list : list varinfo :=
 Definition leapfrog_bmap : boundsmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list leapfrog_bmap_list) in exact z).
 
+(*
+Definition float_equiv {prec emax} (x1 x2: binary_float prec emax) :=
+ match x1, x2 with
+ | B754_zero _ _ s1, B754_zero _ _ s2 => s1=s2
+ | B754_finite _ _ s1 m1 e1 _, B754_finite _ _ s2 m2 e2 _ => (s1,m1,e1)=(s2,m2,e2)
+ | B754_infinity _ _ s1, B754_infinity _ _ s2 => s1=s2
+ | B754_nan _ _ s1 p1 _, B754_nan _ _ s2 p2 _ => (s1,p1)=(s2,p2)
+ | _, _ => False
+ end.
+
+
+Lemma float_ext: forall  {prec emax} (x1 x2: binary_float prec emax),
+  float_equiv x1 x2 -> x1=x2.
+Proof.
+intros.
+destruct x1,x2; inversion H; clear H; subst; f_equal; 
+  apply Classical_Prop.proof_irrelevance.
+Qed.
+
+Ltac float_prune f := 
+ lazymatch f with
+ | B754_zero ?prec ?emax ?s => constr:(f)
+ | B754_finite ?prec ?emax ?s ?m ?e _ => constr:(B754_finite prec emax s m e (eq_refl true))
+ | B754_infinity ?prec ?emax ?s => constr:(f)
+ | B754_nan ?prec ?emax ?s ?p _ => constr:(B754_nan prec emax s p (eq_refl true))
+ end.
+*)
+
+Goal (*fshift_div*) (fcval x') <> Const Tsingle 0%F32.
+
+cbv beta iota zeta delta - [Bmult Bplus Bminus Bdiv 
+                                       plus_nan mult_nan div_nan abs_nan opp_nan sqrt_nan];
+ fold Tsingle; fold Tdouble.
+(* Time compute_binary_floats.
+
+fold b32_B754_finite; fold b64_B754_finite; fold b32_B754_zero; fold b64_B754_zero.
+*)
+Abort.
+(*
+
+  binary_float_equiv_loose 
+  (@fval ident NANS env (@fshift_div ident NANS (@fshift ident NANS (@fcval ident NANS e))))
+  (@fval ident NANS env e).
+
+eapply binary_float_equiv_trans.
+apply fshift_div_fshift_fcval_correct.
+apply binary_float_equiv_sym.
+apply binary_float_equiv_loose_rect.
+apply binary_float_equiv_loose_refl.
+*)
 (** Now we prove that the leapfrogx expression (deep-embedded as  x' )
    has a roundoff error less than 1.0e-5 *)
 Lemma prove_roundoff_bound_x:
@@ -131,7 +181,7 @@ prove_roundoff_bound.
   x' evaluates equivalent to a perturbed expression.
   Goal 2 shows that the perturbed expression evaluates "close to"
   the exact real-number interpretation of expression x'.  *)
--
+- 
   (* Solve Goal 1 by the prove_rndval tactic, which generates
     a list of interval subgoals, and hope to prove each one of those
      by the "interval" tactic *)

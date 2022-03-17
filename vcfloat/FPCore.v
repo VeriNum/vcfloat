@@ -356,8 +356,8 @@ Proof.
        apply Z.eqb_eq. auto.
 Qed.
 
-Definition binary_float_equiv {prec1 emax1 prec2 emax2} 
-(b1: binary_float prec1 emax1) (b2: binary_float prec2 emax2): Prop :=
+Definition binary_float_equiv {prec emax} 
+(b1 b2: binary_float prec emax): Prop :=
   match b1, b2 with
     | B754_zero _ _ b1, B754_zero _ _ b2 => b1 = b2
     | B754_infinity _ _ b1, B754_infinity _ _ b2 =>  b1 = b2
@@ -685,3 +685,316 @@ Definition BOPP ty := Bopp _ (femax ty) (opp_nan ty).
 
 End WITHNANS.
 
+Definition Tsingle := TYPE 24 128 I I.
+Definition Tdouble := TYPE 53 1024 I I.
+
+
+Definition build_nan_full {prec emax} (pl: nan_payload prec emax) :=
+  let n := proj1_sig pl in F754_nan (Bsign _ _ n) (get_nan_pl _ _ n).
+
+Definition Bdiv_full (prec emax : Z) (prec_gt_0_ : FLX.Prec_gt_0 prec) (Hmax : (prec < emax)%Z)
+   (div_nan : binary_float prec emax ->
+             binary_float prec emax ->
+             {x1 : binary_float prec emax | is_nan prec emax x1 = true}) 
+  (m : mode) (x y : binary_float prec emax) : full_float :=
+ let emin := (3 - emax - prec)%Z in
+ let fexp := FLT.FLT_exp emin prec in
+match x with
+| B754_zero _ _ sx =>
+    match y with
+    | B754_infinity _ _ sy | B754_finite _ _ sy _ _ _ => F754_zero (xorb sx sy)
+    | _ => build_nan_full (div_nan x y)
+    end
+| B754_infinity _ _ sx =>
+    match y with
+    | B754_zero _ _ sy | B754_finite _ _ sy _ _ _ => F754_infinity (xorb sx sy)
+    | _ => build_nan_full (div_nan x y)
+    end
+| B754_nan _ _ _ _ _ => build_nan_full (div_nan x y)
+| B754_finite _ _ sx mx ex _ =>
+    match y with
+    | B754_zero _ _ sy => F754_infinity (xorb sx sy)
+    | B754_infinity _ _ sy => F754_zero (xorb sx sy)
+    | B754_nan _ _ _ _ _ => build_nan_full (div_nan x y)
+    | B754_finite _ _ sy my ey _ =>
+          let
+           '(mz, ez, lz) := Fdiv_core_binary prec emax (Z.pos mx) ex (Z.pos my) ey in
+            binary_round_aux prec emax m (xorb sx sy) mz ez lz
+    end
+end.
+
+Lemma build_nan_full_correct: 
+forall {prec emax} (n : {x1 : binary_float prec emax | is_nan prec emax x1 = true})
+  (H : valid_binary prec emax (@build_nan_full prec emax n) = true),
+match
+  @build_nan_full prec emax n as x
+  return (valid_binary prec emax x = true -> binary_float prec emax)
+with
+| F754_zero s1 =>
+    fun _ : valid_binary prec emax (F754_zero s1) = true => B754_zero prec emax s1
+| F754_infinity s1 =>
+    fun _ : valid_binary prec emax (F754_infinity s1) = true => B754_infinity prec emax s1
+| F754_nan b pl =>
+    fun H0 : valid_binary prec emax (F754_nan b pl) = true => B754_nan prec emax b pl H0
+| F754_finite s1 m0 e => B754_finite prec emax s1 m0 e
+end H = build_nan prec emax n.
+Proof.
+intros.
+destruct n.
+simpl in *.
+unfold build_nan.
+f_equal.
+destruct x; simpl; auto;
+apply Classical_Prop.proof_irrelevance.
+Qed.
+
+Lemma Bdiv_full_correct: forall prec emax H1 H2 mknan m x y H,
+  FF2B prec emax (Bdiv_full prec emax H1 H2 mknan m x y) H = Bdiv prec emax H1 H2 mknan m x y.
+Proof.
+intros.
+unfold Bdiv, Bdiv_full, FF2B in *;
+destruct x, y; auto;
+try apply build_nan_full_correct.
+set (j := (let
+   '(mz, ez, lz) := Fdiv_core_binary prec emax (Z.pos m0) e (Z.pos m1) e1 in
+    binary_round_aux prec emax m (xorb s s0) mz ez lz))  in *.
+set (k := @proj1 _ _ _).
+replace k with H
+ by apply Classical_Prop.proof_irrelevance.
+clearbody k. auto.
+Qed.
+
+Definition Bmult_full (prec emax : Z) (prec_gt_0_ : FLX.Prec_gt_0 prec) (Hmax : (prec < emax)%Z) 
+    (mult_nan : binary_float prec emax ->
+              binary_float prec emax ->
+              {x1 : binary_float prec emax | is_nan prec emax x1 = true}) 
+  (m : mode) (x y : binary_float prec emax) 
+  : full_float :=
+match x with
+| B754_zero _ _ sx =>
+    match y with
+    | B754_zero _ _ sy | B754_finite _ _ sy _ _ _ => F754_zero (xorb sx sy)
+    | _ => build_nan_full (mult_nan x y)
+    end
+| B754_infinity _ _ sx =>
+    match y with
+    | B754_infinity _ _ sy | B754_finite _ _ sy _ _ _ => F754_infinity (xorb sx sy)
+    | _ => build_nan_full (mult_nan x y)
+    end
+| B754_nan _ _ _ _ _ => build_nan_full (mult_nan x y)
+| B754_finite _ _ sx mx ex Hx =>
+    match y with
+    | B754_zero _ _ sy => F754_zero  (xorb sx sy)
+    | B754_infinity _ _ sy => F754_infinity (xorb sx sy)
+    | B754_nan _ _ _ _ _ => build_nan_full (mult_nan x y)
+    | B754_finite _ _ sy my ey Hy =>
+          (binary_round_aux prec emax m (xorb sx sy) (Z.pos (mx * my)) 
+             (ex + ey) SpecFloat.loc_Exact)
+    end
+end.
+
+Lemma Bmult_full_correct: forall prec emax H1 H2 mknan m x y H,
+  FF2B prec emax (Bmult_full prec emax H1 H2 mknan m x y) H = Bmult prec emax H1 H2 mknan m x y.
+Proof.
+intros.
+unfold Bmult, Bmult_full, FF2B in *;
+destruct x, y; auto;
+try apply build_nan_full_correct.
+set (j := (let
+   '(mz, ez, lz) := Fdiv_core_binary prec emax (Z.pos m0) e (Z.pos m1) e1 in
+    binary_round_aux prec emax m (xorb s s0) mz ez lz))  in *.
+set (k := @proj1 _ _ _).
+f_equal.
+apply Classical_Prop.proof_irrelevance.
+Qed.
+
+Definition binary_normalize_full (prec emax : Z) (prec_gt_0_ : FLX.Prec_gt_0 prec) (Hmax : (prec < emax)%Z)
+     (mode : mode) (m e : Z) (szero : bool) : full_float :=
+let emin := (3 - emax - prec)%Z in
+let fexp := FLT.FLT_exp emin prec in
+match m with
+| 0%Z => F754_zero szero
+| Z.pos m0 =>
+    binary_round prec emax mode false m0 e
+| Z.neg m0 =>
+    binary_round prec emax mode true m0 e
+end.
+
+Lemma binary_normalize_full_correct:
+  forall prec emax H1 H2 mode m e szero H,
+  FF2B prec emax (binary_normalize_full prec emax H1 H2 mode m e szero) H =
+  binary_normalize prec emax H1 H2 mode m e szero.
+Proof.
+intros.
+unfold FF2B, binary_normalize_full, binary_normalize.
+destruct m; auto.
+-
+unfold FF2B.
+f_equal.
+apply Classical_Prop.proof_irrelevance.
+-
+unfold FF2B.
+f_equal.
+apply Classical_Prop.proof_irrelevance.
+Qed.
+
+Definition Bplus_full (prec emax : Z) (prec_gt_0_ : FLX.Prec_gt_0 prec) (Hmax : (prec < emax)%Z) 
+    (plus_nan : binary_float prec emax ->
+              binary_float prec emax ->
+              {x1 : binary_float prec emax | is_nan prec emax x1 = true}) 
+  (m : mode) (x y : binary_float prec emax) 
+  : full_float :=
+match x with
+| B754_zero _ _ sx =>
+    match y with
+    | B754_zero _ _ sy =>
+        if eqb sx sy
+        then F754_zero sx
+        else
+         match m with
+         | mode_DN => F754_zero true
+         | _ => F754_zero false
+         end
+    | B754_nan _ _ _ _ _ => build_nan_full (plus_nan x y)
+    | B754_finite _ _ sy my ey _ => F754_finite sy my ey
+    | B754_infinity _ _ sy => F754_infinity sy
+    end
+| B754_infinity _ _ sx =>
+    match y with
+    | B754_infinity _ _ sy => if eqb sx sy then F754_infinity sx else build_nan_full (plus_nan x y)
+    | B754_nan _ _ _ _ _ => build_nan_full (plus_nan x y)
+    | _ => F754_infinity sx
+    end
+| B754_nan _ _ _ _ _ => build_nan_full (plus_nan x y)
+| B754_finite _ _ sx mx ex _ =>
+    match y with
+    | B754_zero _ _ _ => F754_finite sx mx ex
+    | B754_infinity _ _ s => F754_infinity s
+    | B754_nan _ _ _ _ _ => build_nan_full (plus_nan x y)
+    | B754_finite _ _ sy my ey _ =>
+        let ez := Z.min ex ey in
+        binary_normalize_full prec emax prec_gt_0_ Hmax m
+          (SpecFloat.cond_Zopp sx (Z.pos (@fst positive Z (shl_align mx ex ez))) +
+           SpecFloat.cond_Zopp sy (Z.pos (@fst positive Z (shl_align my ey ez)))) ez
+          match m with
+          | mode_DN => true
+          | _ => false
+          end
+    end
+end.
+
+Lemma Bplus_full_correct: forall prec emax H1 H2 mknan m x y H,
+  FF2B prec emax (Bplus_full prec emax H1 H2 mknan m x y) H = Bplus prec emax H1 H2 mknan m x y.
+Proof.
+intros.
+unfold Bplus, Bplus_full, FF2B in *;
+destruct x, y; auto;
+try apply build_nan_full_correct.
+- destruct (eqb s s0); auto; destruct m; auto.
+- f_equal. apply Classical_Prop.proof_irrelevance.
+- destruct (eqb s s0); auto. apply build_nan_full_correct.
+- f_equal. apply Classical_Prop.proof_irrelevance.
+- apply binary_normalize_full_correct.
+Qed.
+
+Definition Bminus_full (prec emax : Z) (prec_gt_0_ : FLX.Prec_gt_0 prec) (Hmax : (prec < emax)%Z) 
+  (minus_nan : binary_float prec emax ->
+               binary_float prec emax ->
+               {x1 : binary_float prec emax | is_nan prec emax x1 = true}) 
+  (m : mode) (x y : binary_float prec emax) : full_float :=
+let emin := (3 - emax - prec)%Z in
+let fexp := FLT.FLT_exp emin prec in
+match x with
+| B754_zero _ _ sx =>
+    match y with
+    | B754_zero _ _ sy =>
+        if eqb sx (negb sy)
+        then F754_zero sx
+        else
+         match m with
+         | mode_DN => F754_zero true
+         | _ => F754_zero false
+         end
+    | B754_infinity _ _ sy => F754_infinity (negb sy)
+    | B754_nan _ _ _ _ _ => build_nan_full (minus_nan x y)
+    | B754_finite _ _ sy my ey _ => F754_finite (negb sy) my ey
+    end
+| B754_infinity _ _ sx =>
+    match y with
+    | B754_infinity _ _ sy =>
+        if eqb sx (negb sy) then F754_infinity sx else build_nan_full (minus_nan x y)
+    | B754_nan _ _ _ _ _ => build_nan_full (minus_nan x y)
+    | _ => F754_infinity sx
+    end
+| B754_nan _ _ _ _ _ => build_nan_full (minus_nan x y)
+| B754_finite _ _ sx mx ex _ =>
+    match y with
+    | B754_zero _ _ _ => F754_finite sx mx ex
+    | B754_infinity _ _ sy => F754_infinity (negb sy)
+    | B754_nan _ _ _ _ _ => build_nan_full (minus_nan x y)
+    | B754_finite _ _ sy my ey _ =>
+        let ez := Z.min ex ey in
+        binary_normalize_full prec emax prec_gt_0_ Hmax m
+          (SpecFloat.cond_Zopp sx (Z.pos (@fst positive Z (shl_align mx ex ez))) -
+           SpecFloat.cond_Zopp sy (Z.pos (@fst positive Z (shl_align my ey ez)))) ez
+          match m with
+          | mode_DN => true
+          | _ => false
+          end
+    end
+end.
+
+Lemma Bminus_full_correct: forall prec emax H1 H2 mknan m x y H,
+  FF2B prec emax (Bminus_full prec emax H1 H2 mknan m x y) H = Bminus prec emax H1 H2 mknan m x y.
+Proof.
+intros.
+unfold Bminus, Bminus_full, FF2B in *;
+destruct x, y; auto;
+try apply build_nan_full_correct.
+- destruct (eqb s (negb s0)); auto; destruct m; auto.
+- f_equal. apply Classical_Prop.proof_irrelevance.
+- destruct (eqb s (negb s0)); auto. apply build_nan_full_correct.
+- f_equal. apply Classical_Prop.proof_irrelevance.
+- apply binary_normalize_full_correct.
+Qed.
+
+Ltac const_pos p :=
+  lazymatch p with xH => idtac | xI ?p => const_pos p | xO ?p => const_pos p end.
+
+Ltac const_Z i := 
+  lazymatch i with
+  | Zpos ?p => const_pos p 
+  | Zneg ?p => const_pos p
+  | Z0 => idtac 
+ end.
+
+Ltac const_bool b := lazymatch b with true => idtac | false => idtac end.
+
+Ltac const_float f :=
+ lazymatch f with
+ | B754_zero ?prec ?emax ?s => const_Z prec; const_Z emax; const_bool s
+ | B754_finite ?prec ?emax ?s ?m ?e _ => const_Z prec; const_Z emax; const_bool s; const_pos m; const_Z e
+ | B754_infinity ?prec ?emax ?s => const_Z prec; const_Z emax; const_bool s
+ | B754_nan ?prec ?emax ?s ?p _ => const_Z prec; const_Z emax; const_bool s; const_pos p
+ end.
+
+Ltac compute_binary_floats :=
+repeat
+match goal with
+| |- context [Bdiv ?prec ?emax ?a ?b ?c ?d ?x1 ?x2] =>
+   const_Z prec; const_Z emax; const_float x1; const_float x2;
+   rewrite <- (Bdiv_full_correct prec emax a b c d x1 x2 (eq_refl true));
+   simpl FF2B
+| |- context [Bmult ?prec ?emax ?a ?b ?c ?d ?x1 ?x2] =>
+   const_Z prec; const_Z emax; const_float x1; const_float x2;
+   rewrite <- (Bmult_full_correct prec emax a b c d x1 x2 (eq_refl true));
+   simpl FF2B
+| |- context [Bplus ?prec ?emax ?a ?b ?c ?d ?x1 ?x2] =>
+   const_Z prec; const_Z emax; const_float x1; const_float x2;
+   rewrite <- (Bplus_full_correct prec emax a b c d x1 x2 (eq_refl true));
+   simpl FF2B
+| |- context [Bminus ?prec ?emax ?a ?b ?c ?d ?x1 ?x2] =>
+   const_Z prec; const_Z emax; const_float x1; const_float x2;
+   rewrite <- (Bminus_full_correct prec emax a b c d x1 x2 (eq_refl true));
+   simpl FF2B
+end.

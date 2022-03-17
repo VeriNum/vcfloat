@@ -343,11 +343,11 @@ Ltac process_eval_cond' :=
 Definition prove_rndval' {NANS: Nans} bm vm e :=
  boundsmap_denote bm vm ->
   let
-   '(r, s, _) := rndval_with_cond2 (fshift (fcval e)) in
+   '(r, s, _) := rndval_with_cond2 (fshift_div (fshift (fcval e))) in
     rndval_with_cond_result1 (env_ vm) e r s.
 
 Definition prove_rndval {NANS: Nans} bm vm e :=
-  {rs | fst (rndval_with_cond2 (fshift (fcval e))) = rs /\  
+  {rs | fst (rndval_with_cond2 (fshift_div (fshift (fcval e)))) = rs /\  
          (boundsmap_denote bm vm ->
           let '(r,s) := rs in rndval_with_cond_result1 (env_ vm) e r s)}.
 
@@ -379,31 +379,59 @@ Abort.
 Ltac process_conds :=
  (apply Forall_cons; [process_eval_cond' | process_conds ]) || apply Forall_nil.
 
-Lemma fshift_div_fcval_type {NANS: Nans} {V : Type}:
-      forall e : expr, @type_of_expr V (fshift_div (fcval e)) = @type_of_expr V e.
+Lemma fshift_div_fshift_fcval_type {NANS: Nans} {V : Type}:
+      forall e : expr, @type_of_expr V (fshift_div (fshift (fcval e))) = @type_of_expr V e.
 Proof.
 intros.
 eapply eq_trans.
-apply fshift_type_div. apply fcval_type.
+apply fshift_type_div.
+eapply eq_trans.
+apply fshift_type.
+apply fcval_type.
 Defined.
 
-Lemma fshift_div_fcval_correct {NANS: Nans} {V: Type}:
-  forall (env : forall ty : type, V -> ftype ty) (e : expr),
-  is_nan (fprec (type_of_expr (fshift_div (fcval e))))
-     (femax (type_of_expr (fshift_div (fcval e)))) (fval env (fshift_div (fcval e))) = false ->
-  fval env (fshift_div (fcval e)) = eq_rect_r ftype (fval env e) (fshift_div_fcval_type e).
+Lemma binary_float_equiv_loose_sym prec1 emax1 prec2 emax2
+       (b1: binary_float prec1 emax1) (b2: binary_float prec2 emax2):
+     binary_float_equiv_loose b1 b2 -> binary_float_equiv_loose b2 b1.
 Proof.
 intros.
-rewrite fshift_div_correct; auto.
+destruct b1; destruct b2; simpl; auto. 
+destruct H as (A & B & C); subst; auto. Qed.
+
+
+Lemma binary_float_equiv_eq_rect_r:
+  forall t t1 t2 (v1: ftype t1) (v2: ftype t2) EQ1 EQ2,
+  binary_float_equiv_loose v1 v2 ->
+  @binary_float_equiv (fprec t) (femax t) (eq_rect_r ftype v1 EQ1) (eq_rect_r ftype v2 EQ2) .
+Proof.
+intros.
+subst.
+unfold eq_rect_r, eq_rect; simpl.
+auto.
+Qed.
+
+Lemma fshift_div_fshift_fcval_correct {NANS: Nans} {V: Type}:
+  forall (env : forall ty : type, V -> ftype ty) (e : expr),
+  binary_float_equiv (fval env (fshift_div (fshift (fcval e)))) 
+               (eq_rect_r ftype (fval env e) (fshift_div_fshift_fcval_type e)).
+Proof.
+intros.
+eapply binary_float_equiv_trans.
+apply fshift_div_correct'.
+apply binary_float_equiv_eq_rect_r.
+rewrite fshift_correct.
 rewrite fcval_correct.
-clear H.
-set (e1 := fval env e).
-clearbody e1. clear.
+apply binary_float_equiv_loose_sym.
+apply  (binary_float_equiv_loose_rect _ _ 
+       (eq_sym (eq_trans (fshift_type _) (fcval_type _))) (fval env e)).
 unfold eq_rect_r.
-rewrite <- eq_trans_rew_distr.
-f_equal.
-rewrite <- eq_trans_sym_distr.
-f_equal.
+rewrite !rew_compose.
+rewrite !eq_trans_sym_distr, !eq_sym_involutive.
+rewrite (eq_trans_assoc  (eq_sym (fshift_type (fcval e)))).
+rewrite eq_trans_sym_inv_l, eq_trans_refl_l.
+rewrite eq_trans_sym_inv_l.
+simpl.
+apply binary_float_equiv_refl.
 Qed.
 
 Lemma fshift_fcval_type{NANS: Nans} {V : Type}:
@@ -429,72 +457,118 @@ f_equal.
 Qed.
 
 
-Lemma interval_implies_finite: 
- forall ty (x: ftype ty),
-  Rlt (Rabs (B2R  (fprec ty) (femax ty) x)) (bpow radix2 (femax ty)) ->
-  is_finite (fprec ty) (femax ty) x = true.
-Abort.
+Lemma binary_float_equiv_loose_iff:
+  forall t1 t2 (EQ: t1=t2) (b1: ftype t1) (b2: ftype t2),
+  binary_float_equiv_loose b1 b2 <-> binary_float_equiv b1 (eq_rect_r ftype b2 EQ).
+Proof.
+intros.
+subst t2.
+apply iff_refl.
+Qed.
 
 Lemma rndval_with_cond_result1_fvals_eq {NANS: Nans}:
   forall env e1 e2 EQ r s,
-  fval env e1 = eq_rect_r ftype (fval env e2) EQ -> 
+  binary_float_equiv (fval env e1) (eq_rect_r ftype (fval env e2) EQ) -> 
   rndval_with_cond_result1 env e1 r s ->
   rndval_with_cond_result1 env e2 r s.
 Proof.
 intros.
+rewrite <- binary_float_equiv_loose_iff in H.
 destruct H0 as [errors [? [? ?]]].
-exists errors.
+exists errors. split; auto.
+assert (FIN: is_finite (fprec (type_of_expr e2)) (femax (type_of_expr e2)) (fval env e2) =
+true). {
+  rewrite <- H1; clear H1.
+  clear - H.
+  destruct (fval env e1), (fval env e2); try reflexivity; try contradiction.
+}
 split; auto.
-split; auto.
-rewrite  H in H1.
-rewrite <- H1.
-symmetry; apply is_finite_eq_rect_r.
 rewrite H2.
-rewrite H.
-apply B2R_eq_rect_r.
+clear - H1 FIN H EQ.
+destruct (fval env e1), (fval env e2); try discriminate; clear H1 FIN;
+simpl in H; decompose [and] H; subst;
+ try contradiction;
+simpl; auto.
 Qed.
 
 Lemma rndval_with_cond_correct2_opt {NANS: Nans}:
-      forall (e0 e: expr) EQt,
+      forall (e0 e1 e: expr) (EQ1: e1 = e) EQt,
        expr_valid e = true ->
        forall (bm : boundsmap) (vm : valmap),
        boundsmap_denote bm vm ->
-       fval (env_ vm) e
-         = eq_rect_r ftype (fval (env_ vm) e0) EQt ->
+       @binary_float_equiv (fprec (type_of_expr e1)) (femax (type_of_expr e1))
+            (fval (env_ vm) e1)
+            (eq_rect_r ftype (fval (env_ vm) e0) EQt) ->
        let  '(r, s, p) := rndval_with_cond2 e in
         Forall (fun c : (forall ty : type, positive -> ftype ty) -> Prop => c (env_ vm)) p ->
         rndval_with_cond_result1 (env_ vm) e0 r s.
 Proof.
 intros.
+subst e1.
 pose proof (rndval_with_cond_correct2 e H _ _ H0).
 destruct (rndval_with_cond2 e) as [[? ?] ?].
 intro.
 specialize (H2 H3).
 change (rndval_with_cond_result1 (env_ vm) e r s) in H2.
-eapply rndval_with_cond_result1_fvals_eq; eassumption.
+eapply rndval_with_cond_result1_fvals_eq.
+ eassumption.
+assumption.
 Qed.
 
 Ltac prove_rndval := 
+ (* if necessary, convert goal into a prove_rndval'   goal*)
  lazymatch goal with
  | |- prove_rndval _ _ _ => apply prove_rndval'_e
  | |- _ => idtac
  end;
-lazymatch goal with |- prove_rndval' _ _ ?ee =>
+
+ (* introduce the boundsmap_denote *)
+ lazymatch goal with |- @prove_rndval' ?NANS ?bm ?vm ?ee =>
   let e0 := fresh "e0" in set (e0:=ee);
   change Reify.ident with ident in e0;
   let H := fresh in intro H;
-  let e := fresh "e" in set  (e := fshift (fcval e0));
-  let z := constr:(fshift (fcval e0)) in let u := eval compute in z
-    in change z with u in e;
-  fold Tsingle in e; fold Tdouble in e;
-  match goal with |- context [@rndval_with_cond_result1 ?NANS] =>
-   (* Weird Coq bug:  if we don't write the NANS explicitly,
-      this fails in some cases. Should have worked with inference. *)
-     apply (rndval_with_cond_correct2_opt e0 e 
-     (@fshift_fcval_type NANS ident e0)
-                      (eq_refl _) _ _ H 
-            (@fshift_fcval_correct NANS ident _ e0))
-   end;
+  let EQ := fresh "EQ"  in let EQ0 := fresh "EQ" in
+  let e1 := fresh "e1" in  let e := fresh "e" in 
+
+ (* e0 is the original expression.  e1 is the optimization functions applied to e0, not yet reduced.
+    e is the reduced-to-normal form version of e1, that is, the optimized expression. *)
+
+  (* calculate appropriate equivalences between e0, e1, e *)
+  pose (e1 := @fshift_div ident NANS (@fshift ident NANS (@fcval ident NANS e0)));
+  assert (EQ: (@fshift_div ident NANS (@fshift ident NANS (@fcval ident NANS e0)) = e1 /\
+           binary_float_equiv (fval (env_ vm) e1) (fval (env_ vm) e0)))
+    by (split; [apply eq_refl | 
+                   eapply binary_float_equiv_trans; [ apply fshift_div_fshift_fcval_correct | ];
+                   apply binary_float_equiv_sym;
+                   apply binary_float_equiv_loose_rect; 
+                   apply binary_float_equiv_loose_refl]);
+
+  (* Now compute the fcval optimization *)
+  revert EQ;
+   pattern e1 at 1;
+  let M := fresh "M" in set (M := fun _ => _);
+
+  cbv beta iota zeta delta - [M fshift_div fshift Bmult Bplus Bminus Bdiv 
+                                       plus_nan mult_nan div_nan abs_nan opp_nan sqrt_nan];
+ fold Tsingle; fold Tdouble;
+  compute_binary_floats;
+
+    (* Now compute the remaining optimizations  (fshift, fshift_div) *)
+  cbv beta iota zeta delta - [M Bmult Bplus Bminus Bdiv 
+                                       plus_nan mult_nan div_nan abs_nan opp_nan sqrt_nan];
+ fold Tsingle; fold Tdouble;
+
+ (* Now clean up after optimizing *)
+ match goal with |- M ?ee => set (e:=ee) end;
+ subst M; cbv beta;
+ intros [EQ EQ0];
+ rewrite EQ;
+
+ (* Now apply the main lemma *)
+ apply (rndval_with_cond_correct2_opt e0 e1 e EQ (eq_refl _) (eq_refl _) _ _ H EQ0);
+ clear EQ EQ0 e e1 e0;
+
+  (* What's left is a Forall of all the conds.  Next, clean them up a bit. *)
   change (type_of_expr _) with Tsingle;
   change (type_of_expr _) with Tdouble;
   cbv beta iota zeta delta [
@@ -509,8 +583,11 @@ lazymatch goal with |- prove_rndval' _ _ ?ee =>
           Rbinop_of_rounded_binop Runop_of_exact_unop Runop_of_rounded_unop
           type_of_expr make_rounding round_knowl_denote
          rounding_cond_ast no_overflow app];
+ 
+  (* now process the boundsmap above the line, and the conds below the line *)
   process_boundsmap_denote;
   process_conds
+
  end.
 
 Lemma errors_bounded_e:

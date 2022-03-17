@@ -325,7 +325,8 @@ Proof.
   assumption.
 Qed.
 
-Lemma binary_float_eqb_equiv_strong ty1 ty2 (e1: ftype ty1) (e2: ftype ty2):
+(*
+Lemma binary_float_eqb_equiv_strong ty (e1 e2: ftype ty):
   binary_float_equiv e1 e2 ->
   forall EQ: ty1 = ty2,
     binary_float_equiv e1 (eq_rect_r _ e2 EQ).
@@ -334,7 +335,8 @@ Proof.
   subst.
   assumption.
 Qed.
-        
+  *)
+      
 Lemma fcval_correct env e:
   fval env (fcval e) = eq_rect_r _ (fval env e) (fcval_type e).
 Proof.
@@ -833,7 +835,7 @@ Proof.
 Defined. 
 
 Local Lemma binary_float_equiv_refl : forall prec emax x, 
-   @binary_float_equiv prec emax prec emax x x.
+   @binary_float_equiv prec emax x x.
 Proof. intros. destruct x; hnf; try reflexivity. repeat split; reflexivity. Qed.
 Local Hint Resolve binary_float_equiv_refl : vcfloat.
 
@@ -844,6 +846,158 @@ Local Hint Extern 2 (Binary.is_finite _ _ _ = true) =>
              apply is_finite_strict_finite; 
          apply (Bexact_inverse_correct _ _ _ _ _ _ EINV)
    end : vcfloat.
+
+Lemma cast_preserves_bf_equiv tfrom tto (b1 b2: Binary.binary_float (fprec tfrom) (femax tfrom)) :
+  binary_float_equiv b1 b2 -> 
+  binary_float_equiv (cast tto tfrom b1) (cast tto tfrom b2).
+Proof.
+intros.
+destruct b1, b2; simpl; inversion H; clear H; subst; auto;
+try solve [apply binary_float_eq_equiv; auto].
+-
+unfold cast; simpl.
+destruct (type_eq_dec tfrom tto); auto.
+unfold eq_rect.
+destruct e1.
+reflexivity.
+reflexivity.
+-
+destruct H1; subst m0 e1.
+unfold cast; simpl.
+destruct (type_eq_dec tfrom tto); subst; auto.
+unfold eq_rect.
+simpl. split; auto.
+apply binary_float_eq_equiv.
+f_equal.
+Qed.
+
+Import Binary.
+
+Lemma binary_float_equiv_BDIV ty (b1 b2 b3 b4: binary_float (fprec ty) (femax ty)):
+binary_float_equiv b1 b2 ->
+binary_float_equiv b3 b4 ->
+binary_float_equiv (BDIV ty b1 b3) (BDIV ty b2 b4).
+Proof.
+intros.
+destruct b1.
+all : (destruct b3; destruct b4; try contradiction; try discriminate).
+all :
+match goal with 
+  |- context [
+binary_float_equiv (BDIV ?ty ?a ?b)
+ _] =>
+match a with 
+| B754_nan _ _ _ _ _ => destruct b2; try contradiction; try discriminate;
+    cbv [BDIV BINOP Bdiv build_nan binary_float_equiv]; try reflexivity
+  | _ => apply binary_float_equiv_eq in H; try rewrite <- H;
+  match b with 
+  | B754_nan _ _ _ _ _ => 
+      cbv [BDIV BINOP Bdiv build_nan binary_float_equiv]; try reflexivity
+  | _ => apply binary_float_equiv_eq in H0; try rewrite <- H0;
+          try apply binary_float_eq_equiv; try reflexivity
+end
+end
+end.
+Qed.
+
+Lemma binary_float_equiv_BOP ty (b1 b2 b3 b4: binary_float (fprec ty) (femax ty)):
+forall b: binop ,
+binary_float_equiv b1 b2 ->
+binary_float_equiv b3 b4 ->
+binary_float_equiv (fop_of_binop b ty b1 b3) (fop_of_binop b ty b2 b4).
+Proof.
+intros.
+destruct b1.
+all :
+match goal with 
+  |- context [
+binary_float_equiv (fop_of_binop ?bo ?ty ?a ?b)
+ _] =>
+match a with 
+| B754_zero _ _ _ => 
+apply binary_float_equiv_eq in H; try simpl; try reflexivity
+| B754_infinity _ _ _ => 
+apply binary_float_equiv_eq in H; try simpl; try reflexivity
+| B754_finite _ _ _ _ _ _ => 
+apply binary_float_equiv_eq in H; try simpl; try reflexivity
+| _ => try simpl
+end
+end.
+all :(
+destruct b2; simpl in H; try contradiction; try discriminate;
+destruct b3; destruct b4; try contradiction; try discriminate;
+match goal with 
+  |- context [ binary_float_equiv (fop_of_binop ?bo ?ty ?a ?b)  _] =>
+match a with 
+| B754_nan _ _ _ _ _  => try simpl
+| _ => try (rewrite H); 
+      match b with 
+      | B754_nan _ _ _ _ _ => try simpl
+      | _ => try (apply binary_float_equiv_eq in H);
+             try (rewrite H);
+             try (apply binary_float_equiv_eq in H0);
+             try (rewrite H0);
+             try (apply binary_float_eq_equiv); try reflexivity
+      end
+end
+end
+).
+
+all: (
+try (destruct b);
+try( cbv [fop_of_binop]);
+try destruct op;
+try (cbv [fop_of_rounded_binop]);
+try (cbv [fop_of_rounded_binop]);
+try(
+match goal with 
+|- context [ binary_float_equiv ((if ?m then ?op1 else ?op2)  ?ty ?a ?b) _] =>
+destruct m
+end;
+cbv [BPLUS BMINUS BDIV BMULT BINOP 
+Bplus Bminus Bdiv Bmult build_nan binary_float_equiv]);
+try (reflexivity)
+).
+Qed.
+
+Lemma binary_float_equiv_UOP ty (b1 b2: binary_float (fprec ty) (femax ty)):
+forall u: unop ,
+binary_float_equiv b1 b2 ->
+binary_float_equiv (fop_of_unop u ty b1) (fop_of_unop u ty b2).
+Proof.
+intros.
+destruct b1.
+all: (
+match goal with |- context [binary_float_equiv 
+(fop_of_unop ?u ?ty ?a) _]  =>
+match a with 
+| Binary.B754_nan _ _ _ _ _  => simpl 
+| _ => try apply binary_float_equiv_eq in H; try rewrite  <-H; 
+  try apply binary_float_eq_equiv; try reflexivity
+end
+end).
+destruct b2; try discriminate; try contradiction.
+try (destruct u).
+all: (
+try( cbv [fop_of_unop fop_of_exact_unop]);
+try destruct op;
+try destruct o;
+try destruct ltr;
+try (cbv [fop_of_rounded_unop]);
+try (cbv [Bsqrt Binary.Bsqrt build_nan]);
+try reflexivity
+).
++ destruct (B2 ty (- Z.pos pow)) .
+all: try (
+ (cbv [ BMULT BINOP Bmult build_nan]);
+ reflexivity).
++ destruct (B2 ty (Z.of_N pow)).
+all: try (
+ (cbv [ BMULT BINOP Bmult build_nan]);
+ reflexivity).
++ apply cast_preserves_bf_equiv; auto.
+Qed.
+
 
 Local Hint Resolve cast_preserves_bf_equiv : vcfloat.
 Local Hint Resolve binary_float_eq_equiv : vcfloat.
@@ -937,9 +1091,9 @@ destruct f; auto; discriminate.
 Qed.
 
 Lemma binary_float_equiv_nan:
-  forall prec1 emax1 prec2 emax2 f1 f2,
-  Binary.is_nan prec1 emax1 f1= true  ->
-   Binary.is_nan prec2 emax2 f2 = true ->
+  forall prec emax f1 f2,
+  Binary.is_nan prec emax f1= true  ->
+   Binary.is_nan prec emax f2 = true ->
     binary_float_equiv f1 f2.
 Proof.
 intros.
@@ -949,10 +1103,10 @@ apply I.
 Qed.
 
 Lemma binary_float_equiv_nan1:
-  forall b prec1 emax1 prec2 emax2 f1 f2,
-  Binary.is_nan prec1 emax1 f1= b  ->
+  forall b prec emax f1 f2,
+  Binary.is_nan prec emax f1= b  ->
     binary_float_equiv f1 f2 ->
-   Binary.is_nan prec2 emax2 f2 = b.
+   Binary.is_nan prec emax f2 = b.
 Proof.
 intros.
 destruct b.
@@ -965,10 +1119,10 @@ reflexivity.
 Qed.
 
 Lemma binary_float_equiv_nan2:
-  forall b prec1 emax1 prec2 emax2 f1 f2,
-  Binary.is_nan prec2 emax2 f2= b  ->
+  forall b prec emax f1 f2,
+  Binary.is_nan prec emax f2= b  ->
     binary_float_equiv f1 f2 ->
-   Binary.is_nan prec1 emax1 f1 = b.
+   Binary.is_nan prec emax f1 = b.
 Proof.
 intros.
 destruct b.
@@ -1020,8 +1174,94 @@ Ltac unfold_fval := cbv [fop_of_unop fop_of_exact_unop fop_of_rounded_unop
                       fop_of_binop fop_of_rounded_binop cast_lub_l cast_lub_r
                       BDIV BMULT BINOP BPLUS BMINUS].
 
+Definition binary_float_equiv_loose {prec1 emax1 prec2 emax2} 
+(b1: binary_float prec1 emax1) (b2: binary_float prec2 emax2): Prop :=
+  match b1, b2 with
+    | B754_zero _ _ b1, B754_zero _ _ b2 => b1 = b2
+    | B754_infinity _ _ b1, B754_infinity _ _ b2 =>  b1 = b2
+    | B754_nan _ _ _ _ _, B754_nan _ _ _ _ _ => True
+    | B754_finite _ _ b1 m1 e1 _, B754_finite _ _ b2 m2 e2 _ =>
+      b1 = b2 /\  m1 = m2 /\ e1 = e2
+    | _, _ => False
+  end.
+
+Lemma binary_float_equiv_loose_rect:
+  forall t1 t2 (EQ: t1=t2) (b1: ftype t1) (b2: ftype t2),
+  binary_float_equiv_loose b1 b2 <-> binary_float_equiv b1 (eq_rect_r ftype b2 EQ).
+Proof.
+intros.
+subst t2.
+apply iff_refl. 
+Qed.
+
+Lemma binary_float_equiv_loose_i:
+  forall t (b1 b2: ftype t),
+  binary_float_equiv b1 b2 -> binary_float_equiv_loose b1 b2.
+Proof.
+intros. auto.
+Qed.
+
+Lemma binary_float_equiv_loose_tighten:
+  forall prec emax,
+  @binary_float_equiv_loose prec emax prec emax = 
+     @binary_float_equiv prec emax.
+Proof.
+intros. auto.
+Qed.
+
+Definition binary_float_equiv_loose_refl:
+ forall prec emax b, @binary_float_equiv_loose prec emax prec emax b b.
+Proof.
+intros. destruct b; simpl; auto.
+Qed.
+
+Lemma binary_float_equiv_loose_eq prec emax (b1 b2: binary_float prec emax):
+   binary_float_equiv_loose b1 b2 -> is_nan _ _ b1 =  false -> b1 = b2.
+Proof.
+intros. 
+destruct b1, b2; try contradiction; try discriminate; simpl in H; subst; auto.
+destruct H as [? [? ?]]; subst; auto.
+f_equal; auto.
+apply Classical_Prop.proof_irrelevance.
+Qed.
+
+Lemma binary_float_equiv_loose_nan:
+  forall prec1 emax1 prec2 emax2 f1 f2,
+  Binary.is_nan prec1 emax1 f1= true  ->
+   Binary.is_nan prec2 emax2 f2 = true ->
+    binary_float_equiv_loose f1 f2.
+Proof.
+intros.
+destruct f1; inv H.
+destruct f2; inv H0.
+apply I.
+Qed.
+
+Lemma binary_float_equiv_loose_nan1:
+  forall b prec1 emax1 prec2 emax2 f1 f2,
+  Binary.is_nan prec1 emax1 f1= b  ->
+    binary_float_equiv_loose f1 f2 ->
+   Binary.is_nan prec2 emax2 f2 = b.
+Proof.
+intros.
+destruct b.
+destruct f1; inv H.
+destruct f2; inv H0.
+reflexivity.
+destruct f1; inv H;
+destruct f2; inv H0;
+reflexivity.
+Qed.
+
+
 Ltac binary_float_equiv_tac :=
-      repeat (first [apply Bmult_div_inverse_equiv
+      repeat (first [ rewrite binary_float_equiv_loose_tighten in *
+(*
+                          | match goal with |- binary_float_equiv_loose ?x _ =>
+                                      fail 100 "bingo" x
+                            end
+*)
+                          | apply Bmult_div_inverse_equiv
                           | apply Bmult_div_inverse_equiv2
                           | apply cast_preserves_bf_equiv;
                                (assumption || apply binary_float_equiv_sym; assumption)
@@ -1031,7 +1271,11 @@ Ltac binary_float_equiv_tac :=
 
 Ltac binary_float_equiv_tac2 env e1 e2 :=
          simpl; unfold cast_lub_l, cast_lub_r;
-         repeat match goal with H: binary_float_equiv _ _ |- _ => revert H end;
+         rewrite ?binary_float_equiv_loose_tighten in *;
+         repeat match goal with
+                    | H: binary_float_equiv _ _ |- _ => revert H 
+                    | H: binary_float_equiv_loose _ _ |- _ => revert H
+                    end;
          generalize (fval env (fshift_div  e1));
          generalize (fval env (fshift_div  e2));
          rewrite !fshift_type_div;
@@ -1039,11 +1283,13 @@ Ltac binary_float_equiv_tac2 env e1 e2 :=
          binary_float_equiv_tac.
 
 Lemma fshift_div_correct' env e:
- binary_float_equiv (fval env (fshift_div e)) (fval env e).
+ binary_float_equiv (fval env (fshift_div e)) (eq_rect_r ftype (fval env e) (fshift_type_div _)).
 Proof.
+apply binary_float_equiv_loose_rect.
 induction e; cbn [fshift_div]; auto with vcfloat; unfold fval; fold (fval env);
 try (set (x1 := fval env e1) in *; clearbody x1);
-try (set (x2 := fval env e2) in *; clearbody x2).
+try (set (x2 := fval env e2) in *; clearbody x2);
+try apply binary_float_equiv_loose_refl.
 - (* binop case *)
  apply (ifb_cases_lem binop_eqb_eq); intros ?OP; subst;
                [ | binary_float_equiv_tac2 env e1 e2].
@@ -1058,7 +1304,7 @@ try (set (x2 := fval env e2) in *; clearbody x2).
  assert (H := uncast_finite_strict _ _ _ 
                              (proj1 (Bexact_inverse_correct _ _ _ _ _ _ EINV))).
  destruct f; inversion H; clear H.
- apply binary_float_equiv_eq in IHe2; [ subst x2 | reflexivity].
+ apply binary_float_equiv_loose_eq in IHe2; [ subst x2 | reflexivity].
  rewrite positive_nat_N.
  destruct (fcval_nonrec (fshift_div e1)) eqn:E1.
  + generalize (fshift_type_div e1).
@@ -1066,8 +1312,8 @@ try (set (x2 := fval env e2) in *; clearbody x2).
      simpl in f, E1, IHe1; inv E1.
      cbn [type_of_expr]; intros; subst ty.
      destruct (Binary.is_nan _ _ f) eqn:?NAN.
-    * pose proof (binary_float_equiv_nan1 true _ _ _ _ _ _ NAN IHe1).
-       apply binary_float_equiv_nan; repeat binary_float_eqb_cases;
+    * pose proof (binary_float_equiv_loose_nan1 true _ _ _ _ _ _ NAN IHe1).
+       apply binary_float_equiv_loose_nan; repeat binary_float_eqb_cases;
        unfold fval; unfold_fval; auto with vcfloat.
     * apply binary_float_equiv_eq in IHe1; [ subst | assumption].
        repeat binary_float_eqb_cases; 
@@ -1081,7 +1327,7 @@ try (set (x2 := fval env e2) in *; clearbody x2).
     intros;
     cbn [type_of_expr type_of_unop];
     (destruct (Binary.is_nan _ _ f) eqn:?NAN;
-       [pose proof (binary_float_equiv_nan1 true _ _ _ _ _ _ NAN IHe1);
+       [pose proof (binary_float_equiv_loose_nan1 true _ _ _ _ _ _ NAN IHe1);
         unfold fval; fold (fval env); unfold_fval;
         apply binary_float_equiv_nan; auto with vcfloat
       | apply binary_float_equiv_eq in IHe1; [ subst | assumption ];
@@ -1102,7 +1348,7 @@ Lemma fshift_div_correct env e:
 Proof.
   intros.
   apply binary_float_equiv_eq. 
-  - apply binary_float_eqb_equiv_strong. apply fshift_div_correct'.
+  - apply fshift_div_correct'.
   - apply H. 
 Qed.
 

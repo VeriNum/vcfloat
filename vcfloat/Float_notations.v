@@ -579,4 +579,3 @@ Check 3.0104791538616437e-006.
 Close Scope float64_scope.
 
 End Tests.
-
