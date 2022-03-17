@@ -1004,4 +1004,82 @@ pose proof (Z.mod_bound_pos j i ltac:(lia) ltac:(lia)).
 lia.
 Qed.
 
+Definition bound_contains (i1 i2: ident * varinfo) :=
+        (fst i1 = fst i2 /\ fst i1 = var_name (snd i1) /\ fst i2 = var_name (snd i2))
+  /\ var_type (snd i1) = var_type (snd i2)
+  /\   Rle (var_lobound (snd i1)) (var_lobound (snd i2))
+  /\  Rge (var_hibound (snd i1)) (var_hibound (snd i2)).
+
+Lemma Forall2_e1:
+  forall {A B: Type} (f: A -> B -> Prop) al bl,
+  Forall2 f al bl -> 
+  (forall x, In x al -> exists y, In y bl /\ f x y).
+Proof.
+induction 1; intros.
+inversion H.
+inversion H1; clear H1; subst.
+exists y; split; auto. left; auto.
+destruct (IHForall2 _ H2) as [y1 [? ?]].
+exists y1; split; auto.
+right; auto.
+Qed.
+
+Lemma Forall2_e2:
+  forall {A B: Type} (f: A -> B -> Prop) al bl,
+  Forall2 f al bl -> 
+  (forall y, In y bl -> exists x, In x al /\ f x y).
+Proof.
+induction 1; intros.
+inversion H.
+inversion H1; clear H1; subst.
+exists x; split; auto. left; auto.
+destruct (IHForall2 _ H2) as [x1 [? ?]].
+exists x1; split; auto.
+right; auto.
+Qed.
+
+Definition boundsmap_contains bm1 bm2 :=
+  Forall2 bound_contains (Maps.PTree.elements bm1)
+      (Maps.PTree.elements bm2).
+
+Lemma boundsmap_denote_relax {NANS: Nans}:
+ forall (bm1 bm2 : Maps.PTree.t varinfo)
+          (vm : valmap),
+  boundsmap_contains bm1 bm2 ->
+      boundsmap_denote bm2 vm ->
+     boundsmap_denote bm1 vm.
+Proof.
+intros.
+intro i; specialize (H0 i).
+destruct (Maps.PTree.get i bm1)  as [[t1 n1 lo1 hi1]|] eqn:?H.
+-
+destruct (Forall2_e1 _ _ _ H _ (Maps.PTree.elements_correct _ _ H1))
+ as [[i' [t2 n2 lo2 hi2]] [? [[? [? ?]] [? [? ?]]]]]; simpl in *; subst.
+apply Maps.PTree.elements_complete in H2.
+rewrite H2 in H0.
+destruct (Maps.PTree.get n2 vm); try contradiction; auto.
+destruct H0 as [? [? [? ?]]]; subst.
+split; [ | split; [ | split]]; auto.
+lra.
+-
+destruct (Maps.PTree.get i bm2) eqn:?H; auto.
+destruct (Forall2_e2 _ _ _ H _ (Maps.PTree.elements_correct _ _ H2)) 
+ as [[i' ?] [? [[? _] _]]].
+simpl in H4; subst.
+apply Maps.PTree.elements_complete in H3.
+congruence.
+Qed.
+
+Lemma prove_roundoff_bound_relax {NANS: Nans}:
+  forall bm1 bm2 vm e R,
+    boundsmap_contains bm1 bm2 ->
+ prove_roundoff_bound bm1 vm e R ->
+ prove_roundoff_bound bm2 vm e R.
+Proof.
+intros.
+intro; apply H0.
+revert H1.
+apply boundsmap_denote_relax; auto.
+Qed.
+
 
