@@ -998,3 +998,7 @@ match goal with
    rewrite <- (Bminus_full_correct prec emax a b c d x1 x2 (eq_refl true));
    simpl FF2B
 end.
+
+Definition Zconst (t: type) : Z -> ftype t :=
+  BofZ (fprec t) (femax t) (Pos2Z.is_pos (fprecp t)) (fprec_lt_femax t).
+

@@ -47,6 +47,20 @@ From Flocq Require Import Binary Bits Core.
 From compcert.lib Require Import IEEE754_extra. (* This file should really be part of Flocq, not CompCert *)
 Open Scope Z.
 
+Definition b32_B754_zero : _ -> binary32 := B754_zero 24 128.
+Definition b32_B754_infinity : _ -> binary32 := B754_infinity 24 128.
+Definition b32_B754_nan : bool -> forall pl : positive, nan_pl 24 pl = true ->  binary32 := B754_nan 24 128.
+Definition b32_B754_finite: bool ->
+       forall (m : positive) (e : Z),
+       Binary.bounded 24 128 m e = true ->  binary32 := B754_finite 24 128.
+
+Definition b64_B754_zero : _ -> binary64 := B754_zero 53 1024.
+Definition b64_B754_infinity : _ -> binary64 := B754_infinity 53 1024.
+Definition b64_B754_nan : bool -> forall pl : positive, nan_pl 53 pl = true ->  binary64 := B754_nan 53 1024.
+Definition b64_B754_finite: bool ->
+       forall (m : positive) (e : Z),
+       Binary.bounded 53 1024 m e = true ->  binary64 := B754_finite 53 1024.
+
 Module Type BINARY_FLOAT_TO_NUMBER.
  Parameter number_to_binary_float:
   forall (prec emax: Z) (prec_gt_0: 0 <prec) (Hprecmax: prec < emax),
@@ -442,13 +456,6 @@ Definition float32_to_number (x: binary_float32) : option Number.number :=
    | None  => None
   end.
 
-Definition b32_B754_zero : _ -> binary32 := B754_zero 24 128.
-Definition b32_B754_infinity : _ -> binary32 := B754_infinity 24 128.
-Definition b32_B754_nan : bool -> forall pl : positive, nan_pl 24 pl = true ->  binary32 := B754_nan 24 128.
-Definition b32_B754_finite: bool ->
-       forall (m : positive) (e : Z),
-       Binary.bounded 24 128 m e = true ->  binary32 := B754_finite 24 128.
-
 Inductive binary_float64  : Set :=
     B64_B754_zero : bool -> binary_float64
   | B64_B754_infinity : bool -> binary_float64
@@ -504,13 +511,6 @@ Definition float64_to_number (x: binary_float64) : option Number.number :=
    | Some b => binary_float_to_number 53 1024 ltac:(reflexivity) ltac:(clear; hnf; intro; discriminate) ltac:(reflexivity) b
    | None  => None
   end.
-
-Definition b64_B754_zero : _ -> binary64 := B754_zero 53 1024.
-Definition b64_B754_infinity : _ -> binary64 := B754_infinity 53 1024.
-Definition b64_B754_nan : bool -> forall pl : positive, nan_pl 53 pl = true ->  binary64 := B754_nan 53 1024.
-Definition b64_B754_finite: bool ->
-       forall (m : positive) (e : Z),
-       Binary.bounded 53 1024 m e = true ->  binary64 := B754_finite 53 1024.
 
 Declare Scope float32_scope.
 Delimit Scope float32_scope with F32.

@@ -87,9 +87,6 @@ Ltac find_type prec emax :=
      constr:(TYPE precp emax (ZLT_intro prec emax (eq_refl _)) (BOOL_intro _ (eq_refl _)))
  end.
 
-Definition Zconst (t: type) : Z -> ftype t :=
-  BofZ (fprec t) (femax t) (Pos2Z.is_pos (fprecp t)) (fprec_lt_femax t).
-
 Definition Norm {T} (x: T) := x.
 Definition Denorm {T} (x: T) := x.
 

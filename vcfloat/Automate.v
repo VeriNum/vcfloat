@@ -10,7 +10,49 @@ Set Bullet Behavior "Strict Subproofs".
 
 Open Scope R_scope.
 
+Definition generic_nan (prec emax : Z) : 
+      nan_pl prec 1 = true ->
+       binary_float prec emax  := 
+       B754_nan prec emax false 1.
+
+Definition generic_nan64 := 
+  generic_nan (fprec Tdouble) (femax Tdouble) (eq_refl _).
+
+Ltac float_nearest mode r :=
+ match r with
+  | Rmult (IZR ?a) (Rinv ?b) => let x := constr:(Rdiv (IZR a) (IZR b)) in float_nearest x
+  | Rdiv (IZR ?a) (IZR ?b) =>
+   let f := constr:( Bdiv_full  (fprec Tdouble) (femax Tdouble) (eq_refl _) (eq_refl _) 
+                                  (fun _ _ => exist _ generic_nan64 (eq_refl _))
+                            mode (Zconst _ a) (Zconst _ b)) in
+   let f := eval vm_compute in f in
+   match f with F754_finite ?s ?m ?e =>
+          let g := constr:(b64_B754_finite s m e (eq_refl true))
+     in g
+   end
+ end.
+
 Definition FT2R {t: type} : ftype t -> R := B2R (fprec t) (femax t).
+
+Ltac compute_B2R :=
+ repeat (
+ match goal with |- context [B2R ?a ?b ?c] =>
+   lazymatch c with
+   | b64_B754_finite _ _ _ _ => idtac
+   | b64_B754_zero _ => idtac 
+   | b32_B754_finite _ _ _ _ => idtac
+   | b32_B754_zero _ => idtac 
+  end;
+ let x := constr:(B2R a b c) in
+ let y := eval cbv beta iota zeta delta [
+               FT2R b64_B754_finite B2R Defs.F2R Defs.Fnum Defs.Fexp
+                 SpecFloat.cond_Zopp bpow radix2 radix_val
+                 Z.pow_pos Pos.iter Z.mul Pos.mul] in x
+ in lazymatch y with
+    | Rmult ?u (Rinv ?v) => let z := constr:(Rdiv u v) in change x with z
+    | _ => change x with y
+    end
+ end).
 
 Record varinfo := {var_type: type; var_name: ident; var_lobound: R; var_hibound: R}.
 Definition boundsmap := Maps.PTree.t varinfo.
