@@ -75,6 +75,7 @@ Require Import Lia Lra.
 From Flocq Require Import Binary Bits Core.
 From compcert Require Import lib.IEEE754_extra lib.Floats.
 Global Unset Asymmetric Patterns. (* because "Require compcert..." sets it *)
+Require vcfloat.Float_notations.
 
 Definition BOOL (a: bool): Prop := if a then True else False.
 
@@ -972,33 +973,98 @@ Ltac const_bool b := lazymatch b with true => idtac | false => idtac end.
 
 Ltac const_float f :=
  lazymatch f with
+ | Float_notations.b32_B754_zero ?s => const_bool s
+ | Float_notations.b32_B754_finite ?s ?m ?e _  => const_bool s; const_pos m; const_Z e
+ | Float_notations.b32_B754_infinity ?s  => const_bool s
+ | Float_notations.b64_B754_zero ?s => const_bool s
+ | Float_notations.b64_B754_finite ?s ?m ?e  _ => const_bool s; const_pos m; const_Z e
+ | Float_notations.b64_B754_infinity ?s  => const_bool s
  | B754_zero ?prec ?emax ?s => const_Z prec; const_Z emax; const_bool s
  | B754_finite ?prec ?emax ?s ?m ?e _ => const_Z prec; const_Z emax; const_bool s; const_pos m; const_Z e
  | B754_infinity ?prec ?emax ?s => const_Z prec; const_Z emax; const_bool s
  | B754_nan ?prec ?emax ?s ?p _ => const_Z prec; const_Z emax; const_bool s; const_pos p
  end.
 
+
 Ltac compute_binary_floats :=
 repeat
-match goal with
+(match goal with
+| |- context [@BDIV ?NANS ?t ?x1 ?x2] =>
+           const_float x1; const_float x2;
+           let c := constr:(@BDIV NANS t) in 
+           let d := eval  cbv [BINOP BDIV BMULT BPLUS BMINUS BOPP] in c in 
+           change c with d
+| |- context [@BMULT ?NANS ?t ?x1 ?x2] =>
+           const_float x1; const_float x2;
+           let c := constr:(@BMULT NANS t) in 
+           let d := eval  cbv [BINOP BDIV BMULT BPLUS BMINUS BOPP] in c in 
+           change c with d
+| |- context [@BPLUS ?NANS ?t ?x1 ?x2] =>
+           const_float x1; const_float x2;
+           let c := constr:(@BPLUS NANS t) in 
+           let d := eval  cbv [BINOP BDIV BMULT BPLUS BMINUS BOPP] in c in 
+           change c with d
+| |- context [@BMINUS ?NANS ?t ?x1 ?x2] =>
+           const_float x1; const_float x2;
+           let c := constr:(@BMINUS NANS t) in 
+           let d := eval  cbv [BINOP BDIV BMULT BPLUS BMINUS BOPP] in c in 
+           change c with d
 | |- context [Bdiv ?prec ?emax ?a ?b ?c ?d ?x1 ?x2] =>
-   const_Z prec; const_Z emax; const_float x1; const_float x2;
-   rewrite <- (Bdiv_full_correct prec emax a b c d x1 x2 (eq_refl true));
-   simpl FF2B
+   const_float x1; const_float x2;
+  first 
+     [ const_Z prec; const_Z emax; 
+       rewrite <- (Bdiv_full_correct prec emax a b c d x1 x2 (eq_refl true))
+     | progress (let f := eval compute in prec in change prec with f;
+                      let f := eval compute in emax in change emax with f)
+     ]
 | |- context [Bmult ?prec ?emax ?a ?b ?c ?d ?x1 ?x2] =>
-   const_Z prec; const_Z emax; const_float x1; const_float x2;
-   rewrite <- (Bmult_full_correct prec emax a b c d x1 x2 (eq_refl true));
-   simpl FF2B
+    const_float x1; const_float x2;
+  first 
+     [ const_Z prec; const_Z emax; 
+       rewrite <- (Bmult_full_correct prec emax a b c d x1 x2 (eq_refl true))
+     | progress (let f := eval compute in prec in change prec with f;
+                      let f := eval compute in emax in change emax with f)
+     ]
 | |- context [Bplus ?prec ?emax ?a ?b ?c ?d ?x1 ?x2] =>
-   const_Z prec; const_Z emax; const_float x1; const_float x2;
-   rewrite <- (Bplus_full_correct prec emax a b c d x1 x2 (eq_refl true));
-   simpl FF2B
+    const_float x1; const_float x2;
+  first 
+     [ const_Z prec; const_Z emax; 
+       rewrite <- (Bplus_full_correct prec emax a b c d x1 x2 (eq_refl true))
+     | progress (let f := eval compute in prec in change prec with f;
+                      let f := eval compute in emax in change emax with f)
+     ]
 | |- context [Bminus ?prec ?emax ?a ?b ?c ?d ?x1 ?x2] =>
-   const_Z prec; const_Z emax; const_float x1; const_float x2;
-   rewrite <- (Bminus_full_correct prec emax a b c d x1 x2 (eq_refl true));
-   simpl FF2B
-end.
+   const_float x1; const_float x2;
+  first 
+     [ const_Z prec; const_Z emax; 
+       rewrite <- (Bminus_full_correct prec emax a b c d x1 x2 (eq_refl true))
+     | progress (let f := eval compute in prec in change prec with f;
+                      let f := eval compute in emax in change emax with f)
+     ]
+end; simpl FF2B);
+ fold Float_notations.b32_B754_zero;
+ fold Float_notations.b32_B754_finite;
+ fold Float_notations.b32_B754_infinity;
+ fold Float_notations.b64_B754_zero;
+ fold Float_notations.b64_B754_finite;
+ fold Float_notations.b64_B754_infinity.
+
+Import Float_notations.
+Local Lemma test_compute_binary_floats {NANS: Nans}:
+  (BPLUS Tsingle 1.5 3.5 = BDIV Tsingle 10.0 2)%F32.
+Proof. compute_binary_floats. auto. Qed.
 
 Definition Zconst (t: type) : Z -> ftype t :=
   BofZ (fprec t) (femax t) (Pos2Z.is_pos (fprecp t)) (fprec_lt_femax t).
 
+Lemma BPLUS_commut {NANS: Nans}: forall t a b, 
+    plus_nan t a b = plus_nan t b a -> BPLUS t a b = BPLUS t b a.
+Proof.
+intros. apply Bplus_commut; auto.
+Qed.
+
+Lemma BMULT_commut {NANS: Nans}: forall t a b, 
+    mult_nan t a b = mult_nan t b a -> BMULT t a b = BMULT t b a.
+Proof.
+intros. apply Bmult_commut; auto.
+Qed.

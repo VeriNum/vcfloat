@@ -1762,6 +1762,111 @@ Ltac specialize_interval H prec :=
       t k
   end.
 
-Global Existing Instances
+#[export] Existing Instances
       nans map_nat compcert_map
 .
+
+(** Why do we need this rewrite hint database?
+   You might think that all of this could be accomplished with "change"
+   instead of "rewrite".  But if you do that, then Qed takes forever. *)
+Lemma Float32_add_rewrite: Float32.add = BPLUS Tsingle.  
+Proof. reflexivity. Qed.
+#[export] Hint Rewrite Float32_add_rewrite : float_elim.
+Lemma Float32_sub_rewrite: Float32.sub = BMINUS Tsingle.  
+Proof. reflexivity. Qed.
+#[export] Hint Rewrite Float32_sub_rewrite : float_elim.
+Lemma Float32_mul_rewrite: Float32.mul = BMULT Tsingle.  
+Proof. reflexivity. Qed.
+#[export] Hint Rewrite Float32_mul_rewrite : float_elim.
+Lemma Float32_div_rewrite: Float32.div = BDIV Tsingle.  
+Proof. reflexivity. Qed.
+#[export] Hint Rewrite Float32_div_rewrite : float_elim.
+Lemma Float32_neg_rewrite: Float32.neg = BOPP Tsingle.  
+Proof. reflexivity. Qed.
+#[export] Hint Rewrite Float32_neg_rewrite : float_elim.
+Lemma Float32_abs_rewrite: Float32.abs = BABS Tsingle.  
+Proof. reflexivity. Qed.
+#[export] Hint Rewrite Float32_abs_rewrite : float_elim.
+
+Lemma Float_add_rewrite: Float.add = BPLUS Tdouble.  
+Proof. reflexivity. Qed.
+#[export] Hint Rewrite Float_add_rewrite : float_elim.
+Lemma Float_sub_rewrite: Float.sub = BMINUS Tdouble.  
+Proof. reflexivity. Qed.
+#[export] Hint Rewrite Float_sub_rewrite : float_elim.
+Lemma Float_mul_rewrite: Float.mul = BMULT Tdouble.  
+Proof. reflexivity. Qed.
+#[export] Hint Rewrite Float_mul_rewrite : float_elim.
+Lemma Float_div_rewrite: Float.div = BDIV Tdouble.  
+Proof. reflexivity. Qed.
+#[export] Hint Rewrite Float_div_rewrite : float_elim.
+Lemma Float_neg_rewrite: Float.neg = BOPP Tdouble.  
+Proof. reflexivity. Qed.
+#[export] Hint Rewrite Float_neg_rewrite : float_elim.
+Lemma Float_abs_rewrite: Float.abs = BABS Tdouble.  
+Proof. reflexivity. Qed.
+#[export] Hint Rewrite Float_abs_rewrite : float_elim.
+
+Import Float_notations.
+
+Lemma B754_finite_ext:
+  forall prec emax s m e p1 p2,
+    Binary.B754_finite prec emax s m e p1 = Binary.B754_finite prec emax s m e p2.
+Proof.
+intros.
+f_equal.
+apply Classical_Prop.proof_irrelevance.
+Qed.
+
+Ltac canonicalize_float_constant x :=
+match x with
+| Float32.of_bits (Int.repr ?a) =>
+  const_Z a;
+  let x' := constr:(Bits.b32_of_bits a) in
+  let y := eval compute in x' in
+ match y with
+   | Binary.B754_finite _ _ ?s ?m ?e _ =>
+     let z := constr:(b32_B754_finite s m e (@eq_refl bool true))
+      in change x with x'; 
+        replace x' with z by (apply B754_finite_ext; reflexivity)
+   | Binary.B754_zero _ _ ?s => 
+       let z := constr:(b32_B754_zero s) in
+       change x with z        
+  end
+| Float.of_bits (Int64.repr ?a) =>
+  const_Z a;
+  let x' := constr:(Bits.b64_of_bits a) in
+  let y := eval compute in x' in
+ match y with
+   | Binary.B754_finite _ _ ?s ?m ?e _ =>
+     let z := constr:(b64_B754_finite s m e (@eq_refl bool true))
+      in change x with x'; 
+        replace x' with z by (apply B754_finite_ext; reflexivity)
+   | Binary.B754_zero _ _ ?s => 
+       let z := constr:(b64_B754_zero s) in
+       change x with z        
+  end
+end.
+
+Ltac canonicalize_float_constants := 
+  repeat
+    match goal with
+    | |- context [Binary.B754_finite 24 128 ?s ?m ?e ?p] =>
+         let x := constr:(Binary.B754_finite 24 128 s m e p) in
+         let e' := eval compute in e in
+         let z := constr:(b32_B754_finite s m e' (@eq_refl bool true)) in
+         replace x with z by (apply B754_finite_ext; reflexivity)
+    | |- context [Binary.B754_finite 53 1024 ?s ?m ?e ?p] =>
+         let x := constr:(Binary.B754_finite 53 1024 s m e p) in
+         let e' := eval compute in e in
+         let z := constr:(b64_B754_finite s m e' (@eq_refl bool true)) in
+         replace x with z by (apply B754_finite_ext; reflexivity)
+    | |- context [Float32.of_bits (Int.repr ?a)] =>
+     canonicalize_float_constant constr:(Float32.of_bits (Int.repr a))
+    | |- context [Float.of_bits (Int64.repr ?a)] =>
+     canonicalize_float_constant constr:(Float.of_bits (Int64.repr a))
+    end.
+
+
+
+
