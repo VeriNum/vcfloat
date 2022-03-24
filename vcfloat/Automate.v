@@ -832,27 +832,27 @@ let e := fresh "e" in
        let u := constr:(env_ a b c) in let v := eval hnf in u in change u with v in *
    end
 end;
- destruct H2 as [H2 H3];
- unfold e in H3;
+ destruct H2 as [_ H2];
+ unfold e in H2;
 cbv beta iota zeta delta [
          reval Prog.binary Prog.unary Prog.real_operations
          Tree.binary_real Tree.unary_real] 
-   in H3;
+   in H2;
    repeat 
-    match type of H3 with context [env_ ?a ?b ?c] =>
-       let u := constr:(env_ a b c) in let v := eval hnf in u in change u with v in H3
+    match type of H2 with context [env_ ?a ?b ?c] =>
+       let u := constr:(env_ a b c) in let v := eval hnf in u in change u with v in H2
    end;
-change (Build_radix _ _) with radix2 in H3;
- (* Don't do this stuff, any rewrites in H3 make Qed blow up
+change (Build_radix _ _) with radix2 in H2;
+ (* Don't do this stuff, any rewrites in H2 make Qed blow up
 repeat 
-match type of H3 with
+match type of H2 with
  context [ F2R radix2  {| Defs.Fnum := ?f; Defs.Fexp := ?e |} ] =>
    let H := fresh in assert (H := cleanup_Fnum f e);
       simpl Z.add in H; simpl fst in H; 
       change (powerRZ _ 0) with 1%R in H;
-      rewrite H in H3; clear H
+      rewrite H in H2; clear H
 end;
-rewrite ?Rmult_1_l in H3;
+rewrite ?Rmult_1_l in H2;
 *)
 change (type_of_expr _) with Tsingle in *;
 change (type_of_expr _) with Tdouble in *;
@@ -876,8 +876,8 @@ repeat (let E := fresh "E" in
            apply Forall_inv_tail in H0);
 match type of H0 with Forall _ nil => clear H0 end;
 clear errors;
-fold e in H3;
-revert H3; intro.
+fold e in H2;
+revert H2; intro.
 
 Ltac prove_IZR_neq :=
  change R0 with 0%R; 
@@ -913,8 +913,6 @@ Ltac prove_roundoff_bound2 :=
  match goal with P: prove_rndval _ _ _ |- prove_roundoff_bound _ _ _ _ =>
    intro; unfold_prove_rndval P
  end;
- (* remove a useless is_finite hypothesis *)
- match goal with H: is_finite _ _ _ = _ |- _ => clear H end;
  (* Unfold roundoff_error_bound *)
  red;
  (* The fval below the line should match the e above the line *)
