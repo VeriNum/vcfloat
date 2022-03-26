@@ -225,6 +225,25 @@ prove_roundoff_bound.
  interval.
 Qed.
 
+(** The following lemma demonstrates [val_bound],  that is, 
+  compute the maximum absolute value of a floating-point expression *)
+Lemma prove_val_bound_x:
+  forall x v : ftype Tsingle,
+  prove_val_bound leapfrog_bmap (leapfrog_vmap x v) x' 
+    (4642138645987358 / 2251799813685248).
+Proof.
+intros.
+prove_val_bound.
+- 
+ abstract (prove_rndval; interval).
+- 
+  prove_val_bound2.
+ match goal with |- Rabs ?a <= _ => field_simplify a end.
+  match goal with |- Rabs ?a <= _ => interval_intro (Rabs a) end.
+ eapply Rle_trans; [apply H | clear].
+ lra.
+Qed.
+
 End WITHNANS.
 
 

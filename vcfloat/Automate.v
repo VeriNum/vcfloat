@@ -948,7 +948,7 @@ match goal with H: _ = @FT2R _ _ |- _ => rewrite <- H; clear H end;
   set (j :=  @FT2R t (b64_B754_finite s m e H));
   simpl in j; subst j
  end;
- rewrite <- !(F2R_eq radix2);
+ rewrite <- ?(F2R_eq radix2);
  (* clean up all   F2R radix2 {| Defs.Fnum := _; Defs.Fexp := _ |}   *)
  rewrite ?cleanup_Fnum;
  repeat match goal with |- context [cleanup_Fnum' ?f ?e] =>
@@ -1079,5 +1079,76 @@ intro; apply H0.
 revert H1.
 apply boundsmap_denote_relax; auto.
 Qed.
+
+
+Definition val_bound {NANS: Nans} (vm: valmap) (e: expr) (b: R):=
+ Rle (Rabs (@FT2R (type_of_expr e) (fval (env_ vm) e))) b.
+
+Definition prove_val_bound {NANS: Nans}
+    (bm: boundsmap) (vm: valmap) (e: expr) 
+   (b: R): Prop := 
+   boundsmap_denote bm vm ->
+   val_bound vm e b.
+
+Ltac prove_val_bound :=
+ match goal with |- prove_val_bound ?bm ?vm ?e _ =>
+  assert (P: prove_rndval bm vm e)
+ end.
+
+Ltac prove_val_bound2 :=
+ match goal with P: prove_rndval _ _ _ |- prove_val_bound _ _ _ _ =>
+   intro; unfold_prove_rndval P
+ end;
+ (* Unfold val_bound *)
+ red;
+ (* The fval below the line should match the e above the line *)
+ match goal with e := _ : ftype _ |- _ =>
+     change (fval _ _) with e; clearbody e
+ end;
+ (* cleanups *)
+ change (type_of_expr _) with Tsingle; 
+ change (type_of_expr _) with Tdouble;
+ fold (@FT2R Tsingle) in *; fold (@FT2R Tdouble);
+ (* incorporate the equation above the line *)
+match goal with H: _ = @FT2R _ _ |- _ => rewrite <- H; clear H end;
+ (* Perform all env lookups *)
+ repeat 
+    match goal with
+    | |- context [env_ ?a ?b ?c] =>
+       let u := constr:(env_ a b c) in let v := eval hnf in u in change u with v
+   end;
+ (* Clean up all FT2R constants *)
+ repeat match goal with
+ | |- context [@FT2R ?t (b32_B754_finite ?s ?m ?e ?H)] =>
+ let j := fresh "j" in 
+  set (j :=  @FT2R t (b32_B754_finite s m e H));
+  simpl in j; subst j
+ | |- context [@FT2R ?t (b64_B754_finite ?s ?m ?e ?H)] =>
+ let j := fresh "j" in 
+  set (j :=  @FT2R t (b64_B754_finite s m e H));
+  simpl in j; subst j
+ end;
+ rewrite <- ?(F2R_eq radix2);
+ (* clean up all   F2R radix2 {| Defs.Fnum := _; Defs.Fexp := _ |}   *)
+ rewrite ?cleanup_Fnum;
+ repeat match goal with |- context [cleanup_Fnum' ?f ?e] =>
+  let x := constr:(cleanup_Fnum' f e) in
+  let y := eval cbv - [Rdiv IZR] in x in
+  change x with y
+ end;
+ (* Abstract all FT2R variables *)
+ repeat 
+  match goal with |- context [@FT2R ?t ?e] =>
+     is_var e;
+     let e' := fresh e in
+     set (e' := @FT2R Tsingle e) in *; clearbody e'; clear e; rename e' into e
+  end;
+ (* clean up all powerRZ expressions *)
+ compute_powerRZ.
+ (* Don't do field simplify , it can blow things up, and the interval tactic
+   doesn't actually need it.
+ match goal with |- context [Rabs ?a <= _] => field_simplify a end.
+*)
+
 
 

@@ -1,12 +1,17 @@
-From vcfloat Require Import FPLang FPLangOpt RAux Rounding Reify Float_notations Automate.
-Require Import Interval.Tactic.
-Import Binary.
+Require Import Lra Lia Interval.Tactic.
+Import Raux.
+Require Import Flocq.IEEE754.Binary.
+
 Import List ListNotations.
+Import Tree. (* must import this _after_ List *)
+Import Interval Private Interval_helper I2 IT2.IH I2.T Xreal Interval.Eval.Reify.
+
+Import Basic.
+Import Bool.
+
 Set Bullet Behavior "Strict Subproofs".
 
 Open Scope R_scope.
-
-Import Tree.
 
 Definition ring_simp_Mul (e1 e2 : expr) :=
      match e1, e2 with
@@ -172,9 +177,6 @@ rewrite (ring_simp1_correct _ _ env H).
 auto.
 Qed.
 
-Import Interval Private Interval_helper I2 IT2.IH I2.T Xreal Interval.Eval.Reify.
-
-
 Ltac simple_reify :=
 match goal with
  |- Rabs ?t <= ?r =>
@@ -209,9 +211,8 @@ Ltac unfold_eval_hyps :=
         eval nullary_real unary_real binary_real]; 
   intros; simpl nth.
 
-Import Basic.
-
 Definition fint := Float.f_interval F.type.
+
 
 Definition decent_interval (f: fint) :=
  match f with
@@ -226,7 +227,8 @@ match e with
 | Econst (Bpow 2 n) => I.power_int p52 (fromZ p52 2) n
 | Eunary Neg e' =>  neg (b_expr0 e')
 | Eunary Abs e' => abs (b_expr0 e')
-| Eunary Inv e' => inv p52 (b_expr0 e')
+| Eunary Inv e' => let f := b_expr0 e' in
+                            if decent_interval f then inv p52 (b_expr0 e') else Float.Inan
 | Eunary (PowerInt i) e' => let f := b_expr0 e' in
                                         if decent_interval f then I.power_int p52 f i else Float.Inan
 | Ebinary Mul e1 e2 => let f1 := b_expr0 e1 in let f2 := b_expr0 e2 in
@@ -254,7 +256,6 @@ intros.
 pose proof (F.neg_correct l).
 destruct (F.classify l) eqn:?H; auto.
 unfold F.toX in H.
-(*unfold Xbind in H. *)
 pose proof (F.classify_correct l).
 pose proof (F.classify_correct (F.neg l)).
 rewrite F'.real_neg in H2.
@@ -303,8 +304,6 @@ Proof.
 intros.
 simpl in H.
 unfold unary_real.
-(*pose proof (abs_correct (Float.Ibnd l u) (Xreal x)).*)
-(*simpl Xabs in H0. *)
 simpl in *. unfold sign_large_.
 rewrite (F.classify_correct l), (F.classify_correct u) in H.
 rewrite (F.cmp_correct l F.zero), (F.cmp_correct u F.zero).
@@ -377,83 +376,53 @@ change (F.toR F.zero) with 0.
 lra.
 Qed.
 
+
 Lemma b_expr0_inv:
  forall l u x, 
     match (if F.real l && F.real u then Float.Ibnd l u else Float.Inan) with
       | Float.Inan => True
       | Float.Ibnd lo hi => F.toR lo <= x <= F.toR hi
       end ->
-  match  fixup_fint
-      match sign_strict_ l u with
-      | Xlt | Xgt => Float.Ibnd (Fdivz_DN p52 I2.c1 u) (Fdivz_UP p52 I2.c1 l)
-      | _ => Float.Inan
-      end
-  with
-  | Float.Inan => True
-  | Float.Ibnd lo hi => F.toR lo <= / x <= F.toR hi
-  end.
+    contains (convert (div p52 (fromZ p52 1) (if F.real l && F.real u then Float.Ibnd l u else Float.Inan))) (Xreal (1 / x)).
 Proof.
 intros.
-     destruct (sign_strict_ l u) eqn:H0; simpl; auto;
-     destruct (F.real (Fdivz_DN _ _ _)) eqn:?HDN; simpl; auto;
-     destruct (F.real (Fdivz_UP _ _ _)) eqn:?HUP; simpl; auto;
-     unfold Fdivz_UP, Fdivz_DN in *;
-     unfold sign_strict_  in H0;
-     destruct (F.cmp l F.zero) eqn:?Hl;
-     destruct (F.cmp u F.zero) eqn:?Hu;
-     inversion H0; clear H0;
-     destruct (F.real l) eqn:Hl';
-     destruct (F.real u) eqn:Hu';
-     simpl in H.
-
-(*
-     try discriminate.
-     destruct (F.real 
-    
-     assert (F.real l = true). {
-       clear - HUP. unfold Fdivz_UP in *. 
+set (xx := if F.real l && F.real u then Float.Ibnd l u else Float.Inan) in *.
+pose proof J.div_correct p52 (fromZ p52 1) xx 1 x.
+match type of H0 with _ -> _ -> ?A => assert A; [apply H0 | ]; clear H0 end.
+apply fromZ_correct.
+subst xx.
+destruct (F.real l) eqn:?H, (F.real u) eqn:?H; simpl in *; auto.
+rewrite F'.valid_lb_real by auto.
+rewrite F'.valid_ub_real by auto.
 simpl.
+rewrite F.real_correct in *.
+unfold F.toR in *.
+destruct (F.toX l) eqn:?H; try discriminate.
+destruct (F.toX u) eqn:?H; try discriminate.
+simpl in *. auto.
+clear - H1.
+subst xx.
+red in H1.
+simpl in H1.
+auto.
+Qed.
 
-     unfold Fdivz_DN, Fdivz_UP.
-     assert (F.is_non_neg I2.c1). {
-       unfold I2.c1. red. rewrite F.fromZ_correct. split.  reflexivity. lra. lia.
-     }     
-     assert (F.is_non_neg_real I2.c1). {
-       unfold I2.c1. red. rewrite F.fromZ_correct. lra. lia.
-     }
-     assert (F.is_neg_real u \/ F.is_pos_real u). {
-           clear - H.
-           unfold sign_strict_ in H.
-           rewrite ?F.cmp_correct in H.
-           rewrite F'.classify_zero in H.
-           unfold Xcmp in H.
-           rewrite I.F.zero_correct in H.
-           destruct (F.classify l) eqn:Hl;
-           destruct (F.classify u) eqn:Hu.
-3:{
-    unfold F.is_neg_real, F.is_pos_real.
-    pose proof (F.classify_correct l); rewrite (F.real_correct l) in H0; rewrite Hl in H0; 
-    destruct (F.toX l) eqn:?H; try discriminate. clear H0.
-    pose proof (F.real_correct u); rewrite F.classify_correct, Hu in H0. 
-     destruct (F.toX u) eqn:?H; try discriminate.
-         rewrite F.classify_correct in Hl, Hu.
-Search F.classify F.toX.
-Search (F.classify F.zero).
-           
-     destruct (F.div_DN_correct p52 I2.c1 u).
-     destruct (F.div_UP_correct p52 I2.c1 u).
-
-
- hnf. simpl.
-Search F.div_DN.
-
-     destruct (F.real u) eqn:Hu;
-     destruct (F.real l) eqn:Hl.
-2:{
-simpl.
-Search Fdivz_DN.
-     *)
-Admitted.
+Lemma inv_div1:
+  forall x, 
+   decent_interval x = true -> 
+   inv p52 x = div p52 (fromZ p52 1) x.
+Proof.
+intros.
+unfold inv, div.
+change (fromZ p52 1) with (Float.Ibnd I.c1 I.c1).
+cbv iota.
+change (sign_strict_ I.c1 I.c1) with Xgt.
+destruct x; auto.
+simpl in H. rewrite andb_true_iff in H. destruct H.
+unfold Fdivz_DN, Fdivz_UP.
+rewrite H, H0.
+auto.
+Qed.
 
 Lemma b_expr0_correct:
   forall e,
@@ -529,9 +498,36 @@ destruct n; simpl; auto.
   simpl in *. lra.
  + destruct (b_expr0 e); auto.
    apply fixup_fint_abs_correct; auto.
- + destruct (b_expr0 e); simpl in *; auto.
-     set (x := eval e nil) in *; clearbody x; clear e.
-     apply b_expr0_inv; auto.
+ + destruct (b_expr0 e); auto.
+     set (x := eval e nil) in *. clearbody x; clear e.
+     destruct (decent_interval _) eqn:?H; [ | simpl; auto].
+     simpl in H. rewrite andb_true_iff in H. destruct H.
+     simpl in IHe. rewrite H, H0 in IHe. simpl in IHe.
+     rewrite inv_div1 by (simpl; rewrite H, H0; auto).
+     pose proof J.div_correct p52 (fromZ p52 1) (Float.Ibnd l u) 1 x.
+     match type of H1 with _ -> _ -> ?A => assert A; [apply H1 | ]; clear H1 end.
+     apply fromZ_correct.
+     hnf; simpl.
+     rewrite F'.valid_lb_real by auto.
+     rewrite F'.valid_ub_real by auto.
+     simpl.
+     rewrite F.real_correct in *.
+     unfold F.toR in *.
+     destruct (F.toX l) eqn:?H; try discriminate.
+     destruct (F.toX u) eqn:?H; try discriminate.
+     simpl in *. auto.
+     change I.div with div in H2.
+     set (d := div _ _ _) in *. clearbody d.
+     destruct d; simpl in *; auto.
+     destruct (F.real l0) eqn:?H; simpl; auto.
+     destruct (F.real u0) eqn:?H; simpl; auto.
+     rewrite F'.valid_lb_real in H2 by auto.
+     rewrite F'.valid_ub_real in H2 by auto. simpl in H2.
+     unfold F.toR. rewrite F.real_correct in H1, H3.
+     destruct (F.toX l0); try discriminate.
+     destruct (F.toX u0); try discriminate.
+     unfold Rdiv in H2; rewrite Rmult_1_l in H2.
+     simpl; auto.
  + destruct (b_expr0 e); simpl in *; auto.
      destruct (F.real l) eqn:?H; simpl; auto.
      destruct (F.real u) eqn:?H; simpl; auto.
@@ -584,7 +580,7 @@ destruct n; simpl; auto.
    simpl.
     unfold F.toR in *.
    match type of H3 with _ -> _ -> ?A => assert A; [apply H3 | clear H3 ] end.
- +
+ + (* Mul *)
    hnf; simpl.
        rewrite F'.valid_lb_real by auto.
        rewrite F'.valid_ub_real by auto.
@@ -816,10 +812,30 @@ end end.
 
 Lemma Freal_abs: 
   forall x, F.real x = true -> F.real (F.abs x) = true.
-Admitted.
+Proof.
+intros.
+pose proof F.abs_correct x.
+rewrite F.real_correct in H.
+destruct (F.toX x); try discriminate; simpl in *.
+destruct H0 as [? _].
+rewrite F.real_correct. rewrite H0.
+auto.
+Qed.
 
 Lemma Fmax_real: forall a b, F.real a = true -> F.real b = true -> F.real (F.max a b) = true.
-Admitted.
+Proof.
+intros.
+pose proof F.max_correct a b.
+pose proof H; pose proof H0.
+rewrite F.classify_correct in H,H0.
+destruct (F.classify a); try discriminate.
+destruct (F.classify b); try discriminate.
+rewrite F.real_correct in *.
+destruct (F.toX a); try discriminate.
+destruct (F.toX b); try discriminate.
+simpl in *.
+rewrite H1; auto.
+Qed.
 
 Lemma bconstexpr_correct':
   forall e l u x vars, b_constexpr e = Float.Ibnd l u ->
@@ -1008,6 +1024,8 @@ Qed.
 
 Definition zeroexpr := Econst (Int 0).
 
+Definition infinity := PrimFloat.infinity.
+
 Fixpoint prune (hyps: list (option F.type)) (e: expr) (cutoff: F.type) :
            expr * F.type :=
  match b_expr e hyps with 
@@ -1015,24 +1033,21 @@ Fixpoint prune (hyps: list (option F.type)) (e: expr) (cutoff: F.type) :
  | None =>
  match e with
  | Ebinary Add e1 e2 =>
-(*
   let (e1',b1) := prune hyps e1 cutoff in 
   let (e2',b2) := prune hyps e2 cutoff in 
-  let b0 := F.add_UP p52 b1 b2 in 
-*)
-   match prune hyps e1 cutoff, prune hyps e2 cutoff with
-   | (Econst (Int 0), b1), (Econst (Int 0), b2) => (Econst (Int 0), F.add_UP p52 b1 b2)
-   | (Econst (Int 0), b1), (e2', b2) => (e2', F.add_UP p52 b1 b2)
-   | (e1', b1), (Econst (Int 0), b2) => (e1', F.add_UP p52 b1 b2)
-   | (e1', b1), (e2', b2) => (Ebinary Add e1' e2', F.add_UP p52 b1 b2)
-   end
+  (match e1', e2'  with
+   | Econst (Int 0), _ => e2'
+   | _, Econst (Int 0) => e1'
+   | _, _ => Ebinary Add e1' e2'
+   end, if F.real b1 && F.real b2 then F.add_UP p52 b1 b2 else infinity)
  | Ebinary Sub e1 e2 =>
-   match prune hyps e1 cutoff, prune hyps e2 cutoff with
-   | (Econst (Int 0), b1), (Econst (Int 0), b2) => (Econst (Int 0), F.add_UP p52 b1 b2)
-   | (Econst (Int 0), b1), (e2', b2) => (Eunary Neg e2', F.add_UP p52 b1 b2)
-   | (e1', b1), (Econst (Int 0), b2) => (e1', F.add_UP p52 b1 b2)
-   | (e1', b1), (e2', b2) => (Ebinary Sub e1' e2', F.add_UP p52 b1 b2)
-   end
+  let (e1',b1) := prune hyps e1 cutoff in 
+  let (e2',b2) := prune hyps e2 cutoff in 
+  (match e1', e2' with
+   | Econst (Int 0), _ => Eunary Neg e2'
+   | _, Econst (Int 0) => e1'
+   | _, _ => Ebinary Sub e1' e2'
+   end, if F.real b1 && F.real b2 then F.add_UP p52 b1 b2 else infinity)
  | _ => (e, zero)
  end
 end.
@@ -1042,40 +1057,36 @@ Proof.
 unfold F.toR. change zero with F.zero. rewrite F.zero_correct. reflexivity.
 Qed.
 
-Lemma add_UP_real_inv:
-  forall x y, F.real(F.add_UP p52 x y) = true -> F.real x = true /\ F.real y = true.
-Admitted.
-
 Lemma prune_correct:
   forall env e cutoff e1 slop,
   prune env e cutoff = (e1,slop) ->
   F.real slop = true ->
   forall (vars: list R),
    Forall2 check_bound env vars ->
-   Rabs (eval e vars) <= Rabs (eval e1 vars) + (F.toR slop).
+   Rabs (eval e vars - eval e1 vars) <= F.toR slop.
 Proof.
 intros until 1.
 intro Hslop.
 revert e1 slop H Hslop.
  induction e; intros; unfold prune in H; fold prune in H;
- try (
-match type of H with context [b_expr ?e ?env] => destruct (b_expr e env) eqn:?H end;
- [destruct (F'.le t cutoff) eqn:?H; inversion H; clear H; subst;
-apply (b_expr_correct _ vars _ _ H0) in H1;
- [destruct H1; 
-   simpl in H1|-*; rewrite Rabs_R0; lra
- | rewrite FtoR_zero; lra
- ]
- | inversion H; clear H; subst; rewrite FtoR_zero; lra
-]).
+ try solve [
+  match type of H with context [b_expr ?e ?env] => destruct (b_expr e env) eqn:?H end;
+    [destruct (F'.le t cutoff) eqn:?H; inversion H; clear H; subst;
+     apply (b_expr_correct _ vars _ _ H0) in H1;
+     [destruct H1; simpl in H1|-*; rewrite Rminus_0_r; auto
+     | rewrite Rminus_eq_0, Rabs_R0, FtoR_zero; lra
+     ]
+    | inversion H; clear H; subst; rewrite Rminus_eq_0, Rabs_R0, FtoR_zero; lra
+    ]].
 (* binary case *)
-
- destruct (b_expr (Ebinary b e1 e2)) eqn:?H.
+ destruct (b_expr (Ebinary b e1 e2) env) eqn:?H.
+-
  destruct (b_expr_correct env vars (Ebinary b e1 e2) _ H0 H1); clear H1.
  destruct (F'.le t cutoff) eqn:?H.
     inversion H; clear H; subst.
-    simpl eval in *. rewrite Rabs_R0. lra.
-    inversion H; clear H; subst. rewrite FtoR_zero; lra.
+    simpl eval in *. rewrite Rminus_0_r. auto.
+    inversion H; clear H; subst. rewrite Rminus_eq_0, FtoR_zero, Rabs_R0; lra.
+-
      destruct (prune env e1 cutoff) as [e1' b1].
      destruct (prune env e2 cutoff) as [e2' b2].
      specialize (IHe1 _ _ (eq_refl _)).
@@ -1083,31 +1094,54 @@ apply (b_expr_correct _ vars _ _ H0) in H1;
    clear H1.
  destruct b.
  + (* Add *)
-     destruct (Prog.expr_eq_dec e1' (Econst (Int 0)));
-       [destruct (Prog.expr_eq_dec e2' (Econst (Int 0))) | ].
-     *
-       subst. inversion H; clear H; subst.
-       destruct (add_UP_real_inv _ _ Hslop).
-       specialize (IHe1 H _ H0).
-       specialize (IHe2 H1 _ H0).
-       simpl eval in *. 
-       rewrite Rabs_R0, Rplus_0_l in *. 
-       set (x1 := eval e1 vars) in *; clearbody x1.
-       set (x2 := eval e2 vars) in *; clearbody x2.
-       destruct (F.add_UP_correct p52 b1 b2); auto.
+     injection H; clear H; intros H H'.
+     subst slop.
+     destruct (F.real b1) eqn:R1; try discriminate.
+     destruct (F.real b2) eqn:R2; try discriminate. simpl in Hslop.
+     specialize (IHe1 (eq_refl _) _ H0).
+     specialize (IHe2 (eq_refl _) _ H0).
+     simpl in *.
+     destruct (F.add_UP_correct p52 b1 b2); auto.
          apply F'.valid_ub_real; auto.
          apply F'.valid_ub_real; auto.
-       apply Rle_trans with (F.toR b1 + F.toR b2).
-       unfold Rabs in *. destruct (Rcase_abs x1), (Rcase_abs x2), (Rcase_abs (x1+x2)); lra.
-       red in H3.
-       rewrite F.real_correct in Hslop. unfold F.toR at 3. destruct ( F.toX (F.add_UP p52 b1 b2)); try discriminate.
-      simpl. 
-       rewrite F.real_correct in H,H1.
-        unfold F.toR.
-        destruct (F.toX b1); try discriminate.
-        destruct (F.toX b2); try discriminate.
-        simpl in H3|-*. auto.
-Admitted. 
+     red in H1.
+     unfold F.toR  in *.
+     rewrite F.real_correct in R1,R2.
+     destruct (F.toX b1); try discriminate.
+     destruct (F.toX b2); try discriminate.
+     rewrite F.real_correct in Hslop. destruct ( F.toX (F.add_UP p52 b1 b2)); try discriminate.
+     simpl in *.
+     subst e0; revert IHe1 IHe2.
+     destruct e1' as [ | [ [ | | ] | | ] | | ] ;
+     destruct e2' as [ | [ [ | | ] | | ] | | ] ;
+     simpl;
+     unfold Rabs; repeat destruct (Rcase_abs _); lra.
+ + (* Sub *)
+     injection H; clear H; intros H H'.
+     subst slop.
+     destruct (F.real b1) eqn:R1; try discriminate.
+     destruct (F.real b2) eqn:R2; try discriminate. simpl in Hslop.
+     specialize (IHe1 (eq_refl _) _ H0).
+     specialize (IHe2 (eq_refl _) _ H0).
+     simpl in *.
+     destruct (F.add_UP_correct p52 b1 b2); auto.
+         apply F'.valid_ub_real; auto.
+         apply F'.valid_ub_real; auto.
+     red in H1.
+     unfold F.toR  in *.
+     rewrite F.real_correct in R1,R2.
+     destruct (F.toX b1); try discriminate.
+     destruct (F.toX b2); try discriminate.
+     rewrite F.real_correct in Hslop. destruct ( F.toX (F.add_UP p52 b1 b2)); try discriminate.
+     simpl in *.
+     subst e0; revert IHe1 IHe2.
+     destruct e1' as [ | [ [ | | ] | | ] | | ] ;
+     destruct e2' as [ | [ [ | | ] | | ] | | ] ;
+     simpl;
+     unfold Rabs; repeat destruct (Rcase_abs _); lra.
+ + inversion H; clear H; subst. rewrite Rminus_eq_0, FtoR_zero, Rabs_R0; lra.
+ + inversion H; clear H; subst. rewrite Rminus_eq_0, FtoR_zero, Rabs_R0; lra.
+Qed.
 
 Lemma prune_terms_correct:
  forall hyps e cutoff e1 slop, 
@@ -1123,10 +1157,7 @@ apply eval_hyps_correct ; auto.
 intros.
 apply eval_hyps_correct in H2; auto.
 clear H1.
-eapply Rle_trans.
-pose proof (prune_correct _ _ _ _ _ H H0 vars); clear H.
-apply H1; clear H1.
-2:lra.
+assert (Forall2 check_bound (map b_hyps hyps) vars). {
 clear - H3.
 induction H3.
 constructor.
@@ -1143,8 +1174,12 @@ constructor.
 unfold eval_hyps1 in H.
 inversion H; clear H; subst.
 constructor; auto.
+} clear H3.
+pose proof (prune_correct _ _ _ _ _ H H0 vars H1).
+clear - H2 H3.
+revert H2 H3.
+unfold Rabs. repeat destruct (Rcase_abs _); intros; lra.
 Qed.
-
 
 Ltac prune_terms cutoff := 
  simple_reify;
