@@ -557,6 +557,32 @@ eapply rndval_with_cond_result1_fvals_eq.
 assumption.
 Qed.
 
+Ltac solve_Forall_conds:= 
+ lazymatch goal with
+ | |- Forall _ _ => 
+
+  (* the goal is a Forall of all the conds. Clean them up a bit. *)
+  change (type_of_expr _) with Tsingle;
+  change (type_of_expr _) with Tdouble;
+  cbv beta iota zeta delta [
+            mset shifts_MAP empty_shiftmap mempty
+            compcert_map Maps.PMap.set Maps.PMap.init
+            Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
+              Maps.PTree.set0 Pos.of_succ_nat Pos.succ
+            index_of_tr map_nat fst snd
+
+          rndval_with_cond' rnd_of_binop_with_cond
+          rnd_of_unop_with_cond is_div
+          Rbinop_of_rounded_binop Runop_of_exact_unop Runop_of_rounded_unop
+          type_of_expr make_rounding round_knowl_denote
+         rounding_cond_ast no_overflow app];
+ 
+  (* now process the boundsmap above the line, and the conds below the line *)
+  process_boundsmap_denote;
+  process_conds; interval
+ | |- _ => idtac
+ end.
+
 Ltac prove_rndval := 
  (* if necessary, convert goal into a prove_rndval'   goal*)
  lazymatch goal with
@@ -908,6 +934,44 @@ repeat match goal with
   let x := constr:(Pos.pow a b) in let y := eval compute in x in
   change x with y in *
 end.
+
+
+Ltac unfold_rval :=
+ match goal with |- context [rval ?env ?x] =>
+   let a := constr:(rval env x) in let b := eval hnf in a in change a with b
+ end;
+ cbv beta iota delta [rval Rop_of_binop Rop_of_unop
+            Rop_of_rounded_binop Rop_of_exact_unop Rop_of_rounded_unop];
+ change (type_of_expr _) with Tsingle; 
+ change (type_of_expr _) with Tdouble;
+ fold (@FT2R Tsingle) in *; fold (@FT2R Tdouble);
+ (* Perform all env lookups *)
+ repeat 
+    match goal with
+    | |- context [env_ ?a ?b ?c] =>
+       let u := constr:(env_ a b c) in let v := eval hnf in u in change u with v
+   end;
+ (* Clean up all FT2R constants *)
+ repeat match goal with
+ | |- context [@FT2R ?t (b32_B754_finite ?s ?m ?e ?H)] =>
+ let j := fresh "j" in 
+  set (j :=  @FT2R t (b32_B754_finite s m e H));
+  simpl in j; subst j
+ | |- context [@FT2R ?t (b64_B754_finite ?s ?m ?e ?H)] =>
+ let j := fresh "j" in 
+  set (j :=  @FT2R t (b64_B754_finite s m e H));
+  simpl in j; subst j
+ end;
+ rewrite <- ?(F2R_eq radix2);
+ (* clean up all   F2R radix2 {| Defs.Fnum := _; Defs.Fexp := _ |}   *)
+ rewrite ?cleanup_Fnum;
+ repeat match goal with |- context [cleanup_Fnum' ?f ?e] =>
+  let x := constr:(cleanup_Fnum' f e) in
+  let y := eval cbv - [Rdiv IZR] in x in
+  change x with y
+ end.
+
+
 
 Ltac prove_roundoff_bound2 :=
  match goal with P: prove_rndval _ _ _ |- prove_roundoff_bound _ _ _ _ =>
