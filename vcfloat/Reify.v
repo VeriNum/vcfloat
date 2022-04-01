@@ -17,58 +17,7 @@ Import List.
 
 Definition ident := positive.
 
-Definition SterbenzSub {NANS: Nans} := BMINUS. 
-
 Definition placeholder32: ident -> ftype Tsingle. intro. apply 0%F32. Qed.
-
-Definition extend_comp (c: comparison) (b: bool) (d: option comparison) :=
- match d with
- | None => false
- | Some c' =>
- match c, b, c' with
- | Gt, true, Gt => true
- | Gt, false, Lt => true
- | Gt, false, Eq => true
- | Eq, true, Eq => true
- | Eq, false, Gt => true
- | Eq, false, Lt => true
- | Lt, true, Lt => true
- | Lt, false, Gt => true
- | Lt, false, Eq => true
- | _, _, _ => false
- end
- end.
-
-Definition BCMP (ty: type) (c: comparison) (b: bool) (x y: ftype ty) :=
-  extend_comp c b (Binary.Bcompare (fprec ty) (femax ty) x y).
-
-Notation "x + y" := (BPLUS Tsingle x y) (at level 50, left associativity) : float32_scope.
-Notation "x - y"  := (BMINUS Tsingle x y) (at level 50, left associativity) : float32_scope.
-Notation "x * y"  := (BMULT Tsingle x y) (at level 40, left associativity) : float32_scope.
-Notation "x / y"  := (BDIV Tsingle x y) (at level 40, left associativity) : float32_scope.
-Notation "- x" := (BOPP Tsingle x) (at level 35, right associativity) : float32_scope.
-Notation "x <= y" := (BCMP Tsingle Gt false x y) (at level 70, no associativity) : float32_scope. 
-Notation "x < y" := (BCMP Tsingle Gt true y x) (at level 70, no associativity) : float32_scope. 
-Notation "x >= y" := (BCMP Tsingle Lt false x y) (at level 70, no associativity) : float32_scope. 
-Notation "x > y" := (BCMP Tsingle Gt true x y) (at level 70, no associativity) : float32_scope. 
-Notation "x <= y <= z" := (x <= y /\ y <= z)%F32 (at level 70, y at next level) : float32_scope.
-Notation "x <= y < z" := (x <= y /\ y < z)%F32 (at level 70, y at next level) : float32_scope.
-Notation "x < y < z" := (x < y /\ y < z)%F32 (at level 70, y at next level) : float32_scope.
-Notation "x < y <= z" := (x < y /\ y <= z)%F32 (at level 70, y at next level) : float32_scope.
-
-Notation "x + y" := (BPLUS Tdouble x y) (at level 50, left associativity) : float64_scope.
-Notation "x - y"  := (BMINUS Tdouble x y) (at level 50, left associativity) : float64_scope.
-Notation "x * y"  := (BMULT Tdouble x y) (at level 40, left associativity) : float64_scope.
-Notation "x / y"  := (BDIV Tdouble x y) (at level 40, left associativity) : float64_scope.
-Notation "- x" := (BOPP Tdouble x) (at level 35, right associativity) : float64_scope.
-Notation "x <= y" := (BCMP Tdouble Gt false x y) (at level 70, no associativity) : float64_scope. 
-Notation "x < y" := (BCMP Tdouble Gt true y x) (at level 70, no associativity) : float64_scope. 
-Notation "x >= y" := (BCMP Tdouble Lt false x y) (at level 70, no associativity) : float64_scope. 
-Notation "x > y" := (BCMP Tdouble Gt true x y) (at level 70, no associativity) : float64_scope. 
-Notation "x <= y <= z" := (x <= y /\ y <= z)%F64 (at level 70, y at next level) : float64_scope.
-Notation "x <= y < z" := (x <= y /\ y < z)%F64 (at level 70, y at next level) : float64_scope.
-Notation "x < y < z" := (x < y /\ y < z)%F64 (at level 70, y at next level) : float64_scope.
-Notation "x < y <= z" := (x < y /\ y <= z)%F64 (at level 70, y at next level) : float64_scope.
 
 Ltac ground_pos p := 
  match p with
@@ -86,9 +35,6 @@ Ltac find_type prec emax :=
      let g := ground_pos precp in let g := ground_pos emax in 
      constr:(TYPE precp emax (ZLT_intro prec emax (eq_refl _)) (BOOL_intro _ (eq_refl _)))
  end.
-
-Definition Norm {T} (x: T) := x.
-Definition Denorm {T} (x: T) := x.
 
 Ltac reify_float_expr E :=
  match E with
@@ -130,7 +76,7 @@ Ltac reify_float_expr E :=
  | b64_B754_finite _ _ _ _ => constr:(@Const ident Tdouble E)
  | b32_B754_finite _ _ _ _ => constr:(@Const ident Tsingle E)
  | b64_B754_finite _ _ _ _ => constr:(@Const ident Tdouble E)
- | SterbenzSub _ ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Sterbenz (BMINUS _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident SterbenzMinus a' b')
                                   
  | _ => let E' := eval red in E in reify_float_expr E'

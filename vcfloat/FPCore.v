@@ -75,7 +75,7 @@ Require Import Lia Lra.
 From Flocq Require Import Binary Bits Core.
 From compcert Require Import lib.IEEE754_extra lib.Floats.
 Global Unset Asymmetric Patterns. (* because "Require compcert..." sets it *)
-Require vcfloat.Float_notations.
+Require Export vcfloat.Float_notations.
 
 Definition BOOL (a: bool): Prop := if a then True else False.
 
@@ -686,8 +686,61 @@ Definition BOPP ty := Bopp _ (femax ty) (opp_nan ty).
 
 End WITHNANS.
 
+Definition Norm {T} (x: T) := x.
+Definition Denorm {T} (x: T) := x.
+Definition Sterbenz {T} (x: T) := x.
+
 Definition Tsingle := TYPE 24 128 I I.
 Definition Tdouble := TYPE 53 1024 I I.
+
+Definition extend_comp (c: comparison) (b: bool) (d: option comparison) :=
+ match d with
+ | None => false
+ | Some c' =>
+ match c, b, c' with
+ | Gt, true, Gt => true
+ | Gt, false, Lt => true
+ | Gt, false, Eq => true
+ | Eq, true, Eq => true
+ | Eq, false, Gt => true
+ | Eq, false, Lt => true
+ | Lt, true, Lt => true
+ | Lt, false, Gt => true
+ | Lt, false, Eq => true
+ | _, _, _ => false
+ end
+ end.
+
+Definition BCMP (ty: type) (c: comparison) (b: bool) (x y: ftype ty) :=
+  extend_comp c b (Binary.Bcompare (fprec ty) (femax ty) x y).
+
+Notation "x + y" := (BPLUS Tsingle x y) (at level 50, left associativity) : float32_scope.
+Notation "x - y"  := (BMINUS Tsingle x y) (at level 50, left associativity) : float32_scope.
+Notation "x * y"  := (BMULT Tsingle x y) (at level 40, left associativity) : float32_scope.
+Notation "x / y"  := (BDIV Tsingle x y) (at level 40, left associativity) : float32_scope.
+Notation "- x" := (BOPP Tsingle x) (at level 35, right associativity) : float32_scope.
+Notation "x <= y" := (BCMP Tsingle Gt false x y) (at level 70, no associativity) : float32_scope. 
+Notation "x < y" := (BCMP Tsingle Gt true y x) (at level 70, no associativity) : float32_scope. 
+Notation "x >= y" := (BCMP Tsingle Lt false x y) (at level 70, no associativity) : float32_scope. 
+Notation "x > y" := (BCMP Tsingle Gt true x y) (at level 70, no associativity) : float32_scope. 
+Notation "x <= y <= z" := (x <= y /\ y <= z)%F32 (at level 70, y at next level) : float32_scope.
+Notation "x <= y < z" := (x <= y /\ y < z)%F32 (at level 70, y at next level) : float32_scope.
+Notation "x < y < z" := (x < y /\ y < z)%F32 (at level 70, y at next level) : float32_scope.
+Notation "x < y <= z" := (x < y /\ y <= z)%F32 (at level 70, y at next level) : float32_scope.
+
+Notation "x + y" := (BPLUS Tdouble x y) (at level 50, left associativity) : float64_scope.
+Notation "x - y"  := (BMINUS Tdouble x y) (at level 50, left associativity) : float64_scope.
+Notation "x * y"  := (BMULT Tdouble x y) (at level 40, left associativity) : float64_scope.
+Notation "x / y"  := (BDIV Tdouble x y) (at level 40, left associativity) : float64_scope.
+Notation "- x" := (BOPP Tdouble x) (at level 35, right associativity) : float64_scope.
+Notation "x <= y" := (BCMP Tdouble Gt false x y) (at level 70, no associativity) : float64_scope. 
+Notation "x < y" := (BCMP Tdouble Gt true y x) (at level 70, no associativity) : float64_scope. 
+Notation "x >= y" := (BCMP Tdouble Lt false x y) (at level 70, no associativity) : float64_scope. 
+Notation "x > y" := (BCMP Tdouble Gt true x y) (at level 70, no associativity) : float64_scope. 
+Notation "x <= y <= z" := (x <= y /\ y <= z)%F64 (at level 70, y at next level) : float64_scope.
+Notation "x <= y < z" := (x <= y /\ y < z)%F64 (at level 70, y at next level) : float64_scope.
+Notation "x < y < z" := (x < y /\ y < z)%F64 (at level 70, y at next level) : float64_scope.
+Notation "x < y <= z" := (x < y /\ y <= z)%F64 (at level 70, y at next level) : float64_scope.
 
 
 Definition build_nan_full {prec emax} (pl: nan_payload prec emax) :=

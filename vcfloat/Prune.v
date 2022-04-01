@@ -1344,41 +1344,6 @@ revert H2 H3.
 unfold Rabs. repeat destruct (Rcase_abs _); intros; lra.
 Qed.
 
-Definition simplify_and_prune hyps e cutoff :=
-    let e2 := ring_simp false 100 e in 
-    let '(e1,slop) := prune (map b_hyps hyps) e2 cutoff in
-    (ring_simp true 100 e1, slop).
-
-Lemma prune_terms_correct2:
- forall hyps e cutoff e1 slop,  
-   simplify_and_prune hyps e cutoff = (e1,slop) ->
-  F.real slop = true ->
-   forall vars r, 
-     length hyps = length vars ->
-     eval_hyps hyps vars (Rabs (eval e1 vars) <= r - F.toR slop) ->
-      eval_hyps hyps vars (Rabs (eval e vars) <= r).
-Proof.
-intros.
-unfold simplify_and_prune in H.
-destruct (prune (map b_hyps hyps) (ring_simp false 100 e) cutoff) eqn:?H.
-assert (t = slop) by congruence. subst t.
-eapply prune_terms_correct in H3; try eassumption; auto.
-rewrite  (ring_simp_correct false 100 e vars).
-eassumption.
-assert (e1 = ring_simp true 100 e0) by congruence.
-subst.
-rewrite <- ring_simp_correct in H2. auto.
-Qed.
-
-Ltac prune_terms cutoff := 
- simple_reify;
- match goal with |- eval_hyps _ _ (Rabs (eval ?e _) <= _) => 
-    eapply (prune_terms_correct2 _ _ cutoff);  [vm_compute; reflexivity | reflexivity |  reflexivity |  try clear e]
- end;
- unfold_eval_hyps.
-
-Definition cutoff := Tactic_float.Float.scale (Tactic_float.Float.fromZ 1) (-40)%Z.
-
 Fixpoint count_terms (e: expr) : Z :=
  match e with
  | Ebinary Add e1 e2 => count_terms e1 + count_terms e2
@@ -2742,6 +2707,83 @@ rewrite H.
 simpl. lra.
 Qed.
 
+Definition simplify_and_prune hyps e cutoff :=
+    let e2 := ring_simp false 100 e in 
+    let '(e1,slop) := prune (map b_hyps hyps) e2 cutoff in
+    let e2 := ring_simp true 100 e1 in
+    let e3 := cancel_terms e2 in
+    (e3, slop).
+
+Lemma prune_terms_correct2:
+ forall hyps e cutoff e1 slop,  
+   simplify_and_prune hyps e cutoff = (e1,slop) ->
+  F.real slop = true ->
+   forall vars r, 
+     length hyps = length vars ->
+     eval_hyps hyps vars (Rabs (eval e1 vars) <= r - F.toR slop) ->
+      eval_hyps hyps vars (Rabs (eval e vars) <= r).
+Proof.
+intros.
+unfold simplify_and_prune in H.
+destruct (prune (map b_hyps hyps) (ring_simp false 100 e) cutoff) eqn:?H.
+assert (t = slop) by congruence. subst t.
+assert (e1 = cancel_terms (ring_simp true 100 e0)) by congruence. clear H; subst e1.
+rewrite cancel_terms_correct in H2.
+rewrite <- ring_simp_correct in H2.
+eapply prune_terms_correct in H3; try eassumption; auto.
+rewrite <- ring_simp_correct in H3.
+auto.
+Qed.
+
+Ltac prune_terms cutoff := 
+ simple_reify;
+ match goal with |- eval_hyps _ _ (Rabs (eval ?e _) <= _) => 
+    eapply (prune_terms_correct2 _ _ cutoff);  [vm_compute; reflexivity | reflexivity |  reflexivity |  try clear e]
+ end;
+ unfold_eval_hyps.
+
+
+Definition simplify_and_prune_a hyps e cutoff :=
+    let e2 := ring_simp false 100 e in 
+    let '(e1,slop) := prune (map b_hyps hyps) e2 cutoff in
+(*    let e2 := ring_simp true 100 e1 in*)
+(*    let e3 := cancel_terms e2 in*)
+    (e1, slop).
+
+
+Lemma prune_terms_correct2a:
+ forall hyps e cutoff e1 slop,  
+   simplify_and_prune_a hyps e cutoff = (e1,slop) ->
+  F.real slop = true ->
+   forall vars r, 
+     length hyps = length vars ->
+     eval_hyps hyps vars (Rabs (eval e1 vars) <= r - F.toR slop) ->
+      eval_hyps hyps vars (Rabs (eval e vars) <= r).
+Admitted.
+
+Lemma prune_terms_correct2b:
+ forall hyps e cutoff e1 slop,  
+   simplify_and_prune_a hyps e cutoff = (e1,slop) ->
+  F.real slop = true ->
+   forall vars r, 
+     length hyps = length vars ->
+     eval_hyps hyps vars (Rabs (eval e1 vars) <= r - F.toR slop) ->
+      eval_hyps hyps vars (Rabs (eval e vars) <= r).
+Admitted.
+
+Ltac prune_terms' H cutoff := 
+ simple_reify;
+ match goal with |- eval_hyps _ _ (Rabs (eval ?e _) <= _) => 
+    eapply (H _ _ cutoff);  [vm_compute; reflexivity | reflexivity |  reflexivity |  try clear e]
+ end;
+ unfold_eval_hyps.
+
+
+Definition cutoff40 := Tactic_float.Float.scale (Tactic_float.Float.fromZ 1) (-40)%Z.
+Definition cutoff30 := Tactic_float.Float.scale (Tactic_float.Float.fromZ 1) (-30)%Z.
+
+
+
 Lemma test1:
  forall 
  (x v e0 d e1 e2 d0 e3 : R)
@@ -2756,25 +2798,45 @@ Lemma test1:
 Rabs
   (((x + (1 / 32 * v + e2)) * (1 + d) + e3 + (1 / 2048 * - x + e0)) *
    (1 + d0) + e1 - (x + 1 / 32 * v + 1 / 2 * (1 / 32 * (1 / 32)) * - x)) <=
-/ 4068160.
+  4644337115725829 / 18889465931478580854784 + powerRZ 2 (-33).
 Proof.
 intros.
-prune_terms cutoff.
-
-(*
-simple_reify;
-match goal with |- context [eval ?e ?v] =>
-  let u := constr:(fiddle2 e) in let u' := eval vm_compute in u in
-  replace (eval e v) with (eval u' v) by admit;
-   unfold_eval_hyps; clear __expr 
-end.
-*)
-
-match goal with |- Rabs ?a <= _ => field_simplify a end.
+prune_terms cutoff30.
+(*match goal with |- Rabs ?a <= _ => field_simplify a end.*)
 match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end.
-eapply Rle_trans; [ apply H99 | clear H99 ].
-compute; lra.
+eapply Rle_trans; [ apply H99 | clear  ].
+simpl; compute; lra.
 Qed.
+
+Lemma test3: forall
+ (x v d1 d2 e0 e1 e3 : R)
+ (BOUND : -2 <= v <= 2)
+ (BOUND0 : 2 <= x <= 4)
+ (E : Rabs d1 <= / 16777216) 
+ (E0 : Rabs d2 <= / 16777216)
+ (E1 : Rabs e0 <= / 713623846352979940529142984724747568191373312)
+ (E2 : Rabs e1 <= / 1427247692705959881058285969449495136382746624)
+ (E3 : Rabs e3 <= / 713623846352979940529142984724747568191373312),
+Rabs
+  (((x + (1 / 32 * v + e0)) * (1 + d2) + (1 / 2048 * (3 - x) + e3)) *
+   (1 + d1) + e1 -
+   (x + 1 / 32 * v + 1 / 2 * (1 / 32 * (1 / 32)) * (3 - x))) <=
+/ 2000000.
+Proof.
+intros.
+prune_terms cutoff30.
+match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end.
+eapply Rle_trans; [ apply H99 | clear  ].
+simpl; compute; lra.
+Qed.
+
+
+Fixpoint count_nodes (e: expr) : Z :=
+ match e with
+ | Eunary _ e1 => 1 + count_nodes e1
+ | Ebinary _ e1 e2 => 1 + count_nodes e1 + count_nodes e2
+ | _ => 1
+ end%Z.
 
 
 Lemma test2:
@@ -2852,25 +2914,31 @@ x v : R)
       (v +
        1 / 2 * (1 / 32) *
        (- x + - (x + 1 / 32 * v + 1 / 2 * (1 / 32 * (1 / 32)) * - x))))) <=
-  / 7655753.
+ 5981343255101459 / 2361183241434822606848 + powerRZ 2 (-27).
 Proof.
 intros.
-Time prune_terms cutoff.  (* 2.255 sec *)
+(*
+simple_reify.
+match goal with |- context [eval ?e] =>
+ let e := constr:(ring_simp false 100 e) in 
+ let e := constr:(fst (prune (map b_hyps __hyps) e cutoff30)) in
+ let e := constr:(ring_simp true 100 e) in 
+ let e := constr:(cancel_terms e) in
+ let u := constr:((count_nodes e, count_terms e)) in let u := eval vm_compute in u in
+ assert (fst u >=0)%Z; clear
+ end.
+*)
+(* 242 nodes in original expression *)
+(* 612284 nodes, 31759 terms after ring_simp false 100 e *)
+(* 389520 nodes, 4550 terms after ring_simp true 100 e *)
+(* 1456 nodes, 244 terms after prune with cutoff30 *)
+(* 1060 nodes, 112 terms  after ring_simp true 100 e *)
+(* 289 nodes, 25 terms after cancel_terms e *)
 
-Time
-simple_reify;
-match goal with |- context [eval ?e ?v] =>
-  let u := constr:(fiddle2 e) in let u' := eval vm_compute in u in
- pose (j1 := count_terms e); compute in j1; 
- pose (j := count_terms u'); compute in j;
-  replace (eval e v) with (eval u' v) by admit;
-   unfold_eval_hyps; clear __expr 
-end.
-
-
-Time match goal with |- Rabs ?a <= _ => field_simplify a end.
-match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end.
-eapply Rle_trans; [ apply H99 | clear H99 ].
-compute; lra.
+Time prune_terms cutoff30.  (* 1.871 sec *)
+(*Time match goal with |- Rabs ?a <= _ => field_simplify a end.*)
+match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end;
+eapply Rle_trans; [ apply H99 | clear  ].
+simpl; compute; lra.
 Qed.
 
