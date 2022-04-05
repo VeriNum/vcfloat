@@ -1424,11 +1424,14 @@ lra.
 Qed.
 
 Definition powers := list nat.
+Definition coefficient := (QArith_base.Q * Z)%type.
+Definition normterm := (powers * coefficient)%type.
+  (* Define normterm as a pair rather than a Record because it matches
+   the result of FMap.elements *)
 
-Record normterm := 
-   {nt_coeff: QArith_base.Q; 
-    nt_exp: Z;
-    nt_powers: powers}.
+Definition nt_coeff (n: normterm) := fst (snd n).
+Definition nt_exp (n: normterm) := snd (snd n).
+Definition nt_powers (n: normterm) := fst n.
 
 Fixpoint reflect_power k v e :=
  match k with
@@ -1459,14 +1462,12 @@ apply reflect_power_mor; auto.
 reflexivity.
 Qed.
 
-Definition reflect_normterm (x: normterm) : expr :=
- match x with
-   {|nt_coeff := {|QArith_base.Qnum := n; QArith_base.Qden := d|}; nt_exp := e; nt_powers := al|} =>
+Definition reflect_coeff (x: coefficient) :=
+  let '({|QArith_base.Qnum := n; QArith_base.Qden := d|}, e) := x in
  if Z.eqb n 0 then Econst (Int 0) else
  let en := Econst (Int n) in
  let ed := Eunary Inv (Econst (Int (Zpos d))) in 
  let ee := Econst (Bpow 2 e) in
- let ec := 
     match Z.eqb n 1, Pos.eqb d 1, Z.eqb e 0 with
     | true,true,true => oneexpr
     | true,true,false => ee
@@ -1476,31 +1477,32 @@ Definition reflect_normterm (x: normterm) : expr :=
     | false,true,false => Ebinary Mul en ee
     | false,false,true => Ebinary Mul en ed
     | false,false,false => Ebinary Mul (Ebinary Mul en ed) ee
-    end in
-  reflect_powers al O ec
-  end.
+    end.
 
-Definition simple_reflect_normterm (x: normterm) : expr :=
- match x with
-   {|nt_coeff := {|QArith_base.Qnum := n; QArith_base.Qden := d|}; nt_exp := e; nt_powers := al|} =>
- if Z.eqb n 0 then Econst (Int 0) else
+Definition reflect_coeff_simple (x: coefficient) :=
+  let '({|QArith_base.Qnum := n; QArith_base.Qden := d|}, e) := x in
  let en := Econst (Int n) in
  let ed := Eunary Inv (Econst (Int (Zpos d))) in 
  let ee := Econst (Bpow 2 e) in
- let ec := Ebinary Mul (Ebinary Mul en ed) ee in
-  reflect_powers al O ec
-  end.
+ Ebinary Mul (Ebinary Mul en ed) ee.
 
-Lemma reflect_powers_ext:
-  forall p i e1 e2, 
-    e1 == e2 ->
-   reflect_powers p i e1 == reflect_powers p i e2.
+Lemma reflect_coeff_spec (x: coefficient) : reflect_coeff x == reflect_coeff_simple x.
 Proof.
-intros.
-revert i e1 e2 H; induction p; simpl; intros; auto.
-induction a; simpl; auto.
-intro; simpl; f_equal. auto.
+destruct x as [[n d] e].
+unfold reflect_coeff, reflect_coeff_simple.
+destruct (Z.eqb_spec n 0).
+subst; intro; simpl; ring.
+destruct (Z.eqb_spec n 1), (Pos.eqb_spec d 1), (Z.eqb_spec e 0);
+subst; intro; simpl; rewrite ?Rinv_1; ring.
 Qed.
+
+Definition reflect_normterm (x: normterm) : expr :=
+  let '(al,ec) := x in 
+     reflect_powers al O (reflect_coeff ec).
+
+Definition reflect_normterm_simple (x: normterm) : expr :=
+  let '(al,ec) := x in 
+  Ebinary Mul (reflect_powers al O oneexpr) (reflect_coeff_simple ec).
 
 Lemma reflect_powers_untangle:
   forall p i e, 
@@ -1515,19 +1517,27 @@ rewrite IHa.
 lra.
 Qed.
 
-Lemma reflect_normterm_spec: forall x, 
- reflect_normterm x == simple_reflect_normterm x.
+Lemma reflect_normterm_spec (x: normterm) :
+  reflect_normterm x == reflect_normterm_simple x.
 Proof.
-intros. intro.
-destruct x as [[n d] e p]; simpl.
-destruct (Z.eqb_spec n 0); auto.
-apply reflect_powers_ext; auto.
-intro.
-destruct (Z.eqb_spec n 1),  (Pos.eqb_spec d 1), (Z.eqb_spec e 0); subst;
- try solve [simpl; lra];
-replace (match d with _ => _ end) with false by (destruct d; auto; lia);
-simpl; lra.
+unfold reflect_normterm, reflect_normterm_simple.
+destruct x.
+rewrite reflect_powers_untangle.
+rewrite reflect_coeff_spec.
+reflexivity.
 Qed.
+
+Lemma reflect_powers_ext:
+  forall p i e1 e2, 
+    e1 == e2 ->
+   reflect_powers p i e1 == reflect_powers p i e2.
+Proof.
+intros.
+revert i e1 e2 H; induction p; simpl; intros; auto.
+induction a; simpl; auto.
+intro; simpl; f_equal. auto.
+Qed.
+
 
 Fixpoint merge_powers (al bl: powers) :=
  match al, bl with
@@ -1537,18 +1547,12 @@ Fixpoint merge_powers (al bl: powers) :=
  end.
 
 Definition mult_normterm (x y : normterm) : normterm :=
- match x, y with
- | {| nt_coeff := xc; nt_exp := xe; nt_powers := xp |},
-   {| nt_coeff := yc; nt_exp := ye; nt_powers := yp |} =>
-  {|  nt_coeff := Qreduction.Qmult' xc yc;
-       nt_exp := xe+ye; nt_powers := merge_powers xp yp |}
- end.
+ let '(xp,(xc,xe)) := x in
+ let '(yp,(yc,ye)) := y in 
+   (merge_powers xp yp, (Qreduction.Qmult' xc yc, Z.add xe ye)).
 
 Definition negate_normterm (x: normterm) :=
- match x with
- | {| nt_coeff := xc; nt_exp := xe; nt_powers := xp |} =>
-  {|  nt_coeff := QArith_base.Qopp xc; nt_exp := xe; nt_powers := xp |}
- end.
+ let '(xp,(xc,xe)) := x in (xp, (QArith_base.Qopp xc, xe)).
 
 Fixpoint factor_powers_pos (p: positive) : positive * Z :=
  match p with
@@ -1636,11 +1640,9 @@ Definition inverse_term (i: Z): option normterm :=
    match factor_powers i with
        | (Z0,_) => None
        | (Zpos p, k) => 
-                Some {| nt_coeff := {|QArith_base.Qnum:=1%Z; QArith_base.Qden:=p|};
-                            nt_exp := -k; nt_powers := nil |}
+           Some (nil, ({|QArith_base.Qnum:=1%Z; QArith_base.Qden:=p|}, Z.opp k))
        | (Zneg p, k) => 
-                Some {| nt_coeff := {|QArith_base.Qnum:=(-1)%Z; QArith_base.Qden:=p|};
-                            nt_exp := -k; nt_powers := nil |}
+           Some (nil, ({|QArith_base.Qnum:=(-1)%Z; QArith_base.Qden:=p|}, Z.opp k))
        end.
 
 Fixpoint normalize_term (e: expr) : option normterm :=
@@ -1651,16 +1653,15 @@ match e with
       | _, _ => None
       end
 | Econst (Int i) => let '(z,k) := factor_powers i in 
-                Some {| nt_coeff := QArith_base.inject_Z z; nt_exp := k; nt_powers := nil |}
+                Some (nil, (QArith_base.inject_Z z, k))
 | Eunary Inv (Econst (Int i)) => inverse_term i
  | Econst (Bpow 2 k) => 
-            Some {| nt_coeff := Qone; nt_exp := k; nt_powers := nil|}
+            Some (nil, (Qone, k))
  | Eunary Inv (Econst (Bpow 2 k)) => 
-            Some {| nt_coeff := Qone; nt_exp := Z.opp k; nt_powers := nil|}
+            Some (nil, (Qone, Z.opp k))
  | Ebinary Div (Econst (Int 1)) (Econst (Int i)) => inverse_term i
  | Ebinary Div (Econst (Int (-1))) (Econst (Int i)) => inverse_term (-i)
-| Evar i => Some {| nt_coeff := Qone; nt_exp := Z0;
-               nt_powers := repeat O i ++ 1%nat::nil |}
+| Evar i => Some (repeat O i ++ 1%nat::nil, (Qone, Z0))
 | _ => None
 end.
 
@@ -1703,90 +1704,46 @@ Lemma inverse_term_correct: forall i nt,
    reflect_normterm nt == Eunary Inv (Econst (Int i)).
 Proof.
 intros.
-intro; simpl.
+rewrite reflect_normterm_spec.
+unfold reflect_normterm_simple.
+destruct nt.
 unfold inverse_term in H.
 pose proof (factor_powers_nonneg i).
 pose proof (factor_powers_correct i).
 destruct (factor_powers i); simpl in *; subst.
+unfold reflect_coeff_simple.
 destruct z; simpl in *.
 -
 discriminate.
 -
 inversion H; clear H; subst.
-unfold reflect_normterm.
-change (1 =? 0)%Z with false. cbv match.
 unfold reflect_powers.
-change (1 =? 1)%Z with true. cbv match.
-destruct (Pos.eqb_spec p 1). subst.
-destruct (Z.eqb_spec z0 0). subst.
-simpl. lra.
-destruct (Z.eqb_spec (-z0) 0); try lia.
-simpl eval.
+intro; simpl. ring_simplify.
 destruct z0; try lia.
-simpl. f_equal. f_equal. destruct (Z.pow_pos 2 p); auto.
-destruct (Z.eqb_spec (-z0) 0); try lia.
-assert (z0=0%Z) by lia. subst. simpl. f_equal. f_equal. f_equal. lia.
-simpl.
+simpl. rewrite Rmult_1_r, Pos.mul_1_r. auto.
+clear H0.
 unfold bpow'.
-destruct z0; try lia.
-simpl. 
-rewrite <- Rinv_mult_distr, <- mult_IZR.
-f_equal.
-apply not_0_IZR. lia.
-apply not_0_IZR.
-pose proof (Zpower_pos_gt_0 2 p0 ltac:(lia)). lia.
+simpl.
+pose proof (Zpower_pos_gt_0 2 p ltac:(lia)).
+destruct (Z.pow_pos 2 p); try lia.
+rewrite <- Rinv_mult_distr by (apply not_0_IZR; lia). 
+rewrite <- mult_IZR, <- Pos2Z.inj_mul. auto.
 -
 inversion H; clear H; subst.
-unfold reflect_normterm.
-destruct (Z.eqb_spec (-1) 0); subst. lia.
-unfold reflect_powers.
-change (-1 =? 1)%Z with false. cbv match.
-destruct (Pos.eqb_spec p 1). subst.
-destruct (Z.eqb_spec z0 0). subst.
-simpl. lra.
-destruct (Z.eqb_spec (-z0) 0); try lia.
-simpl eval.
-unfold bpow'.
+intro; simpl. ring_simplify.
+rewrite Ropp_inv_permute by (apply not_0_IZR; lia).
 destruct z0; try lia.
-simpl Z.opp. cbv match.
+simpl. rewrite Rmult_1_r, Pos.mul_1_r.
+reflexivity.
+unfold bpow'.
+simpl.
 pose proof (Zpower_pos_gt_0 2 p ltac:(lia)).
-change (2 ^ Z.pos p)%Z with (Z.pow_pos 2 p).
 destruct (Z.pow_pos 2 p); try lia.
-change (1 * p0)%positive with p0.
-change (Z.neg p0) with (- (Z.pos p0))%Z.
-set (u := Z.pos p0) in *.
-clear - H.
-rewrite opp_IZR.
-rewrite <- Ropp_inv_permute.
-2: apply not_0_IZR; lia.
-lra.
-destruct (Z.eqb_spec z0 0). subst.
-simpl.
-rewrite Pos.mul_1_r.
-change (Z.neg p) with (- (Z.pos p))%Z.
-set (u := Z.pos p) in *.
-assert (H: (0 < u)%Z) by lia.
-clear - H.
-rewrite opp_IZR.
-rewrite <- Ropp_inv_permute.
-2: apply not_0_IZR; lia.
-lra.
-destruct (Z.eqb_spec (-z0) 0); try lia.
-simpl eval.
-unfold bpow'.
-destruct z0; try lia.
-clear.
-simpl.
-pose proof (Zpower_pos_gt_0 2 p0 ltac:(lia)).
-destruct (Z.pow_pos 2 p0); try lia.
-replace (Z.neg (p * p1)) with (Z.neg p * Z.pos p1)%Z by lia.
-rewrite mult_IZR.
-rewrite Rinv_mult_distr by (apply not_0_IZR; lia).
+rewrite <- opp_IZR.
+rewrite <- Rinv_mult_distr by (apply not_0_IZR; lia). 
 f_equal.
-change (Z.neg p) with (Z.opp (Z.pos p)).
-rewrite opp_IZR.
-rewrite <- Ropp_inv_permute by (apply not_0_IZR; lia).
-lra.
+rewrite <- mult_IZR.
+reflexivity.
 Qed.
 
 Lemma bpow'_add: forall a b, bpow' 2 (a+b) = bpow' 2 a * bpow' 2 b.
@@ -1838,56 +1795,41 @@ Lemma mult_normterm_correct:
   reflect_normterm (mult_normterm a b) ==
   Ebinary Mul (reflect_normterm a) (reflect_normterm b).
 Proof.
-intros. intro.
+intros.
 simpl.
 rewrite ?reflect_normterm_spec.
-destruct a as [[na da] ea va], b as [[nb db] eb vb].
+destruct a as [va [[na da] ea]], b as [vb [[nb db] eb]].
 unfold mult_normterm.
 pose proof (Qreduction.Qmult'_correct 
            {| QArith_base.Qnum := na; QArith_base.Qden := da |}
            {| QArith_base.Qnum := nb; QArith_base.Qden := db |}).
 set (j := Qreduction.Qmult' _ _). fold j in H. clearbody j.
-unfold reflect_normterm. destruct j as [n d].
-unfold simple_reflect_normterm.
-destruct (Z.eqb_spec n 0).
-- subst.
-destruct (Z.eqb_spec na 0); [ subst; simpl; lra |].
-destruct (Z.eqb_spec nb 0); [ subst; simpl; lra |].
-elimtype False.
-red in H. simpl in H. lia.
--
-destruct (Z.eqb_spec na 0); [elimtype False; subst; red in H; simpl in H; lia |].
-destruct (Z.eqb_spec nb 0); [elimtype False; subst; red in H; simpl in H; lia |].
-rewrite (reflect_powers_untangle (merge_powers va vb)).
-change (eval (Ebinary Mul ?a ?b) env) with (eval a env * eval b env).
-rewrite (reflect_powers_untangle va).
-rewrite (reflect_powers_untangle vb).
+unfold reflect_normterm_simple.
 rewrite merge_powers_correct.
-change (eval (Ebinary Mul ?a ?b) env) with (eval a env * eval b env).
-set (u:= eval (reflect_powers _ _ _) _); clearbody u.
-set (u1:= eval (reflect_powers _ _ _) _); clearbody u1.
-match goal with |- u * u1 * ?a = u * ?b * (u1 * ?c) =>
-  transitivity (u * u1 * (b * c)); [ | lra]
-end.
-f_equal.
-simpl.
-transitivity (IZR n * / IZR (Z.pos d) * (bpow' 2 ea * bpow' 2 eb)).
-f_equal.
-clear.
-apply bpow'_add.
-transitivity (((IZR na * / IZR (Z.pos da)) * (IZR nb * / IZR (Z.pos db))
-                  *  (bpow' 2 ea * bpow' 2 eb))). 2: lra.
-f_equal.
-transitivity (IZR na * IZR nb * (/ (IZR (Z.pos da)  * IZR (Z.pos db)))).
-2: rewrite Rinv_mult_distr by (apply not_0_IZR; lia); lra.
-apply Stdlib.Rdiv_eq_reg.
-2: (apply not_0_IZR; lia).
-2: apply Rmult_integral_contrapositive_currified; apply not_0_IZR; lia.
-rewrite <- !mult_IZR.
-f_equal.
-red in H.
-simpl in H.
-lia.
+transitivity (Ebinary Mul (Ebinary Mul (reflect_powers va 0 oneexpr)
+                          (reflect_powers vb 0 oneexpr))
+                  (Ebinary Mul
+                    (reflect_coeff_simple ({| QArith_base.Qnum := na; QArith_base.Qden := da |}, ea))
+                    (reflect_coeff_simple ({| QArith_base.Qnum := nb; QArith_base.Qden := db |}, eb))));
+  [ | intro; simpl; ring].
+apply Ebinary_mor; auto. reflexivity.
+unfold reflect_coeff_simple.
+destruct j.
+red in H. simpl in H.
+intro; simpl.
+rewrite bpow'_add.
+field_simplify.
+2: split; apply not_0_IZR; lia.
+2: apply not_0_IZR; lia.
+rewrite <- mult_IZR.
+rewrite <- Pos2Z.inj_mul.
+apply Stdlib.Rdiv_eq_reg; [ | apply not_0_IZR; lia .. ].
+transitivity (IZR (na * nb * Z.pos Qden) * (bpow' 2 ea * bpow' 2 eb)).
+rewrite <- H; clear H.
+rewrite mult_IZR.
+field.
+rewrite !mult_IZR.
+ field.
 Qed.
 
 Lemma normalize_term_correct: 
@@ -1900,8 +1842,10 @@ revert nt H.
 induction e; simpl; intros.
 -
 inversion H; clear H; subst.
-unfold simple_reflect_normterm.
+unfold reflect_normterm_simple.
 simpl.
+rewrite Rinv_1.
+rewrite !Rmult_1_r.
 set (i := 0%nat) at 3.
 replace n with (n+i)%nat at 2 by lia.
 clearbody i.
@@ -1919,9 +1863,9 @@ destruct n; try discriminate.
  inversion H; clear H; subst nt. simpl in H0. 
  simpl.
  pose proof (Z.eqb_spec z 0). destruct H; subst.
- simpl. auto.
- simpl. 
- rewrite mult_IZR. f_equal. lra.
+ simpl. ring. ring_simplify.
+ rewrite Rinv_1, !Rmult_1_r.
+ rewrite mult_IZR. f_equal.
  unfold bpow'.
  destruct z0; simpl; auto; try lia.
 + destruct r; try discriminate. destruct p; try discriminate.
@@ -2008,17 +1952,10 @@ Lemma negate_normterm_correct:
 Proof.
 intros. intro; simpl.
 rewrite !reflect_normterm_spec.
-destruct nt as [ [n d] e p].
+destruct nt as [p [[n d] e]].
 simpl.
-destruct (Z.eqb_spec n 0).
-subst; simpl; lra.
-destruct (Z.eqb_spec (-n) 0); try lia.
-clear n1.
-rewrite !(reflect_powers_untangle _ _ (Ebinary _ _ _)).
-simpl.
-set (u := eval (reflect_powers _ _ _) _). clearbody u.
-simpl.
-rewrite opp_IZR. lra.
+rewrite opp_IZR.
+ring.
 Qed.
 
 Lemma reflect_normterms_untangle:
@@ -2351,20 +2288,18 @@ Require FMapAVL.
 
 Module Table := FMapAVL.Make Keys.
 
-Definition intable_t := list (QArith_base.Q * Z).
+Definition intable_t := list coefficient.
 
+(*
 Definition normterm_to_intable (nt: normterm) :=
  (nt_coeff nt, nt_exp nt).
+*)
 
+Definition reflect_intable1_simple (k: Table.key) (it: coefficient) : expr :=
+    reflect_normterm_simple (k,it).
 
-Definition reflect_intable1_simple (k: Table.key) (it: (QArith_base.Q * Z)) : expr :=
-  let '(c,e) := it in reflect_normterm {| nt_coeff := c; nt_exp := e; nt_powers := k |}.
-
-Definition reflect_intable_simple (k: Table.key) (it: intable_t) (e0: expr) : expr :=
- fold_right (Ebinary Add) e0
-      (map (fun '(c,e) => 
-           (reflect_normterm {| nt_coeff := c;
-                            nt_exp := e; nt_powers := k |})) it).
+Definition reflect_intable_simple (k: Table.key) (it: intable_t) (e: expr) : expr :=
+ fold_right (Ebinary Add) e (map (reflect_intable1_simple k) it).
 
 Lemma reflect_intable_cons:
   forall k a it e,
@@ -2406,6 +2341,7 @@ induction yl.
 unfold cancel1_intable.
 intro. f_equal. f_equal. destruct x,q; simpl; auto.
 -
+
 intro.
 rewrite reflect_intable_cons.
 unfold eval at 2; fold eval.
@@ -2429,32 +2365,8 @@ set (u := eval (fold_right _ _ _) _). clearbody u.
 simpl.
 destruct (Z.eqb_spec xn 0); [subst; simpl; lra | ].
 destruct (Z.eqb_spec (-xn) 0); try lia. clear n0.
-destruct (Z.eqb_spec xn 1); destruct (Z.eqb_spec (-xn) 1); try lia.
-*
-subst.
-destruct ad; destruct (Z.eqb_spec ae 0); subst; simpl;
-match goal with |- _ = eval (reflect_powers _ _ ?a) _  + (eval (reflect_powers _ _ ?b) _ + _) =>
-  rewrite (reflect_powers_untangle _ _ a); 
-  rewrite (reflect_powers_untangle _ _ b);
-  simpl; rewrite ?opp_IZR; lra
-end.
-*
-assert (xn= -1)%Z by lia; subst. clear n n0 e0.
-destruct ad;
-destruct (Z.eqb_spec ae 0); subst; simpl;
-match goal with |- _ = eval (reflect_powers _ _ ?a) _  + (eval (reflect_powers _ _ ?b) _ + _) =>
-  rewrite (reflect_powers_untangle _ _ a); 
-  rewrite (reflect_powers_untangle _ _ b);
-  simpl; rewrite ?opp_IZR; lra
-end.
-*
-destruct ad;
-destruct (Z.eqb_spec ae 0); subst; simpl;
-match goal with |- _ = eval (reflect_powers _ _ ?a) _  + (eval (reflect_powers _ _ ?b) _ + _) =>
-  rewrite (reflect_powers_untangle _ _ a); 
-  rewrite (reflect_powers_untangle _ _ b);
-  simpl; rewrite ?opp_IZR; lra
-end.
+destruct (Z.eqb_spec xn 1); destruct (Z.eqb_spec (-xn) 1); try lia;
+subst; clear; rewrite opp_IZR; ring.
 +
 clear H.
 unfold reflect_intable_simple in IHyl.
@@ -2478,13 +2390,12 @@ Qed.
 Definition cancel_intable (it: intable_t) : intable_t :=
  fold_left cancel1_intable it nil.
 
+Definition find_default [elt] (default: elt) (k: Table.key) (tab: Table.t elt) : elt :=
+ match Table.find k tab with Some x => x | None => default end.
+
 Definition add_to_table (tab: Table.t intable_t) (nt: normterm) :=
-  let key := nt_powers nt in 
-  let it := normterm_to_intable nt in 
-  match Table.find key tab with
-  | None => Table.add key (it::nil) tab
-  | Some al => Table.add key (cancel1_intable al it) tab
-  end.
+  let '(key,it) := nt in 
+   Table.add key (cancel1_intable (find_default nil key tab) it) tab.
 
 Lemma reflect_all0: forall j, Keys.all0 j = true -> forall n e, reflect_powers j n e == e.
 Proof.
@@ -2513,81 +2424,6 @@ simpl.
 f_equal.
 apply IHi. auto.
 Qed.
-
-Definition add_to_table_correct:
-  forall tab nt, reflect_table (add_to_table tab nt) == 
-            Ebinary Add (reflect_table tab) (reflect_normterm nt).
-Proof.
-intros.
-unfold add_to_table.
-destruct (Table.find (elt:=intable_t) (nt_powers nt) tab) eqn:?H.
--
-pose proof (cancel1_intable_correct (nt_powers nt) i (normterm_to_intable nt)).
-set (u := cancel1_intable _ _) in *. clearbody u.
-apply Table.find_2 in H.
-pose proof (@Table.add_1 _ tab (nt_powers nt) (nt_powers nt) u (Keys.eq_refl _)).
-pose proof (@Table.add_2 _ tab (nt_powers nt)).
-pose proof (@Table.add_3 _ tab (nt_powers nt)).
-assert (H4: forall y e, ~Keys.eq (nt_powers nt) y -> 
-     (Table.MapsTo y e tab <-> 
-      Table.MapsTo y e (Table.add (nt_powers nt) u tab)))
-  by (intros; split; intros; eauto).
-clear H2 H3.
-set (tab' := Table.add _ _ _) in *. clearbody tab'.
-unfold reflect_table.
-rewrite !Table.fold_1.
-pose proof (@Table.elements_1 _ tab).
-pose proof (@Table.elements_1 _ tab').
-pose proof (@Table.elements_2 _ tab).
-pose proof (@Table.elements_2 _ tab').
-set (elements := Table.elements (elt:=intable_t) tab) in *.
-set (elements' := Table.elements (elt:=intable_t) tab') in *.
-clearbody elements elements'.
-revert elements' H3 H6.
-induction elements as [ | [? ?]]; intros.
-+ simpl.
-Admitted.
-
-
-Definition reflect_intable1 (x: (QArith_base.Q * Z)) : expr :=
- let '( {|QArith_base.Qnum := n; QArith_base.Qden := d|}, e) := x in
-  if Z.eqb n 0 then zeroexpr else
- let en := Econst (Int n) in
- let ed := Eunary Inv (Econst (Int (Zpos d))) in 
- let ee := Econst (Bpow 2 e) in
-    match Z.eqb n 1, Pos.eqb d 1, Z.eqb e 0 with
-    | true,true,true => Econst (Int 1)
-    | true,true,false => ee
-    | true,false,true => ed
-    | true,false,false => Ebinary Mul ed ee
-    | false,true,true => en
-    | false,true,false => Ebinary Mul en ee
-    | false,false,true => Ebinary Mul en ed
-    | false,false,false => Ebinary Mul (Ebinary Mul en ed) ee
-    end.
-
-Definition reflect_intable_aux (al: intable_t) : expr :=
-  fold_left Add0 (map reflect_intable1 al) zeroexpr.
-
-Definition reflect_intable (x: Table.key * intable_t) :=
- let '(p, it) := x in
- match reflect_intable_aux it with 
- | Econst (Int 0) => Econst (Int 0)
- | c => reflect_powers p 0 c
- end.
-
-Definition sort_using_table (nts: list normterm) : expr -> expr :=
-  fold_left (fun e it => Add0 (reflect_intable it) e)
-  (Table.elements
-    (fold_left add_to_table nts (Table.empty intable_t))).
-
-Definition reflect_list l := fold_right Add0 zeroexpr (map reflect_intable l).
-
-Definition sort_using_table_alt (nts: list normterm) (e0: expr) : expr :=
- Ebinary Add e0 
- (reflect_list
-  (Table.elements
-    (fold_right (Basics.flip add_to_table) (Table.empty intable_t) nts))).
 
 Lemma fold_symmetric_setoid:
   forall [A : Type] [eqv: A -> A -> Prop] 
@@ -2625,7 +2461,28 @@ symmetry.
 auto.
 Qed.
 
-Lemma fold_symmetric_Add0:
+Lemma fold_right_Add0_untangle:
+  forall a l, fold_right Add0 a l == Add0 (fold_right Add0 zeroexpr l) a.
+Proof.
+intros.
+revert a; induction l; simpl; intros; try reflexivity.
+rewrite IHl.
+rewrite !Add0_correct.
+intro; simpl; ring.
+Qed.
+
+Lemma fold_right_Add0_Add:
+  forall a l, fold_right Add0 a l == 
+                fold_right (Ebinary Add) a l.
+Proof.
+intros.
+induction l; simpl; intros; try reflexivity.
+rewrite IHl.
+rewrite Add0_correct.
+reflexivity.
+Qed.
+
+Lemma fold_symmetric_Add0':
   forall l, fold_left Add0 l zeroexpr == fold_right Add0 zeroexpr l.
 Proof.
 intros.
@@ -2636,6 +2493,311 @@ apply Add0_mor; auto.
 intros. rewrite ?Add0_correct. intro; simpl; ring.
 intros. rewrite ?Add0_correct. intro; simpl; ring.
 Qed.
+
+Lemma fold_symmetric_Add0:
+  forall a l, fold_left Add0 l a == fold_right Add0 a l.
+Proof.
+intros.
+rewrite fold_right_Add0_untangle.
+rewrite <- fold_symmetric_Add0'.
+set (b := zeroexpr).
+set (c := a) at 1.
+assert (c == Add0 b a). subst c b; reflexivity.
+clearbody b c.
+revert b c H; induction l; simpl; intros.
+rewrite H.
+rewrite !Add0_correct; intro; simpl;ring.
+rewrite <- IHl.
+2: reflexivity.
+assert (Add0 c a0 == Add0 (Add0 b a0) a).
+rewrite H. rewrite !Add0_correct; intro; simpl; ring.
+set (d := Add0 c a0) in *.
+set (e := Add0 (Add0 b a0) a) in *.
+clearbody d; clearbody e; clear - H0.
+revert d e H0; induction l; simpl; intros; auto.
+apply IHl; auto.
+rewrite H0; reflexivity.
+Qed.
+
+(*
+Definition relate_fold_add:
+ forall [elt A: Type]
+     [eqv: A -> A -> Prop] 
+     (eqv_rel: Equivalence eqv)
+     (lift: Table.key -> elt -> A)
+    (f:  A -> A -> A)
+    (f_mor: forall x1 y1, eqv x1 y1 ->
+              forall x2 y2, eqv x2 y2 ->
+              eqv (f x1 x2) (f y1 y2))
+  (f_assoc: forall x y z : A, eqv (f x (f y z)) (f (f x y) z))
+  (f_commut: forall x y : A, eqv (f x y) (f y x))
+  (u: elt)
+  (f_unit: forall (k: Table.key) (y : A), eqv (f (lift k u) y) (f y (lift k u)))
+  (tab: Table.t elt)
+  (k: Table.key)
+  eqv (Table.fold f (Table.add k ( find_default u k tab)) tab) u)
+    (f 
+Table.fold f tab u 
+
+Definition relate_fold_add:
+ forall [elt A: Type]
+     [eqv: A -> A -> Prop] 
+     (eqv_rel: Equivalence eqv)
+    (f: Table.key -> elt -> A -> A)
+    (f_mor: forall x1 y1, eqv x1 y1 ->
+              forall x2 y2, eqv x2 y2 ->
+              eqv (f x1 x2) (f y1 y2))
+  (f_assoc: forall x y z : A, eqv (f x (f y z)) (f (f x y) z))
+  (f_commut: forall x y : A, eqv (f x y) (f y x))
+  (u: A)
+  (f_unit: forall y : A, eqv (f u y) (f y u))
+  (default: elt)
+  (transform: Table.key * elt -> Table.key * elt)
+  (tab: Table.t elt)
+  (k: Table.key)
+  eqv (Table.fold f (uncurry Table.add (transform (k, find_default default k tab)) tab) u)
+    (f 
+Table.fold f tab u 
+*)
+
+Definition add_to_table_simple (tab: Table.t intable_t) nt :=
+Table.add (fst nt) (snd nt :: find_default [] (fst nt) tab) tab.
+
+Lemma fold_bal:
+  forall [elt A] (f: Table.Raw.key -> elt -> A -> A) (t1 t2: Table.Raw.tree elt) k e x,
+  Table.Raw.fold f (Table.Raw.bal t1 k e t2) x = 
+   Table.Raw.fold f t2 (f k e (Table.Raw.fold f t1 x)).
+Proof.
+intros.
+unfold Table.Raw.bal.
+repeat match goal with
+ | |- context [if ?A then _ else _] => destruct A 
+ | |- context [match Table.Raw.add ?p ?x ?y with _ => _ end] => 
+                   destruct (Table.Raw.add p x y) eqn:?H
+ | |- context [match ?t with _ => _ end ] => is_var t; destruct t 
+end;
+simpl; auto.
+Qed.
+
+Add Parametric Morphism : reflect_intable_simple
+  with signature Keys.eq ==> eq ==> expr_equiv ==> expr_equiv
+  as reflect_intable_simple_mor.
+Proof.
+intros k1 k2 ? t x1 x2 ?.
+unfold reflect_intable_simple.
+rewrite <- !fold_right_Add0_Add.
+rewrite (fold_right_Add0_untangle x1).
+rewrite (fold_right_Add0_untangle x2).
+rewrite H0.
+apply Add0_mor; try reflexivity.
+clear H0 x1 x2.
+rewrite !fold_right_Add0_Add.
+induction t; simpl; auto.
+reflexivity.
+apply Ebinary_mor; auto.
+unfold reflect_intable1_simple.
+unfold reflect_normterm_simple.
+apply Ebinary_mor; auto.
+apply (Keys_cmp_eq k1 k2 H).
+reflexivity.
+Qed.
+
+Definition fold_reflect_intable_simple := Table.Raw.fold reflect_intable_simple.
+
+Add Parametric Morphism : fold_reflect_intable_simple
+  with signature eq ==> expr_equiv ==> expr_equiv
+  as fold_reflect_intable_simple_mor.
+Proof.
+intro t.
+induction t; simpl; intros; auto.
+apply IHt2.
+apply reflect_intable_simple_mor; auto.
+apply Keys.eq_refl.
+Qed.
+
+Lemma reflect_intable_simple_untangle:
+  forall k t e, reflect_intable_simple k t e ==
+         Ebinary Add (reflect_intable_simple k t zeroexpr) e.
+Proof.
+unfold reflect_intable_simple;
+induction t; simpl; intro.
+intro; simpl; ring.
+rewrite IHt.
+intro; simpl; ring.
+Qed.
+
+Lemma fold_reflect_intable_simple_untangle:
+  forall t e, fold_reflect_intable_simple t e == 
+   Ebinary Add (fold_reflect_intable_simple t zeroexpr) e.
+Proof.
+unfold fold_reflect_intable_simple.
+induction t; intros; simpl.
+intro; simpl; ring.
+rewrite !(IHt2 (reflect_intable_simple _ _ _)).
+rewrite (IHt1 e0).
+rewrite reflect_intable_simple_untangle.
+rewrite (reflect_intable_simple_untangle _ _ (Table.Raw.fold _ _ _)).
+intro; simpl; ring.
+Qed.
+
+Lemma add_to_table_spec:
+ forall tab nt,
+  reflect_table (add_to_table tab nt) == reflect_table (add_to_table_simple tab nt).
+Proof.
+intros.
+unfold add_to_table.
+unfold add_to_table_simple.
+destruct nt.
+simpl.
+unfold reflect_table.
+set (j := find_default nil p tab).
+clearbody j.
+assert (H8 :=cancel1_intable_correct p j c).
+set (new := cancel1_intable j c) in *; clearbody new.
+fold coefficient in *.
+set (old := c::j) in *; clearbody old.
+destruct tab; unfold Table.fold, Table.add; simpl.
+induction this.
+simpl; auto.
+inversion is_bst; clear is_bst; subst.
+simpl.
+destruct (Keys.compare p k).
+-
+rewrite !fold_bal.
+apply fold_reflect_intable_simple_mor; auto.
+apply reflect_intable_simple_mor; auto.
+apply Keys.eq_refl.
+-
+simpl.
+apply fold_reflect_intable_simple_mor; auto.
+rewrite <- e0.
+auto.
+-
+rewrite !fold_bal.
+apply IHthis2 in H5.
+set (u := Table.Raw.add p new this2) in *.
+set (v := Table.Raw.add p old this2) in *.
+clearbody u; clearbody v.
+clear - H5.
+fold intable_t.
+fold (fold_reflect_intable_simple u) in *.
+fold (fold_reflect_intable_simple v) in *.
+rewrite !(fold_reflect_intable_simple_untangle _ (reflect_intable_simple _ _ _)).
+rewrite H5.
+reflexivity.
+Qed.
+
+Definition add_to_table_correct:
+  forall tab nt, reflect_table (add_to_table tab nt) == 
+            Ebinary Add (reflect_table tab) (reflect_normterm nt).
+Proof.
+intros.
+rewrite add_to_table_spec.
+unfold add_to_table_simple.
+destruct nt as [key it].
+unfold reflect_table.
+simpl.
+unfold find_default in *.
+destruct tab; unfold Table.find, Table.fold, Table.add in *.
+simpl in *.
+fold intable_t in *.
+destruct (Table.Raw.find key this) eqn:?H.
+-
+revert H; induction this; simpl; intros.
+discriminate.
+inversion is_bst; clear is_bst; subst.
+destruct (Keys.compare key k).
++
+apply IHthis1 in H; auto.
+clear IHthis1 IHthis2.
+rewrite fold_bal.
+rewrite H; clear H.
+fold fold_reflect_intable_simple.
+rewrite !(fold_reflect_intable_simple_untangle _ (reflect_intable_simple _ _ _)).
+rewrite reflect_intable_simple_untangle.
+rewrite (reflect_intable_simple_untangle _ _ (Table.Raw.fold _ _ _)).
+intro; simpl; ring.
++
+inversion H; clear H; subst.
+clear - e0.
+rewrite (Keys_cmp_eq _ _ e0). clear key e0.
+simpl.
+set (u := Table.Raw.fold _ this1 _); clearbody u.
+fold fold_reflect_intable_simple.
+rewrite !(fold_reflect_intable_simple_untangle _ (reflect_intable_simple _ _ _)).
+unfold reflect_intable_simple.
+simpl.
+rewrite reflect_powers_untangle.
+unfold reflect_intable1_simple at 1.
+unfold reflect_normterm_simple.
+rewrite reflect_coeff_spec.
+intro; simpl; ring.
++
+apply IHthis2 in H; auto.
+clear IHthis1 IHthis2.
+rewrite fold_bal.
+fold fold_reflect_intable_simple.
+fold fold_reflect_intable_simple.
+rewrite !(fold_reflect_intable_simple_untangle _ (reflect_intable_simple _ _ _)).
+rewrite H.
+clear.
+fold fold_reflect_intable_simple.
+intro; simpl; ring.
+-
+revert H; induction this; simpl; intros.
++
+unfold reflect_intable_simple; simpl.
+unfold reflect_intable1_simple.
+simpl.
+rewrite (reflect_powers_untangle _ _ (reflect_coeff it)).
+rewrite reflect_coeff_spec.
+intro; simpl; ring.
++
+inversion is_bst; clear is_bst; subst.
+destruct (Keys.compare key k); try discriminate.
+* apply IHthis1 in H; auto; clear IHthis1 IHthis2.
+ rewrite fold_bal.
+ fold fold_reflect_intable_simple in *.
+ rewrite H; clear.
+ fold fold_reflect_intable_simple.
+ set (u := fold_reflect_intable_simple this1 _); clearbody u.
+ rewrite (reflect_intable_simple_untangle).
+ rewrite (fold_reflect_intable_simple_untangle _ (Ebinary _ _ _)).
+ rewrite (fold_reflect_intable_simple_untangle _ (reflect_intable_simple _ _ _)).
+ rewrite (reflect_intable_simple_untangle _ _ u).
+ intro; simpl; ring. 
+* apply IHthis2 in H; auto; clear IHthis1 IHthis2.
+ rewrite fold_bal.
+ fold fold_reflect_intable_simple in *.
+ set (u := Table.Raw.fold  _ this1 _); clearbody u.
+ rewrite fold_reflect_intable_simple_untangle, H.
+ clear.
+ rewrite (fold_reflect_intable_simple_untangle _ (reflect_intable_simple _ _ _)).
+ intro; simpl; ring.
+Qed.
+
+Definition reflect_intable_aux (al: intable_t) : expr :=
+  fold_left Add0 (map reflect_coeff al) zeroexpr.
+
+Definition reflect_intable (x: Table.key * intable_t) :=
+ let '(p, it) := x in
+ match reflect_intable_aux it with 
+ | Econst (Int 0) => Econst (Int 0)
+ | c => reflect_powers p 0 c
+ end.
+
+Definition sort_using_table (nts: list normterm) : expr -> expr :=
+  fold_left (fun e it => Add0 (reflect_intable it) e)
+  (Table.elements
+    (fold_left add_to_table nts (Table.empty intable_t))).
+
+Definition reflect_list l := fold_right Add0 zeroexpr (map reflect_intable l).
+
+Definition sort_using_table_alt (nts: list normterm) (e0: expr) : expr :=
+ Ebinary Add e0 
+ (reflect_list
+  (Table.elements
+    (fold_right (Basics.flip add_to_table) (Table.empty intable_t) nts))).
 
 Ltac reflect_powers_untangle := 
  repeat match goal with |- context [reflect_powers ?k ?i ?e] =>
@@ -2649,77 +2811,56 @@ Proof.
 intros.
 unfold reflect_intable.
 unfold reflect_intable_aux.
-pose proof (fold_symmetric_Add0 (map reflect_intable1 i)).
-set (a := fold_left _ _ _) in *.
-unfold reflect_intable_simple.
-set (g k := fun '(c, e) =>
-      reflect_normterm {| nt_coeff := c; nt_exp := e; nt_powers := k |}).
-change (fun _ => _) with (g k).
+pose proof (fold_symmetric_Add0 zeroexpr (map reflect_coeff i)).
+set (a := fold_left _ _ _) in *. clearbody a.
 destruct (Prog.expr_eq_dec a (Econst (Int 0))).
 -
- rewrite e in H |- *.  clear e.
- transitivity (Add0 (fold_right (Ebinary Add) zeroexpr (map (g k) i)) f).
- revert f; induction (map (g k) i); intros. reflexivity.
- simpl fold_right. rewrite IHl.
- rewrite !Add0_correct; intro; simpl; ring.
- apply Add0_mor; [ | reflexivity].
- symmetry in H.
- clear a.
- transitivity (
-    fold_right (Ebinary Add) zeroexpr
-     (map (fun ce => Ebinary Mul (reflect_powers k 0 oneexpr) (reflect_intable1 ce)) i)). {
- clear.
- induction i; simpl. reflexivity. apply Ebinary_mor; try reflexivity; auto. 
- unfold g. destruct a. rewrite reflect_normterm_spec.
- clear. 
- admit.
- }
- transitivity (Ebinary Mul
-(reflect_powers k 0 oneexpr) 
- (fold_right Add0 zeroexpr (map reflect_intable1 i)));
-  [ | rewrite H; intro; simpl; ring].
-clear H.
-induction i.
-simpl. intro; simpl; ring.
-simpl.
-rewrite IHi. clear IHi.
-intro; simpl.
-rewrite Add0_correct;simpl; ring.
+ subst. simpl.
+ unfold reflect_intable_simple.
+ transitivity (Ebinary Add (fold_right (Ebinary Add) zeroexpr (map (reflect_intable1_simple k) i)) f).
+ clear; induction i; simpl; intros. intro; simpl; ring.
+ rewrite IHi. intro; simpl; ring.
+ transitivity (Ebinary Add zeroexpr f); [ | intro; simpl; ring].
+ apply Ebinary_mor; auto; try reflexivity.
+ transitivity (Ebinary Mul (reflect_powers k O oneexpr) 
+            (fold_right Add0 zeroexpr (map reflect_coeff i))).
+ 2:{ rewrite <- H. intro; simpl; ring. }
+ clear H.
+ induction i; simpl. intro; simpl; ring.
+ rewrite IHi. clear IHi.
+ intro; simpl.
+ rewrite Add0_correct; simpl.
+ rewrite reflect_coeff_spec. ring.
 -
-clearbody a.
 transitivity (Add0 (reflect_powers k 0 a) f).
   2:{ destruct a as [ | [ [ | | ] | | ] | | ] ; try reflexivity. congruence. }
+unfold reflect_intable_simple.
+rewrite Add0_correct.
 clear n.
 rewrite H; clear H.
 clear a.
-revert k f; induction i as [| [[n d] c] i]; simpl; intros.
+transitivity (Ebinary Add (fold_right (Ebinary Add) zeroexpr (map (reflect_intable1_simple k) i)) f).
+revert f; induction i; simpl; intros. intro; simpl; ring. rewrite IHi; intro; simpl; ring.
+apply Ebinary_mor; auto; try reflexivity.
+clear f.
+induction i as [| [[n d] c] i].
 +
+rewrite reflect_powers_untangle. intro; simpl; ring.
++
+unfold map; fold (map (reflect_intable1_simple k));  fold (map reflect_coeff).
+unfold fold_right; 
+ fold (fold_right (Ebinary Add) zeroexpr); fold (fold_right Add0 zeroexpr).
 rewrite reflect_powers_untangle.
-intro.
-rewrite Add0_correct.
-simpl.
-ring.
-+
-rewrite Add0_correct.
 rewrite IHi; clear IHi.
-destruct (Z.eqb_spec n 0).
-  {intro; simpl. rewrite Add0_correct. simpl. ring. }
-destruct (Z.eqb_spec n 1); subst;
- destruct d;
- destruct (Z.eqb_spec c 0);
- subst; intro;
- repeat change (eval (Ebinary Add ?a ?b) env) with (eval a env + eval b env);
- rewrite ?Add0_correct;
- repeat change (eval (Ebinary Add ?a ?b) env) with (eval a env + eval b env);
- reflect_powers_untangle;
- repeat change (eval (Ebinary Mul ?a ?b) env) with (eval a env * eval b env);
- rewrite ?Add0_correct;
- repeat change (eval (Ebinary Add ?a ?b) env) with (eval a env + eval b env);
- repeat change (eval (Ebinary Mul ?a ?b) env) with (eval a env * eval b env);
- fold oneexpr;
- try ring.
-all: fail.
-Admitted.
+rewrite reflect_coeff_spec.
+set (u := fold_right Add0 _ _).
+clearbody u.
+rewrite reflect_powers_untangle.
+rewrite Add0_correct.
+intro; simpl.
+set (p := reflect_powers _ _ _). clearbody p.
+ring.
+Qed.
 
 Lemma reflect_list_rev: forall l, reflect_list (rev l) == reflect_list l.
 Proof.
@@ -2935,7 +3076,7 @@ Lemma prune_terms_correct2a:
      length hyps = length vars ->
      eval_hyps hyps vars (Rabs (eval e1 vars) <= r - F.toR slop) ->
       eval_hyps hyps vars (Rabs (eval e vars) <= r).
-Admitted.
+Abort.  (* easily proved, but needed only for measurement *)
 
 Lemma prune_terms_correct2b:
  forall hyps e cutoff e1 slop,  
@@ -2945,7 +3086,7 @@ Lemma prune_terms_correct2b:
      length hyps = length vars ->
      eval_hyps hyps vars (Rabs (eval e1 vars) <= r - F.toR slop) ->
       eval_hyps hyps vars (Rabs (eval e vars) <= r).
-Admitted.
+Abort.  (* easily proved, but needed only for measurement *)
 
 Ltac prune_terms' H cutoff := 
  simple_reify;
