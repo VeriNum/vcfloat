@@ -1,6 +1,7 @@
 Require Import Lra Lia Interval.Tactic.
 Import Raux.
 Require Import Flocq.IEEE754.Binary.
+Require Import Setoid.
 
 Import List ListNotations.
 Import Tree. (* must import this _after_ List *)
@@ -10,6 +11,42 @@ Import Basic.
 Import Bool.
 
 Set Bullet Behavior "Strict Subproofs".
+Locate R.
+
+Definition expr_equiv (a b: expr) : Prop :=
+  forall env, eval a env = eval b env.
+
+ Infix "==" := expr_equiv (at level 70, no associativity).
+
+Lemma expr_equiv_refl: forall e, e == e.
+Proof. intros ? ?; reflexivity. Qed.
+
+Lemma expr_equiv_sym: forall e1 e2, e1 == e2 -> e2 == e1.
+Proof. intros ? ? ? ?; congruence. Qed.
+
+Lemma expr_equiv_trans: forall e1 e2 e3, e1 == e2 -> e2 == e3 -> e1 == e3.
+Proof. intros; intros ?; congruence. Qed.
+
+Add Parametric Relation : expr expr_equiv
+  reflexivity proved by expr_equiv_refl
+  symmetry proved by expr_equiv_sym
+  transitivity proved by expr_equiv_trans
+  as expr_equiv_rel.
+
+Add Parametric Morphism : Eunary
+  with signature eq ==> expr_equiv ==> expr_equiv
+  as Eunary_mor.
+Proof.
+intros. intro. simpl. rewrite H; auto.
+Qed.
+
+
+Add Parametric Morphism : Ebinary
+  with signature eq ==> expr_equiv ==> expr_equiv ==> expr_equiv
+  as Ebinary_mor.
+Proof.
+intros. intro. simpl. rewrite H, H0; auto.
+Qed.
 
 Open Scope R_scope.
 
@@ -62,10 +99,6 @@ Fixpoint ring_simp_Mul fuel (e1 e2 : expr) : option expr :=
                                end
          | None => None
         end
-(*
-     | Econst (Bpow a b), Econst (Bpow c d) =>
-         if Z.eqb a c && negb (Z.eqb a 0) then Some (Econst (Bpow a (b+d))) else None
-*)
      | Econst _, Ebinary Mul (Econst _) (Econst _) => None
      | Econst _, Econst _ => None
      | Econst _, Eunary Inv (Econst _) => None
@@ -109,6 +142,11 @@ Fixpoint ring_simp_Mul fuel (e1 e2 : expr) : option expr :=
      end
   end.
 
+Definition zeroexpr := Econst (Int 0).
+Definition oneexpr := Econst (Int 1).
+Definition moneexpr := Econst (Int (-1)).
+Definition infinity := PrimFloat.infinity.
+
 Lemma nullary_op_nonzero_e:
  forall n, nullary_op_nonzero n = true -> nullary_real n <> 0.
 Proof.
@@ -123,10 +161,8 @@ apply not_0_IZR. lia.
 pose proof Rgt_2PI_0; lra.
 Qed.
 
-Definition expr_equiv (a b: expr) : Prop :=
-  forall env, eval a env = eval b env.
-
-Infix "==" := expr_equiv (at level 70, no associativity).
+Local Lemma Some_inj: forall {A} (x y: A), Some x = Some y -> x=y.
+Proof. congruence. Qed.
 
 Lemma ring_simp_Mul_correct:
   forall fuel e1 e2 e, 
@@ -135,25 +171,25 @@ Lemma ring_simp_Mul_correct:
 Proof.
 induction fuel; simpl; intros.
 discriminate.
-red; intro.
 symmetry.
 destruct e1, e2; simpl in *; try discriminate;
 repeat
-(match goal with
-| H: ring_simp_Mul _ _ _ = _ |- _ => apply IHfuel in H; rewrite ?H; simpl in *
-| H: Some _ = Some _ |- _ => injection H; clear H; intro H; subst; simpl
+ match goal with
+| H: ring_simp_Mul _ _ _ = _ |- _ => apply IHfuel in H
+| H: Some _ = Some _ |- _ => apply Some_inj in H; subst
 | H: None = _ |- _ => discriminate H
-| H: context [match ?x with _ => _ end] |- _ => is_var x; destruct x; simpl in *
-| H: context [match ?x with _ => _ end] |- _ => destruct x eqn:?H; simpl in *
+| H: ?a == ?b |- _ => is_var a; rewrite H; clear H
+| H: match ?x with _ => _ end = _ |- _ => is_var x; destruct x
+| H: match ?x with _ => _ end = _ |- _ => destruct x eqn:?H
 | H: _ && _ = true |- _ => rewrite andb_true_iff in H; destruct H
 | H: nullary_op_nonzero _ = true |- _ => apply nullary_op_nonzero_e in H
-| H: _ == _ |- _ =>  rewrite H; clear H; simpl eval
-| |- context [bpow' 0 ?x] => is_var x; destruct x; simpl
  end;
- try ring);
+ intro; simpl; 
+ try ring;
  rewrite <- ?mult_IZR, ?Zpow_facts.Zpower_pos_0_l; simpl; auto;
-try (rewrite <- Rinv_mult_distr by auto; auto).
+ try (rewrite <- Rinv_mult_distr by auto; auto).
 Qed.
+
 
 Definition add_assoc2 (enable: bool) op e1 e2 :=
  match op, e2 with
@@ -185,7 +221,7 @@ Lemma add_assoc_correct:
   add_assoc enable op e1 e2 = Some e ->
   e == Ebinary op e1 e2.
 Proof.
-intros. hnf. intros.
+intros.
 unfold add_assoc, add_assoc2 in H.
 destruct op; simpl; auto; try discriminate;
 destruct e1, e2; simpl;  try discriminate; auto;
@@ -194,7 +230,7 @@ repeat match goal with
            | H: context [match ?a with _ => _ end] |- _  => 
                is_var a; destruct a; simpl in H; try discriminate; auto 
            end;
-simpl; rewrite ?IZR_NEG; try ring.
+intro; simpl; rewrite ?IZR_NEG; ring.
 Qed.
 
 Definition add_assoc' enable op e1 e2 :=
@@ -203,10 +239,11 @@ Definition add_assoc' enable op e1 e2 :=
 Lemma add_assoc'_correct:
  forall enable op e1 e2, add_assoc' enable op e1 e2 == Ebinary op e1 e2.
 Proof.
-intros. red; intro.
+intros.
 unfold add_assoc'.
 destruct (add_assoc _ _ _ _) eqn:?H; auto.
 eapply add_assoc_correct; eauto.
+reflexivity.
 Qed.
 
 Definition mul_fuel := 30%nat.
@@ -224,10 +261,11 @@ Lemma ring_simp_Div_correct:
     e == Ebinary Div e1 e2.
 Proof.
 unfold ring_simp_Div.
-intros; intro.
+intros.
 destruct e1,e2; intros; try discriminate;
 repeat match type of H with match ?a with _ => _ end = _ => destruct a; try discriminate end;
-inversion H; clear H; subst; simpl;
+apply Some_inj in H; subst;
+intro; simpl; 
 rewrite ?Rcomplements.Rdiv_1; auto;
 unfold Rdiv;
 rewrite Rmult_1_l;
@@ -235,6 +273,7 @@ auto.
 Qed.
 
 Fixpoint ring_simp1 enable (e: expr) :=
+  (* If enable=true then use associativity of addition *)
  match e with
  | Evar _ => None
  | Econst _ => None
@@ -280,41 +319,37 @@ Proof.
 Opaque mul_fuel.
 Opaque add_assoc.
 Opaque add_assoc'.
-induction e; simpl; intros; try discriminate; intro.
-destruct (ring_simp1 enable e) eqn:?H; inversion H; clear H; subst; simpl; auto.
+induction e; simpl; intros; try discriminate.
 -
-destruct u; try discriminate; try solve [injection H2; clear H2; intro; subst; simpl in *; f_equal; auto].
-+ injection H2; clear H2; intro; subst. simpl in *. lra.
-+  rewrite (IHe _ (eq_refl _)); clear IHe.
-    destruct (ring_simp_Mul mul_fuel e0 e0) eqn:?H;
-    inversion H2; clear H2; subst.
-   rewrite (ring_simp_Mul_correct _ _ _ _ H); reflexivity.
-    reflexivity.
--
+destruct (ring_simp1 enable e).
++ specialize (IHe _ (eq_refl _)).
+  destruct u; try discriminate.
+  * apply Some_inj in H; subst; intro; simpl; ring.
+  * destruct (ring_simp_Mul mul_fuel e0 e0) eqn:?H; apply Some_inj in H.
+     rewrite IHe, <- H.
+    rewrite (ring_simp_Mul_correct _ _ _ _ H0). intro; reflexivity.
+     rewrite IHe, <- H. intro; reflexivity.
++
  clear IHe.
- destruct u; inversion H2; clear H2; subst; simpl in *; try solve [f_equal; auto; lra].
+ destruct u; try discriminate; apply Some_inj in H; rewrite <- H; intro; simpl.
+  ring. reflexivity.
 -
 destruct b; auto;
 destruct (ring_simp1 enable e1) eqn:?H; try discriminate H;
 destruct (ring_simp1 enable e2) eqn:?H; try discriminate H;
-try (injection H; clear H; intro H; subst);
-simpl;
-erewrite ?IHe1 by eauto; erewrite ?IHe2 by auto; clear IHe1 IHe2;
-rewrite ?add_assoc'_correct;
-auto.
-  + rewrite (add_assoc_correct _ _ _ _ _ H); auto.
-  + rewrite (add_assoc_correct _ _ _ _ _ H); auto.
- +
-  destruct (ring_simp_Mul mul_fuel e e2) eqn:?H; inversion H; clear H; subst; auto.
-  rewrite (ring_simp_Mul_correct _ _ _ _ H2); auto.
- +
-  destruct (ring_simp_Mul mul_fuel e1 e) eqn:?H; inversion H; clear H; subst; auto.
-  rewrite (ring_simp_Mul_correct _ _ _ _ H2); auto.
- + rewrite (ring_simp_Mul_correct _ _ _ _ H); auto.
- + rewrite (ring_simp_Div_correct _ _ _ H); auto.
- + rewrite (ring_simp_Div_correct _ _ _ H); auto.
- + rewrite (ring_simp_Div_correct _ _ _ H); auto.
- + rewrite (ring_simp_Div_correct _ _ _ H); auto.
+try apply Some_inj in H;
+rewrite ?(IHe1 _ (eq_refl _));
+rewrite ?(IHe2 _ (eq_refl _));
+clear IHe1 IHe2;
+try match type of H with match ?a with _ => _ end = _ =>
+   destruct a eqn:H2; apply Some_inj in H; subst; rename H2 into H
+end;
+try (apply add_assoc_correct in H; rewrite H; clear H);
+try (rewrite <- H; clear H);
+rewrite ?add_assoc'_correct,
+           ?(ring_simp_Mul_correct _ _ _ _ H),
+           ?(ring_simp_Div_correct _ _ _ H);
+try reflexivity.
 Transparent mul_fuel.
 Transparent add_assoc.
 Transparent add_assoc'.
@@ -328,7 +363,6 @@ Fixpoint ring_simp enable n (e: expr) {struct n} : expr :=
                | None => e
                end
  end.
-
 
 Lemma ring_simp_correct:
   forall enable n e env, 
@@ -399,6 +433,36 @@ match e with
 | _ => Float.Inan
 end.
 
+Lemma b_expr0_inv:
+ forall l u x, 
+    match (if F.real l && F.real u then Float.Ibnd l u else Float.Inan) with
+      | Float.Inan => True
+      | Float.Ibnd lo hi => F.toR lo <= x <= F.toR hi
+      end ->
+    contains (convert (div p52 (fromZ p52 1) (if F.real l && F.real u then Float.Ibnd l u else Float.Inan))) (Xreal (1 / x)).
+Proof.
+intros.
+set (xx := if F.real l && F.real u then Float.Ibnd l u else Float.Inan) in *.
+pose proof J.div_correct p52 (fromZ p52 1) xx 1 x.
+match type of H0 with _ -> _ -> ?A => assert A; [apply H0 | ]; clear H0 end.
+apply fromZ_correct.
+subst xx.
+destruct (F.real l) eqn:?H, (F.real u) eqn:?H; simpl in *; auto.
+rewrite F'.valid_lb_real by auto.
+rewrite F'.valid_ub_real by auto.
+simpl.
+rewrite F.real_correct in *.
+unfold F.toR in *.
+destruct (F.toX l) eqn:?H; try discriminate.
+destruct (F.toX u) eqn:?H; try discriminate.
+simpl in *. auto.
+clear - H1.
+subst xx.
+red in H1.
+simpl in H1.
+auto.
+Qed.
+
 Definition fixup_fint (x: fint) : fint :=
  match x with
  | Float.Ibnd lo hi => if F.real lo && F.real hi then x else Float.Inan 
@@ -425,18 +489,6 @@ rewrite H0 in H2.
 destruct (F.classify (F.neg l)); auto; discriminate.
 Qed.
 
-Lemma toR_neg:
- forall u, F.real u = true -> F.toR (F.neg u) = - (F.toR u).
-Proof.
-intros.
-unfold F.toR.
-unfold proj_val.
-rewrite I2.F'.neg_correct.
-destruct (F.toX u); simpl; auto.
-lra.
-Qed.
-
-
 Lemma toX_Xreal_real:
  forall x y, F.toX x = Xreal y -> F.real x = true.
 Proof.
@@ -449,6 +501,34 @@ destruct (match SpecFloat.digits2_pos m with
       | 53%positive => true
       | _ => false
       end); auto.
+Qed.
+
+Lemma toR_neg:
+ forall u, F.real u = true -> F.toR (F.neg u) = - (F.toR u).
+Proof.
+intros.
+unfold F.toR.
+unfold proj_val.
+rewrite I2.F'.neg_correct.
+destruct (F.toX u); simpl; auto.
+lra.
+Qed.
+
+Lemma inv_div1:
+  forall x, 
+   decent_interval x = true -> 
+   inv p52 x = div p52 (fromZ p52 1) x.
+Proof.
+intros.
+unfold inv, div.
+change (fromZ p52 1) with (Float.Ibnd I.c1 I.c1).
+cbv iota.
+change (sign_strict_ I.c1 I.c1) with Xgt.
+destruct x; auto.
+simpl in H. rewrite andb_true_iff in H. destruct H.
+unfold Fdivz_DN, Fdivz_UP.
+rewrite H, H0.
+auto.
 Qed.
 
 Lemma fixup_fint_abs_correct:
@@ -535,54 +615,6 @@ subst.
 rewrite Rabs_R0.
 change (F.toR F.zero) with 0.
 lra.
-Qed.
-
-
-Lemma b_expr0_inv:
- forall l u x, 
-    match (if F.real l && F.real u then Float.Ibnd l u else Float.Inan) with
-      | Float.Inan => True
-      | Float.Ibnd lo hi => F.toR lo <= x <= F.toR hi
-      end ->
-    contains (convert (div p52 (fromZ p52 1) (if F.real l && F.real u then Float.Ibnd l u else Float.Inan))) (Xreal (1 / x)).
-Proof.
-intros.
-set (xx := if F.real l && F.real u then Float.Ibnd l u else Float.Inan) in *.
-pose proof J.div_correct p52 (fromZ p52 1) xx 1 x.
-match type of H0 with _ -> _ -> ?A => assert A; [apply H0 | ]; clear H0 end.
-apply fromZ_correct.
-subst xx.
-destruct (F.real l) eqn:?H, (F.real u) eqn:?H; simpl in *; auto.
-rewrite F'.valid_lb_real by auto.
-rewrite F'.valid_ub_real by auto.
-simpl.
-rewrite F.real_correct in *.
-unfold F.toR in *.
-destruct (F.toX l) eqn:?H; try discriminate.
-destruct (F.toX u) eqn:?H; try discriminate.
-simpl in *. auto.
-clear - H1.
-subst xx.
-red in H1.
-simpl in H1.
-auto.
-Qed.
-
-Lemma inv_div1:
-  forall x, 
-   decent_interval x = true -> 
-   inv p52 x = div p52 (fromZ p52 1) x.
-Proof.
-intros.
-unfold inv, div.
-change (fromZ p52 1) with (Float.Ibnd I.c1 I.c1).
-cbv iota.
-change (sign_strict_ I.c1 I.c1) with Xgt.
-destruct x; auto.
-simpl in H. rewrite andb_true_iff in H. destruct H.
-unfold Fdivz_DN, Fdivz_UP.
-rewrite H, H0.
-auto.
 Qed.
 
 Lemma b_expr0_correct:
@@ -1183,12 +1215,6 @@ apply H1.
 constructor; auto.
 Qed.
 
-Definition zeroexpr := Econst (Int 0).
-Definition oneexpr := Econst (Int 1).
-Definition moneexpr := Econst (Int (-1)).
-
-Definition infinity := PrimFloat.infinity.
-
 Fixpoint prune (hyps: list (option F.type)) (e: expr) (cutoff: F.type) :
            expr * F.type :=
  match b_expr e hyps with 
@@ -1344,6 +1370,13 @@ revert H2 H3.
 unfold Rabs. repeat destruct (Rcase_abs _); intros; lra.
 Qed.
 
+Fixpoint count_nodes (e: expr) : Z :=
+ match e with
+ | Eunary _ e1 => 1 + count_nodes e1
+ | Ebinary _ e1 e2 => 1 + count_nodes e1 + count_nodes e2
+ | _ => 1
+ end.
+
 Fixpoint count_terms (e: expr) : Z :=
  match e with
  | Ebinary Add e1 e2 => count_terms e1 + count_terms e2
@@ -1368,6 +1401,13 @@ intros. intro.
 destruct e1 as [ | [ [ | | ] | | ] | | ]; simpl; auto;
 destruct e2 as [ | [ [ | | ] | | ] | | ]; simpl; auto; 
 lra.
+Qed.
+
+Add Parametric Morphism : Add0
+  with signature expr_equiv ==> expr_equiv ==> expr_equiv
+  as Add0_mor.
+Proof.
+intros. rewrite ?Add0_correct. rewrite H,H0; reflexivity.
 Qed.
 
 Definition Sub0 (e1 e2: expr) :=
@@ -1396,11 +1436,28 @@ Fixpoint reflect_power k v e :=
  | S k' => Ebinary Mul (reflect_power k' v e) v
  end.
 
+Add Parametric Morphism : reflect_power
+ with signature eq ==> expr_equiv ==> expr_equiv ==> expr_equiv as 
+    reflect_power_mor.
+Proof.
+induction y; simpl; intros; auto.
+apply Ebinary_mor; auto.
+Qed.
+
 Fixpoint reflect_powers al n e : expr :=
  match al with
  | nil => e
  | k :: al' => reflect_power k (Evar n) (reflect_powers al' (S n) e)
  end.
+
+Add Parametric Morphism : reflect_powers 
+ with signature eq ==> eq ==> expr_equiv ==> expr_equiv as 
+    reflect_powers_mor.
+Proof.
+induction y; simpl; intros; auto.
+apply reflect_power_mor; auto.
+reflexivity.
+Qed.
 
 Definition reflect_normterm (x: normterm) : expr :=
  match x with
@@ -1640,7 +1697,6 @@ lra.
 rewrite IHa.
 lra.
 Qed.
-
 
 Lemma inverse_term_correct: forall i nt,
  inverse_term i = Some nt ->
@@ -2049,7 +2105,6 @@ destruct (normalize_term (Evar n)) eqn:?H.
  rewrite reflect_normterms_untangle; simpl; lra].
  inversion H; clear H; subst.
  pose proof (inverse_term_correct _ _ H0 env).
-(*  rewrite reflect_normterm_spec in H. *)
   simpl. clear IHe H0. simpl in H. rewrite <- H.
  destruct sign; simpl.
  rewrite negate_normterm_correct. simpl; lra.
@@ -2533,16 +2588,137 @@ Definition sort_using_table_alt (nts: list normterm) (e0: expr) : expr :=
  (reflect_list
   (Table.elements
     (fold_right (Basics.flip add_to_table) (Table.empty intable_t) nts))).
- 
+
+Lemma fold_symmetric_setoid:
+  forall [A : Type] [eqv: A -> A -> Prop] 
+  (eqv_rel: Equivalence eqv)
+  (f : A -> A -> A)
+  (f_mor: forall x1 y1, eqv x1 y1 ->
+              forall x2 y2, eqv x2 y2 ->
+              eqv (f x1 x2) (f y1 y2)),
+  (forall x y z : A, eqv (f x (f y z)) (f (f x y) z)) ->
+  forall a0 : A,
+  (forall y : A, eqv (f a0 y) (f y a0)) ->
+  forall l : list A, eqv (fold_left f l a0) (fold_right f a0 l).
+Proof.
+intros.
+induction l as [ | a1 l IHl]; [simpl; reflexivity | ].
+simpl.
+eapply  (@Equivalence_Transitive _ eqv eqv_rel).
+2: apply f_mor; [reflexivity | apply IHl].
+clear IHl. revert a1.
+induction l as [|? ? IHl]; [ auto | ].
+    simpl. intro.
+apply  (@Equivalence_Transitive _ eqv eqv_rel)
+ with (fold_left f l (f a0 (f a1 a))).
+clear IHl.
+assert (forall l b c, eqv b c -> eqv (fold_left f l b) (fold_left f l c)). {
+  clear l a1 a a0 H0;
+  induction l; simpl; intros; auto. apply IHl; apply f_mor; auto; reflexivity.
+}
+ apply H1; clear H1. symmetry. auto.
+eapply  (@Equivalence_Transitive _ eqv eqv_rel).
+apply IHl.
+eapply  (@Equivalence_Transitive _ eqv eqv_rel).
+2: apply f_mor; [ reflexivity | symmetry; apply IHl].
+symmetry.
+auto.
+Qed.
+
+Lemma fold_symmetric_Add0:
+  forall l, fold_left Add0 l zeroexpr == fold_right Add0 zeroexpr l.
+Proof.
+intros.
+apply fold_symmetric_setoid.
+apply expr_equiv_rel.
+intros. 
+apply Add0_mor; auto.
+intros. rewrite ?Add0_correct. intro; simpl; ring.
+intros. rewrite ?Add0_correct. intro; simpl; ring.
+Qed.
+
+Ltac reflect_powers_untangle := 
+ repeat match goal with |- context [reflect_powers ?k ?i ?e] =>
+  lazymatch e with zeroexpr => fail | _ => idtac end;
+ rewrite (reflect_powers_untangle k i e)
+end.
 
 Lemma reflect_intable_simple_eqv:
  forall k i f, reflect_intable_simple k i f == Add0 (reflect_intable(k,i)) f.
 Proof.
 intros.
 unfold reflect_intable.
-unfold reflect_intable_simple.
 unfold reflect_intable_aux.
-rewrite <- fold_left_rev_right.
+pose proof (fold_symmetric_Add0 (map reflect_intable1 i)).
+set (a := fold_left _ _ _) in *.
+unfold reflect_intable_simple.
+set (g k := fun '(c, e) =>
+      reflect_normterm {| nt_coeff := c; nt_exp := e; nt_powers := k |}).
+change (fun _ => _) with (g k).
+destruct (Prog.expr_eq_dec a (Econst (Int 0))).
+-
+ rewrite e in H |- *.  clear e.
+ transitivity (Add0 (fold_right (Ebinary Add) zeroexpr (map (g k) i)) f).
+ revert f; induction (map (g k) i); intros. reflexivity.
+ simpl fold_right. rewrite IHl.
+ rewrite !Add0_correct; intro; simpl; ring.
+ apply Add0_mor; [ | reflexivity].
+ symmetry in H.
+ clear a.
+ transitivity (
+    fold_right (Ebinary Add) zeroexpr
+     (map (fun ce => Ebinary Mul (reflect_powers k 0 oneexpr) (reflect_intable1 ce)) i)). {
+ clear.
+ induction i; simpl. reflexivity. apply Ebinary_mor; try reflexivity; auto. 
+ unfold g. destruct a. rewrite reflect_normterm_spec.
+ clear. 
+ admit.
+ }
+ transitivity (Ebinary Mul
+(reflect_powers k 0 oneexpr) 
+ (fold_right Add0 zeroexpr (map reflect_intable1 i)));
+  [ | rewrite H; intro; simpl; ring].
+clear H.
+induction i.
+simpl. intro; simpl; ring.
+simpl.
+rewrite IHi. clear IHi.
+intro; simpl.
+rewrite Add0_correct;simpl; ring.
+-
+clearbody a.
+transitivity (Add0 (reflect_powers k 0 a) f).
+  2:{ destruct a as [ | [ [ | | ] | | ] | | ] ; try reflexivity. congruence. }
+clear n.
+rewrite H; clear H.
+clear a.
+revert k f; induction i as [| [[n d] c] i]; simpl; intros.
++
+rewrite reflect_powers_untangle.
+intro.
+rewrite Add0_correct.
+simpl.
+ring.
++
+rewrite Add0_correct.
+rewrite IHi; clear IHi.
+destruct (Z.eqb_spec n 0).
+  {intro; simpl. rewrite Add0_correct. simpl. ring. }
+destruct (Z.eqb_spec n 1); subst;
+ destruct d;
+ destruct (Z.eqb_spec c 0);
+ subst; intro;
+ repeat change (eval (Ebinary Add ?a ?b) env) with (eval a env + eval b env);
+ rewrite ?Add0_correct;
+ repeat change (eval (Ebinary Add ?a ?b) env) with (eval a env + eval b env);
+ reflect_powers_untangle;
+ repeat change (eval (Ebinary Mul ?a ?b) env) with (eval a env * eval b env);
+ rewrite ?Add0_correct;
+ repeat change (eval (Ebinary Add ?a ?b) env) with (eval a env + eval b env);
+ repeat change (eval (Ebinary Mul ?a ?b) env) with (eval a env * eval b env);
+ fold oneexpr;
+ try ring.
+all: fail.
 Admitted.
 
 Lemma reflect_list_rev: forall l, reflect_list (rev l) == reflect_list l.
@@ -2831,12 +3007,6 @@ simpl; compute; lra.
 Qed.
 
 
-Fixpoint count_nodes (e: expr) : Z :=
- match e with
- | Eunary _ e1 => 1 + count_nodes e1
- | Ebinary _ e1 e2 => 1 + count_nodes e1 + count_nodes e2
- | _ => 1
- end%Z.
 
 
 Lemma test2:
