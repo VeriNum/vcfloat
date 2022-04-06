@@ -2288,12 +2288,9 @@ Require FMapAVL.
 
 Module Table := FMapAVL.Make Keys.
 
-Definition intable_t := list coefficient.
+Search Keys.cmp Keys.compare.
 
-(*
-Definition normterm_to_intable (nt: normterm) :=
- (nt_coeff nt, nt_exp nt).
-*)
+Definition intable_t := list coefficient.
 
 Definition reflect_intable1_simple (k: Table.key) (it: coefficient) : expr :=
     reflect_normterm_simple (k,it).
@@ -2519,50 +2516,6 @@ apply IHl; auto.
 rewrite H0; reflexivity.
 Qed.
 
-(*
-Definition relate_fold_add:
- forall [elt A: Type]
-     [eqv: A -> A -> Prop] 
-     (eqv_rel: Equivalence eqv)
-     (lift: Table.key -> elt -> A)
-    (f:  A -> A -> A)
-    (f_mor: forall x1 y1, eqv x1 y1 ->
-              forall x2 y2, eqv x2 y2 ->
-              eqv (f x1 x2) (f y1 y2))
-  (f_assoc: forall x y z : A, eqv (f x (f y z)) (f (f x y) z))
-  (f_commut: forall x y : A, eqv (f x y) (f y x))
-  (u: elt)
-  (f_unit: forall (k: Table.key) (y : A), eqv (f (lift k u) y) (f y (lift k u)))
-  (tab: Table.t elt)
-  (k: Table.key)
-  eqv (Table.fold f (Table.add k ( find_default u k tab)) tab) u)
-    (f 
-Table.fold f tab u 
-
-Definition relate_fold_add:
- forall [elt A: Type]
-     [eqv: A -> A -> Prop] 
-     (eqv_rel: Equivalence eqv)
-    (f: Table.key -> elt -> A -> A)
-    (f_mor: forall x1 y1, eqv x1 y1 ->
-              forall x2 y2, eqv x2 y2 ->
-              eqv (f x1 x2) (f y1 y2))
-  (f_assoc: forall x y z : A, eqv (f x (f y z)) (f (f x y) z))
-  (f_commut: forall x y : A, eqv (f x y) (f y x))
-  (u: A)
-  (f_unit: forall y : A, eqv (f u y) (f y u))
-  (default: elt)
-  (transform: Table.key * elt -> Table.key * elt)
-  (tab: Table.t elt)
-  (k: Table.key)
-  eqv (Table.fold f (uncurry Table.add (transform (k, find_default default k tab)) tab) u)
-    (f 
-Table.fold f tab u 
-*)
-
-Definition add_to_table_simple (tab: Table.t intable_t) nt :=
-Table.add (fst nt) (snd nt :: find_default [] (fst nt) tab) tab.
-
 Lemma fold_bal:
   forall [elt A] (f: Table.Raw.key -> elt -> A -> A) (t1 t2: Table.Raw.tree elt) k e x,
   Table.Raw.fold f (Table.Raw.bal t1 k e t2) x = 
@@ -2640,51 +2593,189 @@ rewrite (reflect_intable_simple_untangle _ _ (Table.Raw.fold _ _ _)).
 intro; simpl; ring.
 Qed.
 
-Lemma add_to_table_spec:
- forall tab nt,
-  reflect_table (add_to_table tab nt) == reflect_table (add_to_table_simple tab nt).
+Lemma cmp_compare: forall k x,
+    Keys.cmp k x = match Keys.compare k x with
+           | OrderedType.LT _ => Lt
+           | OrderedType.EQ _ => Eq
+           | OrderedType.GT _ => Gt
+           end.
 Proof.
 intros.
-unfold add_to_table.
-unfold add_to_table_simple.
-destruct nt.
-simpl.
-unfold reflect_table.
-set (j := find_default nil p tab).
-clearbody j.
-assert (H8 :=cancel1_intable_correct p j c).
-set (new := cancel1_intable j c) in *; clearbody new.
-fold coefficient in *.
-set (old := c::j) in *; clearbody old.
-destruct tab; unfold Table.fold, Table.add; simpl.
-induction this.
-simpl; auto.
-inversion is_bst; clear is_bst; subst.
-simpl.
-destruct (Keys.compare p k).
--
-rewrite !fold_bal.
-apply fold_reflect_intable_simple_mor; auto.
-apply reflect_intable_simple_mor; auto.
-apply Keys.eq_refl.
--
-simpl.
-apply fold_reflect_intable_simple_mor; auto.
-rewrite <- e0.
-auto.
--
-rewrite !fold_bal.
-apply IHthis2 in H5.
-set (u := Table.Raw.add p new this2) in *.
-set (v := Table.Raw.add p old this2) in *.
-clearbody u; clearbody v.
-clear - H5.
-fold intable_t.
-fold (fold_reflect_intable_simple u) in *.
-fold (fold_reflect_intable_simple v) in *.
-rewrite !(fold_reflect_intable_simple_untangle _ (reflect_intable_simple _ _ _)).
-rewrite H5.
+destruct (Keys.compare k x); auto.
+red in l.
+destruct (Keys.cmp k x) eqn:?H; auto.
+apply Keys.eq_sym in H; congruence.
+pose proof (Keys.lt_trans l H).
+apply Keys.lt_not_eq in H0. contradiction H0.
 reflexivity.
+Qed.
+
+Lemma raw_in_congr:
+ forall [elt k k'] [t: Table.Raw.tree elt],
+        Keys.eq k k' -> (Table.Raw.In k t <-> Table.Raw.In k' t).
+Proof.
+intros.
+induction t; simpl.
+split; intros; inversion H0.
+split; intro H0; inversion H0; clear H0; subst.
+- constructor; apply Keys.eq_sym in H; eapply Keys.eq_trans; eauto.
+- apply Table.Raw.InLeft; rewrite <- IHt1; auto.
+- apply Table.Raw.InRight; rewrite <- IHt2; auto.
+- constructor; eapply Keys.eq_trans; eauto.
+- apply Table.Raw.InLeft; rewrite IHt1; auto.
+- apply Table.Raw.InRight; rewrite IHt2; auto.
+Qed.
+
+Lemma relate_fold_add:
+ forall [elt A: Type]
+     [eqv: A -> A -> Prop] 
+     (eqv_rel: Equivalence eqv)
+     (lift: Table.key -> elt -> A)
+     (lift_prop: forall k k' x, Keys.eq k k' -> eqv (lift k x) (lift k' x))
+    (f:  A -> A -> A)
+    (f_mor: forall x1 y1, eqv x1 y1 ->
+              forall x2 y2, eqv x2 y2 ->
+              eqv (f x1 x2) (f y1 y2))
+    (f_assoc: forall x y z : A, eqv (f x (f y z)) (f (f x y) z))
+    (f_commut: forall x y : A, eqv (f x y) (f y x))
+    (u: elt)
+    (u_unit: forall k x, eqv (f (lift k u) x) x)
+    (g: Table.key -> elt -> A -> A)
+    (g_eqv: forall k x a a', eqv a a' -> eqv (g k x a) (f (lift k x) a'))
+    (tab: Table.t elt)
+    (k: Table.key),
+    eqv (Table.fold g tab (lift k u))
+      (g k (find_default u k tab)
+       (Table.fold (fun k' x a => 
+                           match Keys.cmp k k' with Eq => a 
+                                 | _ => g k' x a end) tab (lift k u))).
+Proof.
+intros.
+destruct tab.
+unfold Table.fold, find_default, Table.find; simpl.
+set (a := lift k u). clearbody a.
+set (h := fun (k' : Table.key) (x : elt) (a0 : A) =>
+         match Keys.cmp k k' with
+         | Eq => a0
+         | _ => g k' x a0
+         end).
+assert (g_mor: forall k x a b, eqv a b -> eqv (g k x a) (g k x b)). {
+  intros. rewrite g_eqv. symmetry. rewrite g_eqv. apply f_mor. reflexivity. reflexivity. reflexivity. auto.
+}
+assert (FOLD1: forall t a,  ~Table.Raw.In k t ->
+    Table.Raw.fold g t a = Table.Raw.fold h t a). {
+ induction t; simpl; intros;auto.
+ rewrite IHt1, IHt2.
+ f_equal. set (uu := Table.Raw.fold _ _ _); clearbody uu.
+ unfold h. clear -H.
+ destruct (Keys.cmp k k0) eqn:?H; auto. contradiction H.
+ constructor; auto.
+ contradict H. constructor 3; auto.
+ contradict H. constructor 2; auto.
+}
+assert (FOLD2: forall t a b, eqv a b -> eqv (Table.Raw.fold g t a) (Table.Raw.fold g t b)). {
+ clear - eqv_rel g_mor.
+  induction t; simpl; intros;auto.
+}
+assert (FOLD3: forall t k a b,
+    eqv (Table.Raw.fold g t (g k a b)) (g k a (Table.Raw.fold g t b))). {
+  induction t; simpl; intros. reflexivity.
+  etransitivity; [ |   apply IHt2]. apply FOLD2.
+  transitivity (g k0 e (g k1 a0 (Table.Raw.fold g t1 b))).
+  apply g_mor; auto.
+  set (v := Table.Raw.fold _ _ _). clearbody v.
+  rewrite (g_eqv k0 _ _ _  (@Equivalence_Reflexive _ _ eqv_rel _)).
+  etransitivity. apply f_mor. reflexivity.
+  apply (g_eqv _ _ _ _  (@Equivalence_Reflexive _ _ eqv_rel _)).
+  etransitivity; [apply f_assoc |].
+  etransitivity. apply f_mor. apply f_commut. reflexivity.
+  etransitivity; [symmetry; apply f_assoc |].
+  symmetry.
+  apply g_eqv. apply g_eqv. reflexivity.
+}
+destruct (Table.Raw.find k this) eqn:?H.
+-
+revert a; induction is_bst; simpl; intros; [ discriminate | ].
+simpl in H.
+unfold h at 2. rewrite (cmp_compare k x).
+destruct (Keys.compare k x).
++
+specialize (IHis_bst1 H); clear IHis_bst2.
+rewrite <- FOLD1
+  by (apply (Table.Raw.Proofs.gt_tree_trans l0) in H1;
+        apply Table.Raw.Proofs.gt_tree_not_in; auto).
+etransitivity; [apply FOLD2; apply g_eqv; apply IHis_bst1 | ].
+set (v := Table.Raw.fold h l a). clearbody v.
+symmetry.
+etransitivity.
+symmetry.
+apply FOLD3.
+apply FOLD2.
+rewrite (g_eqv _ _ _ _  (@Equivalence_Reflexive _ _ eqv_rel _)).
+etransitivity. apply f_mor. reflexivity. apply g_eqv. reflexivity.
+rewrite f_assoc.
+etransitivity. apply f_mor. apply f_commut. reflexivity.
+rewrite <- f_assoc.
+apply f_mor. reflexivity.
+symmetry. 
+rewrite (g_eqv _ _ _ _  (@Equivalence_Reflexive _ _ eqv_rel _)).
+reflexivity.
++
+assert (Hl: ~Table.Raw.In k l)
+  by (rewrite (raw_in_congr e1);
+        apply Table.Raw.Proofs.lt_tree_not_in; auto).
+assert (Hr: ~Table.Raw.In k r)
+  by (rewrite (raw_in_congr e1);
+        apply Table.Raw.Proofs.gt_tree_not_in; auto).
+inversion H; clear H; subst.
+clear IHis_bst1 IHis_bst2.
+rewrite <- !FOLD1 by auto.
+etransitivity.
+apply FOLD3.
+rewrite !(g_eqv _ _ _ _  (@Equivalence_Reflexive _ _ eqv_rel _)).
+apply f_mor; try reflexivity.
+symmetry.
+apply lift_prop; auto.
++
+specialize (IHis_bst2 H); clear IHis_bst1.
+assert (Hl: ~Table.Raw.In k l)
+  by (apply (Table.Raw.Proofs.lt_tree_trans l0) in H0;
+        apply Table.Raw.Proofs.lt_tree_not_in; auto).
+etransitivity. apply IHis_bst2. clear IHis_bst2.
+apply g_mor.
+rewrite FOLD1 by auto. reflexivity.
+-
+assert (Hr: ~Table.Raw.In k this)
+  by (apply Table.Raw.Proofs.not_find_iff; auto).
+rewrite FOLD1 by auto.
+rewrite (g_eqv _ _ _ _  (@Equivalence_Reflexive _ _ eqv_rel _)).
+rewrite u_unit.
+reflexivity.
+Qed.
+
+Lemma fold_add_ignore:
+  forall [elt A]
+   (f: Table.key -> elt -> A -> A)
+   (tab: Table.t elt)
+   (k: Table.key)
+   (x: elt) (a0: A),
+   (forall k' y a, Keys.eq k k' -> f k' y a = a) ->
+   Table.fold f (Table.add k x tab) a0 =
+   Table.fold f tab a0.
+Proof.
+intros.
+destruct tab.
+unfold Table.fold, Table.add; simpl.
+revert a0; induction is_bst; intros.
+unfold Table.Raw.add. simpl.
+apply H; reflexivity.
+simpl.
+destruct (Keys.compare k x0); rewrite ?fold_bal.
+rewrite IHis_bst1. auto.
+simpl.
+f_equal.
+rewrite ?H; auto.
+rewrite IHis_bst2. auto.
 Qed.
 
 Definition add_to_table_correct:
@@ -2692,88 +2783,47 @@ Definition add_to_table_correct:
             Ebinary Add (reflect_table tab) (reflect_normterm nt).
 Proof.
 intros.
-rewrite add_to_table_spec.
-unfold add_to_table_simple.
-destruct nt as [key it].
 unfold reflect_table.
-simpl.
-unfold find_default in *.
-destruct tab; unfold Table.find, Table.fold, Table.add in *.
-simpl in *.
-fold intable_t in *.
-destruct (Table.Raw.find key this) eqn:?H.
--
-revert H; induction this; simpl; intros.
-discriminate.
-inversion is_bst; clear is_bst; subst.
-destruct (Keys.compare key k).
-+
-apply IHthis1 in H; auto.
-clear IHthis1 IHthis2.
-rewrite fold_bal.
-rewrite H; clear H.
-fold fold_reflect_intable_simple.
-rewrite !(fold_reflect_intable_simple_untangle _ (reflect_intable_simple _ _ _)).
-rewrite reflect_intable_simple_untangle.
-rewrite (reflect_intable_simple_untangle _ _ (Table.Raw.fold _ _ _)).
-intro; simpl; ring.
-+
-inversion H; clear H; subst.
-clear - e0.
-rewrite (Keys_cmp_eq _ _ e0). clear key e0.
-simpl.
-set (u := Table.Raw.fold _ this1 _); clearbody u.
-fold fold_reflect_intable_simple.
-rewrite !(fold_reflect_intable_simple_untangle _ (reflect_intable_simple _ _ _)).
-unfold reflect_intable_simple.
-simpl.
-rewrite reflect_powers_untangle.
-unfold reflect_intable1_simple at 1.
-unfold reflect_normterm_simple.
-rewrite reflect_coeff_spec.
-intro; simpl; ring.
-+
-apply IHthis2 in H; auto.
-clear IHthis1 IHthis2.
-rewrite fold_bal.
-fold fold_reflect_intable_simple.
-fold fold_reflect_intable_simple.
-rewrite !(fold_reflect_intable_simple_untangle _ (reflect_intable_simple _ _ _)).
-rewrite H.
-clear.
-fold fold_reflect_intable_simple.
-intro; simpl; ring.
--
-revert H; induction this; simpl; intros.
-+
-unfold reflect_intable_simple; simpl.
+pose (lift k x := reflect_intable_simple k x zeroexpr).
+assert (forall k x a a',  a == a' ->
+     reflect_intable_simple k x a == Ebinary Add (lift k x) a'). {
+  intros. rewrite <- H. unfold lift, reflect_intable_simple.
+  rewrite <-fold_right_Add0_Add.
+  rewrite fold_right_Add0_untangle.
+  rewrite fold_right_Add0_Add. rewrite Add0_correct. reflexivity.
+}
+pose proof relate_fold_add expr_equiv_rel lift
+      ltac:(intros; apply reflect_intable_simple_mor; auto; reflexivity)
+     (Ebinary Add) 
+    (Ebinary_mor Add Add (eq_refl _))
+    ltac:(intros; intro; simpl; ring)
+    ltac:(intros; intro; simpl; ring)
+    nil
+    ltac:(intros; intro; simpl; ring)
+    reflect_intable_simple
+    H.
+clear H.
+unfold add_to_table.
+destruct nt as [k it].
+set (j := cancel1_intable (find_default [] k tab) it).
+etransitivity.
+apply (H0 (Table.add k j tab) k).
+change (lift k []) with zeroexpr.
+pose proof  (H0 tab k).
+change (lift k []) with zeroexpr in H.
+rewrite H; clear H H0.
+rewrite fold_add_ignore by (intros; rewrite H; auto).
+set (u := Table.fold _ _ _); clearbody u. clear.
+unfold find_default at 1.
+rewrite (Table.find_1 (Table.add_1 tab j (Keys.eq_refl k))).
+subst j; rewrite cancel1_intable_correct.
+unfold reflect_intable_simple at 1.
+simpl fold_right.
+fold (reflect_intable_simple k (find_default nil k tab) u).
+set (v := reflect_intable_simple _ _ _). clearbody v.
 unfold reflect_intable1_simple.
-simpl.
-rewrite (reflect_powers_untangle _ _ (reflect_coeff it)).
-rewrite reflect_coeff_spec.
+rewrite reflect_normterm_spec.
 intro; simpl; ring.
-+
-inversion is_bst; clear is_bst; subst.
-destruct (Keys.compare key k); try discriminate.
-* apply IHthis1 in H; auto; clear IHthis1 IHthis2.
- rewrite fold_bal.
- fold fold_reflect_intable_simple in *.
- rewrite H; clear.
- fold fold_reflect_intable_simple.
- set (u := fold_reflect_intable_simple this1 _); clearbody u.
- rewrite (reflect_intable_simple_untangle).
- rewrite (fold_reflect_intable_simple_untangle _ (Ebinary _ _ _)).
- rewrite (fold_reflect_intable_simple_untangle _ (reflect_intable_simple _ _ _)).
- rewrite (reflect_intable_simple_untangle _ _ u).
- intro; simpl; ring. 
-* apply IHthis2 in H; auto; clear IHthis1 IHthis2.
- rewrite fold_bal.
- fold fold_reflect_intable_simple in *.
- set (u := Table.Raw.fold  _ this1 _); clearbody u.
- rewrite fold_reflect_intable_simple_untangle, H.
- clear.
- rewrite (fold_reflect_intable_simple_untangle _ (reflect_intable_simple _ _ _)).
- intro; simpl; ring.
 Qed.
 
 Definition reflect_intable_aux (al: intable_t) : expr :=
@@ -3099,8 +3149,6 @@ Ltac prune_terms' H cutoff :=
 Definition cutoff40 := Tactic_float.Float.scale (Tactic_float.Float.fromZ 1) (-40)%Z.
 Definition cutoff30 := Tactic_float.Float.scale (Tactic_float.Float.fromZ 1) (-30)%Z.
 
-
-
 Lemma test1:
  forall 
  (x v e0 d e1 e2 d0 e3 : R)
@@ -3115,14 +3163,14 @@ Lemma test1:
 Rabs
   (((x + (1 / 32 * v + e2)) * (1 + d) + e3 + (1 / 2048 * - x + e0)) *
    (1 + d0) + e1 - (x + 1 / 32 * v + 1 / 2 * (1 / 32 * (1 / 32)) * - x)) <=
-  4644337115725829 / 18889465931478580854784 + powerRZ 2 (-33).
+   2.46e-7.
 Proof.
 intros.
 prune_terms cutoff30.
 (*match goal with |- Rabs ?a <= _ => field_simplify a end.*)
 match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end.
 eapply Rle_trans; [ apply H99 | clear  ].
-simpl; compute; lra.
+compute; lra.
 Qed.
 
 Lemma test3: forall
