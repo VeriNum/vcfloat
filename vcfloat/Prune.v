@@ -364,10 +364,10 @@ Fixpoint ring_simp enable n (e: expr) {struct n} : expr :=
  end.
 
 Lemma ring_simp_correct:
-  forall enable n e env, 
-    eval e env = eval (ring_simp enable n e) env.
+  forall enable n e,  ring_simp enable n e == e.
 Proof.
-induction n; simpl; intros; auto.
+symmetry. intro.
+revert e; induction n; simpl; intros; auto.
 destruct (ring_simp1 enable e) eqn:?H; auto.
 rewrite (ring_simp1_correct _ _ _ H).
 auto.
@@ -391,7 +391,7 @@ Ltac reified_ring_simplify enable e :=
   assert (H :=ring_simp_correct enable 100 e vars);
   set (e1 := ring_simp enable 100 e) in H; 
   hnf in e1; cbv [add_assoc' add_assoc] in e1;
-  rewrite H; clear H; try clear e
+  rewrite <- H; clear H; try clear e
  end.
 
 Ltac unfold_eval_hyps :=
@@ -2930,14 +2930,13 @@ simpl. lra.
 Qed.
 
 Definition simplify_and_prune hyps e cutoff :=
-    let e2 := ring_simp false 100 e in 
-    let '(e1,slop) := prune (map b_hyps hyps) e2 cutoff in
-    let e2 := ring_simp true 100 e1 in
+    let e1 := ring_simp false 100 e in 
+    let '(e2,slop) := prune (map b_hyps hyps) e1 cutoff in
     let e3 := cancel_terms e2 in
     let e4 := ring_simp true 100 e3 in
     (e4, slop).
 
-Lemma prune_terms_correct2:
+Lemma simplify_and_prune_correct:
  forall hyps e cutoff e1 slop,  
    simplify_and_prune hyps e cutoff = (e1,slop) ->
   F.real slop = true ->
@@ -2949,20 +2948,19 @@ Proof.
 intros.
 unfold simplify_and_prune in H.
 destruct (prune (map b_hyps hyps) (ring_simp false 100 e) cutoff) eqn:?H.
-assert (t = slop) by congruence. subst t.
-assert (e1 = ring_simp true 100 (cancel_terms (ring_simp true 100 e0))) by congruence. clear H; subst e1.
-rewrite <- ring_simp_correct in H2.
+assert (t = slop) by congruence.
+assert (e1 = ring_simp true 100 (cancel_terms e0)) by congruence.
+clear H; subst t e1.
+rewrite ring_simp_correct in H2.
 rewrite cancel_terms_correct in H2.
-rewrite <- ring_simp_correct in H2.
+rewrite <- (ring_simp_correct false 100 e).
 eapply prune_terms_correct in H3; try eassumption; auto.
-rewrite <- ring_simp_correct in H3.
-auto.
 Qed.
 
 Ltac prune_terms cutoff := 
  simple_reify;
  match goal with |- eval_hyps _ _ (Rabs (eval ?e _) <= _) => 
-    eapply (prune_terms_correct2 _ _ cutoff);  [vm_compute; reflexivity | reflexivity |  reflexivity |  try clear e]
+    eapply (simplify_and_prune_correct _ _ cutoff);  [vm_compute; reflexivity | reflexivity |  reflexivity |  try clear e]
  end;
  unfold_eval_hyps.
 
