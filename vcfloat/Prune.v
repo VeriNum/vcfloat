@@ -1661,6 +1661,16 @@ match e with
             Some (nil, (Qone, Z.opp k))
  | Ebinary Div (Econst (Int 1)) (Econst (Int i)) => inverse_term i
  | Ebinary Div (Econst (Int (-1))) (Econst (Int i)) => inverse_term (-i)
+ | Ebinary Div e1 (Econst (Int i)) => 
+      match normalize_term e1, inverse_term i with
+      | Some e1', Some e2' => Some (mult_normterm e1' e2')
+      | _,_ => None
+      end
+ | Ebinary Div e1 (Econst (Bpow 2 k)) => 
+      match normalize_term e1 with
+      | Some e1' => Some (mult_normterm e1' (nil, (Qone, Z.opp k)))
+      | None => None
+      end
 | Evar i => Some (repeat O i ++ 1%nat::nil, (Qone, Z0))
 | _ => None
 end.
@@ -1697,6 +1707,15 @@ induction a; simpl.
 lra.
 rewrite IHa.
 lra.
+Qed.
+
+Lemma inverse_term_nonzero: forall i nt,
+ inverse_term i = Some nt -> i<>0%Z.
+Proof.
+intros.
+unfold inverse_term in H.
+destruct i; simpl in *; try lia.
+discriminate.
 Qed.
 
 Lemma inverse_term_correct: forall i nt,
@@ -1895,7 +1914,7 @@ destruct n; try discriminate.
  2: apply not_0_IZR; lia. lra.
 -
  destruct b; try discriminate.
- +
+ + (* Mul *)
  destruct (normalize_term e1) eqn:?H; try discriminate.
  destruct (normalize_term e2) eqn:?H; try discriminate.
  specialize (IHe1 _ (eq_refl _)).
@@ -1905,24 +1924,47 @@ destruct n; try discriminate.
  rewrite <- IHe1, <- IHe2.
  rewrite <- !reflect_normterm_spec.
  apply mult_normterm_correct.
- +
-  destruct e1; try discriminate.
-  destruct n; try discriminate;
-  destruct n; try discriminate;
-  destruct p; try discriminate;
-  destruct e2; try discriminate;
-  destruct n; try discriminate;
-  assert (Hn: n<>0%Z) by (intro; subst n; inversion H).
- simpl.
- pose proof (inverse_term_correct _ _ H env).
-  rewrite reflect_normterm_spec in H0.
- rewrite H0; simpl. lra.
- pose proof (inverse_term_correct _ _ H env).
-  rewrite reflect_normterm_spec in H0.
- rewrite H0; simpl.
- rewrite opp_IZR.
- rewrite <- Ropp_inv_permute by (apply not_0_IZR; auto).
-  lra.
+ + (* Div *)
+ assert (forall i,
+     eval (reflect_normterm ([], (Qone, (- i)%Z))) env =
+     / eval (reflect_normterm ([], (Qone, i))) env). {
+   destruct i; simpl; try lra. field. 
+   apply not_0_IZR. pose proof (Zpower_pos_gt_0 2 p); lia.
+ }
+  unfold binary_real. unfold Rdiv.
+  repeat 
+  match type of H with
+  | Some _ = Some _ => apply Some_inj in H; subst nt
+  | match ?x with _ => _ end = _ => is_var x; destruct x; try discriminate
+  | match normalize_term ?x with _ => _ end = _ =>
+        destruct (normalize_term x) eqn:?H;
+        try discriminate;
+        try (rewrite <- (IHe1 _ (eq_refl _)); clear IHe1);
+        try (rewrite <- (IHe2 _ (eq_refl _)); clear IHe2)
+ | match inverse_term ?x with _ => _ end = _ =>
+        let H := fresh in 
+        destruct (inverse_term x) eqn:H;
+        try discriminate;
+        let NZ := fresh "NZ" in assert (NZ := inverse_term_nonzero _ _ H);
+        apply inverse_term_correct in H
+ | inverse_term ?n = Some _ => 
+        let NZ := fresh "NZ" in assert (NZ := inverse_term_nonzero _ _ H);
+     apply inverse_term_correct in H
+  end;
+ try (
+  rewrite <- !reflect_normterm_spec;
+  rewrite mult_normterm_correct;
+   unfold eval; fold eval; unfold binary_real;
+  repeat match goal with H: reflect_normterm _ == _ |- _ => 
+    rewrite H; clear H
+  end;
+  f_equal;
+   auto).
+  rewrite <- !reflect_normterm_spec, H; simpl; lra.
+  rewrite <- !reflect_normterm_spec, H; simpl.
+  rewrite opp_IZR.
+  rewrite <- Ropp_inv_permute. lra.
+  apply not_0_IZR; lia.
 Qed.
 
 Fixpoint normalize_terms (negate: bool) (e: expr) (nl: list normterm) : expr * list normterm :=
@@ -2638,26 +2680,25 @@ Lemma relate_fold_add:
               eqv (f x1 x2) (f y1 y2))
     (f_assoc: forall x y z : A, eqv (f x (f y z)) (f (f x y) z))
     (f_commut: forall x y : A, eqv (f x y) (f y x))
-    (u: elt)
-    (u_unit: forall k x, eqv (f (lift k u) x) x)
+    (u: A)
+    (u_unit: forall x, eqv (f u x) x)
     (g: Table.key -> elt -> A -> A)
     (g_eqv: forall k x a a', eqv a a' -> eqv (g k x a) (f (lift k x) a'))
     (tab: Table.t elt)
     (k: Table.key),
-    eqv (Table.fold g tab (lift k u))
-      (g k (find_default u k tab)
+    eqv (Table.fold g tab u)
+      (f (match Table.find k tab with Some x => lift k x | None => u end)
        (Table.fold (fun k' x a => 
                            match Keys.cmp k k' with Eq => a 
-                                 | _ => g k' x a end) tab (lift k u))).
+                                 | _ => g k' x a end) tab u)).
 Proof.
 intros.
 destruct tab.
 unfold Table.fold, find_default, Table.find; simpl.
-set (a := lift k u). clearbody a.
-set (h := fun (k' : Table.key) (x : elt) (a0 : A) =>
+set (h := fun (k' : Table.key) (x : elt) (a : A) =>
          match Keys.cmp k k' with
-         | Eq => a0
-         | _ => g k' x a0
+         | Eq => a
+         | _ => g k' x a
          end).
 assert (g_mor: forall k x a b, eqv a b -> eqv (g k x a) (g k x b)). {
   intros. rewrite g_eqv. symmetry. rewrite g_eqv. apply f_mor. reflexivity. reflexivity. reflexivity. auto.
@@ -2681,7 +2722,7 @@ assert (FOLD3: forall t k a b,
     eqv (Table.Raw.fold g t (g k a b)) (g k a (Table.Raw.fold g t b))). {
   induction t; simpl; intros. reflexivity.
   etransitivity; [ |   apply IHt2]. apply FOLD2.
-  transitivity (g k0 e (g k1 a0 (Table.Raw.fold g t1 b))).
+  transitivity (g k0 e (g k1 a (Table.Raw.fold g t1 b))).
   apply g_mor; auto.
   set (v := Table.Raw.fold _ _ _). clearbody v.
   rewrite (g_eqv k0 _ _ _  (@Equivalence_Reflexive _ _ eqv_rel _)).
@@ -2695,6 +2736,7 @@ assert (FOLD3: forall t k a b,
 }
 destruct (Table.Raw.find k this) eqn:?H.
 -
+set (a:=u). clearbody a.
 revert a; induction is_bst; simpl; intros; [ discriminate | ].
 simpl in H.
 unfold h at 2. rewrite (cmp_compare k x).
@@ -2709,6 +2751,7 @@ set (v := Table.Raw.fold h l a). clearbody v.
 symmetry.
 etransitivity.
 symmetry.
+rewrite <- (g_eqv _ _ _ _  (@Equivalence_Reflexive _ _ eqv_rel _)).
 apply FOLD3.
 apply FOLD2.
 rewrite (g_eqv _ _ _ _  (@Equivalence_Reflexive _ _ eqv_rel _)).
@@ -2718,7 +2761,6 @@ etransitivity. apply f_mor. apply f_commut. reflexivity.
 rewrite <- f_assoc.
 apply f_mor. reflexivity.
 symmetry. 
-rewrite (g_eqv _ _ _ _  (@Equivalence_Reflexive _ _ eqv_rel _)).
 reflexivity.
 +
 assert (Hl: ~Table.Raw.In k l)
@@ -2742,13 +2784,12 @@ assert (Hl: ~Table.Raw.In k l)
   by (apply (Table.Raw.Proofs.lt_tree_trans l0) in H0;
         apply Table.Raw.Proofs.lt_tree_not_in; auto).
 etransitivity. apply IHis_bst2. clear IHis_bst2.
-apply g_mor.
+apply f_mor. reflexivity.
 rewrite FOLD1 by auto. reflexivity.
 -
 assert (Hr: ~Table.Raw.In k this)
   by (apply Table.Raw.Proofs.not_find_iff; auto).
 rewrite FOLD1 by auto.
-rewrite (g_eqv _ _ _ _  (@Equivalence_Reflexive _ _ eqv_rel _)).
 rewrite u_unit.
 reflexivity.
 Qed.
@@ -2798,7 +2839,7 @@ pose proof relate_fold_add expr_equiv_rel lift
     (Ebinary_mor Add Add (eq_refl _))
     ltac:(intros; intro; simpl; ring)
     ltac:(intros; intro; simpl; ring)
-    nil
+    zeroexpr
     ltac:(intros; intro; simpl; ring)
     reflect_intable_simple
     H.
@@ -2814,15 +2855,19 @@ change (lift k []) with zeroexpr in H.
 rewrite H; clear H H0.
 rewrite fold_add_ignore by (intros; rewrite H; auto).
 set (u := Table.fold _ _ _); clearbody u. clear.
-unfold find_default at 1.
 rewrite (Table.find_1 (Table.add_1 tab j (Keys.eq_refl k))).
-subst j; rewrite cancel1_intable_correct.
+subst j.
+unfold lift at 1.
+rewrite cancel1_intable_correct.
 unfold reflect_intable_simple at 1.
 simpl fold_right.
-fold (reflect_intable_simple k (find_default nil k tab) u).
-set (v := reflect_intable_simple _ _ _). clearbody v.
-unfold reflect_intable1_simple.
+unfold find_default.
+fold intable_t.
 rewrite reflect_normterm_spec.
+destruct (Table.find k tab); subst lift; cbv beta.
+fold (reflect_intable_simple k i zeroexpr).
+set (v := reflect_intable_simple _ _ _). clearbody v.
+intro; simpl; ring.
 intro; simpl; ring.
 Qed.
 
@@ -3079,7 +3124,8 @@ Definition simplify_and_prune hyps e cutoff :=
     let '(e1,slop) := prune (map b_hyps hyps) e2 cutoff in
     let e2 := ring_simp true 100 e1 in
     let e3 := cancel_terms e2 in
-    (e3, slop).
+    let e4 := ring_simp true 100 e3 in
+    (e4, slop).
 
 Lemma prune_terms_correct2:
  forall hyps e cutoff e1 slop,  
@@ -3094,7 +3140,8 @@ intros.
 unfold simplify_and_prune in H.
 destruct (prune (map b_hyps hyps) (ring_simp false 100 e) cutoff) eqn:?H.
 assert (t = slop) by congruence. subst t.
-assert (e1 = cancel_terms (ring_simp true 100 e0)) by congruence. clear H; subst e1.
+assert (e1 = ring_simp true 100 (cancel_terms (ring_simp true 100 e0))) by congruence. clear H; subst e1.
+rewrite <- ring_simp_correct in H2.
 rewrite cancel_terms_correct in H2.
 rewrite <- ring_simp_correct in H2.
 eapply prune_terms_correct in H3; try eassumption; auto.
@@ -3108,7 +3155,6 @@ Ltac prune_terms cutoff :=
     eapply (prune_terms_correct2 _ _ cutoff);  [vm_compute; reflexivity | reflexivity |  reflexivity |  try clear e]
  end;
  unfold_eval_hyps.
-
 
 Definition simplify_and_prune_a hyps e cutoff :=
     let e2 := ring_simp false 100 e in 
@@ -3148,6 +3194,7 @@ Ltac prune_terms' H cutoff :=
 
 Definition cutoff40 := Tactic_float.Float.scale (Tactic_float.Float.fromZ 1) (-40)%Z.
 Definition cutoff30 := Tactic_float.Float.scale (Tactic_float.Float.fromZ 1) (-30)%Z.
+Definition cutoff0 := Tactic_float.Float.fromZ 0.
 
 Lemma test1:
  forall 
@@ -3196,7 +3243,26 @@ simpl; compute; lra.
 Qed.
 
 
-
+Lemma test3_alt: forall
+ (x v d1 d2 e0 e1 e3 : R)
+ (BOUND : -2 <= v <= 2)
+ (BOUND0 : 2 <= x <= 4)
+ (E : Rabs e0 <= / 713623846352979940529142984724747568191373312)
+ (E0 : Rabs d1 <= / 16777216) 
+ (E1 : Rabs e1 <= / 713623846352979940529142984724747568191373312)
+ (E2 : Rabs d2 <= / 16777216) 
+ (E3 : Rabs e3 <= / 1427247692705959881058285969449495136382746624),
+Rabs
+  ((x + (1 / 32 * ((v + (1 / 64 * (3 - x) + e1)) * (1 + d1) + e3) + e0)) *
+   (1 + d2) - (x + 1 / 32 * (v + 1 / 32 / 2 * (3 - x)))) <= 
+  2.5e-7.
+Proof.
+intros.
+prune_terms cutoff30.
+match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end.
+eapply Rle_trans; [ apply H99 | clear  ].
+compute; simpl; lra.
+Qed.
 
 Lemma test2:
  forall 
@@ -3273,7 +3339,7 @@ x v : R)
       (v +
        1 / 2 * (1 / 32) *
        (- x + - (x + 1 / 32 * v + 1 / 2 * (1 / 32 * (1 / 32)) * - x))))) <=
- 5981343255101459 / 2361183241434822606848 + powerRZ 2 (-27).
+  3e-6.
 Proof.
 intros.
 (*
