@@ -2775,13 +2775,12 @@ set (c := @nil (Table.key * intable_t)).
 intro.
 transitivity (eval (reflect_list l) env + eval (reflect_list c) env); [ | simpl; lra].
 clearbody c.
+unfold reflect_list.
 revert c; induction l; intros; simpl; auto.
 lra.
-unfold reflect_list at 2.
 simpl.
 rewrite IHl; clear IHl.
 rewrite Add0_correct; simpl.
-unfold reflect_list at 2.
 simpl fold_right. rewrite Add0_correct; simpl.
 fold (reflect_list l).
 fold (reflect_list c). lra.
@@ -2793,7 +2792,7 @@ Proof.
 intros. intro. specialize (H env).
  unfold reflect_table in H.
  rewrite !Table.fold_1 in H.
- unfold reflect_list. simpl.
+ unfold reflect_list.
  set (al := Table.elements ta) in *.
  set (bl := Table.elements tb) in *.
  clearbody al bl.
@@ -2836,7 +2835,7 @@ unfold reflect_table.
 rewrite Table.fold_1.
 rewrite <- reflect_list_rev.
 rewrite <- fold_left_rev_right.
-unfold reflect_list.
+unfold reflect_list. 
 induction (rev _); simpl; intros; auto.
 destruct a.
 rewrite Add0_correct. unfold eval; fold eval. unfold binary_real.
@@ -2892,7 +2891,10 @@ rewrite <- reflect_list_rev.
  clearbody cl.
  revert e; induction cl; intros; simpl; [lra | ];
  rewrite Add0_correct; simpl; rewrite IHcl; clear IHcl;
- unfold reflect_list at 2; fold (reflect_list cl); simpl; rewrite Add0_correct; simpl; fold (reflect_list cl); lra.
+ unfold reflect_list at 2.
+ simpl fold_right. rewrite Add0_correct. simpl.
+ fold (reflect_list cl).
+ lra.
 Qed.
 
 Lemma sort_using_table_correct:
@@ -2933,8 +2935,8 @@ Definition simplify_and_prune hyps e cutoff :=
     let e1 := ring_simp false 100 e in 
     let '(e2,slop) := prune (map b_hyps hyps) e1 cutoff in
     let e3 := cancel_terms e2 in
-    let e4 := ring_simp true 100 e3 in
-    (e4, slop).
+(*    let e4 := ring_simp true 100 e3 in*)
+    (e3, slop).
 
 Lemma simplify_and_prune_correct:
  forall hyps e cutoff e1 slop,  
@@ -2949,9 +2951,9 @@ intros.
 unfold simplify_and_prune in H.
 destruct (prune (map b_hyps hyps) (ring_simp false 100 e) cutoff) eqn:?H.
 assert (t = slop) by congruence.
-assert (e1 = ring_simp true 100 (cancel_terms e0)) by congruence.
+assert (e1 = (*ring_simp true 100*) (cancel_terms e0)) by congruence.
 clear H; subst t e1.
-rewrite ring_simp_correct in H2.
+(*rewrite ring_simp_correct in H2. *)
 rewrite cancel_terms_correct in H2.
 rewrite <- (ring_simp_correct false 100 e).
 eapply prune_terms_correct in H3; try eassumption; auto.
@@ -2964,15 +2966,17 @@ Ltac prune_terms cutoff :=
  end;
  unfold_eval_hyps.
 
+
 Definition simplify_and_prune_a hyps e cutoff :=
-    let e2 := ring_simp false 100 e in 
-    let '(e1,slop) := prune (map b_hyps hyps) e2 cutoff in
+    let e1 := ring_simp false 100 e in 
+    let '(e2,slop) := prune (map b_hyps hyps) e1 cutoff in
+(*    let e3 := cancel_terms e2 in *)
 (*    let e2 := ring_simp true 100 e1 in*)
-(*    let e3 := cancel_terms e2 in*)
     (e1, slop).
 
-
 Lemma prune_terms_correct2a:
+ False ->   (* because this is just for measurement, we don't need to
+                        prove it correct *)
  forall hyps e cutoff e1 slop,  
    simplify_and_prune_a hyps e cutoff = (e1,slop) ->
   F.real slop = true ->
@@ -2980,17 +2984,26 @@ Lemma prune_terms_correct2a:
      length hyps = length vars ->
      eval_hyps hyps vars (Rabs (eval e1 vars) <= r - F.toR slop) ->
       eval_hyps hyps vars (Rabs (eval e vars) <= r).
-Abort.  (* easily proved, but needed only for measurement *)
+Proof. intros. contradiction. Qed.
+
+Definition simplify_and_prune_b hyps e cutoff :=
+    let e1 := ring_simp false 100 e in 
+    let '(e2,slop) := prune (map b_hyps hyps) e1 cutoff in
+    let e3 := cancel_terms e2 in 
+(*    let e2 := ring_simp true 100 e1 in*)
+    (e2, slop).
 
 Lemma prune_terms_correct2b:
+ False ->   (* because this is just for measurement, we don't need to
+                        prove it correct *)
  forall hyps e cutoff e1 slop,  
-   simplify_and_prune_a hyps e cutoff = (e1,slop) ->
+   simplify_and_prune_b hyps e cutoff = (e1,slop) ->
   F.real slop = true ->
    forall vars r, 
      length hyps = length vars ->
      eval_hyps hyps vars (Rabs (eval e1 vars) <= r - F.toR slop) ->
       eval_hyps hyps vars (Rabs (eval e vars) <= r).
-Abort.  (* easily proved, but needed only for measurement *)
+Proof. intros. contradiction. Qed.
 
 Ltac prune_terms' H cutoff := 
  simple_reify;
@@ -3150,28 +3163,48 @@ x v : R)
   3e-6.
 Proof.
 intros.
-(*
-simple_reify.
-match goal with |- context [eval ?e] =>
- let e := constr:(ring_simp false 100 e) in 
- let e := constr:(fst (prune (map b_hyps __hyps) e cutoff30)) in
- let e := constr:(ring_simp true 100 e) in 
- let e := constr:(cancel_terms e) in
- let u := constr:((count_nodes e, count_terms e)) in let u := eval vm_compute in u in
- assert (fst u >=0)%Z; clear
- end.
-*)
-(* 242 nodes in original expression *)
-(* 612284 nodes, 31759 terms after ring_simp false 100 e *)
-(* 389520 nodes, 4550 terms after ring_simp true 100 e *)
-(* 1456 nodes, 244 terms after prune with cutoff30 *)
-(* 1060 nodes, 112 terms  after ring_simp true 100 e *)
-(* 289 nodes, 25 terms after cancel_terms e *)
-
-Time prune_terms cutoff30.  (* 1.871 sec *)
+destruct true.
+-
+Time prune_terms cutoff30.  (* 1.854 sec *)
 (*Time match goal with |- Rabs ?a <= _ => field_simplify a end.*)
 match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end;
 eapply Rle_trans; [ apply H99 | clear  ].
 simpl; compute; lra.
-Qed.
+-
+simple_reify.
+pose (nodes_and_terms e := (count_nodes e, count_terms e)).
+
+pose (counts0 := nodes_and_terms __expr);
+vm_compute in counts0;
+let e1 := constr:(ring_simp false 100 __expr) in 
+let e1 := eval vm_compute in e1 in 
+pose (counts1 := nodes_and_terms e1);
+vm_compute in counts1;
+let e2 := constr:(fst (prune (map b_hyps __hyps) e1 cutoff30)) in
+let e2 := eval vm_compute in e2 in 
+pose (counts2 := nodes_and_terms e2);
+vm_compute in counts2;
+let e3 := constr:(cancel_terms e2) in 
+let e3 := eval vm_compute in e3 in 
+pose (counts3 := nodes_and_terms e3);
+vm_compute in counts3;
+let e4 := constr:(ring_simp true 100 e3) in 
+let e4 := eval vm_compute in e4 in 
+pose (counts4 := nodes_and_terms e4);
+vm_compute in counts4;
+pose (t3 := eval e3 __vars); 
+pose (t4 := eval e4 __vars); 
+cbv [eval nth nullary_real unary_real binary_real bpow' __vars] in t3, t4;
+elimtype False; clear - t3 t4 counts0 counts1 counts2 counts3 counts4.
+Open Scope Z.
+
+(*
+counts0 := (242, 4) : Z * Z
+counts1 := (612284, 31759) : Z * Z
+counts2 := (1456, 244) : Z * Z
+counts3 := (289, 25) : Z * Z
+counts4 := (395, 46) : Z * Z
+*)
+Abort.
+
 
