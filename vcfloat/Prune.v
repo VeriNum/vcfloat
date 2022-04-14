@@ -2691,18 +2691,193 @@ Definition reflect_intable (x: Table.key * intable_t) :=
  | c => reflect_powers p 0 c
  end.
 
-Definition sort_using_table (nts: list normterm) : expr -> expr :=
-  fold_left (fun e it => Add0 (reflect_intable it) e)
-  (Table.elements
-    (fold_left add_to_table nts (Table.empty intable_t))).
+
+Definition find_power_two (al: intable_t) : Z :=
+ fold_left (fun n cp => Z.min n (snd cp)) al 1048576%Z.  (* arbitrarily pick 2^20, larger than most floating-point exponents *)
+
+Fixpoint collapse_intable_aux (k: Z) (c: QArith_base.Q) (al: intable_t) : coefficient :=
+ match al with
+ | nil => (c, k)
+ | (c1,p1)::al' => 
+   collapse_intable_aux k 
+    (Qreduction.Qplus' c
+       match (p1-k)%Z with
+        | Z0 => c1
+        | Zpos p => let '{|  QArith_base.Qnum := n1; QArith_base.Qden := d1 |} := c1 in
+                                {|  QArith_base.Qnum := (n1* Z.pow_pos 2 p)%Z; QArith_base.Qden := d1 |}
+        | Zneg p => let '{|  QArith_base.Qnum := n1; QArith_base.Qden := d1 |} := c1 in
+                                {|  QArith_base.Qnum := n1; QArith_base.Qden := (d1* Pos.pow 2 p)%positive |}
+        end)
+     al'
+ end.
+
+Fixpoint collapse_intable_aux' (k: Z) (c: QArith_base.Q) (al: intable_t) : coefficient :=
+ match al with
+ | nil => (c, k)
+ | (c1,p1)::al' => 
+   collapse_intable_aux' k 
+    (Qreduction.Qplus' c
+       (QArith_base.Qmult c1 (QArith_base.Qpower (QArith_base.inject_Z 2) (p1-k)))) 
+     al'
+ end.
+
+Lemma reflect_coeff_simple_mor1:
+ forall c1 c2 k,
+    QArith_base.Qeq c1 c2 ->
+    reflect_coeff_simple (c1,k) == reflect_coeff_simple (c2,k) .
+Proof.
+intros [n1 d1] [n2 d2] k ?.
+intro; simpl.
+f_equal.
+red in H.
+simpl in H.
+apply Stdlib.Rdiv_eq_reg; try (apply not_0_IZR; lia).
+rewrite <- !mult_IZR.
+f_equal.
+lia.
+Qed.
+
+Lemma reflect_coeff_simple_plus:
+ forall c1 c2 k,
+    reflect_coeff_simple (QArith_base.Qplus c1 c2,k) ==
+   Ebinary Add (reflect_coeff_simple (c1,k)) (reflect_coeff_simple (c2,k)) .
+Proof.
+intros [n1 d1] [n2 d2] k env.
+simpl.
+rewrite Pos2Z.inj_mul, !mult_IZR.
+rewrite Rinv_mult_distr
+  by (apply not_0_IZR; lia).
+rewrite plus_IZR, !mult_IZR.
+rewrite <- Rmult_plus_distr_r.
+f_equal.
+rewrite Rmult_plus_distr_r.
+rewrite !Rmult_assoc.
+f_equal; f_equal.
+rewrite Rmult_comm. rewrite Rmult_assoc.
+rewrite (Rmult_comm (/ IZR (Z.pos d2))).
+rewrite Rinv_r
+  by (apply not_0_IZR; lia). lra.
+rewrite <- Rmult_assoc.
+rewrite Rinv_r
+  by (apply not_0_IZR; lia). lra.
+Qed.
+
+Lemma collapse_intable_aux_correct:
+  forall (k: Z) (c: QArith_base.Q) (al: intable_t),
+  Ebinary Add (reflect_coeff (c,k)) (reflect_intable_aux al) 
+    == reflect_coeff (collapse_intable_aux k c al).
+Proof.
+intros.
+rewrite reflect_coeff_spec.
+unfold reflect_intable_aux.
+rewrite fold_symmetric_Add0'.
+revert c; induction al; intros [n d].
+rewrite reflect_coeff_spec; intro; simpl; lra.
+destruct a as [[n1 d1] p1].
+unfold collapse_intable_aux; fold collapse_intable_aux.
+rewrite <- IHal; clear IHal.
+unfold map; fold (map reflect_coeff).
+unfold fold_right; fold (fold_right Add0 zeroexpr).
+rewrite reflect_coeff_spec.
+set (nd :=  {| QArith_base.Qnum := n; QArith_base.Qden := d |}). clearbody nd.
+clear.
+intro. unfold eval; fold eval. unfold binary_real.
+rewrite Add0_correct. unfold eval; fold eval. unfold binary_real.
+rewrite <- Rplus_assoc.
+f_equal. clear al.
+match goal with |- context [Qreduction.Qplus' nd ?x] =>
+ rewrite (reflect_coeff_simple_mor1 _ _ _ (Qreduction.Qplus'_correct nd x))
+end.
+rewrite reflect_coeff_simple_plus.
+unfold eval; fold eval. unfold binary_real.
+f_equal.
+clear.
+destruct (p1 - k)%Z eqn:?H.
+-
+assert (p1=k) by lia. subst. auto.
+-
+assert (p1 = Z.pos p + k)%Z by lia.
+rewrite H0.
+clear.
+simpl.
+unfold bpow'.
+destruct k;simpl; rewrite !mult_IZR.
+lra.
+rewrite !Rmult_assoc.
+f_equal.
+rewrite Zpower_pos_is_exp,mult_IZR. lra.
+rewrite (Z.pos_sub_spec p p0).
+destruct (p ?= p0)%positive eqn:?H.
+apply Pos.compare_eq in H. subst p0.
+transitivity (IZR n1 * / IZR (Z.pos d1) * ( IZR (Z.pow_pos 2 p) / IZR (Z.pow_pos 2 p)));
+ [ | lra].
+f_equal. symmetry. apply Rinv_r. apply not_0_IZR. 
+rewrite <- Pos2Z.inj_pow_pos. lia.
+change (p < p0)%positive in H.
+replace (Z.pow_pos 2 p0) with (Z.pow_pos 2 (p + (p0-p))) by (f_equal; lia).
+rewrite Zpower_pos_is_exp,mult_IZR.
+rewrite <- (Rmult_1_r (_ * / _ * / _)).
+rewrite <- (Rinv_r (IZR (Z.pow_pos 2 p)))
+  by (apply not_0_IZR; rewrite <- Pos2Z.inj_pow_pos; lia).
+rewrite Rinv_mult_distr
+  by (apply not_0_IZR; rewrite <- Pos2Z.inj_pow_pos; lia).
+lra.
+change (p > p0)%positive in H.
+replace (Z.pow_pos 2 p) with (Z.pow_pos 2 (p0 + (p-p0))) by (f_equal; lia).
+rewrite Zpower_pos_is_exp,mult_IZR.
+rewrite <- (Rmult_1_r (IZR n1 * / _ * _)).
+rewrite <- (Rinv_r (IZR (Z.pow_pos 2 p0)))
+  by (apply not_0_IZR; rewrite <- Pos2Z.inj_pow_pos; lia).
+lra.
+-
+assert (p1 = Z.neg p + k)%Z by lia.
+rewrite H0.
+clear.
+simpl.
+unfold bpow'.
+rewrite Pos2Z.inj_mul, mult_IZR.
+rewrite Pos2Z.inj_pow_pos. 
+destruct k;simpl; rewrite ?mult_IZR.
+rewrite Rinv_mult_distr
+  by (apply not_0_IZR; try lia; rewrite <- Pos2Z.inj_pow_pos; lia).
+lra.
+rewrite Z.pos_sub_spec.
+destruct (p0 ?= p)%positive eqn:?H.
+apply Pos.compare_eq in H. subst p0.
+rewrite Rinv_mult_distr
+  by (apply not_0_IZR; try lia; rewrite <- Pos2Z.inj_pow_pos; lia).
+rewrite <- (Rinv_r (IZR (Z.pow_pos 2 p)))
+  by (apply not_0_IZR; rewrite <- Pos2Z.inj_pow_pos; lia).
+lra.
+change (p0 < p)%positive in H.
+rewrite !Rinv_mult_distr by (apply not_0_IZR; try lia; rewrite <- Pos2Z.inj_pow_pos; lia).
+replace (Z.pow_pos 2 p) with (Z.pow_pos 2 (p0 + (p-p0))) by (f_equal; lia).
+rewrite Zpower_pos_is_exp,mult_IZR.
+rewrite !Rinv_mult_distr by (apply not_0_IZR; try lia; rewrite <- Pos2Z.inj_pow_pos; lia).
+rewrite <- (Rmult_1_r (_ * / _ * / _)).
+rewrite <- (Rinv_r (IZR (Z.pow_pos 2 p0)))
+  by (apply not_0_IZR; rewrite <- Pos2Z.inj_pow_pos; lia).
+lra.
+change (p0 > p)%positive in H.
+replace (Z.pow_pos 2 p0) with (Z.pow_pos 2 (p + (p0-p))) by (f_equal; lia).
+rewrite Zpower_pos_is_exp,mult_IZR.
+rewrite <- (Rmult_1_r (IZR n1 * / _ * _)).
+rewrite Rinv_mult_distr by (apply not_0_IZR; try lia; rewrite <- Pos2Z.inj_pow_pos; lia).
+rewrite <- (Rinv_r (IZR (Z.pow_pos 2 p)))
+  by (apply not_0_IZR; rewrite <- Pos2Z.inj_pow_pos; lia).
+lra.
+rewrite Zpower_pos_is_exp,mult_IZR.
+rewrite !Rinv_mult_distr
+  by (apply not_0_IZR; try lia; rewrite <- Pos2Z.inj_pow_pos; lia).
+lra.
+Qed.
+
+Definition collapse_intable (it: Table.key * intable_t) : Table.key * intable_t :=
+ let '(k, al) := it in
+ let n := find_power_two al in 
+ (k, collapse_intable_aux n (QArith_base.inject_Z 0) al :: nil).
 
 Definition reflect_list l := fold_right Add0 zeroexpr (map reflect_intable l).
-
-Definition sort_using_table_alt (nts: list normterm) (e0: expr) : expr :=
- Ebinary Add e0 
- (reflect_list
-  (Table.elements
-    (fold_right (Basics.flip add_to_table) (Table.empty intable_t) nts))).
 
 Ltac reflect_powers_untangle := 
  repeat match goal with |- context [reflect_powers ?k ?i ?e] =>
@@ -2767,6 +2942,16 @@ set (p := reflect_powers _ _ _). clearbody p.
 ring.
 Qed.
 
+Lemma reflect_intable_spec:
+ forall k i, reflect_intable (k,i) == reflect_intable_simple k i zeroexpr.
+Proof.
+intros.
+rewrite reflect_intable_simple_eqv.
+rewrite Add0_correct.
+intro; unfold eval; fold eval. unfold binary_real.
+simpl eval at 3. lra.
+Qed.
+
 Lemma reflect_list_rev: forall l, reflect_list (rev l) == reflect_list l.
 Proof.
 intros.
@@ -2784,6 +2969,41 @@ rewrite Add0_correct; simpl.
 simpl fold_right. rewrite Add0_correct; simpl.
 fold (reflect_list l).
 fold (reflect_list c). lra.
+Qed.
+
+Lemma collapse_intable_correct: forall it, 
+   reflect_intable (collapse_intable it) == reflect_intable it.
+Proof.
+intros [k al].
+unfold collapse_intable.
+rewrite !reflect_intable_spec.
+unfold reflect_intable_simple.
+set (n := find_power_two al); clearbody n.
+pose proof (collapse_intable_aux_correct n (QArith_base.inject_Z 0) al).
+set (c := collapse_intable_aux _ _ _) in *; clearbody c.
+simpl in *.
+rewrite <- Add0_correct in H. simpl in H.
+unfold reflect_intable1_simple at 1.
+simpl.
+rewrite reflect_coeff_spec in H. rewrite <- H.
+transitivity (Ebinary Mul (reflect_powers k 0 oneexpr)  (reflect_intable_aux al)).
+intro; simpl; lra.
+clear.
+induction al; simpl.
+intro; simpl. lra.
+unfold reflect_intable_aux; fold reflect_intable_aux.
+rewrite fold_symmetric_Add0.
+simpl.
+rewrite <- IHal.
+clear.
+intro; simpl.
+rewrite Add0_correct; simpl.
+rewrite <- Rmult_plus_distr_l.
+f_equal.
+unfold reflect_intable_aux.
+rewrite fold_symmetric_Add0.
+f_equal.
+rewrite reflect_coeff_spec. auto.
 Qed.
 
 Lemma reflect_elements: forall ta tb, reflect_table ta == reflect_table tb -> 
@@ -2846,6 +3066,32 @@ rewrite Add0_correct. unfold eval; fold eval. unfold binary_real.
 auto.
 Qed.
 
+Definition sort_using_table (nts: list normterm) : expr -> expr :=
+  fold_left (fun e it => Add0 (reflect_intable (collapse_intable it)) e)
+  (Table.elements
+    (fold_left add_to_table nts (Table.empty intable_t))).
+
+Definition sort_using_table_alt (nts: list normterm) (e0: expr) : expr :=
+ Ebinary Add e0 
+ (reflect_list
+  (map collapse_intable
+  (Table.elements
+    (fold_right (Basics.flip add_to_table) (Table.empty intable_t) nts)))).
+
+Lemma reflect_list_map:
+ forall  (f: Table.key * intable_t -> Table.key * intable_t)
+    (H: forall it, reflect_intable (f it) == reflect_intable it)
+    (al: list (Table.key * intable_t)),
+   reflect_list (map f al) == reflect_list al.
+Proof.
+induction al; simpl.
+reflexivity.
+unfold reflect_list; fold reflect_list.
+simpl.
+rewrite IHal. rewrite H.
+reflexivity.
+Qed.
+
 Lemma sort_using_table_eq: forall nts e,
  sort_using_table nts e == sort_using_table_alt nts e.
 Proof.
@@ -2882,17 +3128,19 @@ match type of H with (reflect_table ?a == reflect_table ?b) =>
 end.
 intro. specialize (H env).
 simpl.
-rewrite <- reflect_table_elements.
-rewrite <- H; clear H.
+rewrite !reflect_table_elements in H.
 rewrite <- fold_left_rev_right.
-rewrite reflect_table_elements.
+rewrite (reflect_list_map _ collapse_intable_correct).
+rewrite <- H; clear H.
 rewrite <- reflect_list_rev.
  set (cl := rev _).
  clearbody cl.
  revert e; induction cl; intros; simpl; [lra | ];
  rewrite Add0_correct; simpl; rewrite IHcl; clear IHcl;
  unfold reflect_list at 2.
- simpl fold_right. rewrite Add0_correct. simpl.
+ simpl fold_right.
+ rewrite collapse_intable_correct.
+ rewrite Add0_correct. simpl.
  fold (reflect_list cl).
  lra.
 Qed.
@@ -2908,13 +3156,13 @@ simpl. lra.
 simpl eval at 1.
 rewrite IHnts; clear IHnts.
 simpl.
+rewrite !(reflect_list_map _ collapse_intable_correct).
 rewrite <- !reflect_table_elements.
 unfold Basics.flip at 2.
 rewrite add_to_table_correct.
 simpl.
 lra.
 Qed.
-
 
 Definition cancel_terms (e: expr) : expr :=
  let '(e1, nts) := normalize_terms false e nil in
@@ -2951,9 +3199,8 @@ intros.
 unfold simplify_and_prune in H.
 destruct (prune (map b_hyps hyps) (ring_simp false 100 e) cutoff) eqn:?H.
 assert (t = slop) by congruence.
-assert (e1 = (*ring_simp true 100*) (cancel_terms e0)) by congruence.
+assert (e1 = cancel_terms e0) by congruence.
 clear H; subst t e1.
-(*rewrite ring_simp_correct in H2. *)
 rewrite cancel_terms_correct in H2.
 rewrite <- (ring_simp_correct false 100 e).
 eapply prune_terms_correct in H3; try eassumption; auto.
@@ -3165,7 +3412,11 @@ Proof.
 intros.
 destruct true.
 -
-Time prune_terms cutoff30.  (* 1.854 sec *)
+Time prune_terms cutoff30.  
+(* before collapse_terms was added to the algorithm, this
+   took about 1.8-2.0 sec.
+  Now it takes 1.55-6.0 sec. *)
+
 (*Time match goal with |- Rabs ?a <= _ => field_simplify a end.*)
 match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end;
 eapply Rle_trans; [ apply H99 | clear  ].
@@ -3202,7 +3453,8 @@ Open Scope Z.
 counts0 := (242, 4) : Z * Z
 counts1 := (612284, 31759) : Z * Z
 counts2 := (1456, 244) : Z * Z
-counts3 := (289, 25) : Z * Z
+counts3 := (289, 25) : Z * Z ,  before collapse_terms was added 
+counts3 := (219, 24) : Z * Z   with collapse_terms
 counts4 := (395, 46) : Z * Z
 *)
 Abort.
