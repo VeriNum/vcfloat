@@ -104,13 +104,6 @@ Inductive unop: Type :=
 | CastTo (ty: type) (knowl: option rounding_knowledge)
 .
 
-Class VarType (V: Type): Type := 
-  {
-    var_eqb: V -> V -> bool;
-    var_eqb_eq: forall v1 v2, var_eqb v1 v2 = true <-> v1 = v2
-  }.
-
-
 Inductive rounding_knowledge': Type :=
 | Unknown'
 | Normal'

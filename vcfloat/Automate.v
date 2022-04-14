@@ -32,8 +32,6 @@ Ltac float_nearest mode r :=
    end
  end.
 
-Definition FT2R {t: type} : ftype t -> R := B2R (fprec t) (femax t).
-
 Ltac compute_B2R :=
  repeat (
  match goal with |- context [B2R ?a ?b ?c] =>

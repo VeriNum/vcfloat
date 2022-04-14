@@ -71,7 +71,7 @@ VCFloat: core and annotated languages for floating-point operations.
    Thus, the refinement proof in VST will need to import FPCore but
     not the rest of VCFloat. *)
 
-Require Import Lia Lra.
+Require Import Lia.
 From Flocq Require Import Binary Bits Core.
 From compcert Require Import lib.IEEE754_extra lib.Floats.
 Global Unset Asymmetric Patterns. (* because "Require compcert..." sets it *)
@@ -225,6 +225,8 @@ Proof.
 Defined.
 
 Definition ftype ty := binary_float (fprec ty) (femax ty).
+
+Definition FT2R {t: type} : ftype t -> R := B2R (fprec t) (femax t).
 
 Definition nan_payload prec emax : Type := {x : binary_float prec emax
                                                           | is_nan prec emax x = true}.
@@ -625,6 +627,40 @@ Proof.
   apply Z.le_max_r.
 Qed.
 
+Lemma fprec_gt_one ty:
+  (1 < fprec ty)%Z.
+Proof.
+  generalize (fprec_gt_0 ty).
+  unfold FLX.Prec_gt_0.
+  unfold fprec.
+  intros.
+  generalize (fprecp_not_one ty).
+  intros.
+  assert (Z.pos (fprecp ty) <> 1%Z) by congruence.
+  lia.
+Qed.
+
+Corollary any_nan ty: nan_payload (fprec ty) (femax ty).
+Proof.
+ red.
+  set (a:=1%positive).
+  assert (H: Binary.nan_pl (fprec ty) a = true).
+  unfold Binary.nan_pl.
+  subst a. 
+   pose proof (fprec_gt_one ty). simpl. lia.
+  exists (Binary.B754_nan (fprec ty) (femax ty) false 1 H).
+  reflexivity.
+Defined.
+
+(* Perhaps VarType shouldn't go in FPCore, since it has something
+ to do with reification; but it's needed in FPCompCert, which doesn't
+ want to import FPLang, so we make do this way. *)
+Class VarType (V: Type): Type := 
+  {
+    var_eqb: V -> V -> bool;
+    var_eqb_eq: forall v1 v2, var_eqb v1 v2 = true <-> v1 = v2
+  }.
+
 Section WITHNANS.
 Context {NANS: Nans}.
 
@@ -673,6 +709,46 @@ Proof.
   typeclasses eauto.
 Qed.
 
+Lemma cast_id ty f:
+    cast ty ty f = f.
+Proof.
+  unfold cast.
+  destruct (type_eq_dec ty ty); try congruence.
+  assert (e = eq_refl) as K.
+  {
+    apply Eqdep_dec.eq_proofs_unicity.
+    intros.
+    unfold not.
+    rewrite <- type_eqb_eq.
+    destruct (type_eqb x y); intuition congruence.
+  }
+  rewrite K.
+  reflexivity.
+Qed.
+
+Lemma type_lub_comm a b:
+  type_lub a b = type_lub b a.
+Proof.
+  rewrite <- !type_lub'_eq.
+  apply type_ext; simpl; eauto using Pos.max_comm, Z.max_comm.
+Qed.
+
+Lemma type_lub_r a b:
+  type_le a b ->
+  type_lub a b = b.
+Proof.
+  rewrite <- !type_lub'_eq.
+  inversion 1.
+  apply type_ext; simpl; eauto using Pos.max_r, Z.max_r.
+Qed.
+
+Lemma type_lub_id a:
+  type_lub a a = a.
+Proof.
+  rewrite <- !type_lub'_eq.
+  apply type_ext; simpl; eauto using Pos.max_id, Z.max_id.
+Qed.
+
 Definition BINOP (op: ltac:( let t := type of Bplus in exact t ) ) op_nan ty 
     : ftype ty -> ftype ty -> ftype ty 
     := op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (op_nan ty) mode_NE.
@@ -692,6 +768,12 @@ Definition Sterbenz {T} (x: T) := x.
 
 Definition Tsingle := TYPE 24 128 I I.
 Definition Tdouble := TYPE 53 1024 I I.
+
+Lemma single_le_double:
+  type_le Tsingle Tdouble.
+Proof.
+  constructor; compute; congruence.
+Qed.
 
 Definition extend_comp (c: comparison) (b: bool) (d: option comparison) :=
  match d with
