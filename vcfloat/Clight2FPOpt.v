@@ -119,7 +119,7 @@ Require Import compcert.common.Values.
 
 Require Import compcert.cfrontend.Clight.
 
-Require Import Interval.Tactic.
+Require Import IntervalFlocq3.Tactic.
 Require Import Psatz.
 
 

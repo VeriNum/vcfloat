@@ -1,5 +1,5 @@
 From vcfloat Require Import RAux.
-From Flocq Require Import Binary Bits Core.
+From Flocq3 Require Import Binary Bits Core Zaux.
 From compcert Require Import lib.IEEE754_extra lib.Floats.
 Require vcfloat.Fprop_absolute.
 Set Bullet Behavior "Strict Subproofs".
@@ -610,10 +610,10 @@ set (H2 := Binary.binary_round_correct _ _ _ _ _ _ _ _); clearbody H2.
 set (z := Binary.binary_round prec emax mode false p e) in *.
 destruct H2.
 cbv zeta in y.
-set (b := Rlt_bool _ _) in y.
-clearbody b.
 set (H2 := proj1 _).
 clearbody H2.
+set (b := Rlt_bool _ _) in y.
+clearbody b.
 destruct b.
 +
 destruct y as [? [? ?]].
@@ -626,11 +626,11 @@ clearbody z; subst z; reflexivity.
 set (H2 := Binary.binary_round_correct _ _ _ _ _ _ _ _); clearbody H2.
 set (z := Binary.binary_round prec emax mode true p e) in *.
 destruct H2.
+set (H2 := proj1 _).
+clearbody H2.
 cbv zeta in y.
 set (b := Rlt_bool _ _) in y.
 clearbody b.
-set (H2 := proj1 _).
-clearbody H2.
 destruct b.
 +
 destruct y as [? [? ?]].

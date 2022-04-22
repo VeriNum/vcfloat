@@ -54,7 +54,7 @@ numbers.
 
 Require Export vcfloat.BigQAux.
 Require Export vcfloat.Q2RAux.
-Require Export Flocq.Core.Raux.
+Require Export Flocq3.Core.Raux.
 Open Scope R_scope.
 
 Definition BigQ2R x := Q2R (BigQ.to_Q x).

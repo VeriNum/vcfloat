@@ -355,7 +355,7 @@ Ltac mimetism J :=
     | |- _ => intro
   end.
 
-Require Import Interval.Tactic.
+Require Import IntervalFlocq3.Tactic.
 Require Import Psatz.
 
 Ltac interval_ :=

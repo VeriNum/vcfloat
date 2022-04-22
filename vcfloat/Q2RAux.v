@@ -51,7 +51,7 @@ Author: Tahina Ramananandro <ramananandro@reservoir.com>
 Helpers for computing in rational numbers.
 *)
 
-Require Export QArith Qreals Flocq.Core.Raux.
+Require Export QArith Qreals Flocq3.Core.Raux.
 Open Scope R_scope.
 
 Global Instance Q2R_proper:

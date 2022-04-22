@@ -3,7 +3,7 @@
 *)
 
 From vcfloat Require Import FPLang FPLangOpt RAux Rounding Reify Float_notations.
-Require Import Interval.Tactic.
+Require Import IntervalFlocq3.Tactic.
 Import Binary.
 Import List ListNotations.
 Set Bullet Behavior "Strict Subproofs".

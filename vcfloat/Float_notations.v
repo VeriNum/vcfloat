@@ -43,7 +43,7 @@
   is more difficult, but in Coq we have the Z type that simplifies some issues.
 *)
 
-From Flocq Require Import Binary Bits Core.
+From Flocq3 Require Import Binary Bits Core.
 From compcert.lib Require Import IEEE754_extra. (* This file should really be part of Flocq, not CompCert *)
 Open Scope Z.
 

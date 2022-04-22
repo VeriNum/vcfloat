@@ -488,6 +488,8 @@ Definition fshift_mult (e'1 e'2: expr) :=
         match fcval_nonrec e'1 with
           | Some c1' =>
             let c1 := cast ty _ c1' in
+            if Binary.Bsign _ _ c1 then Binop (Rounded2 MULT None) e'1 e'2
+            else
             let n := to_power_2 c1 in
             if binary_float_eqb c1 (B2 ty (Z.of_N n))
             then Unop (Exact1 (Shift n false)) (Unop (CastTo ty None) e'2)
@@ -500,6 +502,8 @@ Definition fshift_mult (e'1 e'2: expr) :=
             match fcval_nonrec e'2 with
               | Some c2' =>
                 let c2 := cast ty _ c2' in
+                if Binary.Bsign _ _ c2 then Binop (Rounded2 MULT None) e'1 e'2
+                else
                 let n := to_power_2 c2 in
                 if binary_float_eqb c2 (B2 ty (Z.of_N n))
                 then Unop (Exact1 (Shift n true)) (Unop (CastTo ty None) e'1)
@@ -527,15 +531,15 @@ Fixpoint fshift (e: FPLang.expr) {struct e}: FPLang.expr :=
 Lemma fshift_type e:
   type_of_expr (fshift e) = type_of_expr e.
 Proof.
-  induction e; simpl; auto; unfold fshift_mult.
-  {
+ induction e; simpl; auto; unfold fshift_mult.
+ - (* binop *)
     destruct (binop_eqb b (Rounded2 MULT None)) eqn:EQ.
-    {
+  +
       apply binop_eqb_eq in EQ.
       subst.
       simpl.
-      destruct (fcval_nonrec (fshift e1)).
-      {
+      destruct (fcval_nonrec (fshift e1)); [ | destruct (fcval_nonrec (fshift e2))].
+    *  destruct (Binary.Bsign _ _ _);  [simpl; congruence | ].
         revert IHe1 f. 
         generalize (fshift e1).
         intros until 1.
@@ -547,43 +551,33 @@ Proof.
             destruct v
         end;
           simpl.
-        {
-          unfold Datatypes.id.
-          congruence.
-        }
+      -- unfold Datatypes.id. congruence.
+      --
         match goal with
             |- type_of_expr (if ?v then _ else _) = _ =>
             destruct v
         end; simpl;
         unfold Datatypes.id;
         congruence.
-}
-      destruct (fcval_nonrec (fshift e2)).
- {
+   *
+        destruct (Binary.Bsign _ _ _);  [simpl; congruence | ].
         match goal with
             |- type_of_expr (if ?v then _ else _) = _ =>
             destruct v
         end; simpl.
-        {
-          unfold Datatypes.id.
-          congruence.
-        }
+      -- unfold Datatypes.id. congruence.
+      --
         match goal with
             |- type_of_expr (if ?v then _ else _) = _ =>
             destruct v
-        end; simpl.
-        {
-        unfold Datatypes.id;
+        end; simpl;
+        unfold Datatypes.id; congruence.
+   *   simpl.
         congruence.
-      }
-        congruence.
-      }
-        simpl.
-        congruence.
-}
+ +
     simpl.
     congruence.
-    }
+ -
     simpl.
     congruence.
 Defined. 
@@ -592,38 +586,50 @@ Lemma fshift_correct' env e:
  binary_float_eqb (fval env (fshift e)) (fval env e) = true.
 Proof.
   induction e; simpl; unfold fshift_mult.
-  {
-    apply binary_float_eqb_eq. reflexivity.
-  }
-  {
-    apply binary_float_eqb_eq. reflexivity.
-  }
-  {
-    destruct (binop_eqb b (Rounded2 MULT None)) eqn:ISMULT.
-    {
-      apply binop_eqb_eq in ISMULT.
-      subst.
-      destruct (fcval_nonrec (fshift e1)) eqn:E1.
-      {
-        generalize (fshift_type e1).
-        destruct (fshift e1); try discriminate.
-        simpl in E1.
-        simpl in f.
-        inversion E1; clear E1; subst.
-        simpl in IHe1.
-        simpl.
-        intros.
-        subst.
-        apply binary_float_eqb_eq in IHe1.
-        subst.
-        match goal with
-            |- binary_float_eqb (fval env (if ?b then _ else _)) _ = _ =>
-            destruct b eqn:FEQ
-        end;
-          simpl.
-        {
-          unfold cast_lub_l.
-          unfold cast_lub_r.
+- apply binary_float_eqb_eq. reflexivity.
+- apply binary_float_eqb_eq. reflexivity.
+- (* binop case *)
+  assert (DEFAULT:    binary_float_eqb
+         (fval env (Binop b (fshift e1) (fshift e2)))
+         (fop_of_binop b
+             (type_lub (type_of_expr e1) (type_of_expr e2))
+             (cast_lub_l (type_of_expr e1) (type_of_expr e2) (fval env e1))
+             (cast_lub_r (type_of_expr e1) (type_of_expr e2) (fval env e2)))
+     = true). {
+      revert IHe1 IHe2.
+      simpl.
+      generalize (fval env (fshift e1)).
+      generalize (fval env (fshift e2)).
+      repeat rewrite fshift_type.
+      intros.
+      apply binary_float_eqb_eq in IHe1. subst.
+      apply binary_float_eqb_eq in IHe2. subst.
+      apply binary_float_eqb_eq.
+      reflexivity.
+   }
+  destruct (binop_eqb b (Rounded2 MULT None)) eqn:ISMULT; [ | auto].
+  apply binop_eqb_eq in ISMULT.
+  subst.
+  destruct (fcval_nonrec (fshift e1)) eqn:E1; [ |  destruct (fcval_nonrec (fshift e2)) eqn:E2].
+  +  
+     destruct (Binary.Bsign _ _ _); [ auto | ].
+     generalize (fshift_type e1).
+     destruct (fshift e1); try discriminate.
+     simpl in E1.
+     simpl in f.
+     inversion E1; clear E1; subst.
+     simpl in IHe1.
+     simpl.
+     intros.
+     subst.
+     apply binary_float_eqb_eq in IHe1.
+     subst.
+     match goal with
+       |- binary_float_eqb (fval env (if ?b then _ else _)) _ = _ =>
+          destruct b eqn:FEQ
+     end;
+     simpl.
+   *    unfold cast_lub_l, cast_lub_r.
           revert IHe2.
           generalize (fval env (fshift e2)).
           revert FEQ.
@@ -635,14 +641,14 @@ Proof.
           rewrite <- FEQ.
           apply binary_float_eqb_eq.
           reflexivity.
-        }
+    *
         clear FEQ.
         match goal with
             |- binary_float_eqb (fval env (if ?b then _ else _)) _ = _ =>
             destruct b eqn:FEQ
         end;
           simpl.
-        {
+       --
           unfold Datatypes.id.
           unfold cast_lub_l.
           unfold cast_lub_r.
@@ -657,7 +663,7 @@ Proof.
           rewrite <- FEQ.
           apply binary_float_eqb_eq.
           reflexivity.
-        }
+       --
         clear FEQ.
         revert IHe2.
         generalize (fval env (fshift e2)).
@@ -667,27 +673,25 @@ Proof.
         subst.
         apply binary_float_eqb_eq.
         reflexivity.
-      }
-      destruct (fcval_nonrec (fshift e2)) eqn:E2.
-      {
-        generalize (fshift_type e2).
-        destruct (fshift e2); try discriminate.
-        simpl in E2.
-        simpl in f.
-        inversion E2; clear E2; subst.
-        simpl in IHe2.
-        simpl.
-        intros.
-        subst.
-        apply binary_float_eqb_eq in IHe2.
-        subst.
-        match goal with
-            |- binary_float_eqb (fval env (if ?b then _ else _)) _ = _ =>
-            destruct b eqn:FEQ
-        end;
-          simpl.
-        {
-          unfold cast_lub_l.
+   +
+     destruct (Binary.Bsign _ _ _); [ auto | ].
+     generalize (fshift_type e2).
+     destruct (fshift e2); try discriminate.
+     simpl in E2.
+     simpl in f.
+     inversion E2; clear E2; subst.
+     simpl in IHe2.
+     simpl.
+     intros.
+     subst.
+     apply binary_float_eqb_eq in IHe2.
+     subst.
+     match goal with
+         |- binary_float_eqb (fval env (if ?b then _ else _)) _ = _ =>
+         destruct b eqn:FEQ
+     end;
+       simpl.
+    *   unfold cast_lub_l.
           unfold cast_lub_r.
           revert IHe1.
           generalize (fval env (fshift e1)).
@@ -700,14 +704,14 @@ Proof.
           rewrite <- FEQ.
           apply binary_float_eqb_eq.
           reflexivity.
-        }
+    *
         clear FEQ.
         match goal with
             |- binary_float_eqb (fval env (if ?b then _ else _)) _ = _ =>
             destruct b eqn:FEQ
         end;
           simpl.
-        {
+       --
           unfold cast_lub_l.
           unfold cast_lub_r.
           revert IHe1.
@@ -721,7 +725,7 @@ Proof.
           rewrite <- FEQ.
           apply binary_float_eqb_eq.
           reflexivity.
-        }
+     --
         clear FEQ.
         revert IHe1.
         generalize (fval env (fshift e1)).
@@ -731,7 +735,7 @@ Proof.
         subst.
         apply binary_float_eqb_eq.
         reflexivity.
-      }
+  +
       clear E1 E2.
       revert IHe1 IHe2.
       simpl.
@@ -743,19 +747,7 @@ Proof.
       apply binary_float_eqb_eq in IHe2. subst.
       apply binary_float_eqb_eq.
       reflexivity.
-    }
-    clear ISMULT.
-    revert IHe1 IHe2.
-    simpl.
-    generalize (fval env (fshift e1)).
-    generalize (fval env (fshift e2)).
-    repeat rewrite fshift_type.
-    intros.
-    apply binary_float_eqb_eq in IHe1. subst.
-    apply binary_float_eqb_eq in IHe2. subst.
-    apply binary_float_eqb_eq.
-    reflexivity.
-  }
+- (* unop case *)
   revert IHe.
   generalize (fval env (fshift e)).
   rewrite fshift_type.

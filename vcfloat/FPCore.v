@@ -72,7 +72,7 @@ VCFloat: core and annotated languages for floating-point operations.
     not the rest of VCFloat. *)
 
 Require Import Lia.
-From Flocq Require Import Binary Bits Core.
+From Flocq3 Require Import Binary Bits Core.
 From compcert Require Import lib.IEEE754_extra lib.Floats.
 Global Unset Asymmetric Patterns. (* because "Require compcert..." sets it *)
 Require Export vcfloat.Float_notations.

@@ -1,11 +1,11 @@
-Require Import Lra Lia Interval.Tactic.
+Require Import Reals ZArith Lra Lia IntervalFlocq3.Tactic.
 Import Raux.
-Require Import Flocq.IEEE754.Binary.
+From Flocq3 Require Import IEEE754.Binary Zaux.
 Require Import Setoid.
 
 Import List ListNotations.
 Import Tree. (* must import this _after_ List *)
-Import Interval Private Interval_helper I2 IT2.IH I2.T Xreal Interval.Eval.Reify.
+Import Interval Private Interval_helper I2 IT2.IH I2.T Xreal Eval.Reify.
 
 Import Basic.
 Import Bool.
@@ -47,7 +47,9 @@ Proof.
 intros. intro. simpl. rewrite H, H0; auto.
 Qed.
 
+
 Open Scope R_scope.
+
 
 Definition nullary_op_nonzero (n: nullary_op) : bool :=
  match n with
@@ -3323,7 +3325,7 @@ Lemma test3_alt: forall
 Rabs
   ((x + (1 / 32 * ((v + (1 / 64 * (3 - x) + e1)) * (1 + d1) + e3) + e0)) *
    (1 + d2) - (x + 1 / 32 * (v + 1 / 32 / 2 * (3 - x)))) <= 
-  2.5e-7.
+  1/4000000.
 Proof.
 intros.
 prune_terms cutoff30.

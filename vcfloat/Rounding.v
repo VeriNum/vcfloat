@@ -51,9 +51,9 @@ Author: Tahina Ramananandro <ramananandro@reservoir.com>
 VCFloat: core and annotated languages for floating-point operations.
 *)
 
-Require Import Interval.Tactic.
+Require Import IntervalFlocq3.Tactic.
 From vcfloat Require Export RAux.
-From Flocq Require Import Binary Bits Core.
+From Flocq3 Require Import Binary Bits Core.
 From compcert Require Import lib.IEEE754_extra lib.Floats.
 Require compcert.lib.Maps.  
 Require Coq.MSets.MSetAVL.
