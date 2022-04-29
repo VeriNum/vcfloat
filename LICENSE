@@ -2,26 +2,22 @@
 VCFloat: A Unified Coq Framework for Verifying C Programs with
 Floating-Point Computations. Application to SAR Backprojection.
 
-Version 1.0 (2015-12-04)
-
 Copyright (C) 2015 Reservoir Labs Inc.
-All rights reserved.
+Copyright (C) 2021-22  Andrew W. Appel and Ariel Kellison
 
-This software and each of its files are free software. With the
-exception of patches/interval.patch (which you can redistribute and/or
-modify under the terms of CeCILL-C, version 1.0, reproduced verbatim
-in extenso in cecill-c-1.0.txt), you can redistribute them and/or modify
-them under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License (GNU GPL
-v3), or (at your option) any later version.  A verbatim copy of the
-GNU GPL v3 is included in gpl-3.0.txt.
+This software and each of its files are free software. You can
+redistribute them and/or modify them under the terms of the GNU
+General Public License as published by the Free Software Foundation,
+either version 3 of the License (GNU GPL v3), or (at your option) any
+later version.  A verbatim copy of the GNU GPL v3 is included in
+gpl-3.0.txt.
 
 This software is distributed in the hope that it will be useful, but
 WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU GPL
 v3 (and CeCILL-C for patches/interval.patch) for more details.
 
-This work is sponsored in part by DARPA MTO as part of the Power
+This work was sponsored in part by DARPA MTO as part of the Power
 Efficiency Revolution for Embedded Computing Technologies (PERFECT)
 program (issued by DARPA/CMO under Contract No: HR0011-12-C-0123). The
 views and conclusions contained in this work are those of the authors
@@ -41,9 +37,5 @@ Computations.
 In CPP (5th ACM/SIGPLAN conference on Certified Programs and Proofs)
 2016.
 
-
-VCFloat requires third-party libraries listed in ACKS along with their
-copyright information.
-
-VCFloat depends on third-party libraries listed in ACKS along with
-their copyright and licensing information.
+VCFloat requires uses third-party libraries listed in ACKS, which
+have various licenses of their own.
