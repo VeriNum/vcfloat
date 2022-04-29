@@ -3215,6 +3215,53 @@ Ltac prune_terms cutoff :=
  end;
  unfold_eval_hyps.
 
+(* Here is a version that _only_ does cancel_terms; this is sometimes useful *)
+
+Lemma do_cancel_correct:
+ forall (vars: list R) (P: R -> Prop) (re re': Tree.expr),
+   Prune.cancel_terms re = re' ->
+   forall vars, 
+     P (Tree.eval re' vars) ->P (Tree.eval re vars).
+Proof.
+intros.
+subst re'.
+rewrite Prune.cancel_terms_correct in H0.
+auto.
+Qed.
+
+Ltac power_simplifier x := 
+   (* Where x contains occurrences of (a ^ b)%R, 
+       carefully unfold into (a*(a*...)), and return the
+       expression with unfoldings *) 
+   lazymatch x with
+   | context C [Rpow_def.pow ?a (S ?b)] =>
+        let e := constr:(Rpow_def.pow a (S b)) in
+        let f := eval red in e in
+        let g := eval fold Rpow_def.pow in f in
+        let y := context C [g] in
+        power_simplifier y
+   | context C [Rpow_def.pow ?a O] =>
+        let e := constr:(Rpow_def.pow a O) in
+        let f := eval red in e in
+        let g := eval fold Rpow_def.pow in f in
+        let y := context C [g] in
+        power_simplifier y
+   | _ => constr:(x)
+   end.
+
+Ltac cancel_terms e :=
+   (* Precondition: The proof goal contains the term e of type R.
+      Postcondition: the proof goal contains (in the same place)
+           an equal expression e', in which things have been canceled. 
+    *)
+      let e' := power_simplifier e in 
+      let vars := Tree.get_vars e' (@nil R) in
+      let re := Tree.reify e' vars in
+      pattern e; change e with (Tree.eval re vars);
+      eapply (do_cancel_correct vars);  [vm_compute; reflexivity | ];
+      cbv [Tree.eval Tree.nullary_real Tree.unary_real Tree.binary_real List.nth].
+
+(* End of the implementation of the version that _only_ does cancel_terms *)
 
 Definition simplify_and_prune_a hyps e cutoff :=
     let e1 := ring_simp false 100 e in 
