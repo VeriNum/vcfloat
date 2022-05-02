@@ -108,8 +108,8 @@ Definition boundsmap_denote_pred (vm: valmap) (ib: ident*varinfo) :=
                   (i, {|var_type:=t; var_name:=i'; var_lobound:=lo; var_hibound:=hi|}) =>
                   exists v,
                     i=i' /\
-                    Maps.PTree.get i vm = Some v /\
-              is_finite (fprec _) (femax _) (projT2 v) = true /\ lo <= FT2R (projT2 v) <= hi
+                    Maps.PTree.get i vm = Some (existT ftype t v) /\
+              is_finite (fprec _) (femax _) v = true /\ lo <= FT2R v <= hi
                    end.
 
 Lemma boundsmap_denote_e:
@@ -123,10 +123,38 @@ apply list_forall_spec.
 intros [i [t i' lo hi]] ?.
 apply Maps.PTree.elements_complete in H0.
 specialize (H i). rewrite H0 in H.
-destruct (Maps.PTree.get i vm) as [ v | ]; try contradiction.
+destruct (Maps.PTree.get i vm) as [ [t' v] | ]; try contradiction.
+simpl in *.
 destruct H as [? [? [? ?]]].
 subst.
 exists v. auto. 
+Qed.
+
+Search (option _ -> Prop).
+
+Lemma boundsmap_denote_i:
+  forall bm vm, 
+ list_forall (boundsmap_denote_pred vm) (Maps.PTree.elements bm) ->
+ list_forall (fun iv => match Maps.PTree.get (fst iv) bm with Some _ => True | _ => False end)
+                   (Maps.PTree.elements vm) ->
+ boundsmap_denote bm vm.
+Proof.
+intros.
+rewrite list_forall_spec in H.
+rewrite list_forall_spec in H0.
+intro.
+destruct (Maps.PTree.get i bm) as [[t i' lo hi]|] eqn:?H.
+apply Maps.PTree.elements_correct in H1.
+apply H in H1.
+destruct H1 as [? [? [? [? ?]]]].
+subst i'.
+rewrite H2.
+split; auto.
+destruct (Maps.PTree.get i vm) eqn:?H; auto.
+apply Maps.PTree.elements_correct in H2.
+apply H0 in H2.
+simpl in H2.
+rewrite H1 in H2. auto.
 Qed.
 
 Ltac compute_PTree x :=
@@ -226,13 +254,12 @@ Lemma boundsmap_denote_pred_e:
     boundsmap_denote_pred vm (i',
      {| var_type := t; var_name := i; var_lobound := lo; var_hibound := hi |}) ->
     match Maps.PTree.get i vm with
-     | Some (existT _ t v) => (lo <= @FT2R t v <= hi)%R                         
+     | Some (existT _ t' v) => t' = t /\ (lo <= @FT2R t' v <= hi)%R                         
      | None => False
     end.
 Proof.
 intros.
 destruct H.
-destruct x.
 destruct H as [? [? [??]]].
 subst.
 simpl in *. rewrite H0. auto.
@@ -329,10 +356,10 @@ Ltac process_boundsmap_denote :=
   unfold list_forall in H;
 repeat lazymatch type of H with 
  | _ /\ _ => let B := fresh "BOUND" in destruct H as [B H];
-    apply boundsmap_denote_pred_e in B; simpl in B
+    apply boundsmap_denote_pred_e in B; destruct B as [_ B]; simpl in B
  | True => clear H
  | _ => let B := fresh "BOUND" in rename H into B;
-    apply boundsmap_denote_pred_e in B; simpl in B
+    apply boundsmap_denote_pred_e in B; destruct B as [_ B]; simpl in B
  end
 end.
 
@@ -809,6 +836,7 @@ reflexivity.
 Qed.
 
 Definition roundoff_error_bound {NANS: Nans} (vm: valmap) (e: expr) (err: R):=
+  is_finite (fprec _) (femax _) (fval (env_ vm) e) = true /\ 
  Rle (Rabs (@FT2R (type_of_expr e) (fval (env_ vm) e) - rval (env_ vm) e)) err.
 
 Definition prove_roundoff_bound {NANS: Nans}
@@ -856,7 +884,8 @@ let e := fresh "e" in
        let u := constr:(env_ a b c) in let v := eval hnf in u in change u with v in *
    end
 end;
- destruct H2 as [_ H2];
+ let FIN := fresh "FIN" in 
+ destruct H2 as [FIN H2];
  unfold e in H2;
 cbv beta iota zeta delta [
          reval Prog.binary Prog.unary Prog.real_operations
@@ -970,6 +999,16 @@ Ltac unfold_rval :=
  end.
 
 
+Lemma prove_rndval_is_finite {NANS} : forall bm vm e,
+ boundsmap_denote bm vm ->
+ @prove_rndval NANS bm vm e -> is_finite _ _ (fval (env_ vm) e) = true.
+Proof.
+intros.
+destruct X as [[??]  [? ?]].
+apply H1 in H; clear H1.
+destruct H as [? [? [? ?]]].
+apply H1.
+Qed.
 
 Ltac prove_roundoff_bound2 :=
  match goal with P: prove_rndval _ _ _ |- prove_roundoff_bound _ _ _ _ =>
@@ -1026,15 +1065,21 @@ match goal with H: _ = @FT2R _ _ |- _ => rewrite <- H; clear H end;
      set (e' := @FT2R Tsingle e) in *; clearbody e'; clear e; rename e' into e
   end;
  (* clean up all powerRZ expressions *)
- compute_powerRZ.
+ compute_powerRZ;
+ match goal with FIN: is_finite _ _ _ = true |- is_finite _ _ _ = true /\ _ =>
+    split; [exact FIN | clear FIN ]
+ end.
  (* Don't do field simplify , it can blow things up, and the interval tactic
    doesn't actually need it.
  match goal with |- context [Rabs ?a <= _] => field_simplify a end.
 *)
 
+
 Ltac prove_roundoff_bound :=
- match goal with |- prove_roundoff_bound ?bm ?vm ?e _ =>
-  assert (P: prove_rndval bm vm e)
+ match goal with
+ | |- prove_roundoff_bound ?bm ?vm ?e _ => assert (P: prove_rndval bm vm e)
+ | H: boundsmap_denote ?bm ?vm |- is_finite _ _ (fval (env_ ?vm') ?e) = true => 
+        unify vm vm'; assert (P: prove_rndval bm vm e); [ | apply (prove_rndval_is_finite _ _ _ H P)]
  end.
 
 Lemma roundoff_bound_hack:
