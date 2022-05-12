@@ -130,7 +130,7 @@ subst.
 exists v. auto. 
 Qed.
 
-Search (option _ -> Prop).
+
 
 Lemma boundsmap_denote_i:
   forall bm vm, 
