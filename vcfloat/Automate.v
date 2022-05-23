@@ -587,8 +587,8 @@ Ltac solve_Forall_conds:=
  | |- Forall _ _ => 
 
   (* the goal is a Forall of all the conds. Clean them up a bit. *)
-  change (type_of_expr _) with Tsingle;
-  change (type_of_expr _) with Tdouble;
+  try change (type_of_expr _) with Tsingle;
+  try change (type_of_expr _) with Tdouble;
   cbv beta iota zeta delta [
             mset shifts_MAP empty_shiftmap mempty
             compcert_map Maps.PMap.set Maps.PMap.init
@@ -871,8 +871,8 @@ let e := fresh "e" in
       fop_of_binop fop_of_rounded_binop cast_lub_l cast_lub_r
       fop_of_unop fop_of_rounded_unop fop_of_exact_unop
       option_pair_of_options] in e;
-   change (type_of_expr _) with Tsingle in e;
-   change (type_of_expr _) with Tdouble in e;
+   try change (type_of_expr _) with Tsingle in e;
+   try change (type_of_expr _) with Tdouble in e;
    try change (type_lub _ _) with Tsingle in e;
    try change (type_lub _ _) with Tdouble in e;
    repeat change (type_lub ?x ?y) with x in e;
@@ -907,8 +907,8 @@ match type of H2 with
 end;
 rewrite ?Rmult_1_l in H2;
 *)
-change (type_of_expr _) with Tsingle in *;
-change (type_of_expr _) with Tdouble in *;
+try change (type_of_expr _) with Tsingle in *;
+try change (type_of_expr _) with Tdouble in *;
 fold (@FT2R Tsingle) in *;
 fold (@FT2R Tdouble) in *;
 repeat (let E := fresh "E" in 
@@ -969,8 +969,8 @@ Ltac unfold_rval :=
  end;
  cbv beta iota delta [rval Rop_of_binop Rop_of_unop
             Rop_of_rounded_binop Rop_of_exact_unop Rop_of_rounded_unop];
- change (type_of_expr _) with Tsingle; 
- change (type_of_expr _) with Tdouble;
+ try change (type_of_expr _) with Tsingle; 
+ try change (type_of_expr _) with Tdouble;
  fold (@FT2R Tsingle) in *; fold (@FT2R Tdouble);
  (* Perform all env lookups *)
  repeat 
@@ -1026,8 +1026,8 @@ Ltac prove_roundoff_bound2 :=
  end;
  cbv beta iota delta [rval Rop_of_binop Rop_of_unop
             Rop_of_rounded_binop Rop_of_exact_unop Rop_of_rounded_unop];
- change (type_of_expr _) with Tsingle; 
- change (type_of_expr _) with Tdouble;
+ try change (type_of_expr _) with Tsingle; 
+ try change (type_of_expr _) with Tdouble;
  fold (@FT2R Tsingle) in *; fold (@FT2R Tdouble);
 
  (* incorporate the equation above the line *)
@@ -1213,8 +1213,8 @@ Ltac prove_val_bound2 :=
      change (fval _ _) with e; clearbody e
  end;
  (* cleanups *)
- change (type_of_expr _) with Tsingle; 
- change (type_of_expr _) with Tdouble;
+ try change (type_of_expr _) with Tsingle; 
+ try change (type_of_expr _) with Tdouble;
  fold (@FT2R Tsingle) in *; fold (@FT2R Tdouble);
  (* incorporate the equation above the line *)
 match goal with H: _ = @FT2R _ _ |- _ => rewrite <- H; clear H end;
