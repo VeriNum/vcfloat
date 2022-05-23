@@ -265,7 +265,7 @@ subst.
 simpl in *. rewrite H0. auto.
 Qed.
 
-Definition eval_cond' s (c: cond) (env: environ) : Prop :=
+Definition eval_cond' (s : shiftmap) (c: cond) (env: environ) : Prop :=
   @eval_cond2 ident _ shifts_MAP _ (compcert_map nat R map_nat) env s c.
 
 Definition rndval_with_cond2 (e: expr) : rexpr * shiftmap * list (environ -> Prop) :=
@@ -662,8 +662,8 @@ Ltac prove_rndval :=
  clear EQ EQ0 e e1 e0;
 
   (* What's left is a Forall of all the conds.  Next, clean them up a bit. *)
-  change (type_of_expr _) with Tsingle;
-  change (type_of_expr _) with Tdouble;
+  try change (type_of_expr _) with Tsingle;
+  try change (type_of_expr _) with Tdouble;
   cbv beta iota zeta delta [
             mset shifts_MAP empty_shiftmap mempty
             compcert_map Maps.PMap.set Maps.PMap.init
