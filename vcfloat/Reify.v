@@ -19,6 +19,8 @@ Definition ident := positive.
 
 Definition placeholder32: ident -> ftype Tsingle. intro. apply 0%F32. Qed.
 
+Definition placeholder ty: ident -> ftype ty. intro. apply (B754_zero _ _ false). Qed.
+
 Ltac ground_pos p := 
  match p with
  | Z.pos ?p' => ground_pos p'
@@ -39,6 +41,7 @@ Ltac find_type prec emax :=
 Ltac reify_float_expr E :=
  match E with
  | placeholder32 ?i => constr:(@Var ident Tsingle i)
+ | placeholder ?ty ?i => constr:(@Var ident ty i)
  | cast ?tto _ ?f => constr:(@Unop ident (CastTo tto None) f)
  | Zconst ?t ?z => constr:(@Const ident t (Zconst t z))
  | BPLUS _ ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
@@ -84,12 +87,17 @@ Ltac reify_float_expr E :=
  end.
 
 Ltac HO_reify_float_expr names E :=
- lazymatch names with
- | ?n :: ?names' =>
-             let Ev := constr:(E (placeholder32 n)) in 
-             HO_reify_float_expr names' Ev
- | nil =>reify_float_expr E
- end.
+         lazymatch names with
+         | ?n :: ?names' =>
+              lazymatch (type of E) with
+              | ftype ?ty -> _ =>
+                     let Ev := constr:(E (placeholder ty n)) in 
+                     HO_reify_float_expr names' Ev
+              | _ => fail 100 "could not reify" E
+              end
+         | nil => reify_float_expr E
+end.
+
 
 Ltac unfold_corresponding e :=
   (* This tactic is given a term (E1=E2), where E1 is an expression
