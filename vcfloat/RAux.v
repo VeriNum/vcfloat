@@ -56,6 +56,44 @@ Proof.
   apply ln_increasing; auto; lra.
 Qed.
 
+
+Lemma Rle_powerRZ_2:
+  forall a b : R, 
+  forall n: nat,
+  0 <= a ->
+  a <= b -> powerRZ a (Z.of_nat n) <= powerRZ b (Z.of_nat n).
+Proof.
+  intros.
+  induction n.
+  + simpl. nra.
+  + replace (Z.of_nat (S n)) with ( (Z.of_nat n + 1%Z)%Z) by lia. 
+    destruct H.
+    - rewrite ?powerRZ_add; try nra. 
+      eapply Rmult_le_compat; try simpl; try nra.
+      apply powerRZ_le; auto.
+    - subst; destruct H0; subst; try simpl; try nra.
+      assert ((0 < n + 1)%nat) by lia.
+      pose proof pow_i (n+1) H0. 
+      replace (powerRZ 0 (Z.of_nat n + 1)) with
+       (0^( n + 1)). 
+      pose proof pow_i (n+1) H0. rewrite H1. apply powerRZ_le; nra.
+      rewrite ?pow_powerRZ; apply f_equal; lia.
+Qed.
+
+Lemma power_RZ_inv: forall x y, x <> 0 -> Rinv (powerRZ x y) = powerRZ x (-y).
+Proof.
+intros.
+destruct y; simpl; auto.
+apply Rinv_1.
+apply Rinv_involutive.
+apply pow_nonzero.
+auto.
+Qed.
+
+Lemma lesseq_less_or_eq:
+ forall x y : R,  x <= y -> x < y \/ x = y.
+Proof. intros. lra. Qed.
+
 Lemma Int_part_unique x z:
   IZR z <= x ->
   IZR z - x > -1 ->
@@ -200,6 +238,29 @@ Proof.
   ring.
 Qed.
 
+Lemma Rminus_le x y:
+x - y <= 0 -> x<=y.
+Proof.
+  nra.
+Qed.
+
+Lemma Rminus_plus_le_minus x y z:
+x + y <= z -> x <= z - y.
+Proof.
+intros.
+nra.
+Qed.
+
+Lemma Rabs_le_minus x y z:
+Rabs (x-y) <= z ->
+Rabs x <= z + Rabs y.
+Proof.
+intros.
+pose proof Rle_trans (Rabs x - Rabs y) (Rabs (x - y)) z  
+  (Rabs_triang_inv x y) H.
+nra.
+Qed.
+
 Lemma Rabs_triang1 a b u v:
   Rabs a <= u ->
   Rabs b <= v ->
@@ -221,6 +282,34 @@ Proof.
   intros.
   replace (a - c) with (a - b + (b - c)) by ring.
   apply Rabs_triang1; auto.
+Qed.
+
+Lemma neg_powerRZ (x:R) (n:Z) :
+  x <> R0 -> 
+  1 / (powerRZ x%R n%Z) = (powerRZ x%R (-n)%Z) .
+Proof.
+intros; pose proof power_RZ_inv x n H; symmetry; rewrite <- H0; nra. 
+Qed.
+
+
+
+Lemma mul_hlf_powerRZ (n:Z) :
+ / 2 * / powerRZ 2 n = powerRZ 2 (-n-1).
+Proof.
+assert (2 <> R0) by nra.
+replace (/ 2) with (1/2) by nra.
+replace (1 / 2 * / powerRZ 2 n) with
+(1 / 2 * powerRZ 2 (- n)).
+match goal with |- ?s = powerRZ ?a ?b' =>
+replace b' with (-1 + - n)%Z by ring
+end.
+pose proof powerRZ_add 2 (-1) (-n) H. rewrite H0.
+replace (1 / 2) with (powerRZ 2 (-1)). reflexivity.
+simpl; nra.
+replace (powerRZ 2 (- n)) with 
+(1 / powerRZ 2 n). 
+nra.
+(apply neg_powerRZ); nra.
 Qed.
 
 
@@ -583,7 +672,6 @@ Proof.
 Qed.
 
 (* Square root *)
-
 Lemma sqrt_pos_strict x:
   0 < x ->
   0 < sqrt x.
@@ -949,9 +1037,22 @@ Proof.
   assumption.
 Qed.
 
+Lemma sqrt_succ_le : 
+forall n: R,
+0 <= n ->
+sqrt(n) < sqrt(n+1).
+Proof.
+intros.
+assert (0 <= n+1) by nra.
+assert (n < n+1) by nra.
+pose proof sqrt_lt_1 n (n+1) H H0 H1; apply H2.
+Qed.
+
+
 Lemma eq_le_le x y:
   x = y ->
   y <= x <= y.
 Proof.
   lra.
 Qed.
+

@@ -54,323 +54,10 @@ and their correctness proofs.
 **)
 
 Require Import Lia.
-From vcfloat Require Export FPLang FPLangOpt.
+From vcfloat Require Export FPLang Rounding FPLangOpt FPCompCert.
 Require compcert.common.AST compcert.common.Values.
 Require Import compcert.lib.Floats.
 Import Binary.
-
-Section WITHNANS.
-Context {NANS: Nans}.
-
-Lemma cast_id ty f:
-    cast ty ty f = f.
-Proof.
-  unfold cast.
-  destruct (type_eq_dec ty ty); try congruence.
-  assert (e = eq_refl) as K.
-  {
-    apply Eqdep_dec.eq_proofs_unicity.
-    intros.
-    unfold not.
-    rewrite <- type_eqb_eq.
-    destruct (type_eqb x y); intuition congruence.
-  }
-  rewrite K.
-  reflexivity.
-Qed.
-
-Lemma type_lub_comm a b:
-  type_lub a b = type_lub b a.
-Proof.
-  apply type_ext; simpl; eauto using Pos.max_comm, Z.max_comm.
-Qed.
-
-Lemma type_lub_r a b:
-  type_le a b ->
-  type_lub a b = b.
-Proof.
-  inversion 1.
-  apply type_ext; simpl; eauto using Pos.max_r, Z.max_r.
-Qed.
-
-Lemma type_lub_id a:
-  type_lub a a = a.
-Proof.
-  apply type_ext; simpl; eauto using Pos.max_id, Z.max_id.
-Qed.
-
-Lemma single_le_double:
-  type_le Tsingle Tdouble.
-Proof.
-  constructor; compute; congruence.
-Qed.
-
-Global Instance ident_vartype: VarType AST.ident :=
-  {
-    var_eqb_eq := Pos.eqb_eq
-  }.
-
-
-Inductive val_inject: Values.val -> forall ty, ftype ty -> Prop :=
-| val_inject_single f:
-    val_inject (Values.Vsingle f) Tsingle f
-| val_inject_double f:
-    val_inject (Values.Vfloat f) Tdouble f
-.
-
-Lemma val_inject_single_inv f1 f2:
-  val_inject (Values.Vsingle f1) Tsingle f2 ->
-  f1 = f2.
-Proof.
-  inversion 1; subst.
-  revert H2.
-  apply Eqdep_dec.inj_pair2_eq_dec; auto.
-  apply type_eq_dec.
-Qed.
-
-Lemma val_inject_double_inv f1 f2:
-  val_inject (Values.Vfloat f1) Tdouble f2 ->
-  f1 = f2.
-Proof.
-  inversion 1; subst.
-  revert H2.
-  apply Eqdep_dec.inj_pair2_eq_dec; auto.
-  apply type_eq_dec.
-Qed.
-
-Definition val_injectb v ty (f: ftype ty): bool :=
-  match v with
-    | Values.Vsingle f' =>
-      type_eqb Tsingle ty && binary_float_eqb f' f
-    | Values.Vfloat f' =>
-      type_eqb Tdouble ty && binary_float_eqb f' f
-    | _ => false
-  end.
-
-Lemma val_injectb_inject v ty f:
-  val_injectb v ty f = true <-> val_inject v ty f.
-Proof.
-  unfold val_injectb.
-  destruct v;
-  (try (split; (try congruence); inversion 1; fail));
-  rewrite Bool.andb_true_iff.
-  {
-    destruct (type_eqb Tdouble ty) eqn:EQ.
-    {
-      rewrite type_eqb_eq in EQ.
-      subst.
-      rewrite binary_float_eqb_eq.
-      split.
-      {
-        destruct 1; subst.
-        constructor.
-      }
-      intros; eauto using val_inject_double_inv.
-    }
-    split; try intuition congruence.
-    inversion 1; subst.
-    apply type_eqb_eq in H3.
-    congruence.
-  }
-  destruct (type_eqb Tsingle ty) eqn:EQ.
-  {
-    rewrite type_eqb_eq in EQ.
-    subst.
-    rewrite binary_float_eqb_eq.
-    split.
-    {
-      destruct 1; subst.
-      constructor.
-    }
-    intros; eauto using val_inject_single_inv.
-  }
-  split; try intuition congruence.
-  inversion 1; subst.
-  apply type_eqb_eq in H3.
-  congruence.  
-Qed.
-
-End WITHNANS.
-
-Lemma fprec_gt_one ty:
-  (1 < fprec ty)%Z.
-Proof.
-  generalize (fprec_gt_0 ty).
-  unfold FLX.Prec_gt_0.
-  unfold fprec.
-  intros.
-  generalize (fprecp_not_one ty).
-  intros.
-  assert (Z.pos (fprecp ty) <> 1%Z) by congruence.
-  lia.
-Qed.
-
-Corollary any_nan ty: nan_payload (fprec ty) (femax ty).
-Proof.
- red.
-  set (a:=1%positive).
-  assert (H: Binary.nan_pl (fprec ty) a = true).
-  unfold Binary.nan_pl.
-  subst a. 
-   pose proof (fprec_gt_one ty). simpl. lia.
-  exists (Binary.B754_nan (fprec ty) (femax ty) false 1 H).
-  reflexivity.
-Defined.
-
-Lemma conv_nan_ex:
-  { conv_nan: forall ty1 ty2,
-                binary_float (fprec ty1) (femax ty1) -> (* guaranteed to be a nan, if this is not a nan then any result will do *)
-                nan_payload (fprec ty2) (femax ty2)
-  |
-  conv_nan Tsingle Tdouble = Floats.Float.of_single_nan
-  /\
-  conv_nan Tdouble Tsingle = Floats.Float.to_single_nan
-  }.
-Proof.
-  eapply exist.
-  Unshelve.
-  {
-    shelve.
-  }
-  intros ty1 ty2.
-  destruct (type_eq_dec ty1 Tsingle).
-  {
-    subst.
-    destruct (type_eq_dec ty2 Tdouble).
-    {
-      subst.
-      exact Floats.Float.of_single_nan.
-    }
-    auto using any_nan.
-  }
-  destruct (type_eq_dec ty1 Tdouble).
-  {
-    subst.
-    destruct (type_eq_dec ty2 Tsingle).
-    {
-      subst.
-      exact Floats.Float.to_single_nan.
-    }
-    intros.
-    auto using any_nan.
-  }
-  intros.
-  auto using any_nan.
-  Unshelve.
-  split; reflexivity.
-Defined.
-
-Definition conv_nan := let (c, _) := conv_nan_ex in c.
-
-Lemma single_double_ex (U: _ -> Type):
-  (forall ty, U ty) ->
-  forall s: U Tsingle,
-  forall d: U Tdouble,
-    {
-      f: forall ty, U ty |
-      f Tsingle = s /\
-      f Tdouble = d
-    }.
-Proof.
-  intro ref.
-  intros.
-  esplit.
-  Unshelve.
-  shelve.
-  intro ty.
-  destruct (type_eq_dec ty Tsingle).
-  {
-    subst.
-    exact s.
-  }
-  destruct (type_eq_dec ty Tdouble).
-  {
-    subst.
-    exact d.
-  }
-  apply ref.
-  Unshelve.
-  split; reflexivity.
-Defined.
-
-Definition single_double (U: _ -> Type)
-           (f_: forall ty, U ty)
-           (s: U Tsingle)
-           (d: U Tdouble)
-:
-  forall ty, U ty :=
-  let (f, _) := single_double_ex U f_ s d in f.
-
-Definition binop_nan :  forall ty, binary_float (fprec ty) (femax ty) ->
-       binary_float (fprec ty) (femax ty) ->
-       nan_payload (fprec ty) (femax ty) :=
-  single_double
-    (fun ty =>
-       binary_float (fprec ty) (femax ty) ->
-       binary_float (fprec ty) (femax ty) ->
-       nan_payload (fprec ty) (femax ty)) 
-     (fun ty  _ _ => any_nan ty)
-     Floats.Float32.binop_nan
-     Floats.Float.binop_nan.
-
-Definition abs_nan :=
-  single_double
-    (fun ty =>
-       binary_float (fprec ty) (femax ty) ->
-       nan_payload (fprec ty) (femax ty)) 
-     (fun ty  _ => any_nan ty)
-     Floats.Float32.abs_nan
-     Floats.Float.abs_nan.
-
-Definition opp_nan :=
-  single_double
-    (fun ty =>
-       binary_float (fprec ty) (femax ty) ->
-       nan_payload (fprec ty) (femax ty)) 
-     (fun ty  _ => any_nan ty)
-     Floats.Float32.neg_nan
-     Floats.Float.neg_nan.
-
-Local Instance nans: Nans :=
-  {
-    conv_nan := conv_nan;
-    plus_nan := binop_nan;
-    mult_nan := binop_nan;
-    div_nan := binop_nan;
-    abs_nan := abs_nan;
-    opp_nan := opp_nan;
-    sqrt_nan := (fun ty _ => any_nan ty)
-  }.
-
-Lemma val_inject_eq_rect_r v ty1 e:
-  val_inject v ty1 e ->
-  forall ty2 (EQ: ty2 = ty1),
-    val_inject v ty2 (eq_rect_r _ e EQ).
-Proof.
-  intros.
-  subst.
-  assumption.
-Qed.
-      
-Local Existing Instance nans.
-
-Lemma val_inject_single_inv_r v f:
-  val_inject v Tsingle f ->
-  v = Values.Vsingle f.
-Proof.
-  inversion 1; subst.
-  apply val_inject_single_inv in H.
-  congruence.
-Qed.
-
-Lemma val_inject_double_inv_r v f:
-  val_inject v Tdouble f ->
-  v = Values.Vfloat f.
-Proof.
-  inversion 1; subst.
-  apply val_inject_double_inv in H.
-  congruence.
-Qed.
 
 (* Tactic for automatic annotations *)
 
@@ -387,19 +74,19 @@ Lemma rndval_with_cond_correct_1:
         is_finite (fprec ty) (femax ty) (env ty i) = true) ->
        forall e : expr,
        expr_valid e = true ->
-       forall (si : nat) (shift : Maps.PMap.t (type * rounding_knowledge))
+       forall (si : nat) (shift : Maps.PMap.t (type * rounding_knowledge'))
          (r : rexpr) (si2 : nat)
-         (s : Maps.PMap.t (type * rounding_knowledge)) 
+         (s : Maps.PMap.t (type * rounding_knowledge')) 
          (p : list cond),
-       rndval_with_cond si shift e = (r, (si2, s), p) ->
+       rndval_with_cond' si shift e = (r, (si2, s), p) ->
        (forall i : cond, List.In i p -> eval_cond1 env s i) ->
        forall errors1 : nat -> R,
-       (forall (i : nat) (ty : type) (k : rounding_knowledge),
+       (forall (i : nat) (ty : type) (k : rounding_knowledge'),
         mget shift i = (ty, k) -> Rabs (errors1 i) <= error_bound ty k) ->
        forall fv, fval env e = fv ->
        exists errors2 : nat -> R,
          (forall i : nat, (i < si)%nat -> errors2 i = errors1 i) /\
-         (forall (i : nat) (ty' : type) (k : rounding_knowledge),
+         (forall (i : nat) (ty' : type) (k : rounding_knowledge'),
           mget s i = (ty', k) -> Rabs (errors2 i) <= error_bound ty' k) /\
           is_finite (fprec (type_of_expr e)) (femax (type_of_expr e)) fv =
           true /\
@@ -409,7 +96,7 @@ Lemma rndval_with_cond_correct_1:
 Proof.
   intros.
   subst.
-  eapply rndval_with_cond_correct; eauto.
+  eapply rndval_with_cond_correct'; eauto.
 Qed.
 
 Fixpoint enum_exists' {T: Type} t (P: nat -> T -> Prop) (Q: _ -> Prop) (m n: nat) {struct n}: Prop :=
@@ -462,9 +149,7 @@ Proof.
     }
     exists (mempty t).
     split; auto.
-    intros.
-    rewrite mget_empty.
-    auto.
+    all:  intros; rewrite mget_empty;  auto.  (* This line for compatibility with Coq 8.13 and before *)
   }
   intros.
   rewrite enum_exists'_S.
@@ -569,7 +254,7 @@ Ltac spec H :=
 
 Definition environ := forall x : type, AST.ident -> binary_float (fprec x) (femax x).
 
-Definition rndval_with_cond_result (env: environ) (e: expr) (r: rexpr) (si2: nat) (s: Maps.PMap.t (type * rounding_knowledge)) :=
+Definition rndval_with_cond_result (env: environ) (e: expr) (r: rexpr) (si2: nat) (s: Maps.PMap.t (type * rounding_knowledge')) :=
        forall fv,
          fval env e = fv ->
          is_finite (fprec (type_of_expr e)) (femax (type_of_expr e)) fv =
@@ -590,9 +275,9 @@ Lemma rndval_with_cond_correct:
        expr_valid e = true ->
        forall
          (r : rexpr) (si2 : nat)
-         (s : Maps.PMap.t (type * rounding_knowledge)) 
+         (s : Maps.PMap.t (type * rounding_knowledge')) 
          (p : list cond),
-       rndval_with_cond O (mempty (Tsingle, Normal))  e = (r, (si2, s), p) ->
+       rndval_with_cond' O (mempty (Tsingle, Normal'))  e = (r, (si2, s), p) ->
        list_forall (eval_cond2 env s) p ->
        rndval_with_cond_result env e r si2 s.
 Proof.
@@ -638,7 +323,7 @@ Proof.
   intros.
   apply H8.
   eapply lt_le_trans; eauto.
-  generalize (rndval_with_cond_left e O (mempty (Tsingle, Normal))).
+  generalize (rndval_with_cond_left e O (mempty (Tsingle, Normal'))).
   rewrite H1.
   simpl.
   intro L.
@@ -670,7 +355,7 @@ Ltac mimetism J :=
     | |- _ => intro
   end.
 
-Require Import Interval.Tactic.
+Require Import IntervalFlocq3.Tactic.
 Require Import Psatz.
 
 Ltac interval_ :=
@@ -1041,7 +726,7 @@ Ltac rnd_of_unop_with_cond_solve
               let j1 := fresh in
               (assert (
                    list_forall (eval_cond2 env s)
-                               (if is_sqrt o' then (r1, false) :: nil else nil)
+                               ((r1, false) :: nil)
                  )
                 as j1
                   by (list_forall_eval_cond2_solve t));
@@ -1280,7 +965,7 @@ Definition annotated_float_expr {V: Type} nv z :=
    (fun z' r si shift t =>
       expr_valid z' = true /\
       FPLangOpt.erase z' = z /\
-      rndval_with_cond O (mempty (Tsingle, Normal)) z' = ((r, (si, shift)), t) /\
+      rndval_with_cond' O (mempty (Tsingle, Normal')) z' = ((r, (si, shift)), t) /\
       list_forall (eval_cond2 (V := V) nv shift) t)
 .
 
@@ -1302,7 +987,7 @@ Ltac annotate_float_expr t nv z k_ :=
                 (assert (erase z' = z) as ERASE by reflexivity);
                 (
                   tryif
-                    (assert (rndval_with_cond O (mempty (Tsingle, Normal)) z' = ((r, (si, shift)), t)) as RNDVAL by (simpl; reflexivity))
+                    (assert (rndval_with_cond O (mempty (Tsingle, Normal')) z' = ((r, (si, shift)), t)) as RNDVAL by (simpl; reflexivity))
                   then
                     k_  EVALID ERASE RNDVAL j
                   else
@@ -1312,7 +997,7 @@ Ltac annotate_float_expr t nv z k_ :=
                       let t_ :=
                           (
                             eval simpl in
-                              (rndval_with_cond O (mempty (Tsingle, Normal)) z')
+                              (rndval_with_cond O (mempty (Tsingle, Normal')) z')
                           )
                       in
                       idtac "Expected: " t_ ;
@@ -1761,6 +1446,8 @@ Ltac specialize_interval H prec :=
       t k
   end.
 
-Global Existing Instances
-      nans map_nat compcert_map
+#[export] Existing Instances
+      map_nat compcert_map
 .
+
+

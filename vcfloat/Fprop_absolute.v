@@ -52,10 +52,10 @@ More properties of floating-point numbers: absolute error,
 multiply/divide by radix.
 *)
 
-Require Import ZArith Flocq.Core.Raux.
+Require Import ZArith Flocq3.Core.Raux.
 Require Import Lia Lra.
 
-Require Import Flocq.Prop.Relative.
+Require Import Flocq3.Prop.Relative.
 (*Require Import Flocq.Appli.Fappli_IEEE. *)
 
 Open Scope R_scope.

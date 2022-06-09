@@ -61,7 +61,7 @@ Require Export vcfloat.cverif.ClightFacts.
 Section WITHNANS.
 Context {NANS: Nans}.
 
-Fixpoint static_float_type (c: Ctypes.type): option FPLang.type :=
+Definition static_float_type (c: Ctypes.type): option FPCore.type :=
   match c with
     | Ctypes.Tfloat Ctypes.F32 _ => Some Tsingle
     | Ctypes.Tfloat Ctypes.F64 _ => Some Tdouble
@@ -89,7 +89,7 @@ Definition static_binop (c: Cop.binary_operation): option FPLang.binop :=
     | _ => None
   end.
 
-Fixpoint static_float (m: Maps.PTree.t FPLang.type) (e: Clight.expr): option FPLang.expr :=
+Fixpoint static_float (m: Maps.PTree.t FPCore.type) (e: Clight.expr): option FPLang.expr :=
   match e with
     | Clight.Econst_float f _ => Some (Const Tdouble f)
     | Clight.Econst_single f _ => Some (Const Tsingle f)

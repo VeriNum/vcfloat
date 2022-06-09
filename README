@@ -1,87 +1,94 @@
 VCFloat: A Unified Coq Framework for Verifying C Programs with
 Floating-Point Computations
 
-Version 1.0 (2015-12-04)
+Version 1.0 (2015-12-04) Initial release
+Version 1.1 (2021-12-22) Update to Coq 8.13, CompCert 3.9, new optimizations.
+Version 2.0 (2022-3-10) Many improvements, see below.
 
 Copyright (C) 2015 Reservoir Labs Inc.
-All rights reserved.
+Copyright (C) 2021-22  Andrew W. Appel and Ariel Kellison.
+
+VCFloat 1.0 was implemented 2015 by Tahina Ramananandro et al (see citation below).
+VCFloat since 2021 is maintained and extended by Andrew Appel and Ariel Kellison.
 
 patches/interval.patch is distributed under CeCILL-C, version 1.0. All
 other files of this library are distributed under the GNU General
-Public License, version 3.0, or (at your option) any later
-version. See LICENSE for more legal information on use and
-distribution of VCFloat.
-
+Public License, version 3.0 or later.  See LICENSE.
 
 For more technical information on VCFloat, you can read Sections 1 to
-4 of our paper published at ACM/SIGPLAN Certified Programs and Proofs
-(CPP) 2016:
+4 of this paper:
 
-Tahina Ramananandro, Paul Mountcastle, Benoit Meister and Richard
-Lethin.
-A Unified Coq Framework for Verifying C Programs with Floating-Point
-Computations
+Tahina Ramananandro, Paul Mountcastle, Benoit Meister and Richard Lethin.
+A Unified Coq Framework for Verifying C Programs with Floating-Point Computations
+ACM SIGPLAN Conference on Certified Programs and Proofs (CPP),  2016.
+https://dl.acm.org/doi/10.1145/2854065.2854066
 
+Subsequent maintenance and additions by Andrew W. Appel and Ariel Kellison.
 
-Summary of directories (each of which corresponds to its logical path
-with the same names where each path separator is replaced with . ):
+THE CORE OF VCFLOAT
 
-  vcfloat/cverif: Verification of CompCert Clight programs (separation
-  logic, etc.)
+The core definitions and theorems are in:
+ vcfloat/FPCore.v  -- definitions of basic types
+ vcfloat/FPLang.v  -- deep-embedded description langage and rndval_with_cond theory
+ vcfloat/FPLangOpt.v -- transformations on deep-embedded expressions
 
-  vcfloat: VCFloat reasoning framework and tactic
+APPLICATION STYLE "Clight"
+ VCFloat 1.0 was designed for use on CompCert Clight expression trees,
+ as described in Ramananandro et al.  These files have been updated
+ to latest versions of CompCert, Coq, and FPLang; they build in Coq
+ but have not been tested.
 
+ FILES: vcfloat/FPSolve.v,  vcfloat/cverif/*.v
 
-Most interesting files:
-
-  vcfloat/FPLang.v: VCFloat floating-point and annotated
-  floating-point calculus
-
-  vcfloat/FPLangOpt.v: further properties about VCFloat
-     
-  vcfloat/Clight2FP.v: C to unannotated VCFloat
-
-  vcfloat/Clight2FPOpt.v: VCFloat annotation tactic
-
-  vcfloat/Example.v: examples of Section 4 of the abovementioned CPP
-  2016 paper (to be replayed interactively under ProofGeneral-Coq or
-  CoqIDE)
-
-VCFloat requires Coq 8.5beta2.
+APPLICATION STYLE "ftype"
+ VCFloat 2.0 supports in addition a use case independent of CompCert Clight.
+ One starts with a shallow-embedded floating-point expression,
+ using the ordinary operators of Floqc (Binary.Bmult, Binary.Bplus, etc)
+ but wrapped in special Coq definitions.
 
 
-VCFloat depends on the following further external libraries, which are
-automatically downloaded from their official sources and built during
-VCFloat's building process:
+ FILES: vcfloat/Automate.v, vcfloat/Test.v
 
-- Reservoir Labs Inc. R-CoqLib version 1.0 (from Reservoir Labs'
-  GitHub at http://github.com/reservoirlabs/rcoqlib )
+ See Test.v for an explanation of how to use VCFloat in this style.
 
-- CompCert 2.4 (from AbsInt's GitHub at
-  https://github.com/AbsInt/CompCert.git , commit 5dd15440). VCFloat
-  contains a patch from this commit (patches/compcert.patch),
-  distributed under the GNU General Public License, version 3.0 or (at
-  your option) any later version.
+------------------------- Requirements Notes -------------------------
 
-- Ssreflect 1.5 (from its official website at
-  http://ssr.msr-inria.inria.fr/FTP/ssreflect-1.5.coq85beta2.tar.gz )
+VCFloat requires Coq 8.15 (but might work under Coq 8.14).
 
-- Mathematical Components (MathComp) 1.5 (from its official website at
-  http://ssr.msr-inria.inria.fr/FTP/mathcomp-1.5.coq85beta2.tar.gz )
+VCFloat depends on the following further external libraries, accessed
+from opam, from the Coq Platform, or (deprecated method) automatically
+downloaded from their official sources and built during VCFloat's
+building process:
 
-- Flocq 2.4.0 (from INRIA GForge at
-  https://gforge.inria.fr/git/flocq/flocq.git , commit bcbcde24)
+- CompCert 3.10 (from AbsInt's GitHub at
+  https://github.com/AbsInt/CompCert.git), or from opam
 
-- Coq-Interval 2.0.0 (from INRIA GForge at
-  https://scm.gforge.inria.fr/anonscm/git/coq-interval/coq-interval.git
-  , commit 81f1f918). VCFloat contains a patch from this commit
-  (patches/interval.patch), distributed under CeCILL-C, version 1.0.
+- Ssreflect 1.5 or later, e.g. from opam
+
+- Mathematical Components (MathComp) 1.5 or later  (opam)
+
+- Flocq 3.4 (from INRIA GForge at
+  https://gforge.inria.fr/git/flocq/flocq.git, or from opam)
+
+- Coq-Interval 4.3.0 (from INRIA GForge at
+  https://scm.gforge.inria.fr/anonscm/git/coq-interval/coq-interval.git,
+    or opam).
 
 See ACKS for copyright and licensing information about those external
 libraries.
 
 
-Usage: assuming that you already have a standard installation of Coq
+Usage method 1:
+Use the Coq Platform (https://github.com/coq/platform)
+to ensure that Coq has access to all the above-named packages.
+Then
+ 1. cd into the vcfloat directory
+ 2. make depend
+ 3. make
+
+Usage method 2: without using Coq Platform or opam
+(deprecated; not recently tested)
+Assuming that you already have a standard installation of Coq
 8.5beta2, GNU make, GNU autoconf, GNU automake, and git.
 
   0. Fetch the external libraries mentioned above, by running the
