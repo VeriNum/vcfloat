@@ -2,7 +2,6 @@ VCFloat: A Unified Coq Framework for Verifying C Programs with
 Floating-Point Computations
 
 Version 1.0 (2015-12-04) Initial release
-Version 1.1 (2021-12-22) Update to Coq 8.13, CompCert 3.9, new optimizations.
 Version 2.0 (2022-3-10) Many improvements, see below.
 
 Copyright (C) 2015 Reservoir Labs Inc.
@@ -11,19 +10,19 @@ Copyright (C) 2021-22  Andrew W. Appel and Ariel Kellison.
 VCFloat 1.0 was implemented 2015 by Tahina Ramananandro et al (see citation below).
 VCFloat since 2021 is maintained and extended by Andrew Appel and Ariel Kellison.
 
-patches/interval.patch is distributed under CeCILL-C, version 1.0. All
-other files of this library are distributed under the GNU General
-Public License, version 3.0 or later.  See LICENSE.
+VCFloat is distributed under the GNU General Public License, version
+3.0 or later.  See LICENSE.
 
-For more technical information on VCFloat, you can read Sections 1 to
-4 of this paper:
+For an introduction, read
+VCFloat2: Floating-point error analysis in Coq, by Appel & Kellison, 2022,
+available as doc/vcfloat2.pdf in this repository.
+
+For more technical information on VCFloat, you can read Sections 1-4 of:
 
 Tahina Ramananandro, Paul Mountcastle, Benoit Meister and Richard Lethin.
 A Unified Coq Framework for Verifying C Programs with Floating-Point Computations
 ACM SIGPLAN Conference on Certified Programs and Proofs (CPP),  2016.
 https://dl.acm.org/doi/10.1145/2854065.2854066
-
-Subsequent maintenance and additions by Andrew W. Appel and Ariel Kellison.
 
 THE CORE OF VCFLOAT
 
