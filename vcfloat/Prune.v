@@ -3308,10 +3308,7 @@ Ltac prune_terms' H cutoff :=
  end;
  unfold_eval_hyps.
 
-
-Definition cutoff40 := Tactic_float.Float.scale (Tactic_float.Float.fromZ 1) (-40)%Z.
-Definition cutoff30 := Tactic_float.Float.scale (Tactic_float.Float.fromZ 1) (-30)%Z.
-Definition cutoff0 := Tactic_float.Float.fromZ 0.
+Definition cutoff n := Tactic_float.Float.scale (Tactic_float.Float.fromZ 1) (-n)%Z.
 
 Lemma test1:
  forall 
@@ -3330,7 +3327,31 @@ Rabs
    2.46e-7.
 Proof.
 intros.
-prune_terms cutoff30.
+prune_terms (cutoff 30).
+(*match goal with |- Rabs ?a <= _ => field_simplify a end.*)
+match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end.
+eapply Rle_trans; [ apply H99 | clear  ].
+compute; lra.
+Qed.
+
+Lemma test1_double_precision:
+ forall 
+ (x v e0 d e1 e2 d0 e3 : R)
+ (BOUND : -2 <= v <= 2)
+ (BOUND0 : -2 <= x <= 2)
+ (E : Rabs e0 <= / bpow' 2 298)
+ (E0 : Rabs d <= / bpow' 2 48)
+ (E1 : Rabs e1 <= / bpow' 2 300)
+ (E2 : Rabs e2 <= / bpow' 2 298)
+ (E3 : Rabs d0 <= / bpow' 2 48)
+ (E4 : Rabs e3 <= / bpow' 2 298),
+Rabs
+  (((x + (1 / 32 * v + e2)) * (1 + d) + e3 + (1 / 2048 * - x + e0)) *
+   (1 + d0) + e1 - (x + 1 / 32 * v + 1 / 2 * (1 / 32 * (1 / 32)) * - x)) <=
+   2.46e-7.
+Proof.
+intros.
+prune_terms (cutoff 60).
 (*match goal with |- Rabs ?a <= _ => field_simplify a end.*)
 match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end.
 eapply Rle_trans; [ apply H99 | clear  ].
@@ -3353,7 +3374,7 @@ Rabs
 / 2000000.
 Proof.
 intros.
-prune_terms cutoff30.
+prune_terms (cutoff 30).
 match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end.
 eapply Rle_trans; [ apply H99 | clear  ].
 simpl; compute; lra.
@@ -3375,7 +3396,7 @@ Rabs
   1/4000000.
 Proof.
 intros.
-prune_terms cutoff30.
+prune_terms (cutoff 30).
 match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end.
 eapply Rle_trans; [ apply H99 | clear  ].
 compute; simpl; lra.
@@ -3461,7 +3482,7 @@ Proof.
 intros.
 destruct true.
 -
-Time prune_terms cutoff30.  
+Time prune_terms (cutoff 30).  
 (* before collapse_terms was added to the algorithm, this
    took about 1.8-2.0 sec.
   Now it takes 1.55-6.0 sec. *)
@@ -3480,7 +3501,7 @@ let e1 := constr:(ring_simp false 100 __expr) in
 let e1 := eval vm_compute in e1 in 
 pose (counts1 := nodes_and_terms e1);
 vm_compute in counts1;
-let e2 := constr:(fst (prune (map b_hyps __hyps) e1 cutoff30)) in
+let e2 := constr:(fst (prune (map b_hyps __hyps) e1 (cutoff 30))) in
 let e2 := eval vm_compute in e2 in 
 pose (counts2 := nodes_and_terms e2);
 vm_compute in counts2;

@@ -50,6 +50,25 @@ APPLICATION STYLE "ftype"
 
  See Test.v for an explanation of how to use VCFloat in this style.
 
+------------------- Special Note: Flocq3/Flocq4 compatibility---------
+
+Between April 2022 and (estimated) October 2022, there is a
+Flocq compatibility issue for the installation of VCFloat.
+In the Coq Platform 2022.04, "Flocq" means Flocq 4.x
+and "Flocq3" means Flocq 3.x.  In that Platform release, CompCert 3.10
+is still using Flocq3, and therefore VST is still using Flocq3.
+
+Packages that must be compatible with VST must (therefore) also use Flocq3.
+Therefore in various files of VCFloat one will see (for example),
+Require Import IntervalFlocq3.Tactic.
+Require Import Flocq3.Core.
+
+The Coq Platform 2202.04 includes these packages (Flocq3 and IntervalFlocq3).
+
+As soon as the next release 3.11 of CompCert comes out, it will be
+a client of ordinary Flocq (meaning 4.x), as will VST, and the entire
+Flocq3 issue will disappear.
+
 ------------------------- Requirements Notes -------------------------
 
 VCFloat requires Coq 8.15 (but might work under Coq 8.14).
