@@ -52,10 +52,10 @@ More properties of floating-point numbers: absolute error,
 multiply/divide by radix.
 *)
 
-Require Import ZArith Flocq3.Core.Raux.
+Require Import ZArith Flocq.Core.Raux Reals.
 Require Import Lia Lra.
 
-Require Import Flocq3.Prop.Relative.
+Require Import Flocq.Prop.Relative.
 (*Require Import Flocq.Appli.Fappli_IEEE. *)
 
 Open Scope R_scope.
@@ -195,7 +195,7 @@ Proof.
   rewrite bpow_plus_1.
   field.
   apply IZR_neq.
-  generalize (radix_gt_0 beta). lia.
+  generalize (Zaux.radix_gt_0 beta). lia.
  -
   simpl.
   destruct (Z.eq_dec emin (Defs.Fexp f)); try lia.

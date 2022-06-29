@@ -18,3 +18,5 @@ depend:
 
 include .depend
 
+clean:
+	rm -f {*,*/*}.{vo,vo?,glob}

@@ -43,8 +43,9 @@
   is more difficult, but in Coq we have the Z type that simplifies some issues.
 *)
 
-From Flocq3 Require Import Binary Bits Core.
-From compcert.lib Require Import IEEE754_extra. (* This file should really be part of Flocq, not CompCert *)
+From Flocq Require Import Binary Bits Core.
+From vcfloat Require Import IEEE754_extra. (* This file should really be part of Flocq, not CompCert *)
+Require Import ZArith.
 Open Scope Z.
 
 Definition b32_B754_zero : _ -> binary32 := B754_zero 24 128.
@@ -52,14 +53,14 @@ Definition b32_B754_infinity : _ -> binary32 := B754_infinity 24 128.
 Definition b32_B754_nan : bool -> forall pl : positive, nan_pl 24 pl = true ->  binary32 := B754_nan 24 128.
 Definition b32_B754_finite: bool ->
        forall (m : positive) (e : Z),
-       Binary.bounded 24 128 m e = true ->  binary32 := B754_finite 24 128.
+       SpecFloat.bounded 24 128 m e = true ->  binary32 := B754_finite 24 128.
 
 Definition b64_B754_zero : _ -> binary64 := B754_zero 53 1024.
 Definition b64_B754_infinity : _ -> binary64 := B754_infinity 53 1024.
 Definition b64_B754_nan : bool -> forall pl : positive, nan_pl 53 pl = true ->  binary64 := B754_nan 53 1024.
 Definition b64_B754_finite: bool ->
        forall (m : positive) (e : Z),
-       Binary.bounded 53 1024 m e = true ->  binary64 := B754_finite 53 1024.
+       SpecFloat.bounded 53 1024 m e = true ->  binary64 := B754_finite 53 1024.
 
 Module Type BINARY_FLOAT_TO_NUMBER.
  Parameter number_to_binary_float:
@@ -114,7 +115,6 @@ Definition ensure_finite prec emax (x: binary_float prec emax) :=
  end.
 
 (*  PARSING arbitrary-sized IEEE floats *)
-
 Definition number_to_binary_float' (prec emax: Z)
        (prec_gt_0: 0 <prec)
        (Hprecmax: prec < emax)
@@ -348,9 +348,9 @@ Definition binary_float_to_number_nonneg (prec emax : Z)
        (Hprecmax: prec < emax)
        (* x must be nonnegative! *)
        (x: binary_float prec emax) : option Number.number :=
-    let '(y,e) := Bfrexp _ _ prec_gt_0 Hmax x in
-    let z := Bldexp _ _ prec_gt_0 Hprecmax mode_NE y prec in
-    match ZofB prec emax z
+    let '(y,e) := Bfrexp _ _ prec_gt_0 (*Hmax*) x in
+    let z := Bldexp _ _ prec_gt_0 Hprecmax BSN.mode_NE y prec in
+    match ZofB _ _ z
     with None =>None
     | Some i => 
       if Z.ltb prec e
@@ -407,7 +407,7 @@ Inductive binary_float32  : Set :=
                forall pl : positive, binary_float32
   | B32_B754_finite : bool ->
                   forall (m : positive) (e : Z), 
-                   Binary.bounded 24 128 m e = true ->  binary_float32.
+                   SpecFloat.bounded 24 128 m e = true ->  binary_float32.
 
 Definition to_bf32 (x: binary32) : option binary_float32 :=
 match x with
@@ -420,9 +420,9 @@ match x with
      else fun _ _ => None) 
      (eq_refl (nan_pl 24 pl)) e
 | B754_finite _ _ s m e e0 =>
-    (if Binary.bounded 24 128 m e as b0
+    (if SpecFloat.bounded 24 128 m e as b0
       return
-        (Binary.bounded 24 128 m e = b0 -> b0 = true -> option binary_float32)
+        (SpecFloat.bounded 24 128 m e = b0 -> b0 = true -> option binary_float32)
      then fun H0 _ => Some (B32_B754_finite s m e H0)
      else fun _ _ => None)
     (eq_refl _) e0
@@ -437,8 +437,8 @@ match x with
      then fun H0 => Some (B754_nan 24 128 b pl H0)
      else fun _ => None) (eq_refl _)
 | B32_B754_finite b m e e0 =>
-    (if Binary.bounded 24 128 m e as b1
-      return (Binary.bounded 24 128 m e = b1 -> b1 = true -> option binary32)
+    (if SpecFloat.bounded 24 128 m e as b1
+      return (SpecFloat.bounded 24 128 m e = b1 -> b1 = true -> option binary32)
      then fun H0 _ => Some (B754_finite 24 128 b m e H0)
      else fun _ _ => None)
       (eq_refl _) e0
@@ -463,7 +463,7 @@ Inductive binary_float64  : Set :=
                forall pl : positive, binary_float64
   | B64_B754_finite : bool ->
                   forall (m : positive) (e : Z), 
-                   Binary.bounded 53 1024 m e = true ->  binary_float64.
+                   SpecFloat.bounded 53 1024 m e = true ->  binary_float64.
 
 Definition to_bf64 (x: binary64) : option binary_float64 :=
 match x with
@@ -476,9 +476,9 @@ match x with
      else fun _ _ => None) 
      (eq_refl (nan_pl 53 pl)) e
 | B754_finite _ _ s m e e0 =>
-    (if Binary.bounded 53 1024 m e as b0
+    (if SpecFloat.bounded 53 1024 m e as b0
       return
-        (Binary.bounded 53 1024 m e = b0 -> b0 = true -> option binary_float64)
+        (SpecFloat.bounded 53 1024 m e = b0 -> b0 = true -> option binary_float64)
      then fun H0 _ => Some (B64_B754_finite s m e H0)
      else fun _ _ => None)
     (eq_refl _) e0
@@ -493,8 +493,8 @@ match x with
      then fun H0 => Some (B754_nan 53 1024 b pl H0)
      else fun _ => None) (eq_refl _)
 | B64_B754_finite b m e e0 =>
-    (if Binary.bounded 53 1024 m e as b1
-      return (Binary.bounded 53 1024 m e = b1 -> b1 = true -> option binary64)
+    (if SpecFloat.bounded 53 1024 m e as b1
+      return (SpecFloat.bounded 53 1024 m e = b1 -> b1 = true -> option binary64)
      then fun H0 _ => Some (B754_finite 53 1024 b m e H0)
      else fun _ _ => None)
       (eq_refl _) e0

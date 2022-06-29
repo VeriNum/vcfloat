@@ -1,6 +1,6 @@
-Require Import Reals ZArith Lra Lia IntervalFlocq3.Tactic.
+Require Import Reals ZArith Lra Lia Interval.Tactic.
 Import Raux.
-From Flocq3 Require Import IEEE754.Binary Zaux.
+From Flocq Require Import IEEE754.Binary Zaux.
 Require Import Setoid.
 
 Import List ListNotations.

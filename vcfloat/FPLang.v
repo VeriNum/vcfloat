@@ -51,10 +51,10 @@ Author: Tahina Ramananandro <ramananandro@reservoir.com>
 VCFloat: core and annotated languages for floating-point operations.
 *)
 
-Require Import IntervalFlocq3.Tactic.
+Require Import Interval.Tactic.
 From vcfloat Require Export RAux.
-From Flocq3 Require Import Binary Bits Core.
-From compcert Require Import lib.IEEE754_extra lib.Floats.
+From Flocq Require Import Binary Bits Core.
+From vcfloat Require Import IEEE754_extra. (*  lib.Floats. *)
 Require compcert.lib.Maps.  
 Require Coq.MSets.MSetAVL.
 Require vcfloat.Fprop_absolute.
@@ -310,7 +310,7 @@ subst t2.
 apply H.
 unfold Bconv.
 destruct x1; try discriminate; auto.
-apply is_nan_normalize.
+apply is_nan_BSN2B'.
 Qed.
 
 Lemma cast_is_nan :
@@ -382,7 +382,7 @@ destruct ltr.
     set (j := bpow radix2 _) in *. clearbody j.
     destruct x; try discriminate; simpl; rewrite ?Rmult_0_l, Rminus_0_r, Rabs_R0; lra.     
   +
-    assert (H2 := Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 ty (Z.neg pow)) x).
+    assert (H2 := Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BSN.mode_NE (B2 ty (Z.neg pow)) x).
     rewrite Rmult_comm in H2. 
     unfold BMULT, BINOP.
     rewrite F2R_B2F by auto.
@@ -404,7 +404,7 @@ destruct ltr.
     set (j := bpow radix2 _) in *. clearbody j.
     destruct x; try discriminate; simpl; rewrite ?Rmult_0_l, Rminus_0_r, Rabs_R0; lra.     
   +
-    assert (H2 := Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 ty (Z.neg pow)) x).
+    assert (H2 := Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BSN.mode_NE (B2 ty (Z.neg pow)) x).
     rewrite Rmult_comm in H2. 
     unfold BMULT, BINOP.
     rewrite F2R_B2F by auto.
@@ -435,7 +435,7 @@ destruct ltr; destruct  (Z_lt_le_dec ((Z.neg pow) + 1) (3 - femax ty));
   unfold Datatypes.id.
 - rewrite (B2_zero _ _ l); unfold Bmult. destruct x; auto.
 - 
-    pose proof (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 ty (Z.neg pow)) x).
+    pose proof (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BSN.mode_NE (B2 ty (Z.neg pow)) x).
     rewrite Rmult_comm in H2. 
     pose proof (B2_correct ty (Z.neg pow) ltac:(lia)).
    rewrite H3 in H2.
@@ -447,7 +447,7 @@ destruct ltr; destruct  (Z_lt_le_dec ((Z.neg pow) + 1) (3 - femax ty));
    apply  InvShift_finite_aux; auto.
 - rewrite (B2_zero _ _ l); unfold Bmult. destruct x; auto.
 - 
-    pose proof (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 ty (Z.neg pow)) x).
+    pose proof (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BSN.mode_NE (B2 ty (Z.neg pow)) x).
     rewrite Rmult_comm in H2. 
     pose proof (B2_correct ty (Z.neg pow) ltac:(lia)).
    rewrite H3 in H2.

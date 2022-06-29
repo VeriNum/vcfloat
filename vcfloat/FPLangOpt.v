@@ -55,8 +55,8 @@ the real-number semantics of floating-point computations.
 Require Export vcfloat.Float_lemmas.
 Require Export vcfloat.FPLang.
 Import RAux.
-Import compcert.lib.IEEE754_extra.
-Import compcert.lib.Floats.
+Import vcfloat.IEEE754_extra.
+(*Import compcert.lib.Floats. *)
 Require Export vcfloat.LibTac.
 Require Export vcfloat.BigRAux.
 Set Bullet Behavior "Strict Subproofs". (* because LibTac screws it up *)
@@ -1048,8 +1048,8 @@ Local Lemma Bmult_div_inverse_equiv ty:
   Binary.is_finite _ _ z = true ->
   Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
   binary_float_equiv
-  (Binary.Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) Binary.mode_NE x z) 
-  (Binary.Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) Binary.mode_NE x y) .
+  (Binary.Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) BSN.mode_NE x z) 
+  (Binary.Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) BSN.mode_NE x y) .
 Proof. intros. apply binary_float_equiv_sym; apply Bdiv_mult_inverse_equiv; auto. Qed.
 
 Theorem Bmult_div_inverse_equiv2 ty:
@@ -1059,8 +1059,8 @@ Theorem Bmult_div_inverse_equiv2 ty:
   Binary.is_finite _ _ z = true ->
   Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
   binary_float_equiv
-  (Binary.Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) Binary.mode_NE x2 z)
-  (Binary.Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) Binary.mode_NE x1 y) .
+  (Binary.Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) BSN.mode_NE x2 z)
+  (Binary.Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) BSN.mode_NE x1 y) .
 Proof. intros. apply binary_float_equiv_sym; apply Bdiv_mult_inverse_equiv2; auto. Qed.
 
 Lemma uncast_finite_strict:

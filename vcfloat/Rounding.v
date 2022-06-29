@@ -51,10 +51,10 @@ Author: Tahina Ramananandro <ramananandro@reservoir.com>
 VCFloat: core and annotated languages for floating-point operations.
 *)
 
-Require Import IntervalFlocq3.Tactic.
+Require Import Interval.Tactic.
 From vcfloat Require Export RAux.
-From Flocq3 Require Import Binary Bits Core.
-From compcert Require Import lib.IEEE754_extra lib.Floats.
+From Flocq Require Import Binary Bits Core.
+From vcfloat Require Import IEEE754_extra. (* lib.Floats. *)
 Require compcert.lib.Maps.  
 Require Coq.MSets.MSetAVL.
 Require vcfloat.Fprop_absolute.
@@ -1848,30 +1848,38 @@ Proof.
 
   {
     (* plus *)
-    generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
-    rewrite Raux.Rlt_bool_true by (unfold round_mode; lra).
+    generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BSN.mode_NE _ _ F1 F2).
+    change (SpecFloat.fexp _ _) with (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
+    change (BSN.round_mode _) with ZnearestE.
+    rewrite Raux.Rlt_bool_true by lra.
     destruct 1 as (? & ? & _).
     auto.
   }
   {
     (* minus *)
-    generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
-    rewrite Raux.Rlt_bool_true by (unfold round_mode; lra).
+    generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BSN.mode_NE _ _ F1 F2).
+    change (SpecFloat.fexp _ _) with (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
+    change (BSN.round_mode _) with ZnearestE.
+    rewrite Raux.Rlt_bool_true by lra.
     destruct 1 as (? & ? & _).
     auto.
   }
   {
     (* mult *)
-    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE e1 e2).
-    rewrite Raux.Rlt_bool_true by (unfold round_mode; lra).
+    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BSN.mode_NE e1 e2).
+    change (SpecFloat.fexp _ _) with (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
+    change (BSN.round_mode _) with ZnearestE.
+    rewrite Raux.Rlt_bool_true by lra.
     rewrite F1. rewrite F2.
     simpl andb.
     destruct 1 as (? & ? & _).
     auto.
   }
   (* div *)
-  generalize (fun K => Bdiv_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (div_nan _) mode_NE e1 e2 K).
-  rewrite Raux.Rlt_bool_true by (unfold round_mode; lra).
+  generalize (fun K => Bdiv_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (div_nan _) BSN.mode_NE e1 e2 K).
+    change (SpecFloat.fexp _ _) with (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
+    change (BSN.round_mode _) with ZnearestE.
+    rewrite Raux.Rlt_bool_true by lra.
   rewrite F1.
   destruct 1 as (? & ? & _).
   {
@@ -1917,7 +1925,7 @@ Proof.
   repeat rewrite B2R_correct in *.
     cbn -[Zminus] in * |- * ;
     rewrite V1 in * |- *.
-    generalize (Bsqrt_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (sqrt_nan _) mode_NE e1).
+    generalize (Bsqrt_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (sqrt_nan _) BSN.mode_NE e1).
     destruct 1 as (? & ? & _).
     split; auto.
     specialize (COND _ (or_introl _ (refl_equal _))).
@@ -2314,7 +2322,7 @@ Proof.
         specialize (H1 _ EB2).
         specialize (H1' _ EB2).
 
-        generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
+        generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BSN.mode_NE _ _ F1 F2).
         intro K.
         change ( Z.pos
                    (fprecp (type_lub (type_of_expr e1) (type_of_expr e2))))
@@ -2403,7 +2411,7 @@ Proof.
             (type_of_expr e2) (fval env e2))).
           destruct minus.
           {
-            generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
+            generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BSN.mode_NE _ _ F1 F2).
             rewrite ZERO.
             rewrite Rminus_0_l.
             rewrite Generic_fmt.round_opp.
@@ -2423,7 +2431,7 @@ Proof.
             }
             apply generic_format_B2R.
           }
-          generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
+          generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BSN.mode_NE _ _ F1 F2).
           rewrite ZERO.
           rewrite Rplus_0_l.
           rewrite Generic_fmt.round_generic; try typeclasses eauto.
@@ -2447,7 +2455,7 @@ Proof.
           (type_of_expr e1) (fval env e1))).
         destruct minus.
         {
-          generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
+          generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BSN.mode_NE _ _ F1 F2).
           rewrite ZERO.
           rewrite Rminus_0_r.
           rewrite Generic_fmt.round_generic; try typeclasses eauto.
@@ -2465,7 +2473,7 @@ Proof.
           }
           apply generic_format_B2R.
         }
-        generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
+        generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BSN.mode_NE _ _ F1 F2).
         rewrite ZERO.
         rewrite Rplus_0_r.
         rewrite Generic_fmt.round_generic; try typeclasses eauto.
@@ -2630,13 +2638,12 @@ Proof.
     rewrite Z.leb_le in H.
     apply center_Z_correct in H.
     assert (B2_FIN := B2_finite (type_of_expr e) (Z.neg pow) (proj2 H)).
-    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.neg pow)) (fval env e)).
-    generalize (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.neg pow)) (fval env e)).
+    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BSN.mode_NE (B2 (type_of_expr e) (Z.neg pow)) (fval env e)).
+    generalize (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BSN.mode_NE (B2 (type_of_expr e) (Z.neg pow)) (fval env e)).
     rewrite Rmult_comm.
-    generalize (B2_correct _ (Z.neg pow) H).
-    repeat rewrite B2R_correct.
-    intro K.
-    rewrite K.
+    change (SpecFloat.fexp (fprec (type_of_expr e)) (femax (type_of_expr e)))
+     with  (FLT_exp (3 - femax (type_of_expr e) - fprec (type_of_expr e)) (fprec (type_of_expr e))).
+    rewrite (B2_correct _ (Z.neg pow) H).
     replace (Z.neg pow) with (- Z.pos pow)%Z in * |- * by reflexivity.   
     rewrite Raux.bpow_opp.
     rewrite FLT_format_div_beta_1; try typeclasses eauto.
@@ -2711,13 +2718,17 @@ Proof.
       generalize (B2_finite (type_of_expr e) (Z.of_N pow) (proj2 H)).
       intro B2_FIN.
       generalize
-          (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.of_N pow)) (fval env e)).
+          (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BSN.mode_NE (B2 (type_of_expr e) (Z.of_N pow)) (fval env e)).
       generalize
-         (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.of_N pow)) (fval env e)).
+         (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BSN.mode_NE (B2 (type_of_expr e) (Z.of_N pow)) (fval env e)).
       rewrite Rmult_comm.
       replace (Z.of_N (pow + 1)) with (Z.of_N pow + 1)%Z in H by (rewrite N2Z.inj_add; simpl; ring).
-      assert (K := B2_correct _ _ H).
-      rewrite K.
+      specialize (H1 _ (or_introl _ (refl_equal _)) _ EB1).
+      simpl in H1.
+      rewrite F2R_eq, <- B2F_F2R_B2R, V1 in H1.
+      rewrite (B2_correct _ _ H) in H1|-*.
+    change (SpecFloat.fexp (fprec (type_of_expr e)) (femax (type_of_expr e)))
+     with  (FLT_exp (3 - femax (type_of_expr e) - fprec (type_of_expr e)) (fprec (type_of_expr e))).
       rewrite FLT_format_mult_beta_n; try typeclasses eauto.
       rewrite F1.
       rewrite B2_FIN.
@@ -2735,13 +2746,6 @@ Proof.
         rewrite L.
         ring.
       }
-      specialize (H1 _ (or_introl _ (refl_equal _))).
-      specialize (H1 _ EB1).
-      simpl in H1.
-      rewrite F2R_eq in H1.
-      rewrite <- B2F_F2R_B2R in H1.
-      rewrite V1 in H1.
-      rewrite K in H1.
       rewrite Rmult_comm.
       lra.
 
@@ -2767,7 +2771,7 @@ Proof.
     rewrite type_leb_le in LEB.
     inversion LEB.
     generalize ((fun J1 =>
-                  Bconv_widen_exact _ _ _ _ J1 (fprec_gt_0 _) (fprec_lt_femax _) (Z.le_ge _ _ H3) (Z.le_ge _ _ H4) (conv_nan _ _) mode_NE _ F1) ltac:( typeclasses eauto ) ).
+                  Bconv_widen_exact _ _ _ _ J1 (fprec_gt_0 _) (fprec_lt_femax _) (Z.le_ge _ _ H3) (Z.le_ge _ _ H4) (conv_nan _ _) BSN.mode_NE _ F1) ltac:( typeclasses eauto ) ).
     destruct 1 as (K & L & _).
     symmetry in K.
     rewrite <- V1 in K.
@@ -2807,8 +2811,8 @@ Proof.
   specialize (K L _ EB1 _ L'  (fun x : Z => negb (Z.even x))); clear L L'.
   destruct K as (errors2 & E & R & EB).
   rewrite V1 in R.
-  generalize (Bconv_correct _ _ _ _ (fprec_gt_0 _) (fprec_lt_femax ty) (conv_nan _ _) mode_NE _ F1).
-  unfold round_mode.
+  generalize (Bconv_correct _ _ _ _ (fprec_gt_0 _) (fprec_lt_femax ty) (conv_nan _ _) BSN.mode_NE _ F1).
+  unfold BSN.round_mode.
   rewrite <- R.
   rewrite Raux.Rlt_bool_true.
   {

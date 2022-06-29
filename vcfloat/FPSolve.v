@@ -355,7 +355,7 @@ Ltac mimetism J :=
     | |- _ => intro
   end.
 
-Require Import IntervalFlocq3.Tactic.
+Require Import Interval.Tactic.
 Require Import Psatz.
 
 Ltac interval_ :=
@@ -1158,7 +1158,7 @@ Proof.
     apply RAux.Rle_Rpower_strong; try Psatz.lra.
     apply IZR_le.
     unfold FLX.Prec_gt_0 in K1.
-    eauto with zarith.
+    red in K2. lia.
   }
   destruct (Rle_dec 1 (B2R _ _ x)).
   {

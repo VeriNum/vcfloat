@@ -65,13 +65,13 @@ Global Instance ident_vartype: VarType AST.ident :=
   }.
 
 Inductive val_inject: Values.val -> forall ty, ftype ty -> Prop :=
-| val_inject_single f:
+| val_inject_single (f: ftype Tsingle):
     val_inject (Values.Vsingle f) Tsingle f
 | val_inject_double f:
     val_inject (Values.Vfloat f) Tdouble f
 .
 
-Lemma val_inject_single_inv f1 f2:
+Lemma val_inject_single_inv (f1: float32) (f2: ftype Tsingle):
   val_inject (Values.Vsingle f1) Tsingle f2 ->
   f1 = f2.
 Proof.
