@@ -65,6 +65,8 @@ Global Unset Asymmetric Patterns.
 Require Export vcfloat.FPCore vcfloat.FPLang.
 Import Bool.
 
+Import List ListNotations.
+
 Local Open Scope R_scope.
 
 Module MSET := MSetAVL.Make(Nat).
@@ -309,7 +311,8 @@ Inductive rexpr: Type :=
   | RAtom (_: ratom)
   | RUnop (o: Tree.unary_op) (e: rexpr)
   | RBinop (o: Tree.binary_op) (e1 e2: rexpr)
-. 
+.
+
 
 Fixpoint reval (e: rexpr) (env: forall ty, V -> ftype ty) (eenv: nat -> R): R :=
   match e with
@@ -319,6 +322,7 @@ Fixpoint reval (e: rexpr) (env: forall ty, V -> ftype ty) (eenv: nat -> R): R :=
     | RUnop o e => Prog.unary Prog.real_operations o (reval e env eenv)
     | RBinop o e1 e2 => Prog.binary Prog.real_operations o (reval e1 env eenv) (reval e2 env eenv)
   end.
+
 
 Fixpoint max_error_var (e: rexpr): nat :=
   match e with
@@ -462,7 +466,7 @@ Definition error_bound ty k :=
     | Unknown' => 0
     | Normal' => (- fprec ty + 1)
     | Denormal' =>  (3 - femax ty - fprec ty)
-    | Denormal2' =>  (1 + (3 - femax ty - fprec ty))
+    | Denormal2' =>   (3 - femax ty - fprec ty)
   end.
 
 Lemma error_bound_nonneg ty k:
@@ -478,7 +482,7 @@ Definition error_bound' ty k :=
     | Unknown' => /2
     | Normal' => / 2 * Raux.bpow Zaux.radix2 (- fprec ty + 1)
     | Denormal' => / 2 * Raux.bpow Zaux.radix2 (3 - femax ty - fprec ty) 
-    | Denormal2' => Raux.bpow Zaux.radix2 (3 - femax ty - fprec ty) 
+    | Denormal2' => /2 * Raux.bpow Zaux.radix2 (3 - femax ty - fprec ty) 
   end.
 
 Lemma error_bound'_correct ty k:
@@ -487,10 +491,6 @@ Proof.
   destruct k; try reflexivity;
   unfold error_bound', error_bound.
   simpl. lra.
-  rewrite bpow_plus.
- rewrite <- Rmult_assoc.
- rewrite Rinv_l. lra.
- simpl. lra.
 Qed.
 
 Definition rounding_cond ty k x :=
@@ -2012,10 +2012,7 @@ destruct (Nat.eq_dec i si1). inversion H; clear H; subst.
   unfold error_bound.
   subst eps.
   rewrite V1.
- rewrite bpow_plus.
- rewrite <- Rmult_assoc.
  change (bpow radix2 1) with 2.
- rewrite Rinv_l, Rmult_1_l by lra.
  apply InvShift_accuracy; auto.
  +
   clear eps.

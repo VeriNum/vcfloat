@@ -360,7 +360,7 @@ Lemma InvShift_accuracy:
   (F1 : is_finite (fprec ty) (femax ty) x = true),
  Rabs (B2R (fprec ty) (femax ty) (fop_of_rounded_unop (InvShift pow ltr) ty x) -
       F2R radix2 (B2F (B2 ty (Z.neg pow))) * B2R (fprec ty) (femax ty) x) <=
-   bpow radix2 (3 - femax ty - fprec ty).
+   /2 * bpow radix2 (3 - femax ty - fprec ty).
 Proof.
 intros.
 unfold fop_of_unop.

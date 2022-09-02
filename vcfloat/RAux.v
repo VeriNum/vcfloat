@@ -34,6 +34,7 @@ More properties about real numbers.
 
 Require Export Reals Psatz.
 Require Export Lia.
+From Coquelicot Require Import Coquelicot.
 Open Scope R_scope.
 
 Lemma increasing_weaken f x y:
@@ -1055,4 +1056,14 @@ Lemma eq_le_le x y:
 Proof.
   lra.
 Qed.
+
+Lemma Rdiv_le_0_compat_Raux : forall r1 r2 : R, 0 <= r1 -> 0 < r2 -> 0 <= r1 / r2.
+apply Rdiv_le_0_compat; auto. Qed.
+
+Lemma  Rabs_div_Raux : forall a b : R, b <> 0 -> Rabs (a/b) = (Rabs a) / (Rabs b).
+apply Rabs_div; auto. Qed.
+
+Lemma Rabs_div_eq : forall a b , b <> 0 -> 0 <= b -> Rabs (a /b) = Rabs a / b.
+intros. rewrite Rabs_div; try nra; replace (Rabs b) with b; try nra; symmetry; apply Rabs_pos_eq; auto. Qed.
+
 

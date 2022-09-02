@@ -774,17 +774,20 @@ apply Rmult_le_compat_l; try lra.
 apply Rle_Rinv in H2; lra.
 Qed.
 
+
+
+
 Lemma InvShift_accuracy_aux:
   forall ty x pow, 
     is_finite (fprec ty) (femax ty) x = true ->
   Rabs (round radix2 (FLT_exp (3 - femax ty - fprec ty) (fprec ty)) (round_mode mode_NE)
         (B2R (fprec ty) (femax ty) x * bpow radix2 (- Z.pos pow)) -
             bpow radix2 (- Z.pos pow) * B2R (fprec ty) (femax ty) x) <=
-           bpow radix2 (3 - femax ty - fprec ty).
+           /2 * bpow radix2 (3 - femax ty - fprec ty).
 Proof.
 intros.
  destruct (Rle_lt_dec
-    (bpow radix2 (3 - femax ty + Z.pos pow - 1))
+    (bpow radix2 (3 - femax ty + Z.pos pow))
     (Rabs (B2R (fprec ty) (femax ty) x))).
 -
 rewrite bpow_opp.
@@ -794,21 +797,21 @@ rewrite Rmult_comm.
 unfold Rdiv.
 rewrite Rminus_eq_0, Rabs_R0.
 pose proof (bpow_gt_0 radix2 (3 - femax ty - fprec ty)). lra.
+eapply Rle_trans. 2: apply r. apply bpow_le. lia.
 -
-rewrite (Rmult_comm (bpow _ _)).
 unfold round_mode.
+rewrite (Rmult_comm (bpow _ _)).
 eapply Rle_trans.
-apply error_le_ulp_round.
-apply FLT_exp_valid; apply fprec_gt_0.
-apply fexp_monotone.
-apply valid_rnd_N.
+apply (error_le_half_ulp radix2 
+  (FLT_exp (3 - femax ty - fprec ty) (fprec ty)) (fun x => negb (Z.even x))
+  (B2R (fprec ty) (femax ty) x * bpow radix2 (- Z.pos pow))).
 unfold ulp.
 set (emin := (3 - _ - _)%Z).
 match goal with |- context  [Req_bool ?A ?B] =>
   set (a := A)
 end.
 pose proof (Req_bool_spec a 0).
-destruct H0.
+destruct H0. 
 +
 subst a.
 destruct (negligible_exp_FLT emin (fprec ty)) as [z [? ?]].
@@ -823,36 +826,37 @@ rewrite ulp_FLT_small.
 lra.
 apply fprec_gt_0.
 subst a.
-rewrite <- round_NE_abs by (apply FLT_exp_valid; apply fprec_gt_0).
-rewrite Rabs_mult.
-rewrite (Rabs_right (bpow _ _)) by (apply Rgt_ge; apply bpow_gt_0).
-apply Rle_lt_trans with (round  radix2 (FLT_exp emin (fprec ty)) ZnearestE (bpow radix2 (emin + fprec ty - 1))).
- *
- apply round_le.
- apply FLT_exp_valid; apply fprec_gt_0.
- apply valid_rnd_N.
- replace (emin + fprec ty - 1)%Z
-  with ((3 - femax ty + Z.pos pow - 1) + (- Z.pos pow))%Z by lia.
- rewrite bpow_plus.
- apply Rmult_le_compat_r.
- apply Rlt_le. apply bpow_gt_0.
- lra.
- *
-  apply Rle_lt_trans with (bpow radix2 (emin + fprec ty - 1)).
-  apply round_le_generic.
- apply FLT_exp_valid; apply fprec_gt_0.
- apply valid_rnd_N.
- apply generic_format_bpow.
- unfold FLT_exp. 
- rewrite Z.max_l by lia.
- ring_simplify.
- pose proof (fprec_gt_0 ty). red in H1; lia.
- apply bpow_le. lia.
- replace (bpow radix2 (emin + fprec ty))%Z
-   with (bpow radix2 (emin + fprec ty - 1 + 1))%Z by (f_equal; lia).
- rewrite bpow_plus.
- change (bpow radix2 1) with 2.
- pose proof (bpow_gt_0 radix2 (emin + fprec ty - 1) ). lra.
+unfold emin.
+rewrite bpow_opp.
+replace (bpow radix2 (3 - femax ty + Z.pos pow)) with
+(bpow radix2 (3 - femax ty - fprec ty + fprec ty) * bpow radix2 (Z.pos pow) ) in r.
+
+assert (HltA: Rlt (IZR Z0) (bpow radix2 (Zpos pow))).
+{pose proof bpow_gt_0 radix2  (( Zpos pow)); auto.
+}
+assert (HnotA: not (@eq R (bpow radix2 (Zpos pow)) (IZR Z0))).
+{
+apply Rabs_lt_pos; auto.
+repeat rewrite Rabs_pos_eq; try apply bpow_ge_0; try nra.
+}
+match goal with |- context [Rabs ?A ] => 
+field_simplify A; try nra
+end.
+apply Rdiv_lt_left in r; try nra.
+rewrite <- Rabs_div_eq in r; try nra.
+rewrite <- bpow_plus.
+match goal with |-context [ bpow _ ?b = bpow _ ?a] =>
+ring_simplify a; ring_simplify b; nra
+end; symmetry;
+match goal with |-context [_ = bpow _ ?a] =>
+ring_simplify a
+end.
 Qed.
+
+
+
+
+
+
 
 End WITHNANS.
