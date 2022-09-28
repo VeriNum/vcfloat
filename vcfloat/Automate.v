@@ -181,11 +181,11 @@ Definition boundsmap_of_list (vl: list varinfo) : boundsmap :=
 Definition valmap_of_list (vl: list (ident * sigT ftype)) : valmap :=
   fold_left (fun m iv => let '(i,v) := iv in Maps.PTree.set i v m) vl (Maps.PTree.empty _).
 
-Instance identVars: VarType ident := Build_VarType ident Pos.eqb Pos.eqb_eq.
+#[export] Instance identVars: VarType ident := Build_VarType ident Pos.eqb Pos.eqb_eq.
 
 Definition shiftmap := Maps.PMap.t (type * rounding_knowledge').
 
-Instance shifts_MAP: Map nat (type * rounding_knowledge') shiftmap :=
+#[export] Instance shifts_MAP: Map nat (type * rounding_knowledge') shiftmap :=
    compcert_map _ _ map_nat.
 
 Definition env_ (tenv: valmap) ty (v: ident): ftype ty :=
