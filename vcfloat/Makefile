@@ -7,7 +7,7 @@ COQC=coqc
 COQDEP=coqdep
 COQFLAGS := $(shell cat _CoqProject)
 
-target: Test.vo FPSolve.vo Clight2FPOpt.vo Prune.vo
+target: Test.vo Test2.vo FPSolve.vo Clight2FPOpt.vo Prune.vo
 
 %.vo: %.v
 	$(COQC) $(COQFLAGS) $*.v
