@@ -927,8 +927,9 @@ repeat (let E := fresh "E" in
            rewrite mul_hlf_powerRZ in E;
            simpl Z.sub in E;
            apply Forall_inv_tail in H0);
-match type of H0 with Forall _ nil => clear H0 end;
-clear errors;
+try match type of H0 with Forall _ (Maps.PTree.elements Maps.PTree.Empty) => clear H0 end;
+try match type of H0 with Forall _ nil => clear H0 end;
+try clear errors;
 fold e in H2;
 revert H2; intro.
 
