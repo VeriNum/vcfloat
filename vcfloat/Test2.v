@@ -18,8 +18,8 @@ Context {NANS: Nans}.
 Definition Sterbenz_test32 a b := Sterbenz(a - b)%F32.
 Definition Sterbenz_test64 a b := Sterbenz(a - b)%F64.
 
-Definition _a : ident := 1%positive.  (* Variable name for position *)
-Definition _b : ident := 2%positive.  (* Variable name for velocity *)
+Definition _a : ident := 1%positive.  
+Definition _b : ident := 2%positive.  
 
 Definition Sterbenz_expr32 := ltac:(let e' := 
   HO_reify_float_expr constr:([_a; _b]) Sterbenz_test32 in exact e').
