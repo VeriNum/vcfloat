@@ -44,7 +44,16 @@ Proof.
 intros.
 prove_roundoff_bound.
 - 
-prove_rndval; interval with (i_prec 128).
+(* the VCFloat tactic "prove_rndval" creates subgoals for each of
+the automatically generated validity conditions. These subgoals
+may or may not be satisfied by the user provided bounds in the 
+data structure bmap. The interval tactic is invoked in order to 
+try and solve each subgoal; this tactic might require, as in this
+exmaple, computations done in higher-precision in order to solve
+the subgoal. *)
+prove_rndval.
+* (* Sterbenz goal 1 *) interval with (i_prec 128).
+* (* Sterbenz goal 2 *) interval with (i_prec 128).
 - 
 prove_roundoff_bound2.
 match goal with |- Rabs ?a <= _ => field_simplify a end. 
