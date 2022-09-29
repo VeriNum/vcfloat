@@ -368,7 +368,7 @@ Ltac process_eval_cond' :=
  | |- eval_cond' _ _ _ => idtac
  | _ => fail 1 "inappropriate goal for process_eval_cond'"
  end;
-    hnf;
+  cbn;
   repeat 
    (let H := fresh in intros ?u H;
     cbv beta iota zeta delta [
@@ -405,7 +405,7 @@ Ltac process_eval_cond' :=
    end;
  
   change (B2R (fprec ?t) _ ?x) with (@FT2R t x);
-  simpl F2R.
+  simpl F2R; try intros.
 
 Definition prove_rndval' {NANS: Nans} bm vm e :=
  boundsmap_denote bm vm ->
