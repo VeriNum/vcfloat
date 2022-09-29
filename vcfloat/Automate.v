@@ -1066,7 +1066,7 @@ match goal with H: _ = @FT2R _ _ |- _ => rewrite <- H; clear H end;
      set (e' := @FT2R Tsingle e) in *; clearbody e'; clear e; rename e' into e
   end;
  (* clean up all powerRZ expressions *)
- compute_powerRZ;
+ try compute_powerRZ;
  match goal with FIN: is_finite _ _ _ = true |- is_finite _ _ _ = true /\ _ =>
     split; [exact FIN | clear FIN ]
  end.
@@ -1252,7 +1252,7 @@ match goal with H: _ = @FT2R _ _ |- _ => rewrite <- H; clear H end;
      set (e' := @FT2R Tsingle e) in *; clearbody e'; clear e; rename e' into e
   end;
  (* clean up all powerRZ expressions *)
- compute_powerRZ.
+ try compute_powerRZ.
  (* Don't do field simplify , it can blow things up, and the interval tactic
    doesn't actually need it.
  match goal with |- context [Rabs ?a <= _] => field_simplify a end.
