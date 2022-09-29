@@ -52,8 +52,8 @@ try and solve each subgoal; this tactic might require, as in this
 exmaple, computations done in higher-precision in order to solve
 the subgoal. *)
 prove_rndval.
-* (* Sterbenz goal 1 *) interval with (i_prec 128).
-* (* Sterbenz goal 2 *) interval with (i_prec 128).
++ (* Sterbenz goal 1 *) interval with (i_prec 128).
++ (* Sterbenz goal 2 *) interval with (i_prec 128).
 - 
 prove_roundoff_bound2.
 match goal with |- Rabs ?a <= _ => field_simplify a end. 
