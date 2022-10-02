@@ -760,6 +760,13 @@ Definition BDIV := BINOP Bdiv div_nan.
 Definition BABS ty := Babs _ (femax ty) (abs_nan ty).
 Definition BOPP ty := Bopp _ (femax ty) (opp_nan ty).
 
+
+Definition UNOP (op: ltac:( let t := type of Bsqrt in exact t ) ) op_nan ty 
+    : ftype ty -> ftype ty
+    := op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (op_nan ty) mode_NE.
+
+Definition BSQRT :=  UNOP Bsqrt sqrt_nan.
+
 End WITHNANS.
 
 Definition Norm {T} (x: T) := x.
