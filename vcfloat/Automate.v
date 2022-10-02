@@ -368,44 +368,40 @@ Ltac process_eval_cond' :=
  | |- eval_cond' _ _ _ => idtac
  | _ => fail 1 "inappropriate goal for process_eval_cond'"
  end;
-  cbn;
+(* time "process_eval_cond'_elements_and_PTrees" *)
+ (let aa := fresh "aa" in 
+ cbv beta iota zeta delta [eval_cond' eval_cond2]; set (aa := MSET.elements _); cbv in aa; subst aa;
+ cbv [enum_forall enum_forall'];
+ cbv [mget shifts_MAP compcert_map Maps.PMap.get Maps.PTree.get fst snd Maps.PTree.get'
+    index_of_tr map_nat Pos.of_succ_nat Pos.succ ]);
+
+ (* time "process_eval_cond'_repeat1" *)
   repeat 
    (let H := fresh in intros ?u H;
-    cbv beta iota zeta delta [
-    mget shifts_MAP compcert_map
-    Maps.PMap.get Maps.PTree.get Maps.PTree.get'
-      Pos.of_succ_nat Pos.succ
-      index_of_tr map_nat fst snd] in H;
-    unfold error_bound in H;
-    simpl in H;
-    unfold Z.pow_pos in H;
-    simpl Pos.iter in H);
+   match type of H with _ _ (error_bound ?x _) => 
+     let y := constr:(x) in let y := eval hnf in y in change x with y in H
+   end;
+   cbv [error_bound bpow radix2 femax fprec fprecp Z.sub Z.add Z.opp 
+     Z.pos_sub Z.succ_double Pos.pred_double Z.pow_pos Z.mul 
+      radix_val Pos.iter Pos.add Pos.succ Pos.mul]  in H);
 
    cbv beta iota zeta delta [
             mset shifts_MAP empty_shiftmap mempty
             compcert_map Maps.PMap.set Maps.PMap.init
             Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
               Maps.PTree.set0 Pos.of_succ_nat Pos.succ
-            index_of_tr map_nat fst snd];
-
- cbv beta iota zeta delta [reval
+            index_of_tr map_nat fst snd reval
      Prog.binary Prog.unary Prog.real_operations
    Tree.binary_real Tree.unary_real
   ];
 
-  cbv beta iota zeta delta [
-    mget shifts_MAP compcert_map
-    Maps.PMap.get Maps.PTree.get Maps.PTree.get'
-      Pos.of_succ_nat Pos.succ
-      index_of_tr map_nat fst snd];
-
  repeat 
    match goal with |- context [env_ ?m ?t ?i ] =>
      let j := fresh "j" in set (j := env_ m t i); hnf in j; subst j
-   end;
- 
-  change (B2R (fprec ?t) _ ?x) with (@FT2R t x);
-  simpl F2R; try intros.
+   end; 
+ change (B2R (fprec ?t) _ ?x) with (@FT2R t x);
+ simpl F2R; 
+ intros.
 
 Definition prove_rndval' {NANS: Nans} bm vm e :=
  boundsmap_denote bm vm ->
