@@ -42,7 +42,6 @@ Ltac reify_float_expr E :=
  match E with
  | placeholder32 ?i => constr:(@Var ident Tsingle i)
  | placeholder ?ty ?i => constr:(@Var ident ty i)
- | cast ?tto _ ?f => constr:(@Unop ident (CastTo tto None) f)
  | Zconst ?t ?z => constr:(@Const ident t (Zconst t z))
  | BPLUS _ ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident (Rounded2 PLUS None) a' b')
@@ -72,8 +71,16 @@ Ltac reify_float_expr E :=
                                       constr:(@Unop ident (Exact1 Opp) a')
  | BABS _ ?a => let a' := reify_float_expr a in 
                                       constr:(@Unop ident (Exact1 Abs) a')
- | cast Tsingle Tdouble ?f => constr:(@Unop ident (CastTo Tdouble None) f)
- | cast Tdouble Tsingle ?f => constr:(@Unop ident (CastTo Tsingle None) f)
+ | BSQRT _ ?a => let a' := reify_float_expr a in 
+                                      constr:(@Unop ident (Rounded1 SQRT) a')
+ | cast Tsingle Tdouble ?f => let f':= reify_float_expr f in 
+                                      constr:(@Unop ident (CastTo Tdouble None) f')
+ | cast Tdouble Tsingle ?f => let f':= reify_float_expr f in 
+                                      constr:(@Unop ident (CastTo Tsingle None) f')
+ | cast Tsingle Tsingle ?f => let f':= reify_float_expr f in 
+                                      constr:(f')
+ | cast Tdouble Tdouble ?f => let f':= reify_float_expr f in 
+                                      constr:(f')
  | b32_B754_zero _ => constr:(@Const ident Tsingle E)
  | b64_B754_zero _ => constr:(@Const ident Tdouble E)
  | b64_B754_finite _ _ _ _ => constr:(@Const ident Tdouble E)
@@ -83,8 +90,9 @@ Ltac reify_float_expr E :=
                                       constr:(@Binop ident SterbenzMinus a' b')
                                   
  | _ => let E' := eval red in E in reify_float_expr E'
- | _ => fail 100 "could not reify" E
+ | _ => fail 100 "could not reify bot" E
  end.
+
 
 Ltac HO_reify_float_expr names E :=
          lazymatch names with
