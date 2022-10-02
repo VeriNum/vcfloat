@@ -10,13 +10,13 @@ Context {NANS:Nans}.
 Open Scope R_scope.
 
 Lemma ex0_bound :
-  forall a  b  c  d  e  f  g  h  i,
-  prove_roundoff_bound ex0_bmap (ex0_vmap a  b  c  d  e  f  g  h  i) ex0_expr 3.10862446895056e-12.
+  forall vmap,
+  prove_roundoff_bound ex0_bmap vmap ex0_expr 3.10862446895056e-12.
 Proof.
 intros.
 time "prove_roundoff_bound" prove_roundoff_bound.
 -
- time "prove_rndval and interval" abstract (prove_rndval; interval).
+ time "prove_rndval" prove_rndval; time "interval" interval.
 -
 time "prove_roundoff_bound2" prove_roundoff_bound2;
 time "prune_terms" (prune_terms (cutoff 30));
@@ -26,14 +26,15 @@ time "compute; lra" (compute; lra).
 
 (* How fast it runs on Andrew's machine with Intel core i7 processor:
 Tactic call prove_roundoff_bound ran for 0. secs (0.u,0.s) (success)
-Tactic call prove_rndval and interval ran for 8.118 secs (8.109u,0.015s) (success)
-Tactic call prove_roundoff_bound2 ran for 1.953 secs (1.937u,0.s) (success)
-Tactic call prune_terms ran for 1.132 secs (1.109u,0.015s) (success)
-Tactic call interval_intro ran for 0.147 secs (0.156u,0.s) (success)
-Tactic call compute; lra ran for 0.008 secs (0.u,0.s) (success)
+Tactic call prove_rndval ran for 4.302 secs (4.312u,0.s) (success)
+Tactic call interval ran for 3.243 secs (3.234u,0.s) (success)
+Tactic call prove_roundoff_bound2 ran for 0.798 secs (0.765u,0.015s) (success)
+Tactic call prune_terms ran for 0.182 secs (0.187u,0.s) (success)
+Tactic call interval_intro ran for 0.011 secs (0.015u,0.s) (success)
+Tactic call compute; lra ran for 0.007 secs (0.u,0.s) (success)
 *)
 
-(* Before improving the process_eval_cond' tactic, it was more like:
+(* Before improving the tactics on October 2, 2022, it was like,
 Tactic call prove_roundoff_bound ran for 0.001 secs (0.u,0.s) (success)
 Tactic call prove_rndval ran for 113.491 secs (111.484u,0.234s) (success)
 Tactic call interval ran for 13.708 secs (13.531u,0.046s) (success) (total time for all 17 subgoals)

@@ -348,6 +348,42 @@ Ltac invert_rndval_with_cond' :=
  | _ => fail "invert_rndval_with_cond' at inappropriate goal"
  end.
 
+Ltac process_one_bound B := 
+   apply boundsmap_denote_pred_e in B; 
+   match type of B with match Maps.PTree.get ?i ?vmap with _ => _ end =>
+      let z := constr:(i) in let z := eval compute in z in change i with z in *;
+     let t := fresh "t" in 
+     first [let v := fresh "v" i in
+             destruct (Maps.PTree.get z vmap) as [ [t v] | ]
+           | let v := fresh "v" in 
+              destruct (Maps.PTree.get z vmap) as [ [t v] | ]
+           ];
+      [ | solve [contradiction B]];
+      destruct B as [? B];
+      subst t
+    end.
+
+Ltac process_boundsmap_denote := 
+ lazymatch goal with
+ | H: boundsmap_denote _ _ |- _ =>
+   apply boundsmap_denote_e in H;
+   simpl Maps.PTree.elements in H;
+   unfold list_forall in H;
+   repeat lazymatch type of H with 
+   | boundsmap_denote_pred _ _ /\ _ => 
+      let B := fresh "BOUND" in destruct H as [B H];
+      process_one_bound B
+   | True => clear H
+   | boundsmap_denote_pred _ _ => 
+       let B := fresh "BOUND" in rename H into B;
+      process_one_bound B
+    end
+  end;
+  repeat change (type_eq_dec ?t _ ) with (@left (t=t) (t<>t) (eq_refl t)) in *;
+  cbv iota;
+  repeat change (eq_rect_r ftype ?v eq_refl) with v in *.
+
+(*  OLD OBSOLETE VERSION 
 Ltac process_boundsmap_denote := 
  lazymatch goal with
  | H: boundsmap_denote _ _ |- _ =>
@@ -362,8 +398,9 @@ repeat lazymatch type of H with
     apply boundsmap_denote_pred_e in B; destruct B as [_ B]; simpl in B
  end
 end.
+*)
 
-Ltac process_eval_cond' :=
+Ltac process_eval_cond' :=  (* THIS IS NOW OBSOLETE AND UNUSED *)
  lazymatch goal with 
  | |- eval_cond' _ _ _ => idtac
  | _ => fail 1 "inappropriate goal for process_eval_cond'"
@@ -439,8 +476,22 @@ destruct (rndval_with_cond2 _) as [[? ?] ?].
 red; intros.
 Abort.
 
+(*  OLD OBSOLETE VERSION
 Ltac process_conds :=
  (apply Forall_cons; [process_eval_cond' | process_conds ]) || apply Forall_nil.
+*)
+
+Ltac process_conds := 
+  repeat simple apply conj; 
+  try simple apply Logic.I;
+  repeat 
+   (let H := fresh in intros ?u H;
+   match type of H with _ _ (error_bound ?x _) => 
+     let y := constr:(x) in let y := eval hnf in y in change x with y in H
+   end;
+   cbv [error_bound bpow radix2 femax fprec fprecp Z.sub Z.add Z.opp 
+     Z.pos_sub Z.succ_double Pos.pred_double Z.pow_pos Z.mul 
+      radix_val Pos.iter Pos.add Pos.succ Pos.mul]  in H).
 
 Lemma fshift_div_fshift_fcval_type {NANS: Nans} {V : Type}:
       forall e : expr, @type_of_expr V (fshift_div (fshift (fcval e))) = @type_of_expr V e.
@@ -604,6 +655,16 @@ Ltac solve_Forall_conds:=
  | |- _ => idtac
  end.
 
+Lemma Forall_nested_and:
+  forall {A} (f: A -> Prop) al, 
+   List.fold_right and True (map f al) ->
+   Forall f al.
+Proof.
+induction al; simpl; intros. constructor.
+destruct H.
+constructor; auto.
+Qed.
+
 Ltac prove_rndval := 
  (* if necessary, convert goal into a prove_rndval'   goal*)
  lazymatch goal with
@@ -647,15 +708,16 @@ Ltac prove_rndval :=
                                        plus_nan mult_nan div_nan abs_nan opp_nan sqrt_nan];
  fold Tsingle; fold Tdouble;
 
- (* Now clean up after optimizing *)
- match goal with |- M ?ee => set (e:=ee) end;
- subst M; cbv beta;
- intros [EQ EQ0];
- rewrite EQ;
+  (* Now clean up after optimizing *)
+  match goal with |- M ?ee => set (e:=ee) end;
+  subst M; cbv beta;
+  intros [EQ EQ0];
+  rewrite EQ;
 
- (* Now apply the main lemma *)
- apply (rndval_with_cond_correct2_opt e0 e1 e EQ (eq_refl _) (eq_refl _) _ _ H EQ0);
- clear EQ EQ0 e e1 e0;
+  (* Now apply the main lemma *)
+   apply (rndval_with_cond_correct2_opt e0 e1 e EQ (eq_refl _) (eq_refl _) _ _ H EQ0);
+   clear EQ EQ0 e e1 e0
+   end;
 
   (* What's left is a Forall of all the conds.  Next, clean them up a bit. *)
   try change (type_of_expr _) with Tsingle;
@@ -672,12 +734,28 @@ Ltac prove_rndval :=
           Rbinop_of_rounded_binop Runop_of_exact_unop Runop_of_rounded_unop
           type_of_expr make_rounding round_knowl_denote
          rounding_cond_ast no_overflow app];
+
+  apply <- Forall_map; apply Forall_nested_and; unfold map at 1; red;
+
+  cbv [eval_cond' eval_cond2 reval];
+  let aa := fresh "aa" in repeat (set (aa := MSET.elements _); cbv in aa; subst aa);
+  cbv [enum_forall enum_forall'
+         mget shifts_MAP compcert_map Maps.PMap.get Maps.PTree.get fst snd Maps.PTree.get'
+        index_of_tr map_nat Pos.of_succ_nat Pos.succ
+            mset shifts_MAP empty_shiftmap mempty
+            compcert_map Maps.PMap.set Maps.PMap.init
+            Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
+              Maps.PTree.set0 Pos.of_succ_nat Pos.succ
+            index_of_tr map_nat fst snd reval
+         Prog.binary Prog.unary Prog.real_operations
+         Tree.binary_real Tree.unary_real ];
+  repeat change (B2R (fprec ?t) _ ?x) with (@FT2R t x);
+  simpl F2R;
+  cbv [env_];
  
   (* now process the boundsmap above the line, and the conds below the line *)
   process_boundsmap_denote;
-  process_conds
-
- end.
+  process_conds.
 
 Lemma errors_bounded_e:
   forall errors t0 k0 m, errors_bounded (t0, k0, m) errors ->
@@ -1007,6 +1085,99 @@ destruct H as [? [? [? ?]]].
 apply H1.
 Qed.
 
+Ltac prove_roundoff_bound2 := 
+
+match goal with 
+| P: prove_rndval ?bmap ?vmap ?e |- prove_roundoff_bound ?bmap' ?vmap' ?e' _ =>
+  constr_eq bmap bmap'; constr_eq vmap vmap'; constr_eq e e';
+  revert P
+| _ => fail "not the right kind of proof goal for prove_roundoff_bound2"
+end;
+
+let BMD := fresh "BMD" in
+let H2 := fresh "H2" in let H3 := fresh "H3" in let FIN := fresh "FIN" in 
+   let e := fresh "e" in let r := fresh "r" in let s := fresh "s" in 
+ intros [[r s] [H2 H3]] BMD;
+specialize (H3 BMD);
+red;
+compute in H2; inversion H2; clear H2; subst;
+fold Tsingle in H3; fold Tdouble in H3;
+apply rndval_with_cond_result1_e in H3;
+destruct H3 as [errors [H0 H2]];
+ match type of H2 with context [fval ?env ?ee] => 
+   set (e := fval env ee) in H2|-*;
+  let e1 := eval hnf in ee in change ee with e1 in e
+end;
+ destruct H2 as [FIN H2]; split; [assumption  | ]; clear FIN;
+ clearbody e;
+ simpl in e;
+ repeat change (type_lub ?x ?y) with x in e;
+ repeat change (type_lub ?x ?y) with y in e;
+ change (B2R _ _ e) with (FT2R e) in H2;
+ match goal with H2 : _ = @FT2R ?t1 e |- context [@FT2R ?t2 e] =>
+  change t2 with t1
+ end;
+ rewrite <- H2; clear H2 e;
+
+ match goal with |- context [rval ?env ?x] =>
+   let a := constr:(rval env x) in let b := eval hnf in a in change a with b
+ end;
+ cbv beta iota delta [
+       reval Prog.binary Prog.unary Prog.real_operations
+      Tree.binary_real Tree.unary_real
+      env_ 
+      rval Rop_of_binop Rop_of_unop
+            Rop_of_rounded_binop Rop_of_exact_unop Rop_of_rounded_unop];
+ repeat change (B2R (fprec ?t) _) with (@FT2R t);
+
+ process_boundsmap_denote;
+
+ repeat (let E := fresh "E" in 
+            assert (E := Forall_inv H0); simpl in E;
+          match type of E with
+           |  Rle (Rabs ?a) (error_bound _ Normal') => 
+                let d := fresh "d" in set (d := a) in *; clearbody d
+           |  Rle (Rabs ?a) (error_bound _ Denormal') => 
+                let d := fresh "e" in set (d := a) in *; clearbody d
+           |  Rle (Rabs ?a) (error_bound _ Denormal2') => 
+                   let d := fresh "e" in set (d := a) in *; clearbody d
+           end;
+           unfold error_bound in E;
+           simpl bpow in E;
+           rewrite Zpower_pos_powerRZ in E; 
+           rewrite mul_hlf_powerRZ in E;
+           simpl Z.sub in E;
+           apply Forall_inv_tail in H0);
+ try match type of H0 with Forall _ (Maps.PTree.elements Maps.PTree.Empty) => clear H0 end;
+ try match type of H0 with Forall _ nil => clear H0 end;
+ try clear errors;
+ repeat match goal with B: context [FT2R ?v] |- _ =>
+  is_var v; let u := fresh "u" in set (u := FT2R v) in *;
+  clearbody u; clear v; rename u into v
+ end;
+
+ (* Clean up all FT2R constants *)
+ repeat match goal with
+ | |- context [@FT2R ?t (b32_B754_finite ?s ?m ?e ?H)] =>
+ let j := fresh "j" in 
+  set (j :=  @FT2R t (b32_B754_finite s m e H));
+  simpl in j; subst j
+ | |- context [@FT2R ?t (b64_B754_finite ?s ?m ?e ?H)] =>
+ let j := fresh "j" in 
+  set (j :=  @FT2R t (b64_B754_finite s m e H));
+  simpl in j; subst j
+ end;
+ rewrite <- ?(F2R_eq radix2);
+
+ (* clean up all   F2R radix2 {| Defs.Fnum := _; Defs.Fexp := _ |}   *)
+ rewrite ?cleanup_Fnum;
+ repeat match goal with |- context [cleanup_Fnum' ?f ?e] =>
+  let x := constr:(cleanup_Fnum' f e) in
+  let y := eval cbv - [Rdiv IZR] in x in
+  change x with y
+ end.
+
+(* OBSOLETE VERSION 
 Ltac prove_roundoff_bound2 :=
  match goal with P: prove_rndval _ _ _ |- prove_roundoff_bound _ _ _ _ =>
    intro; unfold_prove_rndval P
@@ -1070,7 +1241,7 @@ match goal with H: _ = @FT2R _ _ |- _ => rewrite <- H; clear H end;
    doesn't actually need it.
  match goal with |- context [Rabs ?a <= _] => field_simplify a end.
 *)
-
+*)
 
 Ltac prove_roundoff_bound :=
  match goal with

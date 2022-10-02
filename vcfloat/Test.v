@@ -119,8 +119,8 @@ Definition leapfrog_bmap : boundsmap :=
 (** Now we prove that the leapfrogx expression (deep-embedded as  x' )
    has a roundoff error less than 1.0e-5 *)
 Lemma prove_roundoff_bound_x:
-  forall x v : ftype Tsingle,
-  prove_roundoff_bound leapfrog_bmap (leapfrog_vmap x v) x' 
+  forall vmap,
+  prove_roundoff_bound leapfrog_bmap vmap x' 
     (/ 4068166).
 Proof.
 intros.
@@ -131,22 +131,14 @@ prove_roundoff_bound.
   x' evaluates equivalent to a perturbed expression.
   Goal 2 shows that the perturbed expression evaluates "close to"
   the exact real-number interpretation of expression x'.  *)
-- 
+-
   (* Solve Goal 1 by the prove_rndval tactic, which generates
-    a list of interval subgoals, and hope to prove each one of those
+    a list of interval subgoals, and  prove each one of those
      by the "interval" tactic *)
- abstract (prove_rndval; interval).
+ prove_rndval.
+ all: interval.
 - 
-    destruct false eqn:SILLY. {
-     (** This proof goal is just to demonstrate unfold_prove_rndval *)
-    intro.
-    unfold_prove_rndval P.
-    (** Now examine the proof goal above the line *)
-    discriminate SILLY.
-   } clear SILLY.
-
  prove_roundoff_bound2.
-
  match goal with |- Rabs ?a <= _ => field_simplify a end. (* improves the bound *)
 
  (* Right now, just "interval" would solve the goal.
@@ -156,6 +148,38 @@ prove_roundoff_bound.
  eapply roundoff_bound_hack; [lia|lia|lia|compute; reflexivity|].
  lia.
 Qed.
+
+Definition find_and_prove_roundoff_bound (bmap: boundsmap) (e: expr) :=
+  {bound: R | forall vmap, prove_roundoff_bound bmap vmap e bound}.
+
+Definition prove_roundoff_bound_x_alt:
+    find_and_prove_roundoff_bound leapfrog_bmap x'.
+Proof.
+exists (/ 4068166). exact prove_roundoff_bound_x.
+Defined.
+
+Lemma find_and_prove_roundoff_bound_x :
+  find_and_prove_roundoff_bound leapfrog_bmap x'.
+Proof.
+eexists.
+intro.
+ prove_roundoff_bound.
+-
+ prove_rndval; interval.
+-
+prove_roundoff_bound2.
+match goal with |- Rabs ?a <= _ => field_simplify a end.
+match goal with |- Rabs ?a <= _ => interval_intro (Rabs a) end.
+apply H.
+Defined.
+
+Lemma find_and_prove_roundoff_bound_x_abstract:
+  find_and_prove_roundoff_bound leapfrog_bmap x'.
+Proof.
+let v := constr:(proj1_sig find_and_prove_roundoff_bound_x)
+ in let v := eval hnf in v in exists v.
+exact (proj2_sig find_and_prove_roundoff_bound_x).
+Defined.
 
 Lemma prove_roundoff_bound_v:
   forall x v : ftype Tsingle,
@@ -171,11 +195,13 @@ prove_roundoff_bound.
  interval.
 Qed.
 
+(*  This one commented out, because prove_val_bound2 needs to 
+   be brought up to date with the recent changes to prove_roundoff_bound2 
 (** The following lemma demonstrates [val_bound],  that is, 
   compute the maximum absolute value of a floating-point expression *)
 Lemma prove_val_bound_x:
-  forall x v : ftype Tsingle,
-  prove_val_bound leapfrog_bmap (leapfrog_vmap x v) x' 
+  forall vmap,
+  prove_val_bound leapfrog_bmap vmap x' 
     (4642138645987358 / 2251799813685248).
 Proof.
 intros.
@@ -189,7 +215,7 @@ prove_val_bound.
  eapply Rle_trans; [apply H | clear].
  lra.
 Qed.
-
+*)
 End WITHNANS.
 
 
