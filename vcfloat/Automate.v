@@ -1479,3 +1479,7 @@ lazymatch goal with
     try solve [compute; lra]
 end.
 
+Definition find_and_prove_roundoff_bound {NANS} (bmap: boundsmap) (e: expr) :=
+  {bound: R | forall vmap, @prove_roundoff_bound NANS bmap vmap e bound}.
+
+
