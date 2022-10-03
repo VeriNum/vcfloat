@@ -1,5 +1,6 @@
-(** Test.v:  application demo of "ftype" usage-style of VCfloat.
- Copyright (C) 2021-2022 Andrew W. Appel and Ariel Kellison.
+(** TestPaper.v:  examples taken from the paper,
+  "VCFloat2: Floating-point error analysis in Coq"
+ Copyright (C) 2022 Andrew W. Appel and Ariel Kellison.
 *)
 
 From vcfloat Require Import FPLang FPLangOpt RAux Rounding Reify Float_notations Automate Prune.
@@ -85,7 +86,7 @@ prove_roundoff_bound.
 - 
  prove_roundoff_bound2.
  prune_terms (cutoff 30).
- interval.
+ do_interval.
 Qed.
 
 (* The next part demonstrates that you don't have to guess the

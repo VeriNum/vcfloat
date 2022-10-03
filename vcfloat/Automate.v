@@ -629,6 +629,25 @@ eapply rndval_with_cond_result1_fvals_eq.
 assumption.
 Qed.
 
+Lemma fast_apply_rndval_with_cond_correct2  {NANS: Nans}:
+forall e0 e1 e (EQ: e1 = e)
+   (EQt: type_of_expr e1 = type_of_expr e0),
+  expr_valid e = true ->
+  forall (bm : boundsmap) (vm : valmap),
+  boundsmap_denote bm vm ->
+  binary_float_equiv (fval (env_ vm) e1)
+      (eq_rect_r ftype (fval (env_ vm) e0) EQt) ->
+  Forall (fun c : (forall ty, positive -> ftype ty) -> Prop => c (env_ vm)) 
+        (snd (rndval_with_cond2 e)) ->
+  let '(r, s, _) := rndval_with_cond2 e in
+    rndval_with_cond_result1 (env_ vm) e0 r s.
+Proof.
+intros.
+pose proof (rndval_with_cond_correct2_opt e0 e1 e EQ).
+destruct (rndval_with_cond2 e) as [[r s] p].
+apply (H3 EQt H bm vm); auto.
+Qed.
+
 Ltac solve_Forall_conds:= 
  lazymatch goal with
  | |- Forall _ _ => 
@@ -665,6 +684,16 @@ destruct H.
 constructor; auto.
 Qed.
 
+Lemma binary_float_equiv_sym_loose_rect_refl:
+   forall (t : type)  (b : ftype t) ,
+       binary_float_equiv (eq_rect_r ftype b (eq_refl _)) b.
+Proof.
+ intros.
+  apply binary_float_equiv_sym;
+  apply binary_float_equiv_loose_rect.
+  apply binary_float_equiv_loose_refl.
+Qed.
+
 Ltac prove_rndval := 
  (* if necessary, convert goal into a prove_rndval'   goal*)
  lazymatch goal with
@@ -687,11 +716,10 @@ Ltac prove_rndval :=
   pose (e1 := @fshift_div ident NANS (@fshift ident NANS (@fcval ident NANS e0)));
   assert (EQ: (@fshift_div ident NANS (@fshift ident NANS (@fcval ident NANS e0)) = e1 /\
            binary_float_equiv (fval (env_ vm) e1) (fval (env_ vm) e0)))
-    by (split; [apply eq_refl | 
-                   eapply binary_float_equiv_trans; [ apply fshift_div_fshift_fcval_correct | ];
-                   apply binary_float_equiv_sym;
-                   apply binary_float_equiv_loose_rect; 
-                   apply binary_float_equiv_loose_refl]);
+   by (apply (conj (eq_refl _));
+      apply (binary_float_equiv_trans _ _ _ _ _ (fshift_div_fshift_fcval_correct _ _));
+      exact (binary_float_equiv_sym_loose_rect_refl 
+                    (type_of_expr e0) (fval (env_ vm) e0)));
 
   (* Now compute the fcval optimization *)
   revert EQ;
@@ -715,11 +743,14 @@ Ltac prove_rndval :=
   rewrite EQ;
 
   (* Now apply the main lemma *)
-   apply (rndval_with_cond_correct2_opt e0 e1 e EQ (eq_refl _) (eq_refl _) _ _ H EQ0);
-   clear EQ EQ0 e e1 e0
+  (apply (fast_apply_rndval_with_cond_correct2 e0 e1 e EQ 
+     (eq_refl _) (eq_refl _) _ _ H EQ0);
+   subst e;
+   clear EQ EQ0 e1 e0)
    end;
 
   (* What's left is a Forall of all the conds.  Next, clean them up a bit. *)
+  (cbv [rndval_with_cond2 rndval_with_cond' ];
   try change (type_of_expr _) with Tsingle;
   try change (type_of_expr _) with Tdouble;
   cbv beta iota zeta delta [
@@ -728,14 +759,18 @@ Ltac prove_rndval :=
             Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
               Maps.PTree.set0 Pos.of_succ_nat Pos.succ
             index_of_tr map_nat fst snd
-
+          rnd_of_cast_with_cond
           rndval_with_cond' rnd_of_binop_with_cond
           rnd_of_unop_with_cond is_div
           Rbinop_of_rounded_binop Runop_of_exact_unop Runop_of_rounded_unop
           type_of_expr make_rounding round_knowl_denote
          rounding_cond_ast no_overflow app];
-
-  apply <- Forall_map; apply Forall_nested_and; unfold map at 1; red;
+   repeat change (type_leb _ _) with true;
+   repeat change (type_leb _ _) with false;
+   cbv beta iota zeta;
+   apply Forall_nested_and;
+   unfold map at 1 2;
+   red);
 
   cbv [eval_cond' eval_cond2 reval];
   let aa := fresh "aa" in repeat (set (aa := MSET.elements _); cbv in aa; subst aa);

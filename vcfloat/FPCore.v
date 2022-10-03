@@ -1127,10 +1127,8 @@ Ltac const_float f :=
  | B754_nan ?prec ?emax ?s ?p _ => const_Z prec; const_Z emax; const_bool s; const_pos p
  end.
 
-
 Ltac compute_binary_floats :=
-repeat
-(match goal with
+repeat match goal with
 | |- context [@BDIV ?NANS ?t ?x1 ?x2] =>
            const_float x1; const_float x2;
            let c := constr:(@BDIV NANS t) in 
@@ -1155,7 +1153,10 @@ repeat
    const_float x1; const_float x2;
   first 
      [ const_Z prec; const_Z emax; 
-       rewrite <- (Bdiv_full_correct prec emax a b c d x1 x2 (eq_refl true))
+       let H := fresh in let j := fresh "j" in 
+       assert (H := Bdiv_full_correct prec emax a b c d x1 x2 (eq_refl true));
+       set (j := Bdiv prec emax a b c d x1 x2) in *; clearbody j;
+      compute in H; subst j
      | progress (let f := eval compute in prec in change prec with f;
                       let f := eval compute in emax in change emax with f)
      ]
@@ -1163,7 +1164,10 @@ repeat
     const_float x1; const_float x2;
   first 
      [ const_Z prec; const_Z emax; 
-       rewrite <- (Bmult_full_correct prec emax a b c d x1 x2 (eq_refl true))
+       let H := fresh in let j := fresh "j" in 
+       assert (H := Bmult_full_correct prec emax a b c d x1 x2 (eq_refl true));
+       set (j := Bmult prec emax a b c d x1 x2) in *; clearbody j;
+      compute in H; subst j
      | progress (let f := eval compute in prec in change prec with f;
                       let f := eval compute in emax in change emax with f)
      ]
@@ -1171,7 +1175,10 @@ repeat
     const_float x1; const_float x2;
   first 
      [ const_Z prec; const_Z emax; 
-       rewrite <- (Bplus_full_correct prec emax a b c d x1 x2 (eq_refl true))
+       let H := fresh in let j := fresh "j" in 
+       assert (H := Bplus_full_correct prec emax a b c d x1 x2 (eq_refl true));
+       set (j := Bplus prec emax a b c d x1 x2) in *; clearbody j;
+      compute in H; subst j
      | progress (let f := eval compute in prec in change prec with f;
                       let f := eval compute in emax in change emax with f)
      ]
@@ -1179,11 +1186,14 @@ repeat
    const_float x1; const_float x2;
   first 
      [ const_Z prec; const_Z emax; 
-       rewrite <- (Bminus_full_correct prec emax a b c d x1 x2 (eq_refl true))
+       let H := fresh in let j := fresh "j" in 
+       assert (H := Bminus_full_correct prec emax a b c d x1 x2 (eq_refl true));
+       set (j := Bminus prec emax a b c d x1 x2) in *; clearbody j;
+      compute in H; subst j
      | progress (let f := eval compute in prec in change prec with f;
                       let f := eval compute in emax in change emax with f)
      ]
-end; simpl FF2B);
+end;
  fold Float_notations.b32_B754_zero;
  fold Float_notations.b32_B754_finite;
  fold Float_notations.b32_B754_infinity;
