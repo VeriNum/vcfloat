@@ -18,11 +18,9 @@ time "prove_roundoff_bound" prove_roundoff_bound.
 -
  time "prove_rndval" prove_rndval; time "interval" interval.
 -
-time "prove_roundoff_bound2" prove_roundoff_bound2;
-time "prune_terms" (prune_terms (cutoff 30));
-time "interval_intro" (match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end;
-          eapply Rle_trans; [ apply H99 | clear  ]);
-time "compute; lra" (compute; lra).
+time "prove_roundoff_bound2" prove_roundoff_bound2.
+time "prune_terms" (prune_terms (cutoff 30)).
+time "do_interval" do_interval.
 
 (* How fast it runs on Andrew's machine with Intel core i7 processor:
 Tactic call prove_roundoff_bound ran for 0. secs (0.u,0.s) (success)
@@ -30,8 +28,7 @@ Tactic call prove_rndval ran for 4.302 secs (4.312u,0.s) (success)
 Tactic call interval ran for 3.243 secs (3.234u,0.s) (success)
 Tactic call prove_roundoff_bound2 ran for 0.798 secs (0.765u,0.015s) (success)
 Tactic call prune_terms ran for 0.182 secs (0.187u,0.s) (success)
-Tactic call interval_intro ran for 0.011 secs (0.015u,0.s) (success)
-Tactic call compute; lra ran for 0.007 secs (0.u,0.s) (success)
+Tactic call do_interval ran for 0.077 secs (0.078u,0.s) (success)
 *)
 
 (* Before improving the tactics on October 2, 2022, it was like,

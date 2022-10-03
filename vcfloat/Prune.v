@@ -3208,12 +3208,20 @@ rewrite <- (ring_simp_correct false 100 e).
 eapply prune_terms_correct in H3; try eassumption; auto.
 Qed.
 
+Ltac cleanup_F_toR :=
+repeat
+ let j := fresh "j" in 
+ set (j := Private.I2.F.toR _);
+ cbv - [IZR] in j;
+ subst j.
+
 Ltac prune_terms cutoff := 
  simple_reify;
  match goal with |- eval_hyps _ _ (Rabs (eval ?e _) <= _) => 
     eapply (simplify_and_prune_correct _ _ cutoff);  [vm_compute; reflexivity | reflexivity |  reflexivity |  try clear e]
  end;
- unfold_eval_hyps.
+ unfold_eval_hyps;
+ cleanup_F_toR.
 
 (* Here is a version that _only_ does cancel_terms; this is sometimes useful *)
 

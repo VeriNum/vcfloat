@@ -1426,4 +1426,21 @@ match goal with H: _ = @FT2R _ _ |- _ => rewrite <- H; clear H end;
 *)
 
 
+Ltac do_interval := 
+lazymatch goal with
+ | |- (Rabs ?e <= ?a - ?b)%R =>
+    let G := fresh "G" in
+    interval_intro (Rabs e) as [_ G];
+    tryif is_evar a
+    then (eapply Rle_trans; [apply G | clear G ];
+             apply Rminus_plus_le_minus;
+             apply Rle_refl)
+    else (eapply Rle_trans; [apply G | ];
+            try solve [compute; lra])
+ | |- Rabs ?e <= _ =>
+    let G := fresh "G" in
+    interval_intro (Rabs e) as [_ G];
+    eapply Rle_trans; [apply G | ];
+    try solve [compute; lra]
+end.
 
