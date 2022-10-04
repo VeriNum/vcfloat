@@ -684,16 +684,6 @@ destruct H.
 constructor; auto.
 Qed.
 
-Lemma binary_float_equiv_sym_loose_rect_refl:
-   forall (t : type)  (b : ftype t) ,
-       binary_float_equiv (eq_rect_r ftype b (eq_refl _)) b.
-Proof.
- intros.
-  apply binary_float_equiv_sym;
-  apply binary_float_equiv_loose_rect.
-  apply binary_float_equiv_loose_refl.
-Qed.
-
 Ltac prove_rndval := 
  (* if necessary, convert goal into a prove_rndval'   goal*)
  lazymatch goal with
@@ -707,7 +697,7 @@ Ltac prove_rndval :=
   change Reify.ident with ident in e0;
   let H := fresh in intro H;
   let EQ := fresh "EQ"  in let EQ0 := fresh "EQ" in
-  let e1 := fresh "e1" in  let e := fresh "e" in 
+  let e1 := fresh "e1" in  let e := fresh "e" in let M := fresh "M" in 
 
  (* e0 is the original expression.  e1 is the optimization functions applied to e0, not yet reduced.
     e is the reduced-to-normal form version of e1, that is, the optimized expression. *)
@@ -716,15 +706,16 @@ Ltac prove_rndval :=
   pose (e1 := @fshift_div ident NANS (@fshift ident NANS (@fcval ident NANS e0)));
   assert (EQ: (@fshift_div ident NANS (@fshift ident NANS (@fcval ident NANS e0)) = e1 /\
            binary_float_equiv (fval (env_ vm) e1) (fval (env_ vm) e0)))
-   by (apply (conj (eq_refl _));
-      apply (binary_float_equiv_trans _ _ _ _ _ (fshift_div_fshift_fcval_correct _ _));
-      exact (binary_float_equiv_sym_loose_rect_refl 
-                    (type_of_expr e0) (fval (env_ vm) e0)));
+    by (split; [apply eq_refl | 
+                   eapply binary_float_equiv_trans; [ apply fshift_div_fshift_fcval_correct | ];
+                   apply binary_float_equiv_sym;
+                   apply binary_float_equiv_loose_rect; 
+                   apply binary_float_equiv_loose_refl]);
 
   (* Now compute the fcval optimization *)
   revert EQ;
    pattern e1 at 1;
-  let M := fresh "M" in set (M := fun _ => _);
+   set (M := fun _ => _);
 
   cbv beta iota zeta delta - [M fshift_div fshift Bmult Bplus Bminus Bdiv 
                                        plus_nan mult_nan div_nan abs_nan opp_nan sqrt_nan];

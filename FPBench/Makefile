@@ -30,5 +30,5 @@ include .depend
 clean:
 	rm -f *.vo *.vok *.vos *.glob 
 
-vcfloat: $(VCFLOAT_LOC)/Automate.vo
+vcfloat: $(VCFLOAT_LOC)/Automate.vo $(VCFLOAT_LOC)/Prune.vo
 	cd ../vcfloat; make vcfloat2

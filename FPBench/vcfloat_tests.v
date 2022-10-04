@@ -20,6 +20,7 @@ Definition matrixdeterminant_expr :=
 Lemma matrixdeterminant_bound:
 	find_and_prove_roundoff_bound matrixdeterminant_bmap matrixdeterminant_expr.
 Proof.
+idtac "Starting matrixdeterminant".
 eexists. intro. prove_roundoff_bound.
  -
 time "prove_rndval" prove_rndval; time "interval" interval.
@@ -30,7 +31,7 @@ time "do_interval" do_interval.
 Defined.
 
 Definition matrixdeterminant_bound_val := Eval simpl in (proj1_sig matrixdeterminant_bound).
-Print matrixdeterminant_bound_val.
+Compute ltac:(ShowBound matrixdeterminant_bound).
 
 Definition matrixdeterminant2_bmap_list := [Build_varinfo Tdouble 1%positive (-10) (10);Build_varinfo Tdouble 2%positive (-10) (10);Build_varinfo Tdouble 3%positive (-10) (10);Build_varinfo Tdouble 4%positive (-10) (10);Build_varinfo Tdouble 5%positive (-10) (10);Build_varinfo Tdouble 6%positive (-10) (10);Build_varinfo Tdouble 7%positive (-10) (10);Build_varinfo Tdouble 8%positive (-10) (10);Build_varinfo Tdouble 9%positive (-10) (10)].
 
@@ -57,6 +58,7 @@ Defined.
 
 Definition matrixdeterminant2_bound_val := Eval simpl in (proj1_sig matrixdeterminant2_bound).
 Print matrixdeterminant2_bound_val.
+Compute ltac:(ShowBound matrixdeterminant2_bound).
 
 Definition intro_45_example_45_mixed_bmap_list := [Build_varinfo Tsingle 1%positive (1) (999)].
 
@@ -76,17 +78,16 @@ Lemma intro_45_example_45_mixed_bound:
 Proof.
 eexists. intro. prove_roundoff_bound.
  -
-(*
-time "prove_rndval" prove_rndval; time "interval" interval.*)
-admit.
+time "prove_rndval" prove_rndval; time "interval" interval.
 -
 time "prove_roundoff_bound2" prove_roundoff_bound2;
 time "prune_terms" (prune_terms (cutoff 30)).
 time "do_interval" do_interval.
-Admitted.
+Defined.
 
 Definition intro_45_example_45_mixed_bound_val := Eval simpl in (proj1_sig intro_45_example_45_mixed_bound).
 Print intro_45_example_45_mixed_bound_val.
+Compute ltac:(ShowBound intro_45_example_45_mixed_bound).
 
 Definition delta4_bmap_list := [Build_varinfo Tdouble 1%positive (4) (63504e-4);Build_varinfo Tdouble 2%positive (4) (63504e-4);Build_varinfo Tdouble 3%positive (4) (63504e-4);Build_varinfo Tdouble 4%positive (4) (63504e-4);Build_varinfo Tdouble 5%positive (4) (63504e-4);Build_varinfo Tdouble 6%positive (4) (63504e-4)].
 
@@ -113,6 +114,7 @@ Defined.
 
 Definition delta4_bound_val := Eval simpl in (proj1_sig delta4_bound).
 Print delta4_bound_val.
+Compute ltac:(ShowBound delta4_bound).
 
 Definition delta_bmap_list := [Build_varinfo Tdouble 1%positive (4) (63504e-4);Build_varinfo Tdouble 2%positive (4) (63504e-4);Build_varinfo Tdouble 3%positive (4) (63504e-4);Build_varinfo Tdouble 4%positive (4) (63504e-4);Build_varinfo Tdouble 5%positive (4) (63504e-4);Build_varinfo Tdouble 6%positive (4) (63504e-4)].
 
@@ -130,17 +132,16 @@ Lemma delta_bound:
 Proof.
 eexists. intro. prove_roundoff_bound.
  -
-(*
-time "prove_rndval" prove_rndval; time "interval" interval.*)
-admit.
+time "prove_rndval" prove_rndval; time "interval" interval.
 -
 time "prove_roundoff_bound2" prove_roundoff_bound2;
 time "prune_terms" (prune_terms (cutoff 30)).
 time "do_interval" do_interval.
-Admitted.
+Defined.
 
 Definition delta_bound_val := Eval simpl in (proj1_sig delta_bound).
 Print delta_bound_val.
+Compute ltac:(ShowBound delta_bound).
 
 Definition x_by_xy_bmap_list := [Build_varinfo Tsingle 1%positive (1) (4);Build_varinfo Tsingle 2%positive (1) (4)].
 
@@ -158,17 +159,16 @@ Lemma x_by_xy_bound:
 Proof.
 eexists. intro. prove_roundoff_bound.
  -
-(*
-time "prove_rndval" prove_rndval; time "interval" interval.*)
-admit.
+time "prove_rndval" prove_rndval; time "interval" interval.
 -
 time "prove_roundoff_bound2" prove_roundoff_bound2;
 time "prune_terms" (prune_terms (cutoff 30)).
 time "do_interval" do_interval.
-Admitted.
+Defined.
 
 Definition x_by_xy_bound_val := Eval simpl in (proj1_sig x_by_xy_bound).
 Print x_by_xy_bound_val.
+Compute ltac:(ShowBound x_by_xy_bound).
 
 Definition sum_bmap_list := [Build_varinfo Tdouble 1%positive (1) (2);Build_varinfo Tdouble 2%positive (1) (2);Build_varinfo Tdouble 3%positive (1) (2)].
 
@@ -198,6 +198,7 @@ Defined.
 
 Definition sum_bound_val := Eval simpl in (proj1_sig sum_bound).
 Print sum_bound_val.
+Compute ltac:(ShowBound sum_bound).
 
 Definition nonlin1_bmap_list := [Build_varinfo Tdouble 1%positive (0) (999)].
 
@@ -215,17 +216,16 @@ Lemma nonlin1_bound:
 Proof.
 eexists. intro. prove_roundoff_bound.
  -
-(*
-time "prove_rndval" prove_rndval; time "interval" interval.*)
-admit.
+time "prove_rndval" prove_rndval; time "interval" interval.
 -
 time "prove_roundoff_bound2" prove_roundoff_bound2;
 time "prune_terms" (prune_terms (cutoff 30)).
 time "do_interval" do_interval.
-Admitted.
+Defined.
 
 Definition nonlin1_bound_val := Eval simpl in (proj1_sig nonlin1_bound).
 Print nonlin1_bound_val.
+Compute ltac:(ShowBound nonlin1_bound).
 
 Definition nonlin2_bmap_list := [Build_varinfo Tdouble 1%positive (1001e-3) (2);Build_varinfo Tdouble 2%positive (1001e-3) (2)].
 
@@ -244,17 +244,16 @@ Lemma nonlin2_bound:
 Proof.
 eexists. intro. prove_roundoff_bound.
  -
-(*
-time "prove_rndval" prove_rndval; time "interval" interval.*)
-admit.
+time "prove_rndval" prove_rndval; time "interval" interval.
 -
 time "prove_roundoff_bound2" prove_roundoff_bound2;
 time "prune_terms" (prune_terms (cutoff 30)).
 time "do_interval" do_interval.
-Admitted.
+Defined.
 
 Definition nonlin2_bound_val := Eval simpl in (proj1_sig nonlin2_bound).
 Print nonlin2_bound_val.
+Compute ltac:(ShowBound nonlin2_bound).
 
 Definition himmilbeau_bmap_list := [Build_varinfo Tdouble 1%positive (-5) (5);Build_varinfo Tdouble 2%positive (-5) (5)].
 
@@ -283,6 +282,7 @@ Defined.
 
 Definition himmilbeau_bound_val := Eval simpl in (proj1_sig himmilbeau_bound).
 Print himmilbeau_bound_val.
+Compute ltac:(ShowBound himmilbeau_bound).
 
 Definition kepler0_bmap_list := [Build_varinfo Tdouble 1%positive (4) (636e-2);Build_varinfo Tdouble 2%positive (4) (636e-2);Build_varinfo Tdouble 3%positive (4) (636e-2);Build_varinfo Tdouble 4%positive (4) (636e-2);Build_varinfo Tdouble 5%positive (4) (636e-2);Build_varinfo Tdouble 6%positive (4) (636e-2)].
 
@@ -309,6 +309,7 @@ Defined.
 
 Definition kepler0_bound_val := Eval simpl in (proj1_sig kepler0_bound).
 Print kepler0_bound_val.
+Compute ltac:(ShowBound kepler0_bound).
 
 Definition kepler1_bmap_list := [Build_varinfo Tdouble 1%positive (4) (636e-2);Build_varinfo Tdouble 2%positive (4) (636e-2);Build_varinfo Tdouble 3%positive (4) (636e-2);Build_varinfo Tdouble 4%positive (4) (636e-2)].
 
@@ -335,6 +336,7 @@ Defined.
 
 Definition kepler1_bound_val := Eval simpl in (proj1_sig kepler1_bound).
 Print kepler1_bound_val.
+Compute ltac:(ShowBound kepler1_bound).
 
 Definition kepler2_bmap_list := [Build_varinfo Tdouble 1%positive (4) (636e-2);Build_varinfo Tdouble 2%positive (4) (636e-2);Build_varinfo Tdouble 3%positive (4) (636e-2);Build_varinfo Tdouble 4%positive (4) (636e-2);Build_varinfo Tdouble 5%positive (4) (636e-2);Build_varinfo Tdouble 6%positive (4) (636e-2)].
 
@@ -361,6 +363,7 @@ Defined.
 
 Definition kepler2_bound_val := Eval simpl in (proj1_sig kepler2_bound).
 Print kepler2_bound_val.
+Compute ltac:(ShowBound kepler2_bound).
 
 Definition intro_45_example_bmap_list := [Build_varinfo Tdouble 1%positive (0) (999)].
 
@@ -387,6 +390,7 @@ Defined.
 
 Definition intro_45_example_bound_val := Eval simpl in (proj1_sig intro_45_example_bound).
 Print intro_45_example_bound_val.
+Compute ltac:(ShowBound intro_45_example_bound).
 
 Definition sec4_45_example_bmap_list := [Build_varinfo Tdouble 1%positive (1001e-3) (2);Build_varinfo Tdouble 2%positive (1001e-3) (2)].
 
@@ -414,6 +418,7 @@ Defined.
 
 Definition sec4_45_example_bound_val := Eval simpl in (proj1_sig sec4_45_example_bound).
 Print sec4_45_example_bound_val.
+Compute ltac:(ShowBound sec4_45_example_bound).
 
 Definition rump_39_s_32_example_44__32_from_32_c_32_program_bmap_list := [Build_varinfo Tdouble 1%positive (0) (77617);Build_varinfo Tdouble 2%positive (0) (33096)].
 
@@ -446,6 +451,7 @@ Defined.
 
 Definition rump_39_s_32_example_44__32_from_32_c_32_program_bound_val := Eval simpl in (proj1_sig rump_39_s_32_example_44__32_from_32_c_32_program_bound).
 Print rump_39_s_32_example_44__32_from_32_c_32_program_bound_val.
+Compute ltac:(ShowBound rump_39_s_32_example_44__32_from_32_c_32_program_bound).
 
 Definition rump_39_s_32_example_32_revisited_32_for_32_floating_32_point_bmap_list := [Build_varinfo Tdouble 1%positive (0) (77617);Build_varinfo Tdouble 2%positive (0) (33096)].
 
