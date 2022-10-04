@@ -3,32 +3,23 @@ COQDEP=coqdep
 VCFLOAT_LOC=../vcfloat
 COQFLAGS= -Q $(VCFLOAT_LOC) vcfloat
 
-all: _CoqProject vcfloat_tests_thms.vo
+all: _CoqProject univariate.vo 
 
 _CoqProject: Makefile
 	echo $(COQFLAGS) >_CoqProject
 
-vcfloat_tests.vo: vcfloat_tests.v vcfloat
-	$(COQC) $(COQFLAGS) $<
+target: univariate.vo multivar_2.vo doppler.vo 
 
-vcfloat_tests_thms.vo: vcfloat_tests_thms.v
-	$(COQC) $(COQFLAGS) $<
+%.vo: %.v 
+	$(COQC) $(COQFLAGS) $*.v
 
+depend: 
+	$(COQDEP) $(COQFLAGS) *.v cverif/*.v > .depend
 
-# ../vcfloat/%.vo: ../vcfloat/%.v
+all_clean: rm *.vo *.vok *.vos *.glob
 
-# ./%.vo: ./%.v
-# 	$(COQC) $(COQFLAGS) $*.v
+-include .depend
 
-depend: .depend
-
-.depend: 
-	$(COQDEP) $(COQFLAGS) *.v > .depend
-
-include .depend
-
-clean:
-	rm -f *.vo *.vok *.vos *.glob 
 
 vcfloat: $(VCFLOAT_LOC)/Automate.vo $(VCFLOAT_LOC)/Prune.vo
 	cd ../vcfloat; make vcfloat2

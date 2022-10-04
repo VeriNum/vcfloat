@@ -3574,5 +3574,10 @@ Ltac ShowBound bound :=
   let y := eval compute in y in 
   idtac "ShowBound" bound y; exact tt.
 
+Ltac ShowBound' bound :=
+  let y := constr:(proj1_sig bound) in
+  let y := eval simpl in y in 
+  idtac "ShowBound" bound y; exact tt.
+
 
 
