@@ -375,16 +375,29 @@ rewrite (ring_simp1_correct _ _ _ H).
 auto.
 Qed.
 
-Ltac simple_reify :=
-match goal with
- |- Rabs ?t <= ?r =>
+Ltac simple_reify_aux t r :=
   let vars := get_vars t (@nil R) in
   let expr1 := reify t vars in
   let expr := fresh "__expr" in 
   pose (expr := expr1);
   change t with (eval expr vars);
   find_hyps vars;
-  let __vars := fresh "__vars" in set (__vars := vars) in *
+  let __vars := fresh "__vars" in set (__vars := vars) in *.
+
+Lemma simple_reify_aux1:
+  forall a b c  : R,   c < b - a ->  a < b - c.
+Proof. intros. lra. Qed.
+
+Lemma simple_reify_aux2:
+  forall a b c  : R,   c <= b - a ->  a <= b - c.
+Proof. intros. lra. Qed.
+
+Ltac simple_reify :=
+lazymatch goal with
+ | |- Rabs ?t <= ?r => simple_reify_aux t r
+ | |- Rabs ?t < ?r => simple_reify_aux t r
+ | |- ?a < ?b - Rabs ?c => apply simple_reify_aux1; simple_reify 
+ | |- ?a <= ?b - Rabs ?c => apply simple_reify_aux2; simple_reify 
 end.
 
 Ltac reified_ring_simplify enable e :=
@@ -1341,6 +1354,45 @@ Lemma prune_terms_correct:
      length hyps = length vars ->
      eval_hyps hyps vars (Rabs (eval e1 vars) <= r - F.toR slop) ->
       eval_hyps hyps vars (Rabs (eval e vars) <= r).
+Proof.
+intros.
+apply eval_hyps_correct ; auto.
+intros.
+apply eval_hyps_correct in H2; auto.
+clear H1.
+assert (Forall2 check_bound (map b_hyps hyps) vars). {
+clear - H3.
+induction H3.
+constructor.
+constructor; auto.
+clear - H.
+destruct (b_hyps x) eqn:?H; auto.
+2: simpl; auto.
+simpl.
+eapply b_hyps_correct in H0.
+apply H0.
+clear - H.
+induction x.
+constructor.
+unfold eval_hyps1 in H.
+inversion H; clear H; subst.
+constructor; auto.
+} clear H3.
+pose proof (prune_correct _ _ _ _ _ H H0 vars H1).
+clear - H2 H3.
+revert H2 H3.
+unfold Rabs. repeat destruct (Rcase_abs _); intros; lra.
+Qed.
+
+
+Lemma prune_terms_correct_lt:
+ forall hyps e cutoff e1 slop, 
+   prune (map b_hyps hyps) e cutoff = (e1,slop) ->
+  F.real slop = true ->
+   forall vars r, 
+     length hyps = length vars ->
+     eval_hyps hyps vars (Rabs (eval e1 vars) < r - F.toR slop) ->
+      eval_hyps hyps vars (Rabs (eval e vars) < r).
 Proof.
 intros.
 apply eval_hyps_correct ; auto.
@@ -3208,6 +3260,26 @@ rewrite <- (ring_simp_correct false 100 e).
 eapply prune_terms_correct in H3; try eassumption; auto.
 Qed.
 
+Lemma simplify_and_prune_correct_lt:
+ forall hyps e cutoff e1 slop,  
+   simplify_and_prune hyps e cutoff = (e1,slop) ->
+  F.real slop = true ->
+   forall vars r, 
+     length hyps = length vars ->
+     eval_hyps hyps vars (Rabs (eval e1 vars) < r - F.toR slop) ->
+      eval_hyps hyps vars (Rabs (eval e vars) < r).
+Proof.
+intros.
+unfold simplify_and_prune in H.
+destruct (prune (map b_hyps hyps) (ring_simp false 100 e) cutoff) eqn:?H.
+assert (t = slop) by congruence.
+assert (e1 = cancel_terms e0) by congruence.
+clear H; subst t e1.
+rewrite cancel_terms_correct in H2.
+rewrite <- (ring_simp_correct false 100 e).
+eapply prune_terms_correct_lt in H3; try eassumption; auto.
+Qed.
+
 Ltac cleanup_F_toR :=
 repeat
  let j := fresh "j" in 
@@ -3217,8 +3289,11 @@ repeat
 
 Ltac prune_terms cutoff := 
  simple_reify;
- match goal with |- eval_hyps _ _ (Rabs (eval ?e _) <= _) => 
+ match goal with
+ | |- eval_hyps _ _ (Rabs (eval ?e _) <= _) => 
     eapply (simplify_and_prune_correct _ _ cutoff);  [vm_compute; reflexivity | reflexivity |  reflexivity |  try clear e]
+ | |- eval_hyps _ _ (Rabs (eval ?e _) < _) => 
+    eapply (simplify_and_prune_correct_lt _ _ cutoff);  [vm_compute; reflexivity | reflexivity |  reflexivity |  try clear e]
  end;
  unfold_eval_hyps;
  cleanup_F_toR.
