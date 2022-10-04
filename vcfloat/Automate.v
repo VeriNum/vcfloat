@@ -1474,8 +1474,9 @@ lazymatch goal with
  | |- Rabs ?e <= _ =>
     let G := fresh "G" in
     interval_intro (Rabs e) as [_ G];
-    eapply Rle_trans; [apply G | ];
-    try solve [compute; lra]
+    try apply G;
+    (eapply Rle_trans; [apply G | ];
+     try solve [compute; lra])
 end.
 
 Definition find_and_prove_roundoff_bound {NANS} (bmap: boundsmap) (e: expr) :=
