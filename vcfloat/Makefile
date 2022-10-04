@@ -7,7 +7,7 @@ COQC=coqc
 COQDEP=coqdep
 COQFLAGS := $(shell cat _CoqProject)
 
-target: Test.vo Test2.vo FPSolve.vo Clight2FPOpt.vo Prune.vo
+target: Test.vo TestPaper.vo Test2.vo FPSolve.vo Clight2FPOpt.vo Prune.vo
 
 # the vcfloat2 target is the core VCFloat tool for VCFloat2 users who don't need
 # CompCert-based reification

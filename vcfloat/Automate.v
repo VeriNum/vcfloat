@@ -764,7 +764,15 @@ Ltac prove_rndval :=
    red);
 
   cbv [eval_cond' eval_cond2 reval];
-  let aa := fresh "aa" in repeat (set (aa := MSET.elements _); cbv in aa; subst aa);
+(*  OLD VERSION: let aa := fresh "aa" in repeat (set (aa := MSET.elements _); cbv in aa; subst aa); *)
+(* NEW VERSION (faster) *)
+   let ff := fresh "ff" in
+   repeat match goal with |- context [MSET.elements ?x] => 
+     pattern (MSET.elements x);
+     match goal with |- ?f _ => set (ff := f) end;
+     cbv - [ff]; red; clear ff
+   end;
+
   cbv [enum_forall enum_forall'
          mget shifts_MAP compcert_map Maps.PMap.get Maps.PTree.get fst snd Maps.PTree.get'
         index_of_tr map_nat Pos.of_succ_nat Pos.succ
