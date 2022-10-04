@@ -61,4 +61,4 @@ Definition rigidbody2_bound_val := Eval simpl in rigidbody2_bound.
 Compute ltac:(ShowBound' rigidbody2_bound_val).
 
 End WITHNANS.
-Close R_scope.
+Close Scope R_scope.

@@ -6,6 +6,43 @@ Section WITHNANS.
 Context {NANS:Nans}.
 Open Scope R_scope.
 
+Definition verhulst_bmap_list := [Build_varinfo Tdouble 1%positive (1e-1) (3e-1)].
+
+Definition verhulst_bmap :=
+ ltac:(let z := compute_PTree (boundsmap_of_list verhulst_bmap_list) in exact z).
+
+Definition verhulst (x : ftype Tdouble) := 
+  cast Tdouble _ (let r := (4)%F64 in
+  let k := (111e-2)%F64 in
+  ((r * x)%F64 / ((1)%F64 + (x / k)%F64)%F64)%F64).
+
+Definition verhulst_expr := 
+ ltac:(let e' :=  HO_reify_float_expr constr:([1%positive]) verhulst in exact e').
+
+Lemma verhulst_bound:
+	find_and_prove_roundoff_bound verhulst_bmap verhulst_expr.
+Proof.
+idtac "Starting verhulst".
+eexists. intro. prove_roundoff_bound.
+-
+time "prove_rndval" prove_rndval; time "interval" interval.
+-
+time "prove_roundoff_bound2" prove_roundoff_bound2.
+time "field_simplify" match goal with |-Rabs ?a <= _ =>
+field_simplify a ; try split; try unfold id; try field; try nra; try interval
+end. 
+time "interval_intro" match goal with |- Rabs ?a <= _ =>
+interval_intro (Rabs a) with (i_bisect vxH, i_depth 15) as H
+end.
+time "apply bound" (
+eapply Rle_trans;
+try apply H;
+try apply Rle_refl).
+Defined.
+
+Definition verhulst_bound_val := Eval simpl in verhulst_bound.
+Compute ltac:(ShowBound' verhulst_bound_val).
+
 Definition intro_45_example_45_mixed_bmap_list := [Build_varinfo Tsingle 1%positive (1) (999)].
 
 Definition intro_45_example_45_mixed_bmap :=
@@ -27,9 +64,18 @@ eexists. intro. prove_roundoff_bound.
 -
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
-time "prove_roundoff_bound2" prove_roundoff_bound2;
-time "prune_terms" (prune_terms (cutoff 30)).
-time "do_interval" do_interval.
+time "prove_roundoff_bound2" prove_roundoff_bound2.
+unfold id.
+time "field_simplify" match goal with |-Rabs ?a <= _ =>
+field_simplify a ; try split; try unfold id; try field; try nra; try interval
+end. 
+time "interval_intro" match goal with |- Rabs ?a <= _ =>
+interval_intro (Rabs a) with (i_bisect vxH, i_depth 15) as H
+end.
+time "apply bound" (
+eapply Rle_trans;
+try apply H;
+try apply Rle_refl).
 Defined.
 
 Definition intro_45_example_45_mixed_bound_val := Eval simpl in intro_45_example_45_mixed_bound.
@@ -60,9 +106,14 @@ eexists. intro. prove_roundoff_bound.
 -
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
-time "prove_roundoff_bound2" prove_roundoff_bound2;
-time "prune_terms" (prune_terms (cutoff 30)).
-time "do_interval" do_interval.
+time "prove_roundoff_bound2" prove_roundoff_bound2.
+time "interval_intro" match goal with |- Rabs ?a <= _ =>
+interval_intro (Rabs a) with (i_bisect vxH, i_depth 15) as H
+end.
+time "apply bound" (
+eapply Rle_trans;
+try apply H;
+try apply Rle_refl).
 Defined.
 
 Definition carbongas_bound_val := Eval simpl in carbongas_bound.
@@ -87,9 +138,18 @@ eexists. intro. prove_roundoff_bound.
 -
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
-time "prove_roundoff_bound2" prove_roundoff_bound2;
-time "prune_terms" (prune_terms (cutoff 30)).
-time "do_interval" do_interval.
+time "prove_roundoff_bound2" prove_roundoff_bound2.
+time "field_simplify" match goal with |-Rabs ?a <= _ =>
+field_simplify a; try split; try field; try nra; try interval
+end.
+time "interval_intro" match goal with |-Rabs ?a <= _ =>
+interval_intro (Rabs a) with (i_taylor vxH, i_degree 10, i_bisect vxH,
+i_depth 10)
+end.
+time "apply bound" (
+eapply Rle_trans;
+try apply H;
+try apply Rle_refl).
 Defined.
 
 Definition nonlin1_bound_val := Eval simpl in nonlin1_bound.
@@ -116,13 +176,19 @@ eexists. intro. prove_roundoff_bound.
 -
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
-time "prove_roundoff_bound2" prove_roundoff_bound2;
-time "prune_terms" (prune_terms (cutoff 30)).
-time "do_interval" do_interval.
+time "prove_roundoff_bound2" prove_roundoff_bound2.
+time "interval_intro" match goal with |-Rabs ?a <= _ =>
+interval_intro (Rabs a) upper with (i_taylor vxH, i_degree 10, i_bisect vxH,
+i_depth 10) as H
+end.
+time "apply bound" (
+eapply Rle_trans;
+try apply H;
+try apply Rle_refl).
 Defined.
 
 Definition predatorprey_bound_val := Eval simpl in predatorprey_bound.
 Compute ltac:(ShowBound' predatorprey_bound_val).
 
 End WITHNANS.
-Close R_scope.
+Close Scope R_scope.

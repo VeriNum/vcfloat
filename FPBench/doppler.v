@@ -26,9 +26,17 @@ eexists. intro. prove_roundoff_bound.
 -
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
-time "prove_roundoff_bound2" prove_roundoff_bound2;
-time "prune_terms" (prune_terms (cutoff 30)).
-time "do_interval" do_interval.
+time "prove_roundoff_bound2" prove_roundoff_bound2.
+time "interval_intro" match goal with |- Rabs ?a <= _ =>
+interval_intro (Rabs a) with (i_bisect vxH, 
+i_bisect v, 
+i_bisect v0, 
+i_depth 20) as H
+end.
+time "apply bound" (
+eapply Rle_trans;
+try apply H;
+try apply Rle_refl).
 Defined.
 
 Definition doppler1_bound_val := Eval simpl in doppler1_bound.
@@ -54,9 +62,17 @@ eexists. intro. prove_roundoff_bound.
 -
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
-time "prove_roundoff_bound2" prove_roundoff_bound2;
-time "prune_terms" (prune_terms (cutoff 30)).
-time "do_interval" do_interval.
+time "prove_roundoff_bound2" prove_roundoff_bound2.
+time "interval_intro" match goal with |- Rabs ?a <= _ =>
+interval_intro (Rabs a) with (i_bisect vxH, 
+i_bisect v, 
+i_bisect v0, 
+i_depth 20) as H
+end.
+time "apply bound" (
+eapply Rle_trans;
+try apply H;
+try apply Rle_refl).
 Defined.
 
 Definition doppler2_bound_val := Eval simpl in doppler2_bound.
@@ -82,13 +98,21 @@ eexists. intro. prove_roundoff_bound.
 -
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
-time "prove_roundoff_bound2" prove_roundoff_bound2;
-time "prune_terms" (prune_terms (cutoff 30)).
-time "do_interval" do_interval.
+time "prove_roundoff_bound2" prove_roundoff_bound2.
+time "interval_intro" match goal with |- Rabs ?a <= _ =>
+interval_intro (Rabs a) with (i_bisect vxH, 
+i_bisect v, 
+i_bisect v0, 
+i_depth 20) as H
+end.
+time "apply bound" (
+eapply Rle_trans;
+try apply H;
+try apply Rle_refl).
 Defined.
 
 Definition doppler3_bound_val := Eval simpl in doppler3_bound.
 Compute ltac:(ShowBound' doppler3_bound_val).
 
 End WITHNANS.
-Close R_scope.
+Close Scope R_scope.

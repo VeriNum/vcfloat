@@ -88,4 +88,4 @@ Definition kepler2_bound_val := Eval simpl in kepler2_bound.
 Compute ltac:(ShowBound' kepler2_bound_val).
 
 End WITHNANS.
-Close R_scope.
+Close Scope R_scope.
