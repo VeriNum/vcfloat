@@ -108,13 +108,14 @@ time "prove_rndval" prove_rndval; time "interval" interval.
 -
 time "prove_roundoff_bound2" prove_roundoff_bound2.
 time "interval_intro" match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH, i_depth 15) as H
-end.
+interval_intro (Rabs a) with 
+  (i_taylor vxH, i_depth 10, i_bisect vxH, i_depth 20) as H end.
 time "apply bound" (
 eapply Rle_trans;
 try apply H;
 try apply Rle_refl).
 Defined.
+
 
 Definition carbongas_bound_val := Eval simpl in carbongas_bound.
 Compute ltac:(ShowBound' carbongas_bound_val).
