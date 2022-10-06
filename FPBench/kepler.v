@@ -52,7 +52,7 @@ eexists. intro. prove_roundoff_bound.
 -
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
-time "prove_roundoff_bound2" prove_roundoff_bound2;
+time "prove_roundoff_bound2" prove_roundoff_bound2.
 time "prune_terms" (prune_terms (cutoff 30)).
 time "do_interval" do_interval.
 Defined.
@@ -79,8 +79,8 @@ eexists. intro. prove_roundoff_bound.
 -
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
-time "prove_roundoff_bound2" prove_roundoff_bound2;
-time "prune_terms" (prune_terms (cutoff 30)).
+time "prove_roundoff_bound2" prove_roundoff_bound2.
+time "prune_terms" (prune_terms (cutoff 60)).
 time "do_interval" do_interval.
 Defined.
 
