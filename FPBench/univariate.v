@@ -6,6 +6,43 @@ Section WITHNANS.
 Context {NANS:Nans}.
 Open Scope R_scope.
 
+Definition predatorprey_bmap_list := [Build_varinfo Tdouble 1%positive (1e-1) (3e-1)].
+
+Definition predatorprey_bmap :=
+ ltac:(let z := compute_PTree (boundsmap_of_list predatorprey_bmap_list) in exact z).
+
+Definition predatorprey (x : ftype Tdouble) := 
+  cast Tdouble _ (let r := (4)%F64 in
+  let k := (111e-2)%F64 in
+  (((r * x)%F64 * x)%F64 / ((1)%F64 + ((x / k)%F64 * (x / k)%F64)%F64)%F64)%F64).
+
+Definition predatorprey_expr := 
+ ltac:(let e' :=  HO_reify_float_expr constr:([1%positive]) predatorprey in exact e').
+
+Lemma predatorprey_bound:
+	find_and_prove_roundoff_bound predatorprey_bmap predatorprey_expr.
+Proof.
+idtac "Starting predatorprey".
+eexists. intro. prove_roundoff_bound.
+-
+time "prove_rndval" prove_rndval; time "interval" interval.
+-
+time "prove_roundoff_bound2" prove_roundoff_bound2.
+
+time "interval_intro" match goal with |-Rabs ?a <= _ =>
+interval_intro (Rabs a) upper with 
+(i_taylor vxH, i_degree 10, i_bisect vxH,
+i_depth 20) as H
+end.
+time "apply bound" (
+eapply Rle_trans;
+try apply H;
+try apply Rle_refl).
+Defined.
+
+Definition predatorprey_bound_val := Eval simpl in predatorprey_bound.
+Compute ltac:(ShowBound' predatorprey_bound_val).
+
 Definition verhulst_bmap_list := [Build_varinfo Tdouble 1%positive (1e-1) (3e-1)].
 
 Definition verhulst_bmap :=
@@ -156,40 +193,6 @@ Defined.
 Definition nonlin1_bound_val := Eval simpl in nonlin1_bound.
 Compute ltac:(ShowBound' nonlin1_bound_val).
 
-Definition predatorprey_bmap_list := [Build_varinfo Tdouble 1%positive (1e-1) (3e-1)].
-
-Definition predatorprey_bmap :=
- ltac:(let z := compute_PTree (boundsmap_of_list predatorprey_bmap_list) in exact z).
-
-Definition predatorprey (x : ftype Tdouble) := 
-  cast Tdouble _ (let r := (4)%F64 in
-  let k := (111e-2)%F64 in
-  (((r * x)%F64 * x)%F64 / ((1)%F64 + ((x / k)%F64 * (x / k)%F64)%F64)%F64)%F64).
-
-Definition predatorprey_expr := 
- ltac:(let e' :=  HO_reify_float_expr constr:([1%positive]) predatorprey in exact e').
-
-Lemma predatorprey_bound:
-	find_and_prove_roundoff_bound predatorprey_bmap predatorprey_expr.
-Proof.
-idtac "Starting predatorprey".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2.
-time "interval_intro" match goal with |-Rabs ?a <= _ =>
-interval_intro (Rabs a) upper with (i_taylor vxH, i_degree 10, i_bisect vxH,
-i_depth 10) as H
-end.
-time "apply bound" (
-eapply Rle_trans;
-try apply H;
-try apply Rle_refl).
-Defined.
-
-Definition predatorprey_bound_val := Eval simpl in predatorprey_bound.
-Compute ltac:(ShowBound' predatorprey_bound_val).
 
 End WITHNANS.
 Close Scope R_scope.
