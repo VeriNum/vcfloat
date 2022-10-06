@@ -16,6 +16,9 @@ Definition turbine1 (v : ftype Tdouble) (w : ftype Tdouble) (r : ftype Tdouble) 
 
 Definition turbine1_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) turbine1 in exact e').
+From Gappa Require Import Gappa_tactic.
+From Coquelicot Require Import Coquelicot. 
+
 
 Lemma turbine1_bound:
 	find_and_prove_roundoff_bound turbine1_bmap turbine1_expr.
@@ -25,10 +28,16 @@ eexists. intro. prove_roundoff_bound.
 -
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
-time "prove_roundoff_bound2" prove_roundoff_bound2;
-time "prune_terms" (prune_terms (cutoff 30)).
-time "do_interval" do_interval.
+time "prove_roundoff_bound2" prove_roundoff_bound2.
+time "interval_intro" match goal with |- Rabs ?a <= _ =>
+interval_intro (Rabs a) with (i_bisect vxH, i_bisect v, i_bisect v0, i_depth 20) as H
+end.
+time "apply bound" (
+eapply Rle_trans;
+try apply H;
+try apply Rle_refl).
 Defined.
+
 
 Definition turbine1_bound_val := Eval simpl in turbine1_bound.
 Compute ltac:(ShowBound' turbine1_bound_val).
@@ -52,9 +61,14 @@ eexists. intro. prove_roundoff_bound.
 -
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
-time "prove_roundoff_bound2" prove_roundoff_bound2;
-time "prune_terms" (prune_terms (cutoff 30)).
-time "do_interval" do_interval.
+time "prove_roundoff_bound2" prove_roundoff_bound2.
+time "interval_intro" match goal with |- Rabs ?a <= _ =>
+interval_intro (Rabs a) with (i_bisect vxH, i_bisect v, i_bisect v0, i_depth 20) as H
+end.
+time "apply bound" (
+eapply Rle_trans;
+try apply H;
+try apply Rle_refl).
 Defined.
 
 Definition turbine2_bound_val := Eval simpl in turbine2_bound.
@@ -79,13 +93,18 @@ eexists. intro. prove_roundoff_bound.
 -
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
-time "prove_roundoff_bound2" prove_roundoff_bound2;
-time "prune_terms" (prune_terms (cutoff 30)).
-time "do_interval" do_interval.
+time "prove_roundoff_bound2" prove_roundoff_bound2.
+time "interval_intro" match goal with |- Rabs ?a <= _ =>
+interval_intro (Rabs a) with (i_bisect vxH, i_bisect v, i_bisect v0, i_depth 20) as H
+end.
+time "apply bound" (
+eapply Rle_trans;
+try apply H;
+try apply Rle_refl).
 Defined.
 
 Definition turbine3_bound_val := Eval simpl in turbine3_bound.
 Compute ltac:(ShowBound' turbine3_bound_val).
 
 End WITHNANS.
-Close R_scope.
+Close Scope R_scope.
