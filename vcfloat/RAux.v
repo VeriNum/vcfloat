@@ -1058,12 +1058,43 @@ Proof.
 Qed.
 
 Lemma Rdiv_le_0_compat_Raux : forall r1 r2 : R, 0 <= r1 -> 0 < r2 -> 0 <= r1 / r2.
-apply Rdiv_le_0_compat; auto. Qed.
+Proof. apply Rdiv_le_0_compat; auto. Qed.
 
 Lemma  Rabs_div_Raux : forall a b : R, b <> 0 -> Rabs (a/b) = (Rabs a) / (Rabs b).
-apply Rabs_div; auto. Qed.
+Proof. apply Rabs_div; auto. Qed.
 
 Lemma Rabs_div_eq : forall a b , b <> 0 -> 0 <= b -> Rabs (a /b) = Rabs a / b.
-intros. rewrite Rabs_div; try nra; replace (Rabs b) with b; try nra; symmetry; apply Rabs_pos_eq; auto. Qed.
+Proof. intros. rewrite Rabs_div; try nra; replace (Rabs b) with b; try nra; symmetry; apply Rabs_pos_eq; auto. Qed.
 
+
+Lemma Rdiv_rel_error : forall u v u' v', v' <>0 -> v <> 0 -> u <> 0 ->
+u'/v' - u/v = ((u'-u)/u - (v'-v)/v ) * (1 / (1 + ((v'-v)/v))) * (u/v).
+Proof. intros. field_simplify; repeat try split; try nra; auto. Qed.
+
+Lemma Rdiv_rel_error_add : forall u v u' v', v' <>0 -> v <> 0 -> u <> 0 ->
+Rabs (u'/v' - u/v) <= 
+(Rabs(u'-u) * Rabs (1/u) + Rabs (v'-v) * Rabs(1/v)) * Rabs (1 / (1 + ((v'-v)/v))) * Rabs (u/v).
+Proof.
+intros.
+rewrite Rdiv_rel_error; auto. 
+eapply Rle_trans.
+rewrite Rmult_assoc. 
+rewrite Rabs_mult.
+apply Rmult_le_compat. apply Rabs_pos. apply Rabs_pos.
+match goal with |- Rabs (?a/u - ?b /v) <= _=>
+replace (a/u - b /v) with (a/u + (v - v') /v) by nra
+end.
+match goal with |- Rabs (?a/u + ?b /v) <= _=>
+replace (a/u + b /v) with (a * (1/u) + b * (1 /v))
+end.
+eapply Rle_trans.
+apply Rabs_triang.
+apply Rplus_le_compat.
+rewrite Rabs_mult; apply Rle_refl.
+rewrite Rabs_mult. rewrite Rabs_minus_sym. apply Rle_refl.
+field_simplify. f_equal. split; auto. split; auto.
+rewrite Rabs_mult; apply Rle_refl.
+rewrite Rmult_assoc.
+apply Rle_refl.
+Qed.
 
