@@ -1193,3 +1193,7 @@ rewrite Rmult_assoc.
 apply Rle_refl.
 Qed.
 
+Lemma Rplus_opp : forall a b,
+a + - b = a - b. Proof. intros. nra. Qed.
+
+
