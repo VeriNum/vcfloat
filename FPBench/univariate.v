@@ -28,20 +28,43 @@ eexists. intro. prove_roundoff_bound.
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
 time "prove_roundoff_bound2" prove_roundoff_bound2.
-
-time "interval_intro" match goal with |-Rabs ?a <= _ =>
+time "error rewrites" error_rewrites_div_r. 
+all : (time "prune"
+(prune_terms (cutoff 70);
+try match goal with |- (Rabs ?e <= ?a - 0)%R =>
+  rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
+end;
+try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
+                      let G := fresh "G" in
+                      try (interval_intro (Rabs e) with 
+                      (i_taylor vxH, i_bisect vxH, i_depth 20) as G;
+                      eapply Rle_trans;
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl]);
+                      try (interval_intro (Rabs e) as G;
+                      eapply Rle_trans;
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl]) end)).
+{
+time "goal 1" (
+try rewrite Rsqr_pow2;
+try field_simplify_Rabs;
+try match goal with |-Rabs ?a <= _ =>
 interval_intro (Rabs a) upper with 
-(i_taylor vxH, i_degree 10, i_bisect vxH,
-i_depth 20) as H
-end.
-time "apply bound" (
-eapply Rle_trans;
-try apply H;
-try apply Rle_refl).
+(i_bisect vxH, i_depth 17) as H'
+end; apply H').
+}
+all : time "remaining" (
+try rewrite Rsqr_pow2;
+try match goal with |-Rabs ?a <= _ =>
+interval_intro (Rabs a) upper with 
+(i_bisect vxH, i_depth 17) as H'
+end; apply H').
 Defined.
 
 Definition predatorprey_bound_val := Eval simpl in predatorprey_bound.
-Compute ltac:(ShowBound' predatorprey_bound_val).
+Compute ltac:(ShowBound predatorprey_bound_val).
+
+Goal proj1_sig predatorprey_bound_val <= 2.9e-16.
+simpl; interval. Qed.
 
 Definition verhulst_bmap_list := [Build_varinfo Tdouble 1%positive (1e-1) (3e-1)].
 
@@ -135,6 +158,7 @@ Definition carbongas (v : ftype Tdouble) :=
 Definition carbongas_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive]) carbongas in exact e').
 
+
 Lemma carbongas_bound:
 	find_and_prove_roundoff_bound carbongas_bmap carbongas_expr.
 Proof.
@@ -144,18 +168,36 @@ eexists. intro. prove_roundoff_bound.
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
 time "prove_roundoff_bound2" prove_roundoff_bound2.
-time "interval_intro" match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with 
-  (i_taylor vxH, i_depth 10, i_bisect vxH, i_depth 20) as H end.
-time "apply bound" (
-eapply Rle_trans;
-try apply H;
-try apply Rle_refl).
+time "error rewrites" error_rewrites_div_l.
+all : (time "prune"
+(prune_terms (cutoff 60);
+try match goal with |- (Rabs ?e <= ?a - 0)%R =>
+  rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
+end)).
+all: (try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
+                      try (interval_intro (Rabs e) as G; 
+                      eapply Rle_trans;
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl]) end).
+all: (
+try field_simplify_Rabs ;
+try match goal with |-Rabs ?a <= _ =>
+  try (interval_intro (Rabs a) upper with 
+  (i_taylor vxH, i_bisect vxH, i_depth 15) as H' ; apply H');
+  try (interval_intro (Rabs a) upper as H' ; apply H') end;
+  apply Rle_refl).
 Defined.
 
 
 Definition carbongas_bound_val := Eval simpl in carbongas_bound.
-Compute ltac:(ShowBound' carbongas_bound_val).
+Compute ltac:(ShowBound carbongas_bound_val).
+
+Lemma check_doppler3_bound :
+proj1_sig carbongas_bound_val <= 2.5e-8.
+Proof.
+simpl.
+interval.
+Qed.
+
 
 Definition nonlin1_bmap_list := [Build_varinfo Tdouble 1%positive (0) (999)].
 

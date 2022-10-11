@@ -71,7 +71,7 @@ Definition doppler1_bound_val := Eval simpl in doppler1_bound.
 Compute ltac:(ShowBound doppler1_bound_val).
 
 Lemma check_doppler_bound :
-proj1_sig doppler1_bound_val <= 1.21e-12.
+proj1_sig doppler1_bound_val <= 4.5e-13.
 Proof.
 simpl.
 interval.
@@ -144,7 +144,7 @@ Definition doppler2_bound_val := Eval simpl in doppler2_bound.
 Compute ltac:(ShowBound doppler2_bound_val).
 
 Lemma check_doppler2_bound :
-proj1_sig doppler2_bound_val <= 1.3e-12.
+proj1_sig doppler2_bound_val <= 1.19e-12.
 Proof.
 simpl.
 interval.
