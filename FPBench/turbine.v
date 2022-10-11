@@ -30,7 +30,7 @@ time "prove_rndval" prove_rndval; time "interval" interval.
 time "prove_roundoff_bound2" prove_roundoff_bound2. 
 time "error rewrites" error_rewrites_div_l.
 all : (time "prune"
-(prune_terms (cutoff 70));
+(prune_terms (cutoff 70);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
   rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
 end;
@@ -38,8 +38,8 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
                       let G := fresh "G" in
                       interval_intro (Rabs e) as G ;
                       eapply Rle_trans;
-                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end).
-all: (
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)).
+all : ( time "remaining" (
 try rewrite Rsqr_pow2;
 try field_simplify_Rabs;
 try match goal with |- Rabs ?a <= _ =>
@@ -66,7 +66,7 @@ i_bisect vxH, i_depth 20) as H'; apply H'; apply Rle_refl
 end;
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) as H'; apply H'; apply Rle_refl
-end).
+end)).
 Defined.
 
 Definition turbine1_bound_val := Eval simpl in turbine1_bound.
@@ -100,7 +100,7 @@ time "prove_rndval" prove_rndval; time "interval" interval.
 time "prove_roundoff_bound2" prove_roundoff_bound2. 
 time "error rewrites" error_rewrites_div_l.
 all : (time "prune"
-(prune_terms (cutoff 70));
+(prune_terms (cutoff 70);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
   rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
 end;
@@ -108,8 +108,8 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
                       let G := fresh "G" in
                       interval_intro (Rabs e) as G ;
                       eapply Rle_trans;
-                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end).
-all: (
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)) .
+all : ( time "remaining" (
 try rewrite Rsqr_pow2;
 try field_simplify_Rabs;
 try match goal with |- Rabs ?a <= _ =>
@@ -136,7 +136,7 @@ i_bisect vxH, i_depth 20) as H'; apply H'; apply Rle_refl
 end;
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) as H'; apply H'; apply Rle_refl
-end).
+end)).
 Defined.
 
 Definition turbine2_bound_val := Eval simpl in turbine2_bound.
@@ -169,7 +169,7 @@ time "prove_rndval" prove_rndval; time "interval" interval.
 time "prove_roundoff_bound2" prove_roundoff_bound2. 
 time "error rewrites" error_rewrites_div_l.
 all : (time "prune"
-(prune_terms (cutoff 70));
+(prune_terms (cutoff 70);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
   rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
 end;
@@ -177,8 +177,8 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
                       let G := fresh "G" in
                       interval_intro (Rabs e) as G ;
                       eapply Rle_trans;
-                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end).
-all: (
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)).
+all : ( time "remaining" (
 try rewrite Rsqr_pow2;
 try field_simplify_Rabs;
 try match goal with |- Rabs ?a <= _ =>
@@ -205,7 +205,7 @@ i_bisect vxH, i_depth 20) as H'; apply H'; apply Rle_refl
 end;
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) as H'; apply H'; apply Rle_refl
-end).
+end)).
 Defined.
 
 Definition turbine3_bound_val := Eval simpl in turbine3_bound.
