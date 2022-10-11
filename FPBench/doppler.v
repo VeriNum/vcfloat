@@ -30,7 +30,7 @@ time "prove_rndval" prove_rndval; time "interval" interval.
 time "prove_roundoff_bound2" prove_roundoff_bound2.  
 time "error rewrites" error_rewrites_div_r.
 all : (time "prune"
-(prune_terms (cutoff 30));
+(prune_terms (cutoff 30);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
   rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
 end;
@@ -38,33 +38,33 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
                       let G := fresh "G" in
                       interval_intro (Rabs e) as G ;
                       eapply Rle_trans;
-                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end).
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)).
 +
-time "goal 1"
+time "goal 1" (
 field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect v, 
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end.
+end).
 +
-time "goal 2"
+time "goal 2" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH,  
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end.
+end).
 +
-time "goal 3"
+time "goal 3" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end.
+end).
 +
-time "goal 4"
+time "goal 4" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
 i_bisect v, 
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end.
+end).
 Defined.
 
 Definition doppler1_bound_val := Eval simpl in doppler1_bound.
@@ -101,7 +101,7 @@ time "prove_rndval" prove_rndval; time "interval" interval.
 time "prove_roundoff_bound2" prove_roundoff_bound2.
 time "error rewrites" error_rewrites_div_r. 
 all : (time "prune"
-(prune_terms (cutoff 30));
+(prune_terms (cutoff 30);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
   rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
 end;
@@ -109,35 +109,35 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
                       let G := fresh "G" in
                       interval_intro (Rabs e) as G ;
                       eapply Rle_trans;
-                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end).
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)).
 + 
-time "goal 1"
-(field_simplify_Rabs;
+time "goal 1"(
+field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with ( 
 i_bisect v, 
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
 end).
 +
-time "goal 2"
+time "goal 2"(
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
 i_bisect vxH, 
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end.
+end).
 +
-time "goal 3"
+time "goal 3"(
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end.
+end).
 +
-time "goal 4"
+time "goal 4"(
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
 i_bisect v, 
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end.
+end).
 Defined.
 
 Definition doppler2_bound_val := Eval simpl in doppler2_bound.
@@ -173,7 +173,7 @@ time "prove_rndval" prove_rndval; time "interval" interval.
 time "prove_roundoff_bound2" prove_roundoff_bound2.
 time "error rewrites" error_rewrites_div_r.
 all : (time "prune"
-(prune_terms (cutoff 30));
+(prune_terms (cutoff 30);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
   rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
 end;
@@ -181,7 +181,7 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
                       let G := fresh "G" in
                       interval_intro (Rabs e) as G ;
                       eapply Rle_trans;
-                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end).
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)).
 + 
 time "goal 1" (
 field_simplify_Rabs;
@@ -191,26 +191,26 @@ i_bisect v,
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
 end).
 +
-time "goal 2"
+time "goal 2" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
 i_bisect vxH, 
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end.
+end).
 +
-time "goal 3"
+time "goal 3" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
 i_bisect vxH, 
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end.
+end).
 +
-time "goal 4"
+time "goal 4" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect v0, 
 i_bisect vxH, 
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end.
+end).
 Defined.
 
 
