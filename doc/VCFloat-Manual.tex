@@ -1,0 +1,74 @@
+\documentclass{llncs}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{lstlangcoq}
+\lstset{language=Coq,basicstyle=\sffamily\small,mathescape=true,columns=fullflexible}
+\hyphenation{Comp-Cert}
+\pagestyle{plain}
+
+\title{VCFloat 2.0 Reference Manual}
+\author{Andrew W. Appel\inst{1} \and Ariel E. Kellison\inst{2}}
+\institute{Princeton University \and Cornell University}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+\label{section:Introduction}
+
+VCFloat is a tool for Coq proofs about floating-point round-off error.
+When performing a computation such as $x\times 5.7+y$
+in floating-point with a fixed number of mantissa bits,
+the result of $x\times 5.7$ cannot always be represented exactly
+in the same number of bits, ditto the result of the addition $+y$,
+so some low-order bits must be thrown away---there is \emph{round-off error}.
+
+We can state this more formally with a bit of notation.
+Let \lstinline{%F64} be a notation scope in which
+  \lstinline{*} and \lstinline{+} and are interpreted
+  as double-precision (64-bit) floating-point operators
+  and 5.7 is interpreted as a double-precision floating-point constant;
+  let \lstinline{R} be the function that
+  injects a floating-point value into the reals.  Then we might prove
+  that
+\[
+\begin{array}{c}
+ 1 \le x \le 100 \qquad -1000 \le y \le 1000 \\ \hline
+ | \mbox{\lstinline{(x*5.7+y)%F64}} - R(x)\times 5.7+R(y) | \le A
+\end{array}
+\]
+where $A$ is an accuracy bound calculated by VCFloat.
+
+When you prove the correctness and accuracy of a numerical program,
+there is far more to do than bound the round-off error.
+If we view \lstinline{(x*5.7+y)%F64} as a \emph{floating-point functional model}
+  of your program, and $R(x)\times 5.7+R(y)$ as a
+  \emph{real-valued functional model} of the same program, then
+  the main result of interest can be proved by composing
+  these three theorems:
+\begin{enumerate}
+  \item The real-valued functional model finds a solution to
+    the mathematical problem of interest, within accuracy bound $A_1$.
+  \item The float-valued functional model approximates the
+    real-valued functional model within accuracy bound $A_2$.
+  \item The program (in C or Python or whatever) correctly implements
+    the float-valued functional model.
+\end{enumerate}
+VCFloat2 provides
+\begin{itemize}
+\item The \emph{modelling language} for describing float-valued functional
+  models and automatically deriving the corresponding real-valued models;
+\item A prover for bounding roundoff error, the difference between the two models;
+\item Tools for connecting float-valued models to C programs.  But
+  in VCFloat 2.0 (unlike in 1.0) the float-valued modeling language
+  is quite independent of C and can be used to reason about numerical
+  programs in other languages.
+\end{itemize}
+
+\section{Floating-point functional models}
+
+Functional models are written as expressions in Coq that apply
+functions (such as \emph{add} and \emph{multiply}) to
+variables, constants, and subexpressions that belong to floating-point
+\emph{types}.  We will start with the types.
+
