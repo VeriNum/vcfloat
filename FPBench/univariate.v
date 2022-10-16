@@ -1,5 +1,5 @@
-From vcfloat Require Import Automate Prune FPLang FPLangOpt RAux Rounding Reify Float_notations.
-Require Import IntervalFlocq3.Tactic.
+Require Import vcfloat.VCFloat.
+Require Import Interval.Tactic.
 Import Binary List ListNotations.
 Set Bullet Behavior "Strict Subproofs".
 Section WITHNANS.
@@ -12,7 +12,7 @@ Definition predatorprey_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list predatorprey_bmap_list) in exact z).
 
 Definition predatorprey (x : ftype Tdouble) := 
-  cast Tdouble _ (let r := (4)%F64 in
+  cast Tdouble (let r := (4)%F64 in
   let k := (111e-2)%F64 in
   (((r * x)%F64 * x)%F64 / ((1)%F64 + ((x / k)%F64 * (x / k)%F64)%F64)%F64)%F64).
 
@@ -72,7 +72,7 @@ Definition verhulst_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list verhulst_bmap_list) in exact z).
 
 Definition verhulst (x : ftype Tdouble) := 
-  cast Tdouble _ (let r := (4)%F64 in
+  cast Tdouble (let r := (4)%F64 in
   let k := (111e-2)%F64 in
   ((r * x)%F64 / ((1)%F64 + (x / k)%F64)%F64)%F64).
 
@@ -109,9 +109,9 @@ Definition intro_45_example_45_mixed_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list intro_45_example_45_mixed_bmap_list) in exact z).
 
 Definition intro_45_example_45_mixed (t : ftype Tsingle) := 
-  cast Tsingle _ (let t_1 := let t1_2 := (t + (1)%F32)%F32 in
-      (cast Tdouble _ (t) / cast Tdouble _ (t1_2))%F64 in
-  cast Tsingle _ (t_1)).
+  cast Tsingle (let t_1 := let t1_2 := (t + (1)%F32)%F32 in
+      (cast Tdouble (t) / cast Tdouble (t1_2))%F64 in
+  cast Tsingle (t_1)).
 
 Definition intro_45_example_45_mixed_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive]) intro_45_example_45_mixed in exact e').
@@ -147,7 +147,7 @@ Definition carbongas_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list carbongas_bmap_list) in exact z).
 
 Definition carbongas (v : ftype Tdouble) := 
-  cast Tdouble _ (let p := (35e6)%F64 in
+  cast Tdouble (let p := (35e6)%F64 in
   let a := (401e-3)%F64 in
   let b := (427e-7)%F64 in
   let t := (300)%F64 in
@@ -205,7 +205,7 @@ Definition nonlin1_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list nonlin1_bmap_list) in exact z).
 
 Definition nonlin1 (z : ftype Tdouble) := 
-  cast Tdouble _ ((z / (z + (1)%F64)%F64)%F64).
+  cast Tdouble ((z / (z + (1)%F64)%F64)%F64).
 
 Definition nonlin1_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive]) nonlin1 in exact e').

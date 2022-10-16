@@ -3,12 +3,13 @@ COQDEP=coqdep
 VCFLOAT_LOC=../vcfloat
 COQFLAGS= -Q $(VCFLOAT_LOC) vcfloat
 
-all: _CoqProject univariate.vo 
+all: _CoqProject target
 
 _CoqProject: Makefile
 	echo $(COQFLAGS) >_CoqProject
 
-target: univariate.vo multivar_2.vo doppler.vo 
+target: univariate.vo multivar_2.vo doppler.vo multivar_6.vo jetengine.vo \
+     kepler.vo rigid_body.vo turbine.vo
 
 %.vo: %.v 
 	$(COQC) $(COQFLAGS) $*.v

@@ -1,5 +1,5 @@
-From vcfloat Require Import Automate Prune FPLang FPLangOpt RAux Rounding Reify Float_notations.
-Require Import IntervalFlocq3.Tactic.
+Require Import vcfloat.VCFloat.
+Require Import Interval.Tactic.
 Import Binary List ListNotations.
 Set Bullet Behavior "Strict Subproofs".
 Section WITHNANS.
@@ -84,7 +84,7 @@ Definition doppler2_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list doppler2_bmap_list) in exact z).
 
 Definition doppler2 (u : ftype Tdouble) (v : ftype Tdouble) (t : ftype Tdouble) := 
-  cast Tdouble _ (let t1 := ((3314e-1)%F64 + ((6e-1)%F64 * t)%F64)%F64 in
+  cast Tdouble (let t1 := ((3314e-1)%F64 + ((6e-1)%F64 * t)%F64)%F64 in
   (((-t1) * v)%F64 / ((t1 + u)%F64 * (t1 + u)%F64)%F64)%F64).
 
 Definition doppler2_expr := 
@@ -156,7 +156,7 @@ Definition doppler3_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list doppler3_bmap_list) in exact z).
 
 Definition doppler3 (u : ftype Tdouble) (v : ftype Tdouble) (t : ftype Tdouble) := 
-  cast Tdouble _ (let t1 := ((3314e-1)%F64 + ((6e-1)%F64 * t)%F64)%F64 in
+  cast Tdouble (let t1 := ((3314e-1)%F64 + ((6e-1)%F64 * t)%F64)%F64 in
   (((-t1) * v)%F64 / ((t1 + u)%F64 * (t1 + u)%F64)%F64)%F64).
 
 Definition doppler3_expr := 

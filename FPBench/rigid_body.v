@@ -1,5 +1,5 @@
-From vcfloat Require Import Automate Prune FPLang FPLangOpt RAux Rounding Reify Float_notations.
-Require Import IntervalFlocq3.Tactic.
+Require Import vcfloat.VCFloat.
+Require Import Interval.Tactic.
 Import Binary List ListNotations.
 Set Bullet Behavior "Strict Subproofs".
 Section WITHNANS.
@@ -12,7 +12,7 @@ Definition rigidbody1_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list rigidbody1_bmap_list) in exact z).
 
 Definition rigidbody1 (x1 : ftype Tdouble) (x2 : ftype Tdouble) (x3 : ftype Tdouble) := 
-  cast Tdouble _ (((((-(x1 * x2)%F64) - (((2)%F64 * x2)%F64 * x3)%F64)%F64 - x1)%F64 - x3)%F64).
+  cast Tdouble (((((-(x1 * x2)%F64) - (((2)%F64 * x2)%F64 * x3)%F64)%F64 - x1)%F64 - x3)%F64).
 
 Definition rigidbody1_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) rigidbody1 in exact e').
@@ -39,7 +39,7 @@ Definition rigidbody2_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list rigidbody2_bmap_list) in exact z).
 
 Definition rigidbody2 (x1 : ftype Tdouble) (x2 : ftype Tdouble) (x3 : ftype Tdouble) := 
-  cast Tdouble _ (((((((((2)%F64 * x1)%F64 * x2)%F64 * x3)%F64 + (((3)%F64 * x3)%F64 * x3)%F64)%F64 - (((x2 * x1)%F64 * x2)%F64 * x3)%F64)%F64 + (((3)%F64 * x3)%F64 * x3)%F64)%F64 - x2)%F64).
+  cast Tdouble (((((((((2)%F64 * x1)%F64 * x2)%F64 * x3)%F64 + (((3)%F64 * x3)%F64 * x3)%F64)%F64 - (((x2 * x1)%F64 * x2)%F64 * x3)%F64)%F64 + (((3)%F64 * x3)%F64 * x3)%F64)%F64 - x2)%F64).
 
 Definition rigidbody2_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) rigidbody2 in exact e').

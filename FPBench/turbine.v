@@ -1,5 +1,5 @@
-From vcfloat Require Import Automate Prune FPLang FPLangOpt RAux Rounding Reify Float_notations.
-Require Import IntervalFlocq3.Tactic.
+Require Import vcfloat.VCFloat.
+Require Import Interval.Tactic.
 Import Binary List ListNotations.
 Set Bullet Behavior "Strict Subproofs".
 Section WITHNANS.
@@ -13,7 +13,7 @@ Definition turbine1_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list turbine1_bmap_list) in exact z).
 
 Definition turbine1 (v : ftype Tdouble) (w : ftype Tdouble) (r : ftype Tdouble) := 
-  cast Tdouble _ (((((3)%F64 + ((2)%F64 / (r * r)%F64)%F64)%F64 - ((((125e-3)%F64 * ((3)%F64 - ((2)%F64 * v)%F64)%F64)%F64 * (((w * w)%F64 * r)%F64 * r)%F64)%F64 / ((1)%F64 - v)%F64)%F64)%F64 - (45e-1)%F64)%F64).
+  cast Tdouble (((((3)%F64 + ((2)%F64 / (r * r)%F64)%F64)%F64 - ((((125e-3)%F64 * ((3)%F64 - ((2)%F64 * v)%F64)%F64)%F64 * (((w * w)%F64 * r)%F64 * r)%F64)%F64 / ((1)%F64 - v)%F64)%F64)%F64 - (45e-1)%F64)%F64).
 
 Definition turbine1_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) turbine1 in exact e').
@@ -84,7 +84,7 @@ Definition turbine2_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list turbine2_bmap_list) in exact z).
 
 Definition turbine2 (v : ftype Tdouble) (w : ftype Tdouble) (r : ftype Tdouble) := 
-  cast Tdouble _ (((((6)%F64 * v)%F64 - ((((5e-1)%F64 * v)%F64 * (((w * w)%F64 * r)%F64 * r)%F64)%F64 / ((1)%F64 - v)%F64)%F64)%F64 - (25e-1)%F64)%F64).
+  cast Tdouble (((((6)%F64 * v)%F64 - ((((5e-1)%F64 * v)%F64 * (((w * w)%F64 * r)%F64 * r)%F64)%F64 / ((1)%F64 - v)%F64)%F64)%F64 - (25e-1)%F64)%F64).
 
 Definition turbine2_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) turbine2 in exact e').
@@ -152,7 +152,7 @@ Definition turbine3_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list turbine3_bmap_list) in exact z).
 
 Definition turbine3 (v : ftype Tdouble) (w : ftype Tdouble) (r : ftype Tdouble) := 
-  cast Tdouble _ (((((3)%F64 - ((2)%F64 / (r * r)%F64)%F64)%F64 - ((((125e-3)%F64 * ((1)%F64 + ((2)%F64 * v)%F64)%F64)%F64 * (((w * w)%F64 * r)%F64 * r)%F64)%F64 / ((1)%F64 - v)%F64)%F64)%F64 - (5e-1)%F64)%F64).
+  cast Tdouble (((((3)%F64 - ((2)%F64 / (r * r)%F64)%F64)%F64 - ((((125e-3)%F64 * ((1)%F64 + ((2)%F64 * v)%F64)%F64)%F64 * (((w * w)%F64 * r)%F64 * r)%F64)%F64 / ((1)%F64 - v)%F64)%F64)%F64 - (5e-1)%F64)%F64).
 
 Definition turbine3_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) turbine3 in exact e').

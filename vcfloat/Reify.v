@@ -73,13 +73,13 @@ Ltac reify_float_expr E :=
                                       constr:(@Unop ident (Exact1 Abs) a')
  | BSQRT _ ?a => let a' := reify_float_expr a in 
                                       constr:(@Unop ident (Rounded1 SQRT) a')
- | cast Tsingle Tdouble ?f => let f':= reify_float_expr f in 
+ | @cast _ Tsingle Tdouble ?f => let f':= reify_float_expr f in 
                                       constr:(@Unop ident (CastTo Tdouble None) f')
- | cast Tdouble Tsingle ?f => let f':= reify_float_expr f in 
+ | @cast _ Tdouble Tsingle ?f => let f':= reify_float_expr f in 
                                       constr:(@Unop ident (CastTo Tsingle None) f')
- | cast Tsingle Tsingle ?f => let f':= reify_float_expr f in 
+ | @cast _ Tsingle Tsingle ?f => let f':= reify_float_expr f in 
                                       constr:(f')
- | cast Tdouble Tdouble ?f => let f':= reify_float_expr f in 
+ | @cast _ Tdouble Tdouble ?f => let f':= reify_float_expr f in 
                                       constr:(f')
  | b32_B754_zero _ => constr:(@Const ident Tsingle E)
  | b64_B754_zero _ => constr:(@Const ident Tdouble E)
