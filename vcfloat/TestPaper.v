@@ -3,7 +3,7 @@
  Copyright (C) 2022 Andrew W. Appel and Ariel Kellison.
 *)
 
-From vcfloat Require Import FPLang FPLangOpt RAux Rounding Reify Float_notations Automate Prune.
+Require Import vcfloat.VCFloat.
 Require Import Interval.Tactic.
 Import Binary.
 Import List ListNotations.

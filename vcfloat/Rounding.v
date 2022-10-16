@@ -2353,11 +2353,11 @@ Proof.
           exfalso.
           pose proof 
           (abs_B2R_lt_emax _ _
-            (cast (type_lub (type_of_expr e1) (type_of_expr e2)) 
+            (@cast _ (type_lub (type_of_expr e1) (type_of_expr e2)) 
                   (type_of_expr e1) (fval env e1))).
           pose proof 
           (abs_B2R_lt_emax _ _
-            (cast (type_lub (type_of_expr e1) (type_of_expr e2)) 
+            (@cast _ (type_lub (type_of_expr e1) (type_of_expr e2)) 
                   (type_of_expr e2) (fval env e2))).
           rewrite <- V1 in H3.
           rewrite <- V2 in H4.
@@ -2404,7 +2404,7 @@ Proof.
          {
           rewrite V1 in ZERO.
           pose proof (abs_B2R_lt_emax _ _
-          (cast (type_lub (type_of_expr e1) (type_of_expr e2)) 
+          (@cast _ (type_lub (type_of_expr e1) (type_of_expr e2)) 
             (type_of_expr e2) (fval env e2))).
           destruct minus.
           {
@@ -2448,7 +2448,7 @@ Proof.
         }
         rewrite V2 in ZERO.
         pose proof (abs_B2R_lt_emax _ _
-        (cast (type_lub (type_of_expr e1) (type_of_expr e2)) 
+        (@cast _ (type_lub (type_of_expr e1) (type_of_expr e2)) 
           (type_of_expr e1) (fval env e1))).
         destruct minus.
         {

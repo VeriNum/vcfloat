@@ -664,21 +664,21 @@ Class VarType (V: Type): Type :=
 Section WITHNANS.
 Context {NANS: Nans}.
 
-Definition cast (tto: type) (tfrom: type) (f: ftype tfrom): ftype tto :=
+Definition cast (tto: type) {tfrom: type} (f: ftype tfrom): ftype tto :=
   match type_eq_dec tfrom tto with
     | left r => eq_rect _ _ f _ r
     | _ => Bconv (fprec tfrom) (femax tfrom) (fprec tto) (femax tto)
                         (fprec_gt_0 _) (fprec_lt_femax _) (conv_nan _ _) BinarySingleNaN.mode_NE f
   end.
 
-Definition cast_lub_l t1 t2 := cast (type_lub t1 t2) t1.
-Definition cast_lub_r t1 t2 := cast (type_lub t1 t2) t2.
+Definition cast_lub_l t1 t2 := @cast (type_lub t1 t2) t1.
+Definition cast_lub_r t1 t2 := @cast (type_lub t1 t2) t2.
 
 Lemma cast_finite tfrom tto:
   type_le tfrom tto ->
   forall f,
   is_finite _ _ f = true ->
-  is_finite _ _ (cast tto tfrom f) = true.
+  is_finite _ _ (@cast tto tfrom f) = true.
 Proof.
   unfold cast.
   intros.
@@ -695,7 +695,7 @@ Lemma cast_eq tfrom tto:
   type_le tfrom tto ->
   forall f,
     is_finite _ _ f = true ->
-    B2R _ _ (cast tto tfrom f) = B2R _ _ f.
+    B2R _ _ (@cast tto tfrom f) = B2R _ _ f.
 Proof.
   unfold cast.
   intros.
@@ -710,7 +710,7 @@ Proof.
 Qed.
 
 Lemma cast_id ty f:
-    cast ty ty f = f.
+    @cast ty ty f = f.
 Proof.
   unfold cast.
   destruct (type_eq_dec ty ty); try congruence.

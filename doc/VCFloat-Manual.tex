@@ -66,9 +66,45 @@ VCFloat2 provides
 \end{itemize}
 
 \section{Floating-point functional models}
+Normally to use VCFloat you start with,
+\begin{lstlisting}
+Require Import VCFloat.VCFloat.
+\end{lstlisting}
+This imports VCFloat's functional modelling language and all of its
+provers.  But in a .v file is you are \emph{only} writing a functional model,
+and not using the tools to prove things about it, it will suffice
+to import only the modelling language, that is, \lstinline{Require Import VCFloat.FPCore}.
 
 Functional models are written as expressions in Coq that apply
 functions (such as \emph{add} and \emph{multiply}) to
 variables, constants, and subexpressions that belong to floating-point
 \emph{types}.  We will start with the types.
+
+\begin{lstlisting}
+type : Type $\mbox{\qquad\emph{each floating-point format is described as a}~\textsf{type}}$
+ftype: type -> Type $\mbox{\qquad\emph{a floating-point number in format $\mathsf{t}$ belongs to Coq type} \mathsf{ftype(t)}}$
+TYPE : forall (precp : positive) (femax: Z), fprecp<femax -> 1<fprecp -> type.
+Tsingle: type := TYPE 24 128 I I.
+Tdouble: type := TYPE 53 1024 I I.
+\end{lstlisting}
+
+That is, you specify a floating-point format, a \lstinline{type}, by
+the number of mantissa bits (e.g., 24 for single-precision, 53 for
+double-precision, but any number $\ge 2$ is legal) and a maximum
+exponent value (128 for single-precision, 1024 for double-precision,
+any number greater than the number of mantissa bits).
+\lstinline{TYPE} is a constructor for \lstinline{type}, and the
+\lstinline{I} arguments happen to be proofs that \lstinline{24<128}
+and \lstinline{1<24}, and so on.
+
+\paragraph{Notation Scopes.}  The notation scope delimiters \%F32 and \%F64 indicate that constants and operator-symbols should stand for single precision and double-precision (respectively) values and functions.
+\begin{lstlisting}
+Definition myformula ($h$: ftype Tdouble) := 
+     (5.0e-1 + cast Tsingle ($h$ * 1.6)%F64)%F32.
+\end{lstlisting}
+Here, the constant 1.6 and operator \lstinline{*} are
+interpreted in double precision,
+and the constant 5.0e-1 (which could just as well have been written
+as .5) and operator \lstinline{+} are interpreted in single precision.
+The variable $h$ is a double-precision floating-point number.
 

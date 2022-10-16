@@ -282,7 +282,7 @@ Definition fop_of_unop (r: unop):
     with
       | Rounded1 o _ => fop_of_rounded_unop o
       | Exact1 o => fop_of_exact_unop o
-      | CastTo tto _ => cast tto
+      | CastTo tto _ => @cast _ tto
     end.
 
 Fixpoint fval (env: forall ty, V -> ftype ty) (e: expr) {struct e}:
@@ -301,7 +301,7 @@ Fixpoint fval (env: forall ty, V -> ftype ty) (e: expr) {struct e}:
 Lemma is_nan_cast:
   forall  t1 t2 x1,
    is_nan _ _ x1 = false ->
-   is_nan _ _ (cast t2 t1 x1) = false.
+   is_nan _ _ (@cast _ t2 t1 x1) = false.
 Proof.
 intros.
 unfold cast.
@@ -316,7 +316,7 @@ Qed.
 Lemma cast_is_nan :
   forall t1 t2 x1,
   is_nan _ _ x1 = true ->
-  is_nan _ _ (cast t1 t2 x1) = true.
+  is_nan _ _ (@cast _ t1 t2 x1) = true.
 Proof.
 intros.
 unfold cast.
@@ -330,7 +330,7 @@ Qed.
 Lemma cast_inf tfrom tto:
   forall f,
   is_finite _ _ f = false ->
-  is_finite _ _ (cast tto tfrom f) = false.
+  is_finite _ _ (@cast _ tto tfrom f) = false.
 Proof.
   unfold cast.
   intros.
@@ -344,7 +344,7 @@ Qed.
 Lemma cast_inf_strict tfrom tto:
   forall f,
   is_finite_strict _ _ f = false ->
-  is_finite_strict _ _ (cast tto tfrom f) = false.
+  is_finite_strict _ _ (@cast _ tto tfrom f) = false.
 Proof.
   unfold cast.
   intros.
