@@ -375,16 +375,29 @@ rewrite (ring_simp1_correct _ _ _ H).
 auto.
 Qed.
 
-Ltac simple_reify :=
-match goal with
- |- Rabs ?t <= ?r =>
+Ltac simple_reify_aux t r :=
   let vars := get_vars t (@nil R) in
   let expr1 := reify t vars in
   let expr := fresh "__expr" in 
   pose (expr := expr1);
   change t with (eval expr vars);
   find_hyps vars;
-  let __vars := fresh "__vars" in set (__vars := vars) in *
+  let __vars := fresh "__vars" in set (__vars := vars) in *.
+
+Lemma simple_reify_aux1:
+  forall a b c  : R,   c < b - a ->  a < b - c.
+Proof. intros. lra. Qed.
+
+Lemma simple_reify_aux2:
+  forall a b c  : R,   c <= b - a ->  a <= b - c.
+Proof. intros. lra. Qed.
+
+Ltac simple_reify :=
+lazymatch goal with
+ | |- Rabs ?t <= ?r => simple_reify_aux t r
+ | |- Rabs ?t < ?r => simple_reify_aux t r
+ | |- ?a < ?b - Rabs ?c => apply simple_reify_aux1; simple_reify 
+ | |- ?a <= ?b - Rabs ?c => apply simple_reify_aux2; simple_reify 
 end.
 
 Ltac reified_ring_simplify enable e :=
@@ -1341,6 +1354,45 @@ Lemma prune_terms_correct:
      length hyps = length vars ->
      eval_hyps hyps vars (Rabs (eval e1 vars) <= r - F.toR slop) ->
       eval_hyps hyps vars (Rabs (eval e vars) <= r).
+Proof.
+intros.
+apply eval_hyps_correct ; auto.
+intros.
+apply eval_hyps_correct in H2; auto.
+clear H1.
+assert (Forall2 check_bound (map b_hyps hyps) vars). {
+clear - H3.
+induction H3.
+constructor.
+constructor; auto.
+clear - H.
+destruct (b_hyps x) eqn:?H; auto.
+2: simpl; auto.
+simpl.
+eapply b_hyps_correct in H0.
+apply H0.
+clear - H.
+induction x.
+constructor.
+unfold eval_hyps1 in H.
+inversion H; clear H; subst.
+constructor; auto.
+} clear H3.
+pose proof (prune_correct _ _ _ _ _ H H0 vars H1).
+clear - H2 H3.
+revert H2 H3.
+unfold Rabs. repeat destruct (Rcase_abs _); intros; lra.
+Qed.
+
+
+Lemma prune_terms_correct_lt:
+ forall hyps e cutoff e1 slop, 
+   prune (map b_hyps hyps) e cutoff = (e1,slop) ->
+  F.real slop = true ->
+   forall vars r, 
+     length hyps = length vars ->
+     eval_hyps hyps vars (Rabs (eval e1 vars) < r - F.toR slop) ->
+      eval_hyps hyps vars (Rabs (eval e vars) < r).
 Proof.
 intros.
 apply eval_hyps_correct ; auto.
@@ -3208,12 +3260,43 @@ rewrite <- (ring_simp_correct false 100 e).
 eapply prune_terms_correct in H3; try eassumption; auto.
 Qed.
 
+Lemma simplify_and_prune_correct_lt:
+ forall hyps e cutoff e1 slop,  
+   simplify_and_prune hyps e cutoff = (e1,slop) ->
+  F.real slop = true ->
+   forall vars r, 
+     length hyps = length vars ->
+     eval_hyps hyps vars (Rabs (eval e1 vars) < r - F.toR slop) ->
+      eval_hyps hyps vars (Rabs (eval e vars) < r).
+Proof.
+intros.
+unfold simplify_and_prune in H.
+destruct (prune (map b_hyps hyps) (ring_simp false 100 e) cutoff) eqn:?H.
+assert (t = slop) by congruence.
+assert (e1 = cancel_terms e0) by congruence.
+clear H; subst t e1.
+rewrite cancel_terms_correct in H2.
+rewrite <- (ring_simp_correct false 100 e).
+eapply prune_terms_correct_lt in H3; try eassumption; auto.
+Qed.
+
+Ltac cleanup_F_toR :=
+repeat
+ let j := fresh "j" in 
+ set (j := Private.I2.F.toR _);
+ cbv - [IZR] in j;
+ subst j.
+
 Ltac prune_terms cutoff := 
  simple_reify;
- match goal with |- eval_hyps _ _ (Rabs (eval ?e _) <= _) => 
+ match goal with
+ | |- eval_hyps _ _ (Rabs (eval ?e _) <= _) => 
     eapply (simplify_and_prune_correct _ _ cutoff);  [vm_compute; reflexivity | reflexivity |  reflexivity |  try clear e]
+ | |- eval_hyps _ _ (Rabs (eval ?e _) < _) => 
+    eapply (simplify_and_prune_correct_lt _ _ cutoff);  [vm_compute; reflexivity | reflexivity |  reflexivity |  try clear e]
  end;
- unfold_eval_hyps.
+ unfold_eval_hyps;
+ cleanup_F_toR.
 
 (* Here is a version that _only_ does cancel_terms; this is sometimes useful *)
 
@@ -3310,223 +3393,46 @@ Ltac prune_terms' H cutoff :=
 
 Definition cutoff n := Tactic_float.Float.scale (Tactic_float.Float.fromZ 1) (-n)%Z.
 
-Lemma test1:
- forall 
- (x v e0 d e1 e2 d0 e3 : R)
- (BOUND : -2 <= v <= 2)
- (BOUND0 : -2 <= x <= 2)
- (E : Rabs e0 <= / 713623846352979940529142984724747568191373312)
- (E0 : Rabs d <= / 16777216)
- (E1 : Rabs e1 <= / 1427247692705959881058285969449495136382746624)
- (E2 : Rabs e2 <= / 713623846352979940529142984724747568191373312)
- (E3 : Rabs d0 <= / 16777216)
- (E4 : Rabs e3 <= / 1427247692705959881058285969449495136382746624),
-Rabs
-  (((x + (1 / 32 * v + e2)) * (1 + d) + e3 + (1 / 2048 * - x + e0)) *
-   (1 + d0) + e1 - (x + 1 / 32 * v + 1 / 2 * (1 / 32 * (1 / 32)) * - x)) <=
-   2.46e-7.
-Proof.
-intros.
-prune_terms (cutoff 30).
-(*match goal with |- Rabs ?a <= _ => field_simplify a end.*)
-match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end.
-eapply Rle_trans; [ apply H99 | clear  ].
-compute; lra.
-Qed.
+(* The following RtoFloat tactics are a very crude way to convert a n
+  expression of type R that uses only IZR, Rplus, Rmult, Rdiv, Rinv,
+  to a primitive floating-point constant.  It's crude in part because
+  it always uses rounding-UP, which is not really appropriate, and it'
+ does not use interval arithmetic.   It could perhaps be improved to actually
+ compute in interval arithmetic, etc.
 
-Lemma test1_double_precision:
- forall 
- (x v e0 d e1 e2 d0 e3 : R)
- (BOUND : -2 <= v <= 2)
- (BOUND0 : -2 <= x <= 2)
- (E : Rabs e0 <= / bpow' 2 298)
- (E0 : Rabs d <= / bpow' 2 48)
- (E1 : Rabs e1 <= / bpow' 2 300)
- (E2 : Rabs e2 <= / bpow' 2 298)
- (E3 : Rabs d0 <= / bpow' 2 48)
- (E4 : Rabs e3 <= / bpow' 2 298),
-Rabs
-  (((x + (1 / 32 * v + e2)) * (1 + d) + e3 + (1 / 2048 * - x + e0)) *
-   (1 + d0) + e1 - (x + 1 / 32 * v + 1 / 2 * (1 / 32 * (1 / 32)) * - x)) <=
-   2.46e-7.
-Proof.
-intros.
-prune_terms (cutoff 60).
-(*match goal with |- Rabs ?a <= _ => field_simplify a end.*)
-match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end.
-eapply Rle_trans; [ apply H99 | clear  ].
-compute; lra.
-Qed.
-
-Lemma test3: forall
- (x v d1 d2 e0 e1 e3 : R)
- (BOUND : -2 <= v <= 2)
- (BOUND0 : 2 <= x <= 4)
- (E : Rabs d1 <= / 16777216) 
- (E0 : Rabs d2 <= / 16777216)
- (E1 : Rabs e0 <= / 713623846352979940529142984724747568191373312)
- (E2 : Rabs e1 <= / 1427247692705959881058285969449495136382746624)
- (E3 : Rabs e3 <= / 713623846352979940529142984724747568191373312),
-Rabs
-  (((x + (1 / 32 * v + e0)) * (1 + d2) + (1 / 2048 * (3 - x) + e3)) *
-   (1 + d1) + e1 -
-   (x + 1 / 32 * v + 1 / 2 * (1 / 32 * (1 / 32)) * (3 - x))) <=
-/ 2000000.
-Proof.
-intros.
-prune_terms (cutoff 30).
-match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end.
-eapply Rle_trans; [ apply H99 | clear  ].
-simpl; compute; lra.
-Qed.
-
-
-Lemma test3_alt: forall
- (x v d1 d2 e0 e1 e3 : R)
- (BOUND : -2 <= v <= 2)
- (BOUND0 : 2 <= x <= 4)
- (E : Rabs e0 <= / 713623846352979940529142984724747568191373312)
- (E0 : Rabs d1 <= / 16777216) 
- (E1 : Rabs e1 <= / 713623846352979940529142984724747568191373312)
- (E2 : Rabs d2 <= / 16777216) 
- (E3 : Rabs e3 <= / 1427247692705959881058285969449495136382746624),
-Rabs
-  ((x + (1 / 32 * ((v + (1 / 64 * (3 - x) + e1)) * (1 + d1) + e3) + e0)) *
-   (1 + d2) - (x + 1 / 32 * (v + 1 / 32 / 2 * (3 - x)))) <= 
-  1/4000000.
-Proof.
-intros.
-prune_terms (cutoff 30).
-match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end.
-eapply Rle_trans; [ apply H99 | clear  ].
-compute; simpl; lra.
-Qed.
-
-Lemma test2:
- forall 
- (d d0 d1 e0 d2 e1 e2 e3 e4 e5 d3 e6 e7 e8 e9 e10 e11 e12 e13 d4 e14
-e15 e16 e17 e18 d5 d6 d7 d8 e19 e20 d9 d10 d11 d12 e21 d13 e22 e23 e24
-x v : R)
- (BOUND : (-2) <= v <= 2)
- (BOUND0 : (-2) <= x <= 2)
- (E : (Rabs d) <= (/ 16777216))
- ( E0 : (Rabs d0) <= (/ 16777216))
- ( E1 : (Rabs d1) <= (/ 16777216)) 
-( E2 : (Rabs e0) <= (/ 1427247692705959881058285969449495136382746624))
- (E3 : (Rabs d2) <= (/ 16777216)) 
- (E4 : (Rabs e1) <= (/ 713623846352979940529142984724747568191373312))
- ( E5 : (Rabs e2) <= (/ 1427247692705959881058285969449495136382746624))
- ( E6 : (Rabs e3) <= (/ 1427247692705959881058285969449495136382746624))
- ( E7 : (Rabs e4) <= (/ 1427247692705959881058285969449495136382746624))
- ( E8 : (Rabs e5) <= (/ 1427247692705959881058285969449495136382746624)) 
-( E9 : (Rabs d3) <= (/ 16777216))
- ( E10 : (Rabs e6) <= (/ 713623846352979940529142984724747568191373312)) 
-( E11 : (Rabs e7) <= (/ 713623846352979940529142984724747568191373312))
- ( E12 : (Rabs e8) <= (/ 713623846352979940529142984724747568191373312))
- ( E13 : (Rabs e9) <= (/ 713623846352979940529142984724747568191373312)) 
- ( E14 : (Rabs e10) <= (/ 1427247692705959881058285969449495136382746624))
- ( E15 : (Rabs e11) <= (/ 1427247692705959881058285969449495136382746624)) 
-( E16 : (Rabs e12) <= (/ 1427247692705959881058285969449495136382746624))
- ( E17 : (Rabs e13) <= (/ 1427247692705959881058285969449495136382746624))
- ( E18 : (Rabs d4) <= (/ 16777216))
- ( E19 : (Rabs e14) <= (/ 713623846352979940529142984724747568191373312))
- ( E20 : (Rabs e15) <= (/ 1427247692705959881058285969449495136382746624))
- (E21 : (Rabs e16) <= (/ 1427247692705959881058285969449495136382746624) )
-( E22 : (Rabs e17) <= (/ 1427247692705959881058285969449495136382746624))
- ( E23 : (Rabs e18) <= (/ 1427247692705959881058285969449495136382746624)) 
-( E24 : (Rabs d5) <= (/ 16777216))
-(E25 : (Rabs d6) <= (/ 16777216))
-(E26 : (Rabs d7) <= (/ 16777216))
-(E27 : (Rabs d8) <= (/ 16777216))
-(E28 : (Rabs e19) <= (/ 713623846352979940529142984724747568191373312))
-(E29 : (Rabs e20) <= (/ 1427247692705959881058285969449495136382746624))
-(E30 : (Rabs d9) <= (/ 16777216))
-(E31 : (Rabs d10) <= (/ 16777216))
-(E32 : (Rabs d11) <= (/ 16777216))
-(E33 : (Rabs d12) <= (/ 16777216))
-(E34 : (Rabs e21) <= (/ 713623846352979940529142984724747568191373312))
-(E35 : (Rabs d13) <= (/ 16777216))
-(E36 : (Rabs e22) <= (/ 713623846352979940529142984724747568191373312))
-(E37 : (Rabs e23) <= (/ 713623846352979940529142984724747568191373312))
-(E38 : (Rabs e24) <= (/ 1427247692705959881058285969449495136382746624)),
-  Rabs
-    (((((x + (1 / 32 * v + e14)) * (1 + d3) + e20 + (1 / 2048 * - x + e1)) *
-       (1 + d5) + e10) *
-      (((x + (1 / 32 * v + e21)) * (1 + d1) + e17 + (1 / 2048 * - x + e8)) *
-       (1 + d11) + e4) * (1 + d8) + e13 +
-      (((v +
-         (1 / 64 *
-          ((- x +
-            -
-            (((x + (1 / 32 * v + e23)) * (1 + d0) + e16 +
-              (1 / 2048 * - x + e7)) * (1 + d10) + e3)) * 
-           (1 + d7) + e12) + e22)) * (1 + d2) + e18) *
-       ((v +
-         (1 / 64 *
-          ((- x +
-            -
-            (((x + (1 / 32 * v + e9)) * (1 + d12) + e5 +
-              (1 / 2048 * - x + e19)) * (1 + d4) + e24)) * 
-           (1 + d) + e15) + e6)) * (1 + d9) + e2) * 
-       (1 + d6) + e11)) * (1 + d13) + e0 -
-     ((x + 1 / 32 * v + 1 / 2 * (1 / 32 * (1 / 32)) * - x) *
-      (x + 1 / 32 * v + 1 / 2 * (1 / 32 * (1 / 32)) * - x) +
-      (v +
-       1 / 2 * (1 / 32) *
-       (- x + - (x + 1 / 32 * v + 1 / 2 * (1 / 32 * (1 / 32)) * - x))) *
-      (v +
-       1 / 2 * (1 / 32) *
-       (- x + - (x + 1 / 32 * v + 1 / 2 * (1 / 32 * (1 / 32)) * - x))))) <=
-  3e-6.
-Proof.
-intros.
-destruct true.
--
-Time prune_terms (cutoff 30).  
-(* before collapse_terms was added to the algorithm, this
-   took about 1.8-2.0 sec.
-  Now it takes 1.55-6.0 sec. *)
-
-(*Time match goal with |- Rabs ?a <= _ => field_simplify a end.*)
-match goal with |- Rabs ?t <= ?r => interval_intro (Rabs t) as H99 end;
-eapply Rle_trans; [ apply H99 | clear  ].
-simpl; compute; lra.
--
-simple_reify.
-pose (nodes_and_terms e := (count_nodes e, count_terms e)).
-
-pose (counts0 := nodes_and_terms __expr);
-vm_compute in counts0;
-let e1 := constr:(ring_simp false 100 __expr) in 
-let e1 := eval vm_compute in e1 in 
-pose (counts1 := nodes_and_terms e1);
-vm_compute in counts1;
-let e2 := constr:(fst (prune (map b_hyps __hyps) e1 (cutoff 30))) in
-let e2 := eval vm_compute in e2 in 
-pose (counts2 := nodes_and_terms e2);
-vm_compute in counts2;
-let e3 := constr:(cancel_terms e2) in 
-let e3 := eval vm_compute in e3 in 
-pose (counts3 := nodes_and_terms e3);
-vm_compute in counts3;
-let e4 := constr:(ring_simp true 100 e3) in 
-let e4 := eval vm_compute in e4 in 
-pose (counts4 := nodes_and_terms e4);
-vm_compute in counts4;
-pose (t3 := eval e3 __vars); 
-pose (t4 := eval e4 __vars); 
-cbv [eval nth nullary_real unary_real binary_real bpow' __vars] in t3, t4;
-elimtype False; clear - t3 t4 counts0 counts1 counts2 counts3 counts4.
-Open Scope Z.
-
-(*
-counts0 := (242, 4) : Z * Z
-counts1 := (612284, 31759) : Z * Z
-counts2 := (1456, 244) : Z * Z
-counts3 := (289, 25) : Z * Z ,  before collapse_terms was added 
-counts3 := (219, 24) : Z * Z   with collapse_terms
-counts4 := (395, 46) : Z * Z
+  Usage:  
+  RtoFloat' x    returns a float-valued expression corresponding
+                                  to the real-valued expression
+  RtoFloat x    returns a float-valued constant from the real-valued expr
+  ShowBound  prints it out with its name.
 *)
-Abort.
+
+Ltac RtoFloat' x :=
+match x with
+| IZR ?z => constr:(Tactic_float.Float.fromZ_UP 53%Z z)
+| Rplus ?a ?b => let a' := RtoFloat' a in let b' := RtoFloat' b in constr:(PrimFloat.add a' b')
+| Rmult ?a ?b => let a' := RtoFloat' a in let b' := RtoFloat' b in constr:(PrimFloat.mul a' b')
+| Rdiv ?a ?b => let a' := RtoFloat' a in let b' := RtoFloat' b in constr:(PrimFloat.div a' b')
+| Rinv ?a => let a' := RtoFloat' a in constr:(PrimFloat.div PrimFloat.one a')
+end.
+
+Ltac RtoFloat x := 
+   let y := eval simpl in x in 
+   let y := RtoFloat' y in
+   let y := eval compute in y in
+   exact y.
+
+Ltac ShowBound bound :=
+  let y := constr:(proj1_sig bound) in
+  let y := eval simpl in y in 
+  let y := RtoFloat' y in
+  let y := eval compute in y in 
+  idtac "ShowBound" bound y; exact tt.
+
+Ltac ShowBound' bound :=
+  let y := constr:(proj1_sig bound) in
+  let y := eval simpl in y in 
+  idtac "ShowBound" bound y; exact tt.
+
 
 

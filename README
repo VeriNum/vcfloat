@@ -7,11 +7,21 @@ Version 2.0 (2022-3-10) Many improvements, see below.
 Copyright (C) 2015 Reservoir Labs Inc.
 Copyright (C) 2021-22  Andrew W. Appel and Ariel Kellison.
 
+VCFloat is open-source licensed according to the LGPL (Gnu Lesser General
+Public License) version 3 or any later version.
+
+Previously it was licensed differently; see OLD_LICENSE for an explanation.
+
+This software is distributed WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+By making a pull-request to this repo, or by making a direct push, or by contributing
+by any other such means, you thereby certify that you have the rights to do
+so specified in the Developer Certificate of Origin, https://developercertificate.org/
+and you also thereby license your contribution by the LGPL 3.0 and later.
+
 VCFloat 1.0 was implemented 2015 by Tahina Ramananandro et al (see citation below).
 VCFloat since 2021 is maintained and extended by Andrew Appel and Ariel Kellison.
-
-VCFloat is distributed under the GNU General Public License, version
-3.0 or later.  See LICENSE.
 
 For an introduction, read
 VCFloat2: Floating-point error analysis in Coq, by Appel & Kellison, 2022,
@@ -78,8 +88,8 @@ from opam, from the Coq Platform, or (deprecated method) automatically
 downloaded from their official sources and built during VCFloat's
 building process:
 
-- CompCert 3.10 (from AbsInt's GitHub at
-  https://github.com/AbsInt/CompCert.git), or from opam
+- CompCert 3.10 (from AbsInt's GitHub at https://github.com/AbsInt/CompCert.git),
+  or from opam (but you don't need CompCert at all if you are using the "ftype" style, see above)
 
 - Ssreflect 1.5 or later, e.g. from opam
 

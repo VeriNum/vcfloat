@@ -360,7 +360,7 @@ Lemma InvShift_accuracy:
   (F1 : is_finite (fprec ty) (femax ty) x = true),
  Rabs (B2R (fprec ty) (femax ty) (fop_of_rounded_unop (InvShift pow ltr) ty x) -
       F2R radix2 (B2F (B2 ty (Z.neg pow))) * B2R (fprec ty) (femax ty) x) <=
-   bpow radix2 (3 - femax ty - fprec ty).
+   /2 * bpow radix2 (3 - femax ty - fprec ty).
 Proof.
 intros.
 unfold fop_of_unop.
@@ -382,7 +382,7 @@ destruct ltr.
     set (j := bpow radix2 _) in *. clearbody j.
     destruct x; try discriminate; simpl; rewrite ?Rmult_0_l, Rminus_0_r, Rabs_R0; lra.     
   +
-    assert (H2 := Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BSN.mode_NE (B2 ty (Z.neg pow)) x).
+    assert (H2 := Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) x).
     rewrite Rmult_comm in H2. 
     unfold BMULT, BINOP.
     rewrite F2R_B2F by auto.
@@ -404,7 +404,7 @@ destruct ltr.
     set (j := bpow radix2 _) in *. clearbody j.
     destruct x; try discriminate; simpl; rewrite ?Rmult_0_l, Rminus_0_r, Rabs_R0; lra.     
   +
-    assert (H2 := Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BSN.mode_NE (B2 ty (Z.neg pow)) x).
+    assert (H2 := Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) x).
     rewrite Rmult_comm in H2. 
     unfold BMULT, BINOP.
     rewrite F2R_B2F by auto.
@@ -435,7 +435,7 @@ destruct ltr; destruct  (Z_lt_le_dec ((Z.neg pow) + 1) (3 - femax ty));
   unfold Datatypes.id.
 - rewrite (B2_zero _ _ l); unfold Bmult. destruct x; auto.
 - 
-    pose proof (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BSN.mode_NE (B2 ty (Z.neg pow)) x).
+    pose proof (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) x).
     rewrite Rmult_comm in H2. 
     pose proof (B2_correct ty (Z.neg pow) ltac:(lia)).
    rewrite H3 in H2.
@@ -447,7 +447,7 @@ destruct ltr; destruct  (Z_lt_le_dec ((Z.neg pow) + 1) (3 - femax ty));
    apply  InvShift_finite_aux; auto.
 - rewrite (B2_zero _ _ l); unfold Bmult. destruct x; auto.
 - 
-    pose proof (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BSN.mode_NE (B2 ty (Z.neg pow)) x).
+    pose proof (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) x).
     rewrite Rmult_comm in H2. 
     pose proof (B2_correct ty (Z.neg pow) ltac:(lia)).
    rewrite H3 in H2.

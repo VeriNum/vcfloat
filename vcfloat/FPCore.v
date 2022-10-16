@@ -668,7 +668,7 @@ Definition cast (tto: type) (tfrom: type) (f: ftype tfrom): ftype tto :=
   match type_eq_dec tfrom tto with
     | left r => eq_rect _ _ f _ r
     | _ => Bconv (fprec tfrom) (femax tfrom) (fprec tto) (femax tto)
-                        (fprec_gt_0 _) (fprec_lt_femax _) (conv_nan _ _) BSN.mode_NE f
+                        (fprec_gt_0 _) (fprec_lt_femax _) (conv_nan _ _) BinarySingleNaN.mode_NE f
   end.
 
 Definition cast_lub_l t1 t2 := cast (type_lub t1 t2) t1.
@@ -751,7 +751,7 @@ Qed.
 
 Definition BINOP (op: ltac:( let t := type of Bplus in exact t ) ) op_nan ty 
     : ftype ty -> ftype ty -> ftype ty 
-    := op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (op_nan ty) BSN.mode_NE.
+    := op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (op_nan ty) BinarySingleNaN.mode_NE.
 
 Definition BPLUS := BINOP Bplus plus_nan.
 Definition BMINUS := BINOP Bminus plus_nan. (* NOTE: must be same as the one used for plus *)
@@ -759,6 +759,13 @@ Definition BMULT := BINOP Bmult mult_nan.
 Definition BDIV := BINOP Bdiv div_nan.
 Definition BABS ty := Babs _ (femax ty) (abs_nan ty).
 Definition BOPP ty := Bopp _ (femax ty) (opp_nan ty).
+
+
+Definition UNOP (op: ltac:( let t := type of Bsqrt in exact t ) ) op_nan ty 
+    : ftype ty -> ftype ty
+    := op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (op_nan ty) BinarySingleNaN.mode_NE.
+
+Definition BSQRT :=  UNOP Bsqrt sqrt_nan.
 
 End WITHNANS.
 
@@ -879,8 +886,7 @@ Ltac compute_float_operation E :=
            end.
 
 Ltac compute_binary_floats :=
-repeat
-(match goal with
+repeat (match goal with
 | |- context [@BDIV ?NANS ?t ?x1 ?x2] =>
            const_float x1; const_float x2;
            let c := constr:(@BDIV NANS t) in 

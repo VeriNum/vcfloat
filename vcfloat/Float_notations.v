@@ -349,7 +349,7 @@ Definition binary_float_to_number_nonneg (prec emax : Z)
        (* x must be nonnegative! *)
        (x: binary_float prec emax) : option Number.number :=
     let '(y,e) := Bfrexp _ _ prec_gt_0 (*Hmax*) x in
-    let z := Bldexp _ _ prec_gt_0 Hprecmax BSN.mode_NE y prec in
+    let z := Bldexp _ _ prec_gt_0 Hprecmax BinarySingleNaN.mode_NE y prec in
     match ZofB _ _ z
     with None =>None
     | Some i => 

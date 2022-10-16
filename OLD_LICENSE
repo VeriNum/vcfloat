@@ -1,0 +1,68 @@
+How VCFloat became LGPL licensed instead of GPL licensed: a History
+
+VCFloat, a Coq Framework for verifying floating-point computations,
+was originally developed by researchers at Reservoir Labs Inc.
+It was copyright (C) 2015 Reservoir Labs Inc., made open-source
+under the Gnu Public License (GPL), and published in a github repo.
+
+In 2021 and 2022, Andrew Appel and Ariel Kellison made contributions
+to the github repo, which were also (therefore) GPL Licensed.
+
+In 2022, Reservoir Labs Inc. was acquired by Qualcomm.  Qualcomm determined
+that this was not an open-source project that they wanted to continue
+to maintain.  Since Andrew Appel was interested in maintaining and improving
+VCFloat, Qualcomm generously decided to transfer all its copyright ownership
+in VCFloat to Andrew Appel, which was done by contract in June 2022.
+
+The maintainers of a GPL-licensed repository cannot simply change the license
+to some other license, even LGPL, unless every one of the copyright owners agrees.
+In July 2022, "every one of the copyright owners" was Andrew Appel and Ariel Kellison.
+On 10 July 2022, those owners hereby license their copyrighted software under the LGPL.
+
+We welcome contributions by others to VCFloat, which will continue to be LGPL licensed.
+
+Below, for historical purposes, we reproduce the license agreement as it stood
+in June 2022.
+
+--------------OLD, OBSOLETE LICENSE FOLLOWS---------------------------
+
+VCFloat: A Unified Coq Framework for Verifying C Programs with
+Floating-Point Computations. Application to SAR Backprojection.
+
+Copyright (C) 2015 Reservoir Labs Inc.
+Copyright (C) 2021-22  Andrew W. Appel and Ariel Kellison
+
+This software and each of its files are free software. You can
+redistribute them and/or modify them under the terms of the GNU
+General Public License as published by the Free Software Foundation,
+either version 3 of the License (GNU GPL v3), or (at your option) any
+later version.  A verbatim copy of the GNU GPL v3 is included in
+gpl-3.0.txt.
+
+This software is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU GPL
+v3 (and CeCILL-C for patches/interval.patch) for more details.
+
+This work was sponsored in part by DARPA MTO as part of the Power
+Efficiency Revolution for Embedded Computing Technologies (PERFECT)
+program (issued by DARPA/CMO under Contract No: HR0011-12-C-0123). The
+views and conclusions contained in this work are those of the authors
+and should not be interpreted as representing the official policies,
+either expressly or implied, of the DARPA or the
+U.S. Government. Distribution Statement "A" (Approved for Public
+Release, Distribution Unlimited.)
+
+
+If you are using or modifying VCFloat in your work, please consider
+citing the following paper:
+
+Tahina Ramananandro, Paul Mountcastle, Benoit Meister and Richard
+Lethin.
+A Unified Coq Framework for Verifying C Programs with Floating-Point
+Computations.
+In CPP (5th ACM/SIGPLAN conference on Certified Programs and Proofs)
+2016.
+
+VCFloat requires uses third-party libraries listed in ACKS, which
+have various licenses of their own.

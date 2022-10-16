@@ -5,6 +5,8 @@ dir-locals
 *.glob
 *.v.d
 *.vo
+*.vos
+*.vok
 run-coqide.sh
 *~
 *.tgz
