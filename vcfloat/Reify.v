@@ -2,7 +2,7 @@
 
 From vcfloat Require Export RAux.
 From Flocq Require Import Binary Bits Core.
-From compcert Require Import lib.IEEE754_extra (*lib.Floats*) .
+From vcfloat Require Import IEEE754_extra (*lib.Floats*) .
 Require compcert.lib.Maps.  
 Require Coq.MSets.MSetAVL.
 Require vcfloat.Fprop_absolute.
