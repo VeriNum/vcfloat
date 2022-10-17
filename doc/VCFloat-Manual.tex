@@ -1,4 +1,4 @@
-\documentclass{llncs}
+\documentclass[article]{memoir}
 \usepackage{amssymb}
 \usepackage{listings}
 \usepackage{lstlangcoq}
@@ -6,14 +6,26 @@
 \hyphenation{Comp-Cert}
 \pagestyle{plain}
 
+%\setstocksize{210mm}{153mm}
+\setstocksize{230mm}{178mm}
+\settrimmedsize{\stockheight}{\stockwidth}{*}
+\settypeblocksize{200mm}{150mm}{*}
+\setlrmargins{*}{*}{1}
+\setulmargins{*}{*}{1}
+\setlength{\footskip}{8mm}
+\setlength{\headsep}{5mm}
+\setlength{\headheight}{7mm}
+\checkandfixthelayout
+
+
+
 \title{VCFloat 2.0 Reference Manual}
-\author{Andrew W. Appel\inst{1} \and Ariel E. Kellison\inst{2}}
-\institute{Princeton University \and Cornell University}
+\author{Andrew W. Appel \and Ariel E. Kellison}
 
 \begin{document}
 \maketitle
 
-\section{Introduction}
+\chapter{Introduction}
 \label{section:Introduction}
 
 VCFloat is a tool for Coq proofs about floating-point round-off error.
@@ -34,7 +46,7 @@ Let \lstinline{%F64} be a notation scope in which
 \[
 \begin{array}{c}
  1 \le x \le 100 \qquad -1000 \le y \le 1000 \\ \hline
- | \mbox{\lstinline{(x*5.7+y)\%F64}} - R(x)\times 5.7+R(y) | \le A
+ | \mbox{\lstinline{(x*5.7+y)\%F64}} - (R(x)\times 5.7+R(y)) | \le A
 \end{array}
 \]
 where $A$ is an accuracy bound calculated by VCFloat.
@@ -56,7 +68,7 @@ If we view \lstinline{(x*5.7+y)%F64} as a \emph{floating-point functional model}
 \end{enumerate}
 VCFloat2 provides
 \begin{itemize}
-\item The \emph{modelling language} for describing float-valued functional
+\item A \emph{modelling language} for describing float-valued functional
   models and automatically deriving the corresponding real-valued models;
 \item A prover for bounding roundoff error, the difference between the two models;
 \item Tools for connecting float-valued models to C programs.  But
@@ -65,7 +77,7 @@ VCFloat2 provides
   programs in other languages.
 \end{itemize}
 
-\paragraph{To use VCFloat} you follow these steps, as explained in the rest of this reference manual:
+\paragraph{To use VCFloat} you follow these steps, we will explain below:
 \begin{enumerate}
 \item Write down your floating-point functional model as Coq functions on floating-point values.
 \item Pick identifiers for your variables and apply a tactic to reify your model.
@@ -81,15 +93,13 @@ VCFloat2 provides
   mathematical quantity of interest.
 \end{enumerate}
 
-\section{Floating-point functional models}
-Normally to use VCFloat you start with,
+\chapter{Floating-point functional models}
+To use VCFloat you start with,
 \begin{lstlisting}
 Require Import vcfloat.VCFloat.
 \end{lstlisting}
 This imports VCFloat's functional modelling language and all of its
-provers.  But in a .v file is you are \emph{only} writing a functional model,
-and not using the tools to prove things about it, it will suffice
-to import only the modelling language, that is, \lstinline{Require Import vcfloat.FPCore}.
+provers.  
 
 Functional models are written as expressions in Coq that apply
 functions (such as \emph{add} and \emph{multiply}) to
@@ -97,9 +107,9 @@ variables, constants, and subexpressions that belong to floating-point
 \emph{types}.  We will start with the types.
 
 \begin{lstlisting}
-type : Type $\mbox{\qquad\emph{each floating-point format is described as a}~\textsf{type}}$
+type : Type $\mbox{\qquad\qquad\emph{each floating-point format is described as a}~\textsf{type}}$
 ftype: type -> Type $\mbox{\qquad\emph{a floating-point number in format \(\mathsf{t}\) belongs to Coq type} \textsf{ftype(t)}}$
-TYPE : forall (precp : positive) (femax: Z), fprecp<femax -> 1<fprecp -> type.
+TYPE : forall (precp : positive) (femax: Z), (fprecp<femax) -> (1<fprecp) -> type.
 Tsingle: type := TYPE 24 128 I I.
 Tdouble: type := TYPE 53 1024 I I.
 \end{lstlisting}
@@ -113,11 +123,11 @@ any number greater than the number of mantissa bits).
 \lstinline{I} arguments happen to be proofs that \lstinline{24<128}
 and \lstinline{1<24}, and so on.
 
-\subsection{Nans}
+\chapter{NaNs}
 In the IEEE-754 floating-point standard, one cannot
-simply \emph{add} two numbers, one must specify how the Nans will
+simply \emph{add} two numbers, one must specify how the NaNs will
 be propagated.  That is, if $x$ and $y$ are double-precision floats,
-what Not-a-Number (NaN) should float-add return if $y$ is
+what Not-a-Number (NaN) should float-add return if $x$ or $y$ or both are
 Not-a-Number?  Unfortunately that is left to each computer architecture 
 to decide.  VCFloat wants to be rigorously faithful to the
 semantics of the actual computation, so we specify the
@@ -125,8 +135,9 @@ NaN-propagation behavior of the floating-point model in a
 typeclass \lstinline{Nans}.
 
 The good news is that if your computation never produces any
-NaNs, then it won't matter which instance of the Nans typeclass you use.
-You can parameterize your float-functional-model as follows:
+NaNs, then it won't matter which instance of the \lstinline{Nans}
+typeclass you use.
+Then you can parameterize your float-functional-model as follows:
 
 \begin{lstlisting}
 Section WITHNANS.
@@ -136,7 +147,7 @@ $\mbox{\emph{\ldots your functional model goes here }}$
 End WITHNANS.
 \end{lstlisting}
 
-\subsection{Notation Scopes}
+\chapter{Notation Scopes}
 These notation scopes (and their delimiters) come with VCFloat:
 \begin{lstlisting}
 Delimit Scope float32_scope with F32.
@@ -145,8 +156,7 @@ Delimit Scope float64_scope with F64.
 
 Delimiters \%F32 and \%F64 indicate that constants and operator-symbols should stand for single precision and double-precision (respectively) values and functions.
 \begin{lstlisting}
-Definition myformula ($h$: ftype Tdouble) := 
-     (5.0e-1 + cast Tsingle ($h$ * 1.6)%F64)%F32.
+Definition myformula ($h$: ftype Tdouble) := (5.0e-1 + cast Tsingle ($h$ * 1.6)%F64)%F32.
 \end{lstlisting}
 Here, the constant 1.6 and operator \lstinline{*} are
 interpreted in double precision,
@@ -154,14 +164,13 @@ and the constant 5.0e-1 (which could just as well have been written
 as .5) and operator \lstinline{+} are interpreted in single precision.
 The variable $h$ is a double-precision floating-point number.
 
-\subsection{Operators}
+\chapter{Operators}
 The following operators are available in each notation scope:
 \begin{lstlisting}
   + - * / < <= > >= 
 \end{lstlisting}
 The minus sign \lstinline{-} can be used infix (subtraction) or prefix (negation).  The comparison operators can be used in the style
 \lstinline{$x$ <= $y$ < $z$} as usual in Coq.
-
 The following functions can also be used:
 \begin{description}
 \item[\textsc{babs}]  absolute value
@@ -169,7 +178,7 @@ The following functions can also be used:
 \item[\textsf{cast~$t$}]  cast to $\mathsf{ftype}(t)$
 \end{description}
 
-\subsection{Example}
+\chapter{Example}
 
 A mass on a spring---a harmonic oscillator---with position $x$ and
 velocity $v$ can be simulated over time-step $h=\frac{1}{32}$ using the
@@ -182,7 +191,7 @@ Definition step (x v: ftype Tsingle) := (x + h*(v+(h/2)*F(x)))%F32.
 \end{lstlisting}
 
 Here, the function \lstinline{step} is the functional model of
-(part of) the loop body of a C program:
+(part of) a C program:
 
 \begin{lstlisting}[language=C]
 const float h = 1.0/32.0;
@@ -190,13 +199,14 @@ float F (float x) { return 3.0f-x; }
 float step (float x, float v) { return x+h*(v+h/2.0f)*F(x); }
 \end{lstlisting}
 
-\section{Reification and bounds}
+\chapter{Reification}
 
 VCFloat will \emph{reify} your functional model into the internal
 syntax tree that it uses.  In order to do this, it will need
-a \emph{name} for each of your variables; in our example
-these are $x$ and $v$.  VCFloat's name type is the Coq positive numbers,
-and we can arbitrarily use 1 and 2:
+a \emph{name} for each of your variables.
+VCFloat's name type is the Coq positive numbers.
+In our example the variables are $x$ and $v$, and
+we will use 1 and 2 for their names:
 
 \begin{lstlisting}
 Definition _x : ident := 1%positive.  (* Variable name for position *)
@@ -205,13 +215,13 @@ Definition _v : ident := 2%positive.  (* Variable name for velocity *)
 
 Here, the Coq variable \lstinline{_x} contains not the value,
 but the \emph{identifier} that we will use for the floating-point
-variable $x$.  
+variable $x$.  It is not necessary to use consecutive positives,
+we could have used 5 and 2.
 Now we can connect \lstinline{_x} and
 \lstinline{_v} to $x$ and $v$ as follows:
 
 \begin{lstlisting}
-Definition step' := ltac:(let e' := 
-  HO_reify_float_expr constr:([_x; _v]) step in exact e').
+Definition step' := ltac:(let e' := HO_reify_float_expr constr:([_x; _v]) step in exact e').
 \end{lstlisting}
 
 This is a tactical definition of a VCFloat abstract-syntax tree,
@@ -223,14 +233,15 @@ to a floating-point value.  It learns how many arguments
 there should be from examining the Coq type of \lstinline{step}.
 In this case, since \lstinline{step} has type
 \lstinline{ftype Tsingle -> ftype Tsingle -> ftype Tsingle},
-the tactic knows that \lstinline{step} should have.
+the tactic knows that \lstinline{step} should have
+two arguments, both single-precision floats.
 
 The first argument of \lstinline{HO_reify_float_expr}
 should be list of identifiers, to associate with those
 parameters of the functional model.  In this case the list is
 simpliy \lstinline{[_x;_v]}.
 
-\subsection{Bounds}
+\chapter{Boundsmap}
 
 In order to do round-off analysis one generally needs \emph{bounds}
 in the input variables:
@@ -248,11 +259,7 @@ Definition step_bmap : boundsmap :=
 In the first definition, we make a list of \lstinline{varinfo} structures.
 
 \begin{lstlisting}
-Record varinfo := {
-  var_type: type; 
-  var_name: ident; 
-  var_lobound: R; 
-  var_hibound: R}.
+Record varinfo := {var_type: type; var_name: ident; var_lobound: R; var_hibound: R}.
 \end{lstlisting}
 For each parameter of the functional model, we specify its floating-point precision, its identifier, its lowest possible input value,
 and its highest possible input value.  
@@ -262,31 +269,252 @@ a line of boilerplate that always looks the same
 (except for the italicized part where you specify this list
 as shown above).
 
-\subsection{Annotations}
+
+\chapter{Varmap and reflection}
+
+You can \emph{reflect} the abstract-syntax tree (such as \lstinline{step'})
+back into a functional model (such as \lstinline{step}).
+To do that, first make a \lstinline{valmap} that relates your
+variable identifiers to floating-point values.
+
+\begin{lstlisting}
+Definition step_vmap_list ($x$ $v$ : ftype Tsingle) := 
+     [(_x, existT ftype _ $x$);(_v, existT ftype _ $v$)].
+
+Definition step_vmap (x v : ftype Tsingle) : valmap :=
+ ltac:(let z := compute_PTree (valmap_of_list (step_vmap_list x v)) in exact z).
+\end{lstlisting}
+The auxiliary definition \lstinline{step_vmap_list}
+(when applied to $x$ and $v$)
+is a list of pairs, identifier$\times$value,
+where the ``value'' is a dependent pair of a \lstinline{type} (a floating
+point format such as Tsingle or Tdouble) and a value of that type.
+In this case, both $x$ and $v$ are single-precision,
+but valmaps have the ability to mix precisions.
+
+The second step computes this association list into
+an efficient data structure.
+
+The function \lstinline{fval} evaluates the floating-point interpretation
+of an AST, in an environment that maps the variables.
+To \emph{reflect} an AST using a valmap, apply \lstinline{fval} as follows:
+
+\begin{lstlisting}
+Definition reflected_step (x v: ftype Tsingle) :=
+   fval (env_ (step_vmap x v)) step'.
+
+Lemma reflect_reify : forall x v, reflected_step x v = step x v.
+Proof. reflexivity. Qed.
+\end{lstlisting}
+The lemma demonstrates that the round-trip---reify then reflect---is indeed
+the identity function.
+
+\chapter{Real-valued functional model}
+
+Suppose we take the float-valued functional model (the \lstinline{step}) 
+function) and interpret every constant and operator in the real numbers:
+
+\begin{lstlisting}
+Definition step_realmodel' (x v: ftype Tsingle) : R :=
+   FT2R x + (1/32)*(FT2R v + ((1/32)/2)*(3- FT2R x)).
+\end{lstlisting}
+
+You can make this look prettier using a coercion:
+
+\begin{lstlisting}
+Coercion FT2R: ftype >-> R.
+
+Definition step_realmodel (x v: ftype Tsingle) : R :=
+   x + (1/32)*(v + ((1/32)/2)*(3-x)).
+\end{lstlisting}
+
+In fact, you can automatically derive a real-valued functional model
+using the \lstinline{rval} function, which reflects into the reals
+much like \lstinline{fval} reflects into the floats.  Here's
+a theorem showing that you get what you'd expect:
+
+\begin{lstlisting}
+Lemma correspond_floatmodel_realmodel: 
+  forall x v, rval (env_ (step_vmap x v)) step' = step_realmodel x v.
+Proof. intros.
+ unfold step_realmodel.
+ simpl.
+ repeat f_equal; compute; lra.
+Qed. 
+\end{lstlisting}
+
+\chapter{Round-off theorem}
+The purpose of VCFloat is to prove how accurately the
+float-valued functional model approximates the real-valued
+functional model.  Here's an example of such a theorem:
+ 
+\begin{lstlisting}
+Lemma prove_roundoff_bound_step:
+  forall vmap,
+     prove_roundoff_bound step_bmap vmap step'  (/ 4000000).
+\end{lstlisting}
+This says, for any varmap \emph{vmap}
+containing values for $x$ and $v$
+that are within the bounds specified by \lstinline{step_bmap},
+the difference between the floating-point
+interpretation of \lstinline{step'}
+and the real-number interpretation of \lstinline{step'}
+will be less than one four-millionth.
+
+Recall, of course, that ``the floating-point interpretation of \lstinline{step'}'' is exactly our float-valued functional model;
+and ``the real-number interpretation of \lstinline{step'}''
+is exactly our real-valued functional model.
+
+What if we didn't know the accuracy 1/400000 in advance?  See the
+next chapter.
+
+Here is how we prove the theorem:
+\begin{lstlisting}
+Proof.
+intros.
+prove_roundoff_bound.
+-
+ prove_rndval.
+ all: interval.
+- 
+ prove_roundoff_bound2.
+ prune_terms (cutoff 30).
+ do_interval.
+Qed.
+\end{lstlisting}
+Step one, \lstinline{prove_roundoff_bound}, is always the same,
+and leaves two subgoals (delimited by ``bullets'').
+The first subgoal is always proved with \lstinline{prove_rndval},
+which leaves a few verification conditions.
+In this case, there are three: proving that the additions
+and subtractions do not overflow.  In general the subgoals
+left by \lstinline{prove_rndval} are easy to prove using the Coq
+Interval package, as shown here by \lstinline{all:interval}.
+
+The second subgoal is always proved by
+\lstinline{prove_roundoff_bound2}, which leaves
+one subgoal.  In this case the subgoal is,
+
+\begin{lstlisting}
+NANS : Nans
+v_v : R, $\qquad$ BOUND : -2 <= v_v <= 2
+v_x : R, $\qquad$ BOUND0 : 2 <= v_x <= 4
+e0 : R, $\qquad$ E : Rabs e0 <= powerRZ 2 (-150)
+d : R, $\qquad$ E0 : Rabs d <= powerRZ 2 (-24)
+e1 : R, $\qquad$ E1 : Rabs e1 <= powerRZ 2 (-150)
+e2 : R, $\qquad$ E2 : Rabs e2 <= powerRZ 2 (-150)
+d0 : R, $\qquad$ E3 : Rabs d0 <= powerRZ 2 (-24)
+e3 : R, $\qquad$ E4 : Rabs e3 <= powerRZ 2 (-150)
+e4 : R, $\qquad$ E5 : Rabs e4 <= powerRZ 2 (-150)
+d1 : R, $\qquad$ E6 : Rabs d1 <= powerRZ 2 (-24)
+______________________________________(1/1)
+Rabs
+  ((v_x +
+    (1 / 32 *
+     ((v_v + (1 / 64 * ((3 - v_x) * (1 + d0) + e1) + e4)) *
+      (1 + d) + e3) + e2)) * (1 + d1) + e0 -
+   (v_x + 1 / 32 * (v_v + 1 / 32 / 2 * (3 - v_x))))
+ <=  / 4000000
+\end{lstlisting}
+That is, the real-valued variables \lstinline{v_x} and \lstinline{v_v},
+which represent the values of $x$ and $v$, are within the bounds
+specified in the boundsmap.  The variables 
+$\delta,\delta_0,\delta_1$ that represent
+relative errors of additions and subtractions, are each less than
+$2^{-24}$ in absolute value.  The variables 
+$\epsilon,\epsilon_0,\epsilon_1,\epsilon_2,\epsilon_3,\epsilon_4$ that
+represent absolute errors of additions and multiplications
+are each less than $2^{-150}$ in absolute value.
+Finally, assuming all of that, one must prove that the
+difference between the computation \emph{with} all the
+deltas and epsilons and the computation \emph{without}
+the deltas and epsilons, is less than the accuracy bound.
+
+To prove this, one can use the Coq Interval package.  But in many
+cases one must do some work to prepare the goal for solution by
+Interval.  Later chapters will explain.
+In this example, we use the \lstinline{prune_terms} tactic.
+Then the goal solves by \lstinline{do_interval}.
+
+\chapter{When the accuracy bound is unknown}
+
+You can ask VCFloat not only to \emph{prove} an accuracy bound,
+but to \emph{calculate and prove} the bound if you don't know it
+in advance.
+
+\begin{lstlisting}
+Definition find_and_prove_roundoff_bound (bmap: boundsmap) (e: expr) :=
+  {bound: R | forall vmap, prove_roundoff_bound bmap vmap e bound}.
+\end{lstlisting}
+
+This useful definition expresses a dependent pair of a real-valued
+\lstinline{bound} with a proof that this really is a bound
+on the accuracy of a floating-point program.  To use this with
+our ``step'' example, one could state this theorem:
+
+\begin{lstlisting}
+Lemma find_and_prove_roundoff_bound_step :
+  find_and_prove_roundoff_bound step_bmap step'.
+Proof.
+eexists.
+intro.
+ prove_roundoff_bound.
+-
+ prove_rndval; interval.
+-
+prove_roundoff_bound2.
+prune_terms (cutoff 30).
+do_interval.
+Defined.
+\end{lstlisting}
+
+Within the proof, the only differences are,
+\begin{itemize}
+\item  The \lstinline{eexists} tactic introduces a unification variable
+  for the accuracy parameter.
+\item The proof ends with \lstinline{Defined} instead of \lstinline{Qed}
+  so that when it's done, one can extract the actual value of the bound.
+\end{itemize}
+
+\chapter{field\_simplify}
+
+need to write this chapter
+
+\chapter{prune\_terms}
+
+need to write this chapter
+
+\chapter{error\_rewrites\_div\_r}
+
+need to write this chapter
+
+\chapter{Annotations}
 
 Floating-point error analysis can be slightly more precise
 in certain cases:
 
-%\begin{description}
-%\end{description}  
+\begin{description}
+\item[Norm]
+\item[Denorm]
+\item[Sterbenz]
+\end{description}  
 
 
 
-\section{Bibliography}
+\chapter{Bibliography}
 
-VCFloat 1.0 was built in 2015 and described in,
+\quad VCFloat 1.0 was built in 2015 and described in,\newline
+\textbf{A unified Coq framework for verifying C programs with floating-point computations}, by Tahina Ramananandro, Paul Mountcastle, Beno\^{\i}t  Meister, and Richard Lethin, in \emph{Proceedings of the 5th ACM SIGPLAN Conference on Certified Programs and Proofs (CPP'16)}, pages 15--26, 2016\newline (https://doi.org/10.1145/2854065.2854066).
+\vspace\baselineskip
 
-A unified Coq framework for verifying C programs with floating-point computations, by Tahina Ramananandro, Paul Mountcastle, Beno\^{\i}t  Meister, and Richard Lethin, in \emph{Proceedings of the 5th ACM SIGPLAN Conference on Certified Programs and Proofs (CPP'16)}, pages 15--26, 2016 (https://doi.org/10.1145/2854065.2854066).
-
-VCFloat 2.0 was built 2021-2022 and described in,
-
-VCFloat2: Floating-point error analysis in Coq,
+VCFloat 2.0 was built 2021-2022 and described in,\newline
+\textbf{VCFloat2: Floating-point error analysis in Coq},
 by Andrew W. Appel and Ariel E. Kellison,
 October 2022  (distributed as doc/vcfloat2.pdf in the vcfloat repo).
+\vspace\baselineskip
 
-VCFloat 2.0 is applied and demonstrated in,
-
-Verified numerical methods for ordinary differential equations,
+VCFloat 2.0 is applied and demonstrated in,\newline
+\textbf{Verified numerical methods for ordinary differential equations},
 by Ariel E. Kellison and Andrew W. Appel,
 in \emph{15th International Workshop on Numerical Software Verification (NSV'22)}, August 2022.
 
