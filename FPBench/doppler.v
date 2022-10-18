@@ -28,7 +28,7 @@ eexists. intro. prove_roundoff_bound.
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
 time "prove_roundoff_bound2" prove_roundoff_bound2.  
-time "error rewrites" error_rewrites_div_r.
+time "error rewrites" error_rewrites.
 all : (time "prune"
 (prune_terms (cutoff 30);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
@@ -44,6 +44,13 @@ time "goal 1" (
 field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect v, 
+ i_depth 20) as H'; apply H'; apply Rle_refl
+end).
++
+time "goal 1" (
+field_simplify_Rabs;
+match goal with |- Rabs ?a <= _ =>
+interval_intro (Rabs a) with (i_bisect vxH, 
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
 end).
 +
@@ -57,22 +64,20 @@ time "goal 3" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end).
+end). (*
 +
 time "goal 4" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
 i_bisect v, 
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end).
+end). *)
 Defined.
 
 Definition doppler1_bound_val := Eval simpl in doppler1_bound.
 Compute ltac:(ShowBound doppler1_bound_val).
 
-Lemma check_doppler_bound :
-proj1_sig doppler1_bound_val <= 4.5e-13.
-Proof.
+Goal proj1_sig doppler1_bound_val <= 4.5e-13.
 simpl.
 interval.
 Qed.
@@ -99,7 +104,7 @@ eexists. intro. prove_roundoff_bound.
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
 time "prove_roundoff_bound2" prove_roundoff_bound2.
-time "error rewrites" error_rewrites_div_r. 
+time "error rewrites" error_rewrites. 
 all : (time "prune"
 (prune_terms (cutoff 30);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
@@ -111,31 +116,29 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
                       eapply Rle_trans;
                       [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)).
 + 
-time "goal 1"(
+time "goal 1" (
 field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with ( 
-i_bisect v, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+interval_intro (Rabs a) with (i_bisect v, 
+ i_depth 20) as H'; apply H'; apply Rle_refl
 end).
 +
-time "goal 2"(
-match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect vxH, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end).
-+
-time "goal 3"(
+time "goal 2" (
+field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
 end).
 +
-time "goal 4"(
+time "goal 3" (
+match goal with |- Rabs ?a <= _ =>
+interval_intro (Rabs a) with (i_bisect vxH,  
+i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+end).
++
+time "goal 4" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v, 
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
 end).
 Defined.
@@ -171,7 +174,7 @@ eexists. intro. prove_roundoff_bound.
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
 time "prove_roundoff_bound2" prove_roundoff_bound2.
-time "error rewrites" error_rewrites_div_r.
+time "error rewrites" error_rewrites.
 all : (time "prune"
 (prune_terms (cutoff 30);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
@@ -186,29 +189,26 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
 time "goal 1" (
 field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with ( 
-i_bisect v, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+interval_intro (Rabs a) with (i_bisect v, 
+ i_depth 20) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 2" (
+field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect vxH, 
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 3" (
 match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect vxH, 
+interval_intro (Rabs a) with (i_bisect vxH,  
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 4" (
 match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect v0, 
-i_bisect vxH, 
+interval_intro (Rabs a) with (i_bisect vxH, 
 i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
 end).
 Defined.
@@ -218,7 +218,7 @@ Definition doppler3_bound_val := Eval simpl in doppler3_bound.
 Compute ltac:(ShowBound doppler3_bound_val).
 
 Lemma check_doppler3_bound :
-proj1_sig doppler3_bound_val <= 1.75e-13.
+proj1_sig doppler3_bound_val <= 2e-13.
 Proof.
 simpl.
 interval.

@@ -28,7 +28,7 @@ eexists. intro. prove_roundoff_bound.
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
 time "prove_roundoff_bound2" prove_roundoff_bound2.
-time "error rewrites" error_rewrites_div_r. 
+time "error rewrites" error_rewrites. 
 all : (time "prune"
 (prune_terms (cutoff 70);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
@@ -63,7 +63,7 @@ Defined.
 Definition predatorprey_bound_val := Eval simpl in predatorprey_bound.
 Compute ltac:(ShowBound predatorprey_bound_val).
 
-Goal proj1_sig predatorprey_bound_val <= 2.9e-16.
+Goal proj1_sig predatorprey_bound_val <= 3.1e-16.
 simpl; interval. Qed.
 
 Definition verhulst_bmap_list := [Build_varinfo Tdouble 1%positive (1e-1) (3e-1)].
@@ -168,7 +168,7 @@ eexists. intro. prove_roundoff_bound.
 time "prove_rndval" prove_rndval; time "interval" interval.
 -
 time "prove_roundoff_bound2" prove_roundoff_bound2.
-time "error rewrites" error_rewrites_div_l.
+time "error rewrites" error_rewrites.
 all : (time "prune"
 (prune_terms (cutoff 60);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
