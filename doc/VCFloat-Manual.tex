@@ -40,7 +40,7 @@ Let \lstinline{%F64} be a notation scope in which
   \lstinline{*} and \lstinline{+} and are interpreted
   as double-precision (64-bit) floating-point operators
   and 5.7 is interpreted as a double-precision floating-point constant;
-  let \lstinline{R} be the function that
+  let $R$ be the function that
   injects a floating-point value into the reals.  Then we might prove
   that
 \[
@@ -85,7 +85,7 @@ VCFloat2 provides
 \item Specify bounds for your input variables, in a \lstinline{boundsmap}.
 \item State a roundoff-error theorem, and start the proof using the
   \lstinline{prove_rndval} tactic.
-\item Prove all the verification conditions; usually this is as easy as
+\item Prove the stage-1 verification conditions; usually this is as easy as
   writing \lstinline{all:interval}.
 \item Finish proving the main theorem; sometimes this is completely automatic, sometimes you have to assist.
 \item (optional) Prove that your C program correctly implements the functional model.
@@ -167,15 +167,15 @@ The variable $h$ is a double-precision floating-point number.
 \chapter{Operators}
 The following operators are available in each notation scope:
 \begin{lstlisting}
-  + - * / < <= > >= 
+  + $~$ - $~$ * $~$ / $~$ < $~$ <= $~$ > $~$ >= 
 \end{lstlisting}
 The minus sign \lstinline{-} can be used infix (subtraction) or prefix (negation).  The comparison operators can be used in the style
 \lstinline{$x$ <= $y$ < $z$} as usual in Coq.
 The following functions can also be used:
 \begin{description}
-\item[\textsc{babs}]  absolute value
-\item[\textsc{bsqrt}]  square root
-\item[\textsf{cast~$t$}]  cast to $\mathsf{ftype}(t)$
+\item[\textsf{BABS}]  ~~~(absolute value)
+\item[\textsf{BSQRT}]  ~~~(square root)
+\item[\textsf{cast~$t$}]  ~~~~(cast to $\mathsf{ftype}(t)$)
 \end{description}
 
 \chapter{Example}
@@ -278,8 +278,7 @@ To do that, first make a \lstinline{valmap} that relates your
 variable identifiers to floating-point values.
 
 \begin{lstlisting}
-Definition step_vmap_list ($x$ $v$ : ftype Tsingle) := 
-     [(_x, existT ftype _ $x$);(_v, existT ftype _ $v$)].
+Definition step_vmap_list ($x$ $v$ : ftype Tsingle) := [(_x, existT ftype _ $x$);(_v, existT ftype _ $v$)].
 
 Definition step_vmap (x v : ftype Tsingle) : valmap :=
  ltac:(let z := compute_PTree (valmap_of_list (step_vmap_list x v)) in exact z).
@@ -300,8 +299,7 @@ of an AST, in an environment that maps the variables.
 To \emph{reflect} an AST using a valmap, apply \lstinline{fval} as follows:
 
 \begin{lstlisting}
-Definition reflected_step (x v: ftype Tsingle) :=
-   fval (env_ (step_vmap x v)) step'.
+Definition reflected_step (x v: ftype Tsingle) :=  fval (env_ (step_vmap x v)) step'.
 
 Lemma reflect_reify : forall x v, reflected_step x v = step x v.
 Proof. reflexivity. Qed.
@@ -315,17 +313,14 @@ Suppose we take the float-valued functional model (the \lstinline{step})
 function) and interpret every constant and operator in the real numbers:
 
 \begin{lstlisting}
-Definition step_realmodel' (x v: ftype Tsingle) : R :=
-   FT2R x + (1/32)*(FT2R v + ((1/32)/2)*(3- FT2R x)).
+Definition step_realmodel' (x v: ftype Tsingle) : R := FT2R x + (1/32)*(FT2R v + ((1/32)/2)*(3- FT2R x)).
 \end{lstlisting}
-
 You can make this look prettier using a coercion:
 
 \begin{lstlisting}
 Coercion FT2R: ftype >-> R.
 
-Definition step_realmodel (x v: ftype Tsingle) : R :=
-   x + (1/32)*(v + ((1/32)/2)*(3-x)).
+Definition step_realmodel (x v: ftype Tsingle) : R :=  x + (1/32)*(v + ((1/32)/2)*(3-x)).
 \end{lstlisting}
 
 In fact, you can automatically derive a real-valued functional model
@@ -334,13 +329,8 @@ much like \lstinline{fval} reflects into the floats.  Here's
 a theorem showing that you get what you'd expect:
 
 \begin{lstlisting}
-Lemma correspond_floatmodel_realmodel: 
-  forall x v, rval (env_ (step_vmap x v)) step' = step_realmodel x v.
-Proof. intros.
- unfold step_realmodel.
- simpl.
- repeat f_equal; compute; lra.
-Qed. 
+Lemma correspond_floatmodel_realmodel: forall x v, rval (env_ (step_vmap x v)) step' = step_realmodel x v.
+Proof. intros. unfold step_realmodel. simpl. repeat f_equal; compute; lra. Qed. 
 \end{lstlisting}
 
 \chapter{Round-off theorem}
@@ -349,9 +339,7 @@ float-valued functional model approximates the real-valued
 functional model.  Here's an example of such a theorem:
  
 \begin{lstlisting}
-Lemma prove_roundoff_bound_step:
-  forall vmap,
-     prove_roundoff_bound step_bmap vmap step'  (/ 4000000).
+Lemma prove_roundoff_bound_step:  forall $\mathit{vmap}$, prove_roundoff_bound step_bmap $\mathit{vmap}$ step'  (/ 4000000).
 \end{lstlisting}
 This says, for any varmap \emph{vmap}
 containing values for $x$ and $v$
@@ -397,25 +385,22 @@ one subgoal.  In this case the subgoal is,
 
 \begin{lstlisting}
 NANS : Nans
-v_v : R, $\qquad$ BOUND : -2 <= v_v <= 2
-v_x : R, $\qquad$ BOUND0 : 2 <= v_x <= 4
-e0 : R, $\qquad$ E : Rabs e0 <= powerRZ 2 (-150)
-d : R, $\qquad$ E0 : Rabs d <= powerRZ 2 (-24)
-e1 : R, $\qquad$ E1 : Rabs e1 <= powerRZ 2 (-150)
-e2 : R, $\qquad$ E2 : Rabs e2 <= powerRZ 2 (-150)
-d0 : R, $\qquad$ E3 : Rabs d0 <= powerRZ 2 (-24)
-e3 : R, $\qquad$ E4 : Rabs e3 <= powerRZ 2 (-150)
-e4 : R, $\qquad$ E5 : Rabs e4 <= powerRZ 2 (-150)
-d1 : R, $\qquad$ E6 : Rabs d1 <= powerRZ 2 (-24)
+v_v : R, $\qquad$ BOUND : -2 $\le$ v_v $\le$ 2
+v_x : R, $\qquad$ BOUND0 : 2 $\le$ v_x $\le$ 4
+e0 : R, $\qquad$ E : Rabs e0 $\le$ powerRZ 2 (-150)
+d : R, $\qquad$ E0 : Rabs d $\le$ powerRZ 2 (-24)
+e1 : R, $\qquad$ E1 : Rabs e1 $\le$ powerRZ 2 (-150)
+e2 : R, $\qquad$ E2 : Rabs e2 $\le$ powerRZ 2 (-150)
+d0 : R, $\qquad$ E3 : Rabs d0 $\le$ powerRZ 2 (-24)
+e3 : R, $\qquad$ E4 : Rabs e3 $\le$ powerRZ 2 (-150)
+e4 : R, $\qquad$ E5 : Rabs e4 $\le$ powerRZ 2 (-150)
+d1 : R, $\qquad$ E6 : Rabs d1 $\le$ powerRZ 2 (-24)
 ______________________________________(1/1)
-Rabs
-  ((v_x +
-    (1 / 32 *
-     ((v_v + (1 / 64 * ((3 - v_x) * (1 + d0) + e1) + e4)) *
-      (1 + d) + e3) + e2)) * (1 + d1) + e0 -
-   (v_x + 1 / 32 * (v_v + 1 / 32 / 2 * (3 - v_x))))
- <=  / 4000000
+Rabs ((v_x + (1/32 * ((v_v + (1/64 * ((3-v_x)*(1+d0)+e1) + e4)) * (1+d) + e3) + e2)) * (1+d1) + e0
+      - (v_x + 1/32 * (v_v + 1/32 / 2 * (3-v_x))))
+ $\le$  / 4000000
 \end{lstlisting}
+\label{stage2proofgoal}
 That is, the real-valued variables \lstinline{v_x} and \lstinline{v_v},
 which represent the values of $x$ and $v$, are within the bounds
 specified in the boundsmap.  The variables 
@@ -456,21 +441,21 @@ our ``step'' example, one could state this theorem:
 Lemma find_and_prove_roundoff_bound_step :
   find_and_prove_roundoff_bound step_bmap step'.
 Proof.
-eexists.
+eexi$$sts.
 intro.
- prove_roundoff_bound.
+prove_roundoff_bound.
 -
  prove_rndval; interval.
 -
-prove_roundoff_bound2.
-prune_terms (cutoff 30).
-do_interval.
+ prove_roundoff_bound2.
+ prune_terms (cutoff 30).
+ do_interval.
 Defined.
 \end{lstlisting}
 
 Within the proof, the only differences are,
 \begin{itemize}
-\item  The \lstinline{eexists} tactic introduces a unification variable
+\item  The \lstinline{eex$$ists} tactic introduces a unification variable
   for the accuracy parameter.
 \item The proof ends with \lstinline{Defined} instead of \lstinline{Qed}
   so that when it's done, one can extract the actual value of the bound.
@@ -478,11 +463,98 @@ Within the proof, the only differences are,
 
 \chapter{field\_simplify}
 
-need to write this chapter
+The subgoal remaining after \lstinline{prove_roundoff_bound2} has the
+form, $|E'-E|\le A$, where $E$ is the real-valued functional model,
+$E'$ is the real-valued model with deltas and epsilons inserted to
+represent round-off errors, and $A$ is the accuracy bound.
+Goals of this kind can be given to the Coq Interval package to solve.
+Interval works by computing in interval arithmetic,
+where every number is represented by a pair of floating-point numbers
+representing a lower bound and upper bound.  For example, to subtract
+$a-b$ represented as $(a_\mathrm{lo},a_\mathrm{hi})-(b_\mathrm{lo},b_\mathrm{hi})$,
+the result is $(a_\mathrm{lo}-b_\mathrm{hi},~a_\mathrm{hi}-b_\mathrm{lo})$.
+For soundness Interval even takes care to set the floating-point rounding modes
+to round down when computing the lo-bound, and round-up when computing
+the high bound.
+
+When variables such as \lstinline{v_x} and \lstinline{v_v} can
+take on a wide range of possible values, Interval uses
+repeated \emph{bisection} to measure many subranges
+of \lstinline{v_x} and \lstinline{v_v}, taking the maximum error.
+
+But there's a problem.  Consider the interval calculation of
+$(a+\delta)-a$, which comes out to
+\[(a_\mathrm{lo}+\delta_\mathrm{lo}-a_\mathrm{hi},~~a_\mathrm{hi}+\delta_\mathrm{lo}-a_\mathrm{lo}).\]
+If the value of $a$ is only approximately known, so
+$a_\mathrm{hi}-a_\mathrm{lo}$ is large, then the interval approximation
+of $(a+\delta)-a$ is similarly large---which is bad.  But we know that whatever the \emph{true} value of $a$ is, when subtracted from itself it will yield zero.
+That is, a much better approximation can be obtained by
+\emph{symbolically} subtracting $a+\delta-a=\delta$
+before calling the interval package.
+
+If you examine the proof goal at the end of section~\ref{stage2proofgoal},
+you'll see that it contains (more or less)
+$\mathsf{v\_x}(1+\delta)-\mathsf{v\_x}$ and
+$\mathsf{v\_v}(1+\delta)-\mathsf{v\_v}$.  So we can expect the Interval
+tactic to perform badly on this expression.
+The solution is to symbolically simplify the expression,
+and Coq's \lstinline{field_simplify} tactic can do that:
+
+\begin{lstlisting}
+match goal with |- Rabs ?a <= _ $~~$   => field_simplify a end.
+\end{lstlisting}
+This changes the below-the-line portion of the proof goal to,
+\begin{lstlisting}
+Rabs((-v_x*d0*d*d1-v_x*d0*d-v_x*d0*d1-v_x*d0-v_x*d*d1-v_x*d+2047*v_x*d1+64*v_v*d*d1+
+   64*v_v*d+64*v_v*d1+3*d0*d*d1+3*d0*d+3*d0*d1+3*d0+e1*d*d1+e1*d+e1*d1+e1+64*e4*d*d1+
+   64*e4*d+64*e4*d1+64*e4+3*d*d1+3*d+64*e3*d1+64*e3+2048*e2*d1+2048*e2+3*d1+2048*e0)/2048)
+ <= / 4000000
+\end{lstlisting}
+Applying the \lstinline{interval} tactic solves this goal immediately.
+
+But \lstinline{field_simplify} is not the best tool for this job;
+we use it here only to illustrate the principle of (automatically) expanding the
+formula into a multinomial and symbolically canceling terms.
+There are two problems: (1) the multinomial can have an exponential number of terms, most of which are negligible; and (2) nonlinear floating-point functional models do not expand into nice multinomials.
 
 \chapter{prune\_terms}
 
-need to write this chapter
+The proof goal at at the end of the last section had many terms
+similar to \lstinline{3*d0*d*d1} where two or more deltas or epsilons
+are multiplied together.  Since the deltas are bounded by $2^{-24}$
+(in single precision) or $2^{-53}$ (in double precision),
+and the epsilons are much smaller than that, their product is
+probably negligible.
+
+The \lstinline{prune_terms} tactic expands a formula into a
+multinomial (like \lstinline{field_simplify}) but also
+deletes (and bounds) negligible terms---you specify
+a ``cutoff'' for what you consider neglible.  For example,
+at the section-\ref{stage2proofgoal} proof goal,
+one can write,
+
+\begin{lstlisting}
+prune_terms (cutoff 30).
+\end{lstlisting}
+which expands into a multinomial, cancels terms symbolically,
+and deletes all terms that can be bounded by $2^{-30}$.
+The result is,
+
+\begin{lstlisting}
+Rabs (1 * d1 * v_x + 1/32 * d * v_v + 1/32 * d1 * v_v)
+ <=  / 4000000 - 5910977010729000 / 9671406556917033397649408
+\end{lstlisting}
+In this goal, the number \lstinline{5910977010729000 / 9671406556917033397649408} is the sum of the bounds of the negligible terms.
+The goal solves easily by the \lstinline{interval} tactic.
+
+For comparison, using \lstinline{(cutoff 50)} gives the goal,
+\begin{lstlisting}
+Rabs (-1/2048 * d0 * v_x + -1/2048 * d * v_x + 2047/2048 * d1 * v_x +
+      1/32 * d * v_v + 1/32 * d1 * v_v + 3/2048 * d0 + 3/2048 * d + 3/2048 * d1)
+   <= / 4000000 - 5242471455916076 / 20282409603651670423947251286016
+\end{lstlisting}
+in which not as many terms have been neglected.  But either way,
+\lstinline{interval} solves the goal.
 
 \chapter{error\_rewrites\_div\_r}
 
@@ -494,12 +566,43 @@ Floating-point error analysis can be slightly more precise
 in certain cases:
 
 \begin{description}
-\item[Norm]
-\item[Denorm]
-\item[Sterbenz]
-\end{description}  
+\item[Denorm:]  When the result of a calculation is known to be a
+  \emph{denormal} (also called \emph{subnormal}) number---a tiny
+  number within $2^{e_\mathrm{min}}$ of zero---then it has only
+  an additive error.  That is, $(a+b)+\epsilon$ instead of
+  $(a+b)(1+\delta)+\epsilon$.
+\item[Norm:]
+   When the result of a calculation is known to be a
+   \emph{normal} number---that is, bounded away from zero by
+   at least $2^{e_\mathrm{min}}$---then it has only
+  a relative error.  That is, $(a+b)(1+\delta)$ instead of
+  $(a+b)(1+\delta)+\epsilon$.
+\item[Sterbenz:]  When $a,b$ satisfy $\frac{1}{2} < \frac{a}{b} < 2$,
+  then the floating point subtraction $a-b$ is exact, no relative
+  error $\delta$, no absolute error $\epsilon$.
+\end{description}
 
+You can annotate these cases in your functional model using these functions:
 
+\begin{lstlisting}
+Definition Norm {A}(x: A) := x.
+Definition Denorm {A}(x: A) := x.
+Definition Sterbenz {A}(x: A) := x.
+\end{lstlisting}
+
+As you can see, these are just identity functions, so semantically they
+do nothing.  But they guide VCFloat's reifier to mark its internal
+abstract-syntax tree.  This will cause additional proof obligations
+(subgoals) at stage 1, to \emph{prove} that such-and-such a subexpression
+is normal, or denormal, or Sterbenz; but will cause fewer
+deltas and epsilons to be generated at stage 2.
+
+In our running example we could write,
+\begin{lstlisting}
+Definition h := (1/32)%F32.
+Definition F(x: ftype Tsingle) : ftype Tsingle := Sterbenz(3.0-x)%F32.  
+Definition step (x v: ftype Tsingle) := (Norm(x + h*(v+(h/2)*F(x))))%F32.
+\end{lstlisting}
 
 \chapter{Bibliography}
 
