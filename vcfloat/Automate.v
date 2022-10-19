@@ -1489,7 +1489,6 @@ Definition find_and_prove_roundoff_bound {NANS} (bmap: boundsmap) (e: expr) :=
   {bound: R | forall vmap, @prove_roundoff_bound NANS bmap vmap e bound}.
 
 
-
 Ltac mult_le_compat_tac :=
 try apply Rmult_le_compat; try apply Rabs_pos;
 try apply Rmult_le_pos; try apply Rabs_pos;
@@ -1504,10 +1503,10 @@ try apply Rplus_le_compat;
 try apply Rmult_le_compat; try apply Rabs_pos.
 
 
-Ltac error_rewrites_div_r :=
+Ltac error_rewrites :=
 try rewrite Rplus_opp;
 repeat match goal with 
-|- Rabs((?u1 - ?v1) * ?D + ?E - ?U) <= _ => 
+ | |- Rabs((?u1 - ?v1) * ?D + ?E - ?U) <= _ => 
     (replace ((u1 - v1) * D + E - U) with 
       ((u1 * D - v1 * D) - U + E)  by nra) ; 
         eapply Rle_trans; [apply Rabs_triang| idtac]; apply Rplus_le_compat;
@@ -1538,85 +1537,13 @@ repeat match goal with
       ((u1 * D)/v1 -  U + E)  by nra);
         eapply Rle_trans; [apply Rabs_triang| idtac]; apply Rplus_le_compat;
         [eapply Rle_trans; 
-          [apply Rdiv_rel_error_add_reduced_r; interval (* will sometimes fail *)
-          | apply Rmult_le_compat; mult_le_compat_tac; 
+          [ apply Rdiv_rel_error_no_u_div_reduced; interval (* will sometimes fail *)
+          | apply Rmult_le_compat; repeat try mult_le_compat_tac; 
              try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc ]
         |try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc] 
- | |- Rabs((?u1 / ?v1)  + ?E - ?U) <= _ => 
-    (replace ((u1 / v1)  + E - U ) with 
-      (u1/v1 - U + E)  by nra);
-        eapply Rle_trans; [apply Rabs_triang| idtac]; apply Rplus_le_compat;
-        [eapply Rle_trans; 
-          [apply Rdiv_rel_error_add_reduced_r; interval (* will sometimes fail *)
-          | apply Rmult_le_compat; mult_le_compat_tac; 
-           try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc]
-        | try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc] 
- | |- Rabs((?u1 / ?v1)  * ?D - ?U) <= _ => 
-    (replace ((u1 / v1) * D - U ) with 
-      ((u1 * D)/v1 - U )  by nra);
-        eapply Rle_trans; 
-          [apply Rdiv_rel_error_add_reduced_r; interval (* will sometimes fail *)
-          | apply Rmult_le_compat; mult_le_compat_tac; 
-            try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc ]
  | |- Rabs(- _) <= _ => rewrite Rabs_Ropp 
 end.
 
-Ltac error_rewrites_div_l :=
-try rewrite Rplus_opp;
-repeat match goal with 
-|- Rabs((?u1 - ?v1) * ?D + ?E - ?U) <= _ => 
-    (replace ((u1 - v1) * D + E - U) with 
-      ((u1 * D - v1 * D) - U + E)  by nra) ; 
-        eapply Rle_trans; [apply Rabs_triang| idtac]; apply Rplus_le_compat;
-        [rewrite Rminus_rel_error; eapply Rle_trans; [apply Rabs_triang| apply Rplus_le_compat];
-          [ try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc
-          | try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc]
-          |idtac] 
- | |- Rabs((?u1 + ?v1) * ?D + ?E - ?U) <= _ => 
-    (replace ((u1 + v1) * D + E - U) with 
-      ((u1 * D + v1 * D) - U + E)  by nra) ; 
-        eapply Rle_trans; [apply Rabs_triang| idtac]; apply Rplus_le_compat;
-        [rewrite Rplus_rel_error ; eapply Rle_trans ;[apply Rabs_triang| idtac] ; apply Rplus_le_compat;
-          [ try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc
-            | try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc]
-          | idtac]
- | |- Rabs((?u1 * ?v1) * ?D + ?E - ?U) <= _ => 
-    (replace ((u1 * v1) * D + E - U ) with 
-      ((u1 * D * v1) - U + E)  by nra);
-        eapply Rle_trans; [apply Rabs_triang | apply Rplus_le_compat; 
-        [rewrite Rmult_rel_error; eapply Rle_trans; [apply Rabs_triang | apply Rplus_le_compat ;
-              [eapply Rle_trans; [apply Rabs_triang | apply Rplus_le_compat; 
-                  [rewrite Rabs_mult; apply Rmult_le_compat; mult_le_compat_tac| 
-                    rewrite Rabs_mult; apply Rmult_le_compat; mult_le_compat_tac]] 
-              | rewrite Rabs_mult; apply Rmult_le_compat; mult_le_compat_tac]  ] 
-        | idtac ] ] ; try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc
- | |- Rabs((?u1 / ?v1) * ?D + ?E -?U) <= _ => 
-    (replace ((u1 / v1) * D + E - U ) with 
-      ((u1 * D)/v1 -  U + E)  by nra);
-        eapply Rle_trans; [apply Rabs_triang| idtac]; apply Rplus_le_compat;
-        [eapply Rle_trans; 
-          [apply Rdiv_rel_error_add_reduced_l; interval (* will sometimes fail *)
-          | apply Rmult_le_compat; mult_le_compat_tac; 
-             try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc ]
-        |try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc] 
- | |- Rabs((?u1 / ?v1)  + ?E - ?U) <= _ => 
-    (replace ((u1 / v1)  + E - U ) with 
-      (u1/v1 - U + E)  by nra);
-        eapply Rle_trans; [apply Rabs_triang| idtac]; apply Rplus_le_compat;
-        [eapply Rle_trans; 
-          [apply Rdiv_rel_error_add_reduced_l; interval (* will sometimes fail *)
-          | apply Rmult_le_compat; mult_le_compat_tac; 
-           try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc]
-        | try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc] 
- | |- Rabs((?u1 / ?v1)  * ?D - ?U) <= _ => 
-    (replace ((u1 / v1) * D - U ) with 
-      ((u1 * D)/v1 - U )  by nra);
-        eapply Rle_trans; 
-          [apply Rdiv_rel_error_add_reduced_l; interval (* will sometimes fail *)
-          | apply Rmult_le_compat; mult_le_compat_tac; 
-            try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc ]
- | |- Rabs(- _) <= _ => rewrite Rabs_Ropp 
-end.
 
 
 Ltac field_simplify_Rabs :=

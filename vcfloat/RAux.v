@@ -1193,7 +1193,95 @@ rewrite Rmult_assoc.
 apply Rle_refl.
 Qed.
 
+Lemma Rdiv_rel_error_no_u_div' : forall u v u' v', v' <>0 -> v <> 0 ->
+u'/v' - u/v = ((u'-u) - (v'-v) * 1/v * u)  * (1 / (1 + ((v'-v)/v))) * (1/v).
+Proof. intros. field_simplify; repeat try split; try nra; auto. Qed.
+
+Lemma Rdiv_rel_error_no_u_div2 : forall u v u' v', v' <>0 -> v <> 0 ->
+u'/v' - u/v = ((u'-u) - (v'-v)/v  * u)  * (1 / (1 + ((v'-v)/v))) * (1/v).
+Proof. intros. field_simplify; repeat try split; try nra; auto. Qed.
+
+Lemma Rdiv_rel_error_no_u_div_reduced : 
+forall u v u' v', v' <>0 -> v <> 0 ->
+Rabs (u'/v' - u/v) <= (Rabs (u'-u)  +  Rabs ((v'-v)) * Rabs (1/v) * Rabs u)  * Rabs (1 / (1 + ((v'-v)/v))) * Rabs (1/v).
+Proof.
+intros.
+rewrite Rdiv_rel_error_no_u_div'; auto. 
+eapply Rle_trans.
+rewrite Rmult_assoc. 
+rewrite Rabs_mult.
+apply Rmult_le_compat. apply Rabs_pos. apply Rabs_pos.
+match goal with |- Rabs (?a - (v' - v) *1/v * u) <= _=>
+replace (a - (v' - v) * 1/v * u) with (a + (v - v') * (1/v) * u) by nra
+end.
+eapply Rle_trans.
+apply Rabs_triang.
+apply Rplus_le_compat.
+apply Rle_refl.
+rewrite Rabs_mult.
+apply Rmult_le_compat;
+try apply Rabs_pos.
+rewrite Rabs_mult.
+apply Rmult_le_compat;
+try apply Rabs_pos.
+rewrite <- Rabs_Ropp;  apply Rle_refl. 
+apply Rle_refl. 
+apply Rle_refl. 
+rewrite Rabs_mult.
+apply Rmult_le_compat;
+try apply Rabs_pos.
+apply Rle_refl. 
+apply Rle_refl. 
+repeat rewrite Rmult_assoc.
+apply Req_le.
+f_equal. f_equal. f_equal.
+f_equal.
+nra.
+Qed.
+
+Lemma Rdiv_rel_error_no_u_div_reduced2 : 
+forall u v u' v', v' <>0 -> v <> 0 ->
+Rabs (u'/v' - u/v) <= (Rabs (u'-u)  +  Rabs ((v'-v)/v)* Rabs u)  * Rabs (1 / (1 + ((v'-v)/v))) * Rabs (1/v).
+Proof.
+intros.
+rewrite Rdiv_rel_error_no_u_div2; auto. 
+eapply Rle_trans.
+rewrite Rmult_assoc. 
+rewrite Rabs_mult.
+apply Rmult_le_compat. apply Rabs_pos. apply Rabs_pos.
+match goal with |- Rabs (?a - (v' - v)/v * u) <= _=>
+replace (a - (v' - v)/v * u) with (a + (v - v')/v * u) by nra
+end.
+eapply Rle_trans.
+apply Rabs_triang.
+apply Rplus_le_compat.
+apply Rle_refl.
+rewrite Rabs_mult.
+apply Rmult_le_compat;
+try apply Rabs_pos.
+rewrite <- Rabs_Ropp;  apply Rle_refl. 
+apply Rle_refl. 
+apply Rle_refl. 
+
+repeat rewrite Rmult_assoc.
+apply Req_le.
+f_equal. f_equal. f_equal.
+f_equal.
+nra.
+rewrite Rabs_mult.
+nra.
+Qed.
+
 Lemma Rplus_opp : forall a b,
 a + - b = a - b. Proof. intros. nra. Qed.
+
+Lemma Rabs_Ropp2 :
+forall A D U,  Rabs(-A * D - - U) = Rabs(A * D - U).
+Proof.
+intros.
+rewrite <- Rabs_Ropp.
+rewrite Ropp_minus_distr.
+f_equal. nra. Qed.
+
 
 
