@@ -601,8 +601,88 @@ In our running example we could write,
 \begin{lstlisting}
 Definition h := (1/32)%F32.
 Definition F(x: ftype Tsingle) : ftype Tsingle := Sterbenz(3.0-x)%F32.  
-Definition step (x v: ftype Tsingle) := (Norm(x + h*(v+(h/2)*F(x))))%F32.
+Definition step (x v: ftype Tsingle) := Norm(x + h*(v+(h/2)*F(x)))%F32.
 \end{lstlisting}
+
+\chapter{Verified Software Toolchain}
+
+You can use the Verified Software Toolchain (VST) to prove that a C program
+correctly implements a floating-point functional model.
+
+Along with importing \lstinline{VST.floyd.proofauto} and
+the other standard boilerplate that introduces a VST proof,
+you will want:
+
+\begin{lstlisting}
+From vcfloat Require Import FPCompCert Float_notations.
+Require Import float_model.  (* your functional model *)
+\end{lstlisting}
+
+It is not necessary to import all of vcfloat.VCFloat; the imports shown
+are enough to connect CompCert's definitions for floating point
+to VCFloat's definitions.  CompCert and VCFloat use different names
+for the same underlying Flocq floating-point types:
+
+\begin{lstlisting}
+Eval compute in compcert.lib.Floats.float32.   (* = Binary.binary_float 24 128 *)
+Eval compute in ftype Tsingle.   $~~~~~~~~~~~~~~~$              (* = Binary.binary_float 24 128 *)
+Eval compute in compcert.lib.Floats.float.  $~$   (* = Binary.binary_float 53 1024 *)
+Eval compute in ftype Tdouble.   $~~~~~~~~~~~~~$              (* = Binary.binary_float 53 1024 *)
+\end{lstlisting}
+
+In your VST assertions (funspecs, loop invariants,
+etc.), use the VCFloat names for those types.
+For example, here we write \lstinline{ftype Tsingle} instead of
+\lstinline{float32}:
+
+\begin{lstlisting}
+Definition force_spec :=
+ DECLARE _force
+ WITH  q : ftype Tsingle
+ PRE [ tfloat ] PROP() PARAMS(Vsingle q) SEP()
+ POST [ tfloat ] PROP() RETURN (Vsingle (F q)) SEP().
+\end{lstlisting}
+
+There are two useful tactics to convert CompCert-style float notations to VCFloat-style notations.  Immediately after \lstinline{start_function} you
+can write,
+
+\begin{lstlisting}
+start_function.
+subst MORE_COMMANDS; unfold abbreviate; canonicalize_float_constants.
+\end{lstlisting}
+
+The tactic \lstinline{canonicalize_float_constants} converts
+all of the floating-point literals in the AST of your function-body
+into a VCFloat style, which makes them easier to reason about
+(and to relate to your functional model).
+
+The following tactic is useful \emph{after} going \lstinline{forward}
+through a sequence of C statements that perform floating-point
+operations:
+\begin{lstlisting}
+autorewrite with float_elim in *.
+\end{lstlisting}
+It converts \lstinline{Float32.add $x$ $y$} to \lstinline{($x$+$y$)%F32},
+  and similarly for other operators.
+
+That's it!  Other than these conversions, you use VST in
+a completely standard way.  
+
+\subsection*{Exactly matching the functional model}
+
+When using VST or any other tool to prove that a program correctly
+implements a functional model, take care to
+match it exactly.  For example, in floating point the
+associative law $(a+b)+c=a+(b+c)$ does not hold.
+
+The commutative law $a+b=b+a$ may hold \emph{only if
+neither $a$ nor $b$ is a NaN}, depending on how your target
+machine propagates NaNs.  Therefore, if your C program
+computes $a+b$ while the functional model computes $b+a$,
+you will be able to prove it correct only if you propagate
+the invariant that $a$ is finite and $b$ is finite.
+It's certainly possible to propagate such invariants, but
+it's simpler if you don't have to.
 
 \chapter{Bibliography}
 
