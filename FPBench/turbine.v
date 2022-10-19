@@ -7,79 +7,6 @@ Context {NANS:Nans}.
 Open Scope R_scope.
 
 
-
-Definition turbine3_bmap_list := [Build_varinfo Tdouble 1%positive (-45e-1) (-3e-1);Build_varinfo Tdouble 2%positive (4e-1) (9e-1);Build_varinfo Tdouble 3%positive (38e-1) (78e-1)].
-
-Definition turbine3_bmap :=
- ltac:(let z := compute_PTree (boundsmap_of_list turbine3_bmap_list) in exact z).
-
-Definition turbine3 (v : ftype Tdouble) (w : ftype Tdouble) (r : ftype Tdouble) : ftype Tdouble := 
-  ((( (3 -  (2 / (r * r))) - (( (125e-3 * (1 + (2 * v))) *  (((w * w) * r) * r)) / (1 - v))) - (5e-1))%F64).
-
-Definition turbine3_expr := 
- ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) turbine3 in exact e').
-
-
-Lemma turbine3_bound:
-	find_and_prove_roundoff_bound turbine3_bmap turbine3_expr.
-Proof.
-idtac "Starting turbine3".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval with (i_prec 128).
-
--
-time "prove_roundoff_bound2" prove_roundoff_bound2. 
-time "error rewrites" error_rewrites.
-all : (time "prune"
-(prune_terms (cutoff 70);
-try match goal with |- (Rabs ?e <= ?a - 0)%R =>
-  rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
-end;
-try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
-                      let G := fresh "G" in
-                      interval_intro (Rabs e) as G ;
-                      eapply Rle_trans;
-                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)). 
-all : ( time "remaining" (
-try rewrite Rsqr_pow2;
-try field_simplify_Rabs;
-try match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with ( i_bisect vxH,
-i_bisect v, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end;
-try match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (
-i_bisect v, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end;
-try match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with ( 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end;
-try match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with ( 
-i_bisect v, i_depth 20) as H'; apply H'; apply Rle_refl
-end;
-try match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with ( 
-i_bisect vxH, i_depth 20) as H'; apply H'; apply Rle_refl
-end;
-try match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) as H'; apply H'; apply Rle_refl
-end)).
-Defined.
-
-Definition turbine3_bound_val := Eval simpl in turbine3_bound.
-Compute ltac:(ShowBound turbine3_bound_val).
-
-Goal proj1_sig turbine3_bound_val <= 6.1e-14.
-simpl.
-interval.
-Qed.
-
-
 Definition turbine1_bmap_list := [Build_varinfo Tdouble 1%positive (-45e-1) (-3e-1);Build_varinfo Tdouble 2%positive (4e-1) (9e-1);Build_varinfo Tdouble 3%positive (38e-1) (78e-1)].
 
 Definition turbine1_bmap :=
@@ -219,7 +146,76 @@ Goal proj1_sig turbine2_bound_val <= 1.2e-13.
 simpl; interval.
 Qed.
 
+Definition turbine3_bmap_list := [Build_varinfo Tdouble 1%positive (-45e-1) (-3e-1);Build_varinfo Tdouble 2%positive (4e-1) (9e-1);Build_varinfo Tdouble 3%positive (38e-1) (78e-1)].
 
+Definition turbine3_bmap :=
+ ltac:(let z := compute_PTree (boundsmap_of_list turbine3_bmap_list) in exact z).
+
+Definition turbine3 (v : ftype Tdouble) (w : ftype Tdouble) (r : ftype Tdouble) : ftype Tdouble := 
+  ((( (3 -  (2 / (r * r))) - (( (125e-3 * (1 + (2 * v))) *  (((w * w) * r) * r)) / (1 - v))) - (5e-1))%F64).
+
+Definition turbine3_expr := 
+ ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) turbine3 in exact e').
+
+
+Lemma turbine3_bound:
+	find_and_prove_roundoff_bound turbine3_bmap turbine3_expr.
+Proof.
+idtac "Starting turbine3".
+eexists. intro. prove_roundoff_bound.
+-
+time "prove_rndval" prove_rndval; time "interval" interval with (i_prec 128).
+
+-
+time "prove_roundoff_bound2" prove_roundoff_bound2. 
+time "error rewrites" error_rewrites.
+all : (time "prune"
+(prune_terms (cutoff 70);
+try match goal with |- (Rabs ?e <= ?a - 0)%R =>
+  rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
+end;
+try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
+                      let G := fresh "G" in
+                      interval_intro (Rabs e) as G ;
+                      eapply Rle_trans;
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)). 
+all : ( time "remaining" (
+try rewrite Rsqr_pow2;
+try field_simplify_Rabs;
+try match goal with |- Rabs ?a <= _ =>
+interval_intro (Rabs a) with ( i_bisect vxH,
+i_bisect v, 
+i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+end;
+try match goal with |- Rabs ?a <= _ =>
+interval_intro (Rabs a) with (
+i_bisect v, 
+i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+end;
+try match goal with |- Rabs ?a <= _ =>
+interval_intro (Rabs a) with ( 
+i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+end;
+try match goal with |- Rabs ?a <= _ =>
+interval_intro (Rabs a) with ( 
+i_bisect v, i_depth 20) as H'; apply H'; apply Rle_refl
+end;
+try match goal with |- Rabs ?a <= _ =>
+interval_intro (Rabs a) with ( 
+i_bisect vxH, i_depth 20) as H'; apply H'; apply Rle_refl
+end;
+try match goal with |- Rabs ?a <= _ =>
+interval_intro (Rabs a) as H'; apply H'; apply Rle_refl
+end)).
+Defined.
+
+Definition turbine3_bound_val := Eval simpl in turbine3_bound.
+Compute ltac:(ShowBound turbine3_bound_val).
+
+Goal proj1_sig turbine3_bound_val <= 6.1e-14.
+simpl.
+interval.
+Qed.
 
 
 End WITHNANS.
