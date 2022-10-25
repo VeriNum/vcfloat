@@ -11,7 +11,7 @@ target: Test.vo TestPaper.vo Test2.vo VCFloat.vo
 
 # the vcfloat2 target is the core VCFloat tool for VCFloat2 users who don't need
 # CompCert-based reification
-vcfloat2: Automate.vo Prune.vo
+vcfloat2: Automate.vo Prune.vo FPCompCert.vo
 
 %.vo: %.v
 	$(COQC) $(COQFLAGS) $*.v
