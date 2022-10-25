@@ -86,9 +86,7 @@ Proof.
 intros.
 destruct y; simpl; auto.
 apply Rinv_1.
-apply Rinv_involutive.
-apply pow_nonzero.
-auto.
+apply Rinv_inv.
 Qed.
 
 Lemma lesseq_less_or_eq:
@@ -184,7 +182,7 @@ Proof.
   apply Rdiv_le_left in H0.
   {
     unfold Rdiv in H0.
-    rewrite Rinv_involutive in H0; lra.
+    rewrite Rinv_inv in H0; lra.
   }
   apply Rinv_0_lt_compat.
   assumption.
@@ -227,7 +225,7 @@ Proof.
   apply Rdiv_lt_right in H0.
   {
     unfold Rdiv in H0.
-    rewrite Rinv_involutive in H0; lra.
+    rewrite Rinv_inv in H0; lra.
   }
   apply Rinv_0_lt_compat.
   assumption.
@@ -1013,7 +1011,7 @@ Proof.
   end.
   intros.
   generalize (sqrt_pos x). generalize (sqrt_pos y). intros.
-  rewrite Rabs_Rinv by lra.
+  rewrite Rabs_inv by lra.
   f_equal.
   rewrite Rabs_right by lra.
   reflexivity.

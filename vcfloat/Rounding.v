@@ -457,7 +457,7 @@ Proof.
   unfold make_rounding.
   destruct kn;
   inversion 1; subst; simpl; intros;
-  repeat (apply Max.max_lub; auto with arith).
+  repeat (apply Nat.max_lub; auto with arith).
 Qed.
 
 Definition error_bound ty k :=
@@ -889,11 +889,11 @@ Proof.
     intros.
     destruct (rndval si shift x1) as (r1 & si1 & s1) eqn:EQ1.
     destruct (rndval si1 s1 x2) as (r2 & si2 & s2) eqn:EQ2.
-    eapply le_trans.
+    eapply Nat.le_trans.
     {
       eapply IHx1; eauto.
     }
-    eapply le_trans.
+    eapply Nat.le_trans.
     {
       eapply IHx2; eauto.
     }
@@ -901,7 +901,7 @@ Proof.
 - (* Unop *)
   intros.
   destruct (rndval si shift x) as (r1 & si1 & s1) eqn:EQ1.
-  eapply le_trans.
+  eapply Nat.le_trans.
   {
     eapply IHx; eauto.
   }
@@ -923,7 +923,7 @@ Proof.
     destruct (rndval si shift x1) as (r1 & si1 & s1) eqn:EQ1.
     destruct (rndval si1 s1 x2) as (r2 & si2 & s2) eqn:EQ2.
     eapply rnd_of_binop_shift_le; eauto.
-    eapply le_trans.
+    eapply Nat.le_trans.
     {
       eapply IHx1; eauto.
     }
@@ -952,7 +952,7 @@ Proof.
     etransitivity.
     {
       eapply rnd_of_binop_shift_unchanged; eauto.
-      eapply lt_le_trans; [ eassumption | ].
+      eapply Nat.lt_le_trans; [ eassumption | ].
       etransitivity.
       {
         eapply rndval_shift_incr; eauto.
@@ -962,7 +962,7 @@ Proof.
     etransitivity.
     {
       eapply IHx2; eauto.
-      eapply lt_le_trans; [ eassumption | ].
+      eapply Nat.lt_le_trans; [ eassumption | ].
       eapply rndval_shift_incr; eauto.
     }
     eapply IHx1; eauto.
@@ -972,7 +972,7 @@ Proof.
   etransitivity.
   {
     eapply rnd_of_unop_shift_unchanged; eauto.
-    eapply lt_le_trans; [ eassumption | ].
+    eapply Nat.lt_le_trans; [ eassumption | ].
     eapply rndval_shift_incr; eauto.
   }
   eapply IHx; eauto.
@@ -1116,11 +1116,11 @@ Proof.
   rewrite MSET.union_spec.
   destruct 1.
   {
-    eapply lt_le_trans.
+    eapply Nat.lt_le_trans.
     { eapply IHe1; eauto. }
     apply Nat.le_max_l.
   }
-  eapply lt_le_trans.
+  eapply Nat.lt_le_trans.
   { eapply IHe2; eauto. }
   apply Nat.le_max_r.
 Qed.
@@ -1308,7 +1308,7 @@ Proof.
     subst;
     inversion H; clear H; subst;
     simpl;
-    try rewrite Max.max_0_r;
+    try rewrite Nat.max_0_r;
     auto with arith.
   Transparent Zminus.
 Qed.
@@ -1390,7 +1390,7 @@ Proof.
     destruct 1; try contradiction.
     Opaque Zminus. inversion H; clear H; subst. Transparent Zminus.
     simpl.
-    apply Max.max_0_r.
+    apply Nat.max_0_r.
 -
   destruct 1; try contradiction.
   Opaque Zminus. inversion H; clear H; subst. Transparent Zminus.
@@ -1430,13 +1430,13 @@ Proof.
       simpl.
       eapply make_rounding_shift_le; eauto.
       simpl.
-      apply Max.max_lub; auto.
+      apply Nat.max_lub; auto.
     }
     apply rounding_cond_ast_shift_cond in H1.
     rewrite H1.
     simpl.
     apply make_rounding_shift_incr in EQ.
-    apply Max.max_lub; lia.
+    apply Nat.max_lub; lia.
   }
   {
     intro K.
@@ -1446,14 +1446,14 @@ Proof.
     {
       inversion H1; clear H1; subst.
       simpl.
-      rewrite Max.max_0_r.
-      apply Max.max_lub; lia.
+      rewrite Nat.max_0_r.
+      apply Nat.max_lub; lia.
     }
     destruct H1; try contradiction.
     inversion H1; clear H1; subst.
     simpl.
-    rewrite Max.max_0_r.
-    apply Max.max_lub; lia.
+    rewrite Nat.max_0_r.
+    apply Nat.max_lub; lia.
   }
   {
     intro K.
@@ -1580,7 +1580,7 @@ Proof.
     destruct H0; try contradiction.
     inversion H0; clear H0; subst.
     simpl.
-    rewrite Max.max_0_r.
+    rewrite Nat.max_0_r.
     assumption.
   * intros. inversion H; clear H; subst. inversion H1.
   * intros. inversion H; clear H; subst. inversion H1.
@@ -2127,13 +2127,13 @@ Proof.
         etransitivity.
         {
           eapply rnd_of_binop_shift_unchanged; eauto.
-          eapply lt_le_trans; [ eassumption | ].
+          eapply Nat.lt_le_trans; [ eassumption | ].
           etransitivity.
           eapply rndval_with_cond_shift_cond; [ | eassumption ] ; eauto.
           eapply rndval_shift_incr; eauto.
         }
         eapply rndval_shift_unchanged; eauto.
-        eapply lt_le_trans; [ eassumption | ].
+        eapply Nat.lt_le_trans; [ eassumption | ].
         eapply rndval_with_cond_shift_cond; eauto.
       }
       apply H1. apply in_or_app. right. apply in_or_app. auto.
@@ -2150,7 +2150,7 @@ Proof.
         subst.
         symmetry.
         eapply rnd_of_binop_shift_unchanged; eauto.
-        eapply lt_le_trans; [ eassumption | ].
+        eapply Nat.lt_le_trans; [ eassumption | ].
         eapply rndval_with_cond_shift_cond; [ | eassumption ] ; eauto.
       }
       apply H1. apply in_or_app. right. apply in_or_app. auto.
@@ -2175,7 +2175,7 @@ Proof.
     symmetry in V2.
 
     rewrite <- (reval_error_ext errors1_2) in V1
-     by (intros; apply E2; eapply lt_le_trans; [ eassumption | eapply rndval_shift_le; eauto]).
+     by (intros; apply E2; eapply Nat.lt_le_trans; [ eassumption | eapply rndval_shift_le; eauto]).
     destruct b.
    + (* rounded binary operator *)
         simpl.
@@ -2196,7 +2196,7 @@ Proof.
           intros.
           apply Nat.max_lub.
           {
-            eapply le_trans; [ eapply rndval_shift_le; eauto | ].
+            eapply Nat.le_trans; [ eapply rndval_shift_le; eauto | ].
             eapply rndval_shift_incr; eauto.
           }
           eapply rndval_shift_le; eauto.
@@ -2217,9 +2217,9 @@ Proof.
             simpl in H3.
             
             eapply make_rounding_shift_unchanged; eauto.
-            eapply lt_le_trans; eauto.
+            eapply Nat.lt_le_trans; eauto.
             etransitivity; try eassumption.
-            apply Max.max_lub; eauto using rndval_shift_le.
+            apply Nat.max_lub; eauto using rndval_shift_le.
             etransitivity; [ eapply rndval_shift_le; eauto | ].
             eapply rndval_shift_incr; eauto.
           }
@@ -2232,7 +2232,7 @@ Proof.
           apply reval_error_ext.
           intros.
           apply E.
-          eapply lt_le_trans; [ eassumption | ].
+          eapply Nat.lt_le_trans; [ eassumption | ].
           etransitivity; [ eapply rndval_shift_le; eauto | ].
           eapply rndval_shift_incr; eauto.
         }
@@ -2241,7 +2241,7 @@ Proof.
           apply reval_error_ext.
           intros.
           apply E.
-          eapply lt_le_trans; [ eassumption | ].
+          eapply Nat.lt_le_trans; [ eassumption | ].
           eapply rndval_shift_le; eauto.
         }
         rewrite <- W1, <- W2 in *.
@@ -2294,14 +2294,14 @@ Proof.
         etransitivity.
         {
           eapply E.
-          eapply lt_le_trans; [ eassumption | ].
+          eapply Nat.lt_le_trans; [ eassumption | ].
           etransitivity; [ eapply rndval_shift_incr; eauto | ].
           eapply rndval_shift_incr; eauto.
         }
         etransitivity.
         {
           eapply E2.
-          eapply lt_le_trans; [ eassumption | ].
+          eapply Nat.lt_le_trans; [ eassumption | ].
           eapply rndval_shift_incr; eauto.
         }
         eauto.
@@ -2345,7 +2345,7 @@ Proof.
             etransitivity.
             {
               eapply E2.
-              eapply lt_le_trans; [ eassumption | ].
+              eapply Nat.lt_le_trans; [ eassumption | ].
               eapply rndval_shift_incr; eauto.
             }
             auto.
@@ -2389,7 +2389,7 @@ Proof.
           etransitivity.
           {
             eapply E2.
-            eapply lt_le_trans; [ eassumption | ].
+            eapply Nat.lt_le_trans; [ eassumption | ].
             eapply rndval_shift_incr; eauto.
           }
           eauto.
@@ -2515,7 +2515,7 @@ Proof.
       intros; subst.
       symmetry.
       eapply rnd_of_unop_shift_unchanged; eauto.
-      eapply lt_le_trans; eauto.
+      eapply Nat.lt_le_trans; eauto.
       eapply rndval_with_cond_shift_cond; eauto.
     }
     apply H1. apply in_or_app. auto.
@@ -2556,7 +2556,7 @@ Proof.
         apply rounding_cond_ast_shift in H3.
         simpl in H3.
         eapply rnd_of_unop_shift_unchanged; eauto.
-        eapply lt_le_trans; eauto.
+        eapply Nat.lt_le_trans; eauto.
         etransitivity; try eassumption.
       }
       eapply H1.
@@ -2574,7 +2574,7 @@ Proof.
       apply reval_error_ext.
       intros.
       apply E.
-      eapply lt_le_trans; [ eassumption | ].
+      eapply Nat.lt_le_trans; [ eassumption | ].
       eapply rndval_shift_le; eauto.
     }
     rewrite <- W1 in V1.
@@ -2612,7 +2612,7 @@ Proof.
     etransitivity.
     {
       eapply E.
-      eapply lt_le_trans; [eassumption | ].
+      eapply Nat.lt_le_trans; [eassumption | ].
       eapply rndval_shift_incr; eauto.
     }
     eauto.
@@ -2796,7 +2796,7 @@ Proof.
       apply rounding_cond_ast_shift in H3.
       simpl in H3.
       eapply make_rounding_shift_unchanged; eauto.
-      eapply lt_le_trans; eauto.
+      eapply Nat.lt_le_trans; eauto.
       etransitivity; try eassumption.
     }
     eapply H1.
@@ -2821,7 +2821,7 @@ Proof.
     etransitivity.
     {
       eapply E.
-      eapply lt_le_trans; eauto.
+      eapply Nat.lt_le_trans; eauto.
       eapply rndval_shift_incr; eauto.
     }
     auto.

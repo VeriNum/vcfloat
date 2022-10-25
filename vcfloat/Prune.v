@@ -188,7 +188,7 @@ repeat
  intro; simpl; 
  try ring;
  rewrite <- ?mult_IZR, ?Zpow_facts.Zpower_pos_0_l; simpl; auto;
- try (rewrite <- Rinv_mult_distr by auto; auto).
+ try (rewrite <- Rinv_mult by auto; auto).
 Qed.
 
 
@@ -1798,12 +1798,12 @@ unfold bpow'.
 simpl.
 pose proof (Zpower_pos_gt_0 2 p ltac:(lia)).
 destruct (Z.pow_pos 2 p); try lia.
-rewrite <- Rinv_mult_distr by (apply not_0_IZR; lia). 
+rewrite <- Rinv_mult by (apply not_0_IZR; lia). 
 rewrite <- mult_IZR, <- Pos2Z.inj_mul. auto.
 -
 inversion H; clear H; subst.
 intro; simpl. ring_simplify.
-rewrite Ropp_inv_permute by (apply not_0_IZR; lia).
+rewrite <- Rinv_opp.
 destruct z0; try lia.
 simpl. rewrite Rmult_1_r, Pos.mul_1_r.
 reflexivity.
@@ -1812,7 +1812,7 @@ simpl.
 pose proof (Zpower_pos_gt_0 2 p ltac:(lia)).
 destruct (Z.pow_pos 2 p); try lia.
 rewrite <- opp_IZR.
-rewrite <- Rinv_mult_distr by (apply not_0_IZR; lia). 
+rewrite <- Rinv_mult by (apply not_0_IZR; lia). 
 f_equal.
 rewrite <- mult_IZR.
 reflexivity.
@@ -1823,7 +1823,7 @@ Proof.
 unfold bpow';
 intros.
 destruct a, b; simpl; rewrite ?Zpower_pos_is_exp, ?mult_IZR,
-   ?Rinv_mult_distr by (apply not_0_IZR; lia); try lra.
+   ?Rinv_mult by (apply not_0_IZR; lia); try lra.
 -
 rewrite (Z.pos_sub_spec p p0).
 destruct (Pos.compare_spec p p0).
@@ -1831,7 +1831,7 @@ subst. symmetry. apply Rinv_r. apply not_0_IZR; lia.
 assert (p0 = p + (p0 - p))%positive by lia.
 rewrite H0 at 2.
 rewrite ?Zpower_pos_is_exp, ?mult_IZR.
-rewrite Rinv_mult_distr by (apply not_0_IZR; lia).
+rewrite Rinv_mult by (apply not_0_IZR; lia).
 rewrite <- Rmult_assoc.
 rewrite Rinv_r by (apply not_0_IZR; lia).
 lra.
@@ -1848,7 +1848,7 @@ subst. symmetry. rewrite Rmult_comm. apply Rinv_r. apply not_0_IZR; lia.
 assert (p = (p-p0)+p0)%positive by lia.
 rewrite H0 at 2.
 rewrite ?Zpower_pos_is_exp, ?mult_IZR.
-rewrite Rinv_mult_distr by (apply not_0_IZR; lia).
+rewrite Rinv_mult by (apply not_0_IZR; lia).
 rewrite Rmult_assoc.
 rewrite (Rmult_comm _ (IZR _)).
 rewrite Rinv_r by (apply not_0_IZR; lia).
@@ -1963,8 +1963,7 @@ destruct n; try discriminate.
  simpl in IHe. simpl.
  unfold bpow'.
  destruct n; simpl; auto. lra. lra.
- rewrite Rinv_involutive.
- 2: apply not_0_IZR; lia. lra.
+ rewrite Rinv_inv. lra.
 -
  destruct b; try discriminate.
  + (* Mul *)
@@ -2016,8 +2015,7 @@ destruct n; try discriminate.
   rewrite <- !reflect_normterm_spec, H; simpl; lra.
   rewrite <- !reflect_normterm_spec, H; simpl.
   rewrite opp_IZR.
-  rewrite <- Ropp_inv_permute. lra.
-  apply not_0_IZR; lia.
+  rewrite Rinv_opp. lra.
 Qed.
 
 Fixpoint normalize_terms (negate: bool) (e: expr) (nl: list normterm) : expr * list normterm :=
@@ -2163,14 +2161,12 @@ destruct (normalize_term (Evar n)) eqn:?H.
  destruct (Z.eqb_spec (-n) 0). lia.
  simpl. f_equal. f_equal.
  unfold bpow'. destruct n; simpl; auto; try lra.
- rewrite Rinv_involutive.
- 2: apply not_0_IZR; lia. lra.
+ rewrite Rinv_inv. lra.
  destruct (Z.eqb_spec n 0). subst. simpl. lra.
  destruct (Z.eqb_spec (-n) 0). lia.
  simpl. f_equal. f_equal.
  unfold bpow'. destruct n; simpl; auto; try lra.
- rewrite Rinv_involutive.
- 2: apply not_0_IZR; lia. lra.
+ rewrite Rinv_inv. lra.
 -
 destruct b;
 try solve [
@@ -2799,7 +2795,7 @@ Proof.
 intros [n1 d1] [n2 d2] k env.
 simpl.
 rewrite Pos2Z.inj_mul, !mult_IZR.
-rewrite Rinv_mult_distr
+rewrite Rinv_mult
   by (apply not_0_IZR; lia).
 rewrite plus_IZR, !mult_IZR.
 rewrite <- Rmult_plus_distr_r.
@@ -2873,7 +2869,7 @@ rewrite Zpower_pos_is_exp,mult_IZR.
 rewrite <- (Rmult_1_r (_ * / _ * / _)).
 rewrite <- (Rinv_r (IZR (Z.pow_pos 2 p)))
   by (apply not_0_IZR; rewrite <- Pos2Z.inj_pow_pos; lia).
-rewrite Rinv_mult_distr
+rewrite Rinv_mult
   by (apply not_0_IZR; rewrite <- Pos2Z.inj_pow_pos; lia).
 lra.
 change (p > p0)%positive in H.
@@ -2892,22 +2888,22 @@ unfold bpow'.
 rewrite Pos2Z.inj_mul, mult_IZR.
 rewrite Pos2Z.inj_pow_pos. 
 destruct k;simpl; rewrite ?mult_IZR.
-rewrite Rinv_mult_distr
+rewrite Rinv_mult
   by (apply not_0_IZR; try lia; rewrite <- Pos2Z.inj_pow_pos; lia).
 lra.
 rewrite Z.pos_sub_spec.
 destruct (p0 ?= p)%positive eqn:?H.
 apply Pos.compare_eq in H. subst p0.
-rewrite Rinv_mult_distr
+rewrite Rinv_mult
   by (apply not_0_IZR; try lia; rewrite <- Pos2Z.inj_pow_pos; lia).
 rewrite <- (Rinv_r (IZR (Z.pow_pos 2 p)))
   by (apply not_0_IZR; rewrite <- Pos2Z.inj_pow_pos; lia).
 lra.
 change (p0 < p)%positive in H.
-rewrite !Rinv_mult_distr by (apply not_0_IZR; try lia; rewrite <- Pos2Z.inj_pow_pos; lia).
+rewrite !Rinv_mult by (apply not_0_IZR; try lia; rewrite <- Pos2Z.inj_pow_pos; lia).
 replace (Z.pow_pos 2 p) with (Z.pow_pos 2 (p0 + (p-p0))) by (f_equal; lia).
 rewrite Zpower_pos_is_exp,mult_IZR.
-rewrite !Rinv_mult_distr by (apply not_0_IZR; try lia; rewrite <- Pos2Z.inj_pow_pos; lia).
+rewrite !Rinv_mult by (apply not_0_IZR; try lia; rewrite <- Pos2Z.inj_pow_pos; lia).
 rewrite <- (Rmult_1_r (_ * / _ * / _)).
 rewrite <- (Rinv_r (IZR (Z.pow_pos 2 p0)))
   by (apply not_0_IZR; rewrite <- Pos2Z.inj_pow_pos; lia).
@@ -2916,12 +2912,12 @@ change (p0 > p)%positive in H.
 replace (Z.pow_pos 2 p0) with (Z.pow_pos 2 (p + (p0-p))) by (f_equal; lia).
 rewrite Zpower_pos_is_exp,mult_IZR.
 rewrite <- (Rmult_1_r (IZR n1 * / _ * _)).
-rewrite Rinv_mult_distr by (apply not_0_IZR; try lia; rewrite <- Pos2Z.inj_pow_pos; lia).
+rewrite Rinv_mult by (apply not_0_IZR; try lia; rewrite <- Pos2Z.inj_pow_pos; lia).
 rewrite <- (Rinv_r (IZR (Z.pow_pos 2 p)))
   by (apply not_0_IZR; rewrite <- Pos2Z.inj_pow_pos; lia).
 lra.
 rewrite Zpower_pos_is_exp,mult_IZR.
-rewrite !Rinv_mult_distr
+rewrite !Rinv_mult
   by (apply not_0_IZR; try lia; rewrite <- Pos2Z.inj_pow_pos; lia).
 lra.
 Qed.

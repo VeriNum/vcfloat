@@ -693,7 +693,7 @@ intros.
 unfold BinarySingleNaN.round_mode.
 pose proof (bpow_gt_0 radix2 (Z.pos pow)).
 rewrite <- round_NE_abs by (apply FLT_exp_valid; apply fprec_gt_0).
-rewrite Rabs_mult, Rabs_Rinv by lra.
+rewrite Rabs_mult, Rabs_inv by lra.
 rewrite (Rabs_right (bpow _ _)) by lra.
 assert (bpow radix2 (femax ty - 1) < bpow radix2 (femax ty - 1 + 1)).
 rewrite bpow_plus.
@@ -723,7 +723,7 @@ apply bpow_le. lia.
 unfold bpow at 1 in H2.
 change (bpow radix2 1) with 2.
 set (j := bpow radix2 (Z.pos pow - 1)) in *. clearbody j.
-rewrite Rinv_mult_distr by lra.
+rewrite Rinv_mult by lra.
 replace (femax ty - 1)%Z with (femax ty + -(1))%Z by lia.
 rewrite bpow_plus, bpow_opp.
 rewrite bpow_1.

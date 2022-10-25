@@ -1303,7 +1303,7 @@ subst u. rename H3 into H2.
 pose proof (IZR_lt _ _ H).
 pose proof (IZR_lt _ _ H0).
 pose proof (IZR_lt _ _ H1).
-rewrite <- Rinv_Rdiv by lra.
+rewrite <- Rinv_div by lra.
 apply Rinv_le. lra.
 apply Rcomplements.Rle_div_r.
 lra.
