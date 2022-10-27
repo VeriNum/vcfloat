@@ -1,5 +1,6 @@
 \documentclass[article]{memoir}
 \usepackage{amssymb}
+\usepackage{amsmath}
 \usepackage{listings}
 \usepackage{lstlangcoq}
 \lstset{language=Coq,basicstyle=\sffamily\small,mathescape=true,columns=fullflexible}
@@ -556,7 +557,37 @@ Rabs (-1/2048 * d0 * v_x + -1/2048 * d * v_x + 2047/2048 * d1 * v_x +
 in which not as many terms have been neglected.  But either way,
 \lstinline{interval} solves the goal.
 
-\chapter{error\_rewrites\_div\_r}
+\chapter{error\_rewrites} Suppose your expression for the absolute
+forward floating-point error does not expand into a nice multinomial
+that can be handled by the VCFloat \lstinline{prune} tactic. An example
+of such a problem is the \lstinline{carbonGas} benchmark from the
+FPBench benchmark suite:
+\begin{lstlisting} carbonGas:= ((3.5e-7 + 401e-3 * (1e3/v) * (1e3/v) *
+(v-1e3 * 427e-7)) - 13806503e-30 * 1e3 * 3e2)%F64. \end{lstlisting} The
+rounded expression for \lstinline{carbonGas} with its associated
+$\delta$s and $\epsilon$s as it appears below the line in a Coq proof is
+too long for us to include here. Because one can't apply the VCFloat
+\lstinline{prune} tactic to derive a bound, the remaining options
+introduced so far would be to try the \lstinline{field_simplify} tactic
+followed by the \lstinline{interval} tactic; applying such a chain of
+tactics causes Coq to crash. An alternative method is to recusively
+decompose the expression for the absolute foward into smaller
+subexpressions of related terms; each of these subexpressions appears as
+a subgoal that we have to bound in Coq, but they are simple enough now
+for either the \lstinline{prune} tactic or \lstinline{field_simplify}
+tactic followed by the \lstinline{interval} tactic to discharge.
+The \lstinline{error\_rewrites} tactic implements the recursive
+decomposition procedure described above. In particular, it repeatedly
+decomposes and rewrites the goal into multiple subgoals using the
+following equalities,
+\begin{align*}
+ (\tilde{u} - \tilde{v}) - (u-v) = (\tilde{u} - u) -
+(\tilde{v} - v) \\
+ (\tilde{u} + \tilde{v}) - (u+v) = (\tilde{u} - u) +
+(\tilde{v} - v) \\ 
+(\tilde{u} * \tilde{v}) - (u*v) = (\tilde{u} - u)*v +
+(\tilde{v} - v)*u + (\tilde{u} - u)*(\tilde{v} - v) 
+\end{align*}
 
 need to write this chapter
 
