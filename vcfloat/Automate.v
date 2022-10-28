@@ -3,7 +3,7 @@
 *)
 
 From vcfloat Require Import FPLang FPLangOpt RAux Rounding Reify Float_notations.
-Require Import IntervalFlocq3.Tactic.
+Require Import Interval.Tactic.
 Import Binary.
 Import List ListNotations.
 Set Bullet Behavior "Strict Subproofs".
@@ -18,6 +18,7 @@ Definition generic_nan (prec emax : Z) :
 Definition generic_nan64 := 
   generic_nan (fprec Tdouble) (femax Tdouble) (eq_refl _).
 
+(*
 Ltac float_nearest mode r :=
  match r with
   | Rmult (IZR ?a) (Rinv ?b) => let x := constr:(Rdiv (IZR a) (IZR b)) in float_nearest x
@@ -31,6 +32,9 @@ Ltac float_nearest mode r :=
      in g
    end
  end.
+*)
+
+Import Zaux.
 
 Ltac compute_B2R :=
  repeat (
@@ -721,7 +725,7 @@ Ltac prove_rndval :=
   cbv beta iota zeta delta - [M fshift_div fshift Bmult Bplus Bminus Bdiv 
                                        plus_nan mult_nan div_nan abs_nan opp_nan sqrt_nan];
  fold Tsingle; fold Tdouble;
-  compute_binary_floats;
+ compute_binary_floats;
 
     (* Now compute the remaining optimizations  (fshift, fshift_div) *)
   cbv beta iota zeta delta - [M Bmult Bplus Bminus Bdiv 
@@ -1299,13 +1303,13 @@ subst u. rename H3 into H2.
 pose proof (IZR_lt _ _ H).
 pose proof (IZR_lt _ _ H0).
 pose proof (IZR_lt _ _ H1).
-rewrite <- Rinv_Rdiv by lra.
+rewrite <- Rinv_div by lra.
 apply Rinv_le. lra.
 apply Rcomplements.Rle_div_r.
 lra.
 rewrite <- mult_IZR.
 apply IZR_le.
-pose proof (Zmod_eq j i ltac:(lia)).
+pose proof (Zdiv.Zmod_eq j i ltac:(lia)).
 assert (j/i * i = j - j mod i)%Z by lia.
 apply Zmult_ge_compat_r with (p:=i) in H2; [ | lia].
 rewrite H7 in H2.
@@ -1425,7 +1429,7 @@ match goal with H: _ = @FT2R _ _ |- _ => rewrite <- H; clear H end;
  (* Perform all env lookups *)
  repeat 
     match goal with
-    | |- context [env_ ?a ?b ?c] =>
+    | |- context [env_ ?a ?b ?c] => 
        let u := constr:(env_ a b c) in let v := eval hnf in u in change u with v
    end;
  (* Clean up all FT2R constants *)

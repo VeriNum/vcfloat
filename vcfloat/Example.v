@@ -56,7 +56,7 @@ Require Import Clightdefs.
 
 Require Import Reals.
 Require Clight2FPOpt.
-Import Flocq3.Appli.Fappli_IEEE.
+Import Flocq.Appli.Fappli_IEEE.
 Require Import Maps.
 Require Import Values.
 Require ClightTac.

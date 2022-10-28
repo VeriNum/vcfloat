@@ -1,19 +1,32 @@
-\documentclass{llncs}
+\documentclass[article]{memoir}
 \usepackage{amssymb}
+\usepackage{amsmath}
 \usepackage{listings}
 \usepackage{lstlangcoq}
 \lstset{language=Coq,basicstyle=\sffamily\small,mathescape=true,columns=fullflexible}
 \hyphenation{Comp-Cert}
 \pagestyle{plain}
 
+%\setstocksize{210mm}{153mm}
+\setstocksize{230mm}{178mm}
+\settrimmedsize{\stockheight}{\stockwidth}{*}
+\settypeblocksize{200mm}{150mm}{*}
+\setlrmargins{*}{*}{1}
+\setulmargins{*}{*}{1}
+\setlength{\footskip}{8mm}
+\setlength{\headsep}{5mm}
+\setlength{\headheight}{7mm}
+\checkandfixthelayout
+
+
+
 \title{VCFloat 2.0 Reference Manual}
-\author{Andrew W. Appel\inst{1} \and Ariel E. Kellison\inst{2}}
-\institute{Princeton University \and Cornell University}
+\author{Andrew W. Appel \and Ariel E. Kellison}
 
 \begin{document}
 \maketitle
 
-\section{Introduction}
+\chapter{Introduction}
 \label{section:Introduction}
 
 VCFloat is a tool for Coq proofs about floating-point round-off error.
@@ -28,13 +41,13 @@ Let \lstinline{%F64} be a notation scope in which
   \lstinline{*} and \lstinline{+} and are interpreted
   as double-precision (64-bit) floating-point operators
   and 5.7 is interpreted as a double-precision floating-point constant;
-  let \lstinline{R} be the function that
+  let $R$ be the function that
   injects a floating-point value into the reals.  Then we might prove
   that
 \[
 \begin{array}{c}
  1 \le x \le 100 \qquad -1000 \le y \le 1000 \\ \hline
- | \mbox{\lstinline{(x*5.7+y)%F64}} - R(x)\times 5.7+R(y) | \le A
+ | \mbox{\lstinline{(x*5.7+y)\%F64}} - (R(x)\times 5.7+R(y)) | \le A
 \end{array}
 \]
 where $A$ is an accuracy bound calculated by VCFloat.
@@ -56,7 +69,7 @@ If we view \lstinline{(x*5.7+y)%F64} as a \emph{floating-point functional model}
 \end{enumerate}
 VCFloat2 provides
 \begin{itemize}
-\item The \emph{modelling language} for describing float-valued functional
+\item A \emph{modelling language} for describing float-valued functional
   models and automatically deriving the corresponding real-valued models;
 \item A prover for bounding roundoff error, the difference between the two models;
 \item Tools for connecting float-valued models to C programs.  But
@@ -65,10 +78,705 @@ VCFloat2 provides
   programs in other languages.
 \end{itemize}
 
-\section{Floating-point functional models}
+\paragraph{To use VCFloat} you follow these steps, we will explain below:
+\begin{enumerate}
+\item Write down your floating-point functional model as Coq functions on floating-point values.
+\item Pick identifiers for your variables and apply a tactic to reify your model.
+\item Automatically derive a real-value functional model.
+\item Specify bounds for your input variables, in a \lstinline{boundsmap}.
+\item State a roundoff-error theorem, and start the proof using the
+  \lstinline{prove_rndval} tactic.
+\item Prove the stage-1 verification conditions; usually this is as easy as
+  writing \lstinline{all:interval}.
+\item Finish proving the main theorem; sometimes this is completely automatic, sometimes you have to assist.
+\item (optional) Prove that your C program correctly implements the functional model.
+\item (optional) Prove that your real-valued model accurately approximates the
+  mathematical quantity of interest.
+\end{enumerate}
+
+\chapter{Floating-point functional models}
+To use VCFloat you start with,
+\begin{lstlisting}
+Require Import vcfloat.VCFloat.
+\end{lstlisting}
+This imports VCFloat's functional modelling language and all of its
+provers.  
 
 Functional models are written as expressions in Coq that apply
 functions (such as \emph{add} and \emph{multiply}) to
 variables, constants, and subexpressions that belong to floating-point
 \emph{types}.  We will start with the types.
 
+\begin{lstlisting}
+type : Type $\mbox{\qquad\qquad\emph{each floating-point format is described as a}~\textsf{type}}$
+ftype: type -> Type $\mbox{\qquad\emph{a floating-point number in format \(\mathsf{t}\) belongs to Coq type} \textsf{ftype(t)}}$
+TYPE : forall (precp : positive) (femax: Z), (fprecp<femax) -> (1<fprecp) -> type.
+Tsingle: type := TYPE 24 128 I I.
+Tdouble: type := TYPE 53 1024 I I.
+\end{lstlisting}
+
+That is, you specify a floating-point format, a \lstinline{type}, by
+the number of mantissa bits (e.g., 24 for single-precision, 53 for
+double-precision, but any number $\ge 2$ is legal) and a maximum
+exponent value (128 for single-precision, 1024 for double-precision,
+any number greater than the number of mantissa bits).
+\lstinline{TYPE} is a constructor for \lstinline{type}, and the
+\lstinline{I} arguments happen to be proofs that \lstinline{24<128}
+and \lstinline{1<24}, and so on.
+
+\chapter{NaNs}
+In the IEEE-754 floating-point standard, one cannot
+simply \emph{add} two numbers, one must specify how the NaNs will
+be propagated.  That is, if $x$ and $y$ are double-precision floats,
+what Not-a-Number (NaN) should float-add return if $x$ or $y$ or both are
+Not-a-Number?  Unfortunately that is left to each computer architecture 
+to decide.  VCFloat wants to be rigorously faithful to the
+semantics of the actual computation, so we specify the
+NaN-propagation behavior of the floating-point model in a
+typeclass \lstinline{Nans}.
+
+The good news is that if your computation never produces any
+NaNs, then it won't matter which instance of the \lstinline{Nans}
+typeclass you use.
+Then you can parameterize your float-functional-model as follows:
+
+\begin{lstlisting}
+Section WITHNANS.
+Context {NANS: Nans}.
+
+$\mbox{\emph{\ldots your functional model goes here }}$
+End WITHNANS.
+\end{lstlisting}
+
+\chapter{Notation Scopes}
+These notation scopes (and their delimiters) come with VCFloat:
+\begin{lstlisting}
+Delimit Scope float32_scope with F32.
+Delimit Scope float64_scope with F64.
+\end{lstlisting}
+
+Delimiters \%F32 and \%F64 indicate that constants and operator-symbols should stand for single precision and double-precision (respectively) values and functions.
+\begin{lstlisting}
+Definition myformula ($h$: ftype Tdouble) := (5.0e-1 + cast Tsingle ($h$ * 1.6)%F64)%F32.
+\end{lstlisting}
+Here, the constant 1.6 and operator \lstinline{*} are
+interpreted in double precision,
+and the constant 5.0e-1 (which could just as well have been written
+as .5) and operator \lstinline{+} are interpreted in single precision.
+The variable $h$ is a double-precision floating-point number.
+
+\chapter{Operators}
+The following operators are available in each notation scope:
+\begin{lstlisting}
+  + $~$ - $~$ * $~$ / $~$ < $~$ <= $~$ > $~$ >= 
+\end{lstlisting}
+The minus sign \lstinline{-} can be used infix (subtraction) or prefix (negation).  The comparison operators can be used in the style
+\lstinline{$x$ <= $y$ < $z$} as usual in Coq.
+The following functions can also be used:
+\begin{description}
+\item[\textsf{BABS}]  ~~~(absolute value)
+\item[\textsf{BSQRT}]  ~~~(square root)
+\item[\textsf{cast~$t$}]  ~~~~(cast to $\mathsf{ftype}(t)$)
+\end{description}
+
+\chapter{Example}
+
+A mass on a spring---a harmonic oscillator---with position $x$ and
+velocity $v$ can be simulated over time-step $h=\frac{1}{32}$ using the
+Verlet (``leapfrog'') method with the formula,
+
+\begin{lstlisting}
+Definition h := (1/32)%F32.
+Definition F(x: ftype Tsingle) : ftype Tsingle := (3.0-x)%F32.  
+Definition step (x v: ftype Tsingle) := (x + h*(v+(h/2)*F(x)))%F32.
+\end{lstlisting}
+
+Here, the function \lstinline{step} is the functional model of
+(part of) a C program:
+
+\begin{lstlisting}[language=C]
+const float h = 1.0/32.0;
+float F (float x) { return 3.0f-x; }
+float step (float x, float v) { return x+h*(v+h/2.0f)*F(x); }
+\end{lstlisting}
+
+\chapter{Reification}
+
+VCFloat will \emph{reify} your functional model into the internal
+syntax tree that it uses.  In order to do this, it will need
+a \emph{name} for each of your variables.
+VCFloat's name type is the Coq positive numbers.
+In our example the variables are $x$ and $v$, and
+we will use 1 and 2 for their names:
+
+\begin{lstlisting}
+Definition _x : ident := 1%positive.  (* Variable name for position *)
+Definition _v : ident := 2%positive.  (* Variable name for velocity *)
+\end{lstlisting}
+
+Here, the Coq variable \lstinline{_x} contains not the value,
+but the \emph{identifier} that we will use for the floating-point
+variable $x$.  It is not necessary to use consecutive positives,
+we could have used 5 and 2.
+Now we can connect \lstinline{_x} and
+\lstinline{_v} to $x$ and $v$ as follows:
+
+\begin{lstlisting}
+Definition step' := ltac:(let e' := HO_reify_float_expr constr:([_x; _v]) step in exact e').
+\end{lstlisting}
+
+This is a tactical definition of a VCFloat abstract-syntax tree,
+\lstinline{step'}, the reified version of \lstinline{step}.
+The tactic is called \lstinline{HO_reify_float_expr},
+and it expects its second argument (in this case, \lstinline{step})
+to be a function from (zero or more) floating-point values
+to a floating-point value.  It learns how many arguments
+there should be from examining the Coq type of \lstinline{step}.
+In this case, since \lstinline{step} has type
+\lstinline{ftype Tsingle -> ftype Tsingle -> ftype Tsingle},
+the tactic knows that \lstinline{step} should have
+two arguments, both single-precision floats.
+
+The first argument of \lstinline{HO_reify_float_expr}
+should be list of identifiers, to associate with those
+parameters of the functional model.  In this case the list is
+simpliy \lstinline{[_x;_v]}.
+
+\chapter{Boundsmap}
+
+In order to do round-off analysis one generally needs \emph{bounds}
+in the input variables:
+For example, what are the lowest and highest possible
+values of $x$ and $v$ in our example?
+One specifies that using a \lstinline{boundsmap}.
+
+\begin{lstlisting}
+Definition step_bmap_list : list varinfo := 
+  [ Build_varinfo Tsingle _x 2 4 ;  Build_varinfo Tsingle _v (-2)  2 ].
+
+Definition step_bmap : boundsmap :=
+   ltac:(let z := compute_PTree (boundsmap_of_list $\mathit{step\_bmap\_list}$) in exact z).
+\end{lstlisting}
+In the first definition, we make a list of \lstinline{varinfo} structures.
+
+\begin{lstlisting}
+Record varinfo := {var_type: type; var_name: ident; var_lobound: R; var_hibound: R}.
+\end{lstlisting}
+For each parameter of the functional model, we specify its floating-point precision, its identifier, its lowest possible input value,
+and its highest possible input value.  
+We put these into a list---in our example, \lstinline{step_bmap_list}.
+Then the tactical definition (\lstinline{step_bmap}) is
+a line of boilerplate that always looks the same
+(except for the italicized part where you specify this list
+as shown above).
+
+
+\chapter{Varmap and reflection}
+
+You can \emph{reflect} the abstract-syntax tree (such as \lstinline{step'})
+back into a functional model (such as \lstinline{step}).
+To do that, first make a \lstinline{valmap} that relates your
+variable identifiers to floating-point values.
+
+\begin{lstlisting}
+Definition step_vmap_list ($x$ $v$ : ftype Tsingle) := [(_x, existT ftype _ $x$);(_v, existT ftype _ $v$)].
+
+Definition step_vmap (x v : ftype Tsingle) : valmap :=
+ ltac:(let z := compute_PTree (valmap_of_list (step_vmap_list x v)) in exact z).
+\end{lstlisting}
+The auxiliary definition \lstinline{step_vmap_list}
+(when applied to $x$ and $v$)
+is a list of pairs, identifier$\times$value,
+where the ``value'' is a dependent pair of a \lstinline{type} (a floating
+point format such as Tsingle or Tdouble) and a value of that type.
+In this case, both $x$ and $v$ are single-precision,
+but valmaps have the ability to mix precisions.
+
+The second step computes this association list into
+an efficient data structure.
+
+The function \lstinline{fval} evaluates the floating-point interpretation
+of an AST, in an environment that maps the variables.
+To \emph{reflect} an AST using a valmap, apply \lstinline{fval} as follows:
+
+\begin{lstlisting}
+Definition reflected_step (x v: ftype Tsingle) :=  fval (env_ (step_vmap x v)) step'.
+
+Lemma reflect_reify : forall x v, reflected_step x v = step x v.
+Proof. reflexivity. Qed.
+\end{lstlisting}
+The lemma demonstrates that the round-trip---reify then reflect---is indeed
+the identity function.
+
+\chapter{Real-valued functional model}
+
+Suppose we take the float-valued functional model (the \lstinline{step}) 
+function) and interpret every constant and operator in the real numbers:
+
+\begin{lstlisting}
+Definition step_realmodel' (x v: ftype Tsingle) : R := FT2R x + (1/32)*(FT2R v + ((1/32)/2)*(3- FT2R x)).
+\end{lstlisting}
+You can make this look prettier using a coercion:
+
+\begin{lstlisting}
+Coercion FT2R: ftype >-> R.
+
+Definition step_realmodel (x v: ftype Tsingle) : R :=  x + (1/32)*(v + ((1/32)/2)*(3-x)).
+\end{lstlisting}
+
+In fact, you can automatically derive a real-valued functional model
+using the \lstinline{rval} function, which reflects into the reals
+much like \lstinline{fval} reflects into the floats.  Here's
+a theorem showing that you get what you'd expect:
+
+\begin{lstlisting}
+Lemma correspond_floatmodel_realmodel: forall x v, rval (env_ (step_vmap x v)) step' = step_realmodel x v.
+Proof. intros. unfold step_realmodel. simpl. repeat f_equal; compute; lra. Qed. 
+\end{lstlisting}
+
+\chapter{Round-off theorem}
+The purpose of VCFloat is to prove how accurately the
+float-valued functional model approximates the real-valued
+functional model.  Here's an example of such a theorem:
+ 
+\begin{lstlisting}
+Lemma prove_roundoff_bound_step:  forall $\mathit{vmap}$, prove_roundoff_bound step_bmap $\mathit{vmap}$ step'  (/ 4000000).
+\end{lstlisting}
+This says, for any varmap \emph{vmap}
+containing values for $x$ and $v$
+that are within the bounds specified by \lstinline{step_bmap},
+the difference between the floating-point
+interpretation of \lstinline{step'}
+and the real-number interpretation of \lstinline{step'}
+will be less than one four-millionth.
+
+Recall, of course, that ``the floating-point interpretation of \lstinline{step'}'' is exactly our float-valued functional model;
+and ``the real-number interpretation of \lstinline{step'}''
+is exactly our real-valued functional model.
+
+What if we didn't know the accuracy 1/400000 in advance?  See the
+next chapter.
+
+Here is how we prove the theorem:
+\begin{lstlisting}
+Proof.
+intros.
+prove_roundoff_bound.
+-
+ prove_rndval.
+ all: interval.
+- 
+ prove_roundoff_bound2.
+ prune_terms (cutoff 30).
+ do_interval.
+Qed.
+\end{lstlisting}
+Step one, \lstinline{prove_roundoff_bound}, is always the same,
+and leaves two subgoals (delimited by ``bullets'').
+The first subgoal is always proved with \lstinline{prove_rndval},
+which leaves a few verification conditions.
+In this case, there are three: proving that the additions
+and subtractions do not overflow.  In general the subgoals
+left by \lstinline{prove_rndval} are easy to prove using the Coq
+Interval package, as shown here by \lstinline{all:interval}.
+
+The second subgoal is always proved by
+\lstinline{prove_roundoff_bound2}, which leaves
+one subgoal.  In this case the subgoal is,
+
+\begin{lstlisting}
+NANS : Nans
+v_v : R, $\qquad$ BOUND : -2 $\le$ v_v $\le$ 2
+v_x : R, $\qquad$ BOUND0 : 2 $\le$ v_x $\le$ 4
+e0 : R, $\qquad$ E : Rabs e0 $\le$ powerRZ 2 (-150)
+d : R, $\qquad$ E0 : Rabs d $\le$ powerRZ 2 (-24)
+e1 : R, $\qquad$ E1 : Rabs e1 $\le$ powerRZ 2 (-150)
+e2 : R, $\qquad$ E2 : Rabs e2 $\le$ powerRZ 2 (-150)
+d0 : R, $\qquad$ E3 : Rabs d0 $\le$ powerRZ 2 (-24)
+e3 : R, $\qquad$ E4 : Rabs e3 $\le$ powerRZ 2 (-150)
+e4 : R, $\qquad$ E5 : Rabs e4 $\le$ powerRZ 2 (-150)
+d1 : R, $\qquad$ E6 : Rabs d1 $\le$ powerRZ 2 (-24)
+______________________________________(1/1)
+Rabs ((v_x + (1/32 * ((v_v + (1/64 * ((3-v_x)*(1+d0)+e1) + e4)) * (1+d) + e3) + e2)) * (1+d1) + e0
+      - (v_x + 1/32 * (v_v + 1/32 / 2 * (3-v_x))))
+ $\le$  / 4000000
+\end{lstlisting}
+\label{stage2proofgoal}
+That is, the real-valued variables \lstinline{v_x} and \lstinline{v_v},
+which represent the values of $x$ and $v$, are within the bounds
+specified in the boundsmap.  The variables 
+$\delta,\delta_0,\delta_1$ that represent
+relative errors of additions and subtractions, are each less than
+$2^{-24}$ in absolute value.  The variables 
+$\epsilon,\epsilon_0,\epsilon_1,\epsilon_2,\epsilon_3,\epsilon_4$ that
+represent absolute errors of additions and multiplications
+are each less than $2^{-150}$ in absolute value.
+Finally, assuming all of that, one must prove that the
+difference between the computation \emph{with} all the
+deltas and epsilons and the computation \emph{without}
+the deltas and epsilons, is less than the accuracy bound.
+
+To prove this, one can use the Coq Interval package.  But in many
+cases one must do some work to prepare the goal for solution by
+Interval.  Later chapters will explain.
+In this example, we use the \lstinline{prune_terms} tactic.
+Then the goal solves by \lstinline{do_interval}.
+
+\chapter{When the accuracy bound is unknown}
+
+You can ask VCFloat not only to \emph{prove} an accuracy bound,
+but to \emph{calculate and prove} the bound if you don't know it
+in advance.
+
+\begin{lstlisting}
+Definition find_and_prove_roundoff_bound (bmap: boundsmap) (e: expr) :=
+  {bound: R | forall vmap, prove_roundoff_bound bmap vmap e bound}.
+\end{lstlisting}
+
+This useful definition expresses a dependent pair of a real-valued
+\lstinline{bound} with a proof that this really is a bound
+on the accuracy of a floating-point program.  To use this with
+our ``step'' example, one could state this theorem:
+
+\begin{lstlisting}
+Lemma find_and_prove_roundoff_bound_step :
+  find_and_prove_roundoff_bound step_bmap step'.
+Proof.
+eexi$$sts.
+intro.
+prove_roundoff_bound.
+-
+ prove_rndval; interval.
+-
+ prove_roundoff_bound2.
+ prune_terms (cutoff 30).
+ do_interval.
+Defined.
+\end{lstlisting}
+
+Within the proof, the only differences are,
+\begin{itemize}
+\item  The \lstinline{eex$$ists} tactic introduces a unification variable
+  for the accuracy parameter.
+\item The proof ends with \lstinline{Defined} instead of \lstinline{Qed}
+  so that when it's done, one can extract the actual value of the bound.
+\end{itemize}
+
+\chapter{field\_simplify}
+
+The subgoal remaining after \lstinline{prove_roundoff_bound2} has the
+form, $|E'-E|\le A$, where $E$ is the real-valued functional model,
+$E'$ is the real-valued model with deltas and epsilons inserted to
+represent round-off errors, and $A$ is the accuracy bound.
+Goals of this kind can be given to the Coq Interval package to solve.
+Interval works by computing in interval arithmetic,
+where every number is represented by a pair of floating-point numbers
+representing a lower bound and upper bound.  For example, to subtract
+$a-b$ represented as $(a_\mathrm{lo},a_\mathrm{hi})-(b_\mathrm{lo},b_\mathrm{hi})$,
+the result is $(a_\mathrm{lo}-b_\mathrm{hi},~a_\mathrm{hi}-b_\mathrm{lo})$.
+For soundness Interval even takes care to set the floating-point rounding modes
+to round down when computing the lo-bound, and round-up when computing
+the high bound.
+
+When variables such as \lstinline{v_x} and \lstinline{v_v} can
+take on a wide range of possible values, Interval uses
+repeated \emph{bisection} to measure many subranges
+of \lstinline{v_x} and \lstinline{v_v}, taking the maximum error.
+
+But there's a problem.  Consider the interval calculation of
+$(a+\delta)-a$, which comes out to
+\[(a_\mathrm{lo}+\delta_\mathrm{lo}-a_\mathrm{hi},~~a_\mathrm{hi}+\delta_\mathrm{lo}-a_\mathrm{lo}).\]
+If the value of $a$ is only approximately known, so
+$a_\mathrm{hi}-a_\mathrm{lo}$ is large, then the interval approximation
+of $(a+\delta)-a$ is similarly large---which is bad.  But we know that whatever the \emph{true} value of $a$ is, when subtracted from itself it will yield zero.
+That is, a much better approximation can be obtained by
+\emph{symbolically} subtracting $a+\delta-a=\delta$
+before calling the interval package.
+
+If you examine the proof goal at the end of section~\ref{stage2proofgoal},
+you'll see that it contains (more or less)
+$\mathsf{v\_x}(1+\delta)-\mathsf{v\_x}$ and
+$\mathsf{v\_v}(1+\delta)-\mathsf{v\_v}$.  So we can expect the Interval
+tactic to perform badly on this expression.
+The solution is to symbolically simplify the expression,
+and Coq's \lstinline{field_simplify} tactic can do that:
+
+\begin{lstlisting}
+match goal with |- Rabs ?a <= _ $~~$   => field_simplify a end.
+\end{lstlisting}
+This changes the below-the-line portion of the proof goal to,
+\begin{lstlisting}
+Rabs((-v_x*d0*d*d1-v_x*d0*d-v_x*d0*d1-v_x*d0-v_x*d*d1-v_x*d+2047*v_x*d1+64*v_v*d*d1+
+   64*v_v*d+64*v_v*d1+3*d0*d*d1+3*d0*d+3*d0*d1+3*d0+e1*d*d1+e1*d+e1*d1+e1+64*e4*d*d1+
+   64*e4*d+64*e4*d1+64*e4+3*d*d1+3*d+64*e3*d1+64*e3+2048*e2*d1+2048*e2+3*d1+2048*e0)/2048)
+ <= / 4000000
+\end{lstlisting}
+Applying the \lstinline{interval} tactic solves this goal immediately.
+
+But \lstinline{field_simplify} is not the best tool for this job;
+we use it here only to illustrate the principle of (automatically) expanding the
+formula into a multinomial and symbolically canceling terms.
+There are two problems: (1) the multinomial can have an exponential number of terms, most of which are negligible; and (2) nonlinear floating-point functional models do not expand into nice multinomials.
+
+\chapter{prune\_terms}
+
+The proof goal at at the end of the last section had many terms
+similar to \lstinline{3*d0*d*d1} where two or more deltas or epsilons
+are multiplied together.  Since the deltas are bounded by $2^{-24}$
+(in single precision) or $2^{-53}$ (in double precision),
+and the epsilons are much smaller than that, their product is
+probably negligible.
+
+The \lstinline{prune_terms} tactic expands a formula into a
+multinomial (like \lstinline{field_simplify}) but also
+deletes (and bounds) negligible terms---you specify
+a ``cutoff'' for what you consider neglible.  For example,
+at the section-\ref{stage2proofgoal} proof goal,
+one can write,
+
+\begin{lstlisting}
+prune_terms (cutoff 30).
+\end{lstlisting}
+which expands into a multinomial, cancels terms symbolically,
+and deletes all terms that can be bounded by $2^{-30}$.
+The result is,
+
+\begin{lstlisting}
+Rabs (1 * d1 * v_x + 1/32 * d * v_v + 1/32 * d1 * v_v)
+ <=  / 4000000 - 5910977010729000 / 9671406556917033397649408
+\end{lstlisting}
+In this goal, the number \lstinline{5910977010729000 / 9671406556917033397649408} is the sum of the bounds of the negligible terms.
+The goal solves easily by the \lstinline{interval} tactic.
+
+For comparison, using \lstinline{(cutoff 50)} gives the goal,
+\begin{lstlisting}
+Rabs (-1/2048 * d0 * v_x + -1/2048 * d * v_x + 2047/2048 * d1 * v_x +
+      1/32 * d * v_v + 1/32 * d1 * v_v + 3/2048 * d0 + 3/2048 * d + 3/2048 * d1)
+   <= / 4000000 - 5242471455916076 / 20282409603651670423947251286016
+\end{lstlisting}
+in which not as many terms have been neglected.  But either way,
+\lstinline{interval} solves the goal.
+\chapter{error\_rewrites} Suppose an expression for the absolute
+forward error (1) does not expand into a nice multinomial
+that is tractable for the \lstinline{prune} tactic, and (2) is 
+so large (as a meausure of the number of operations after 
+rounding) that applying the \lstinline{field_simplify+interval} 
+tactic causes Coq to crash. An example
+of such a problem is the \lstinline{carbonGas} benchmark from the
+FPBench benchmark suite:
+\begin{lstlisting} 
+carbonGas($v$):= P+A*(N/$v$)*(N/$v$)*($v$-N*B)-K*N*T
+\end{lstlisting}
+where \lstinline{A,B,K,N,P,T} are constants. Because $v$ 
+appears in the denominator of terms in \lstinline{carbonGas},
+VCFloat's \lstinline{prune} tactic won't simplify the 
+expression enough for \lstinline{interval} to produce a decent 
+bound. A tactic that can be used in cases like this is 
+\lstinline{error_rewrites}, which will recursively
+decompose a main proof goal for absolute forward error into 
+subgoals of smaller subexpressions on related terms using the 
+following equalities.  
+ 
+\begin{align*}
+ (\tilde{u} - \tilde{v}) - (u-v) &= (\tilde{u} - u) -
+(\tilde{v} - v) \\
+ (\tilde{u} + \tilde{v}) - (u+v) &= (\tilde{u} - u) +
+(\tilde{v} - v) \\ 
+(\tilde{u} * \tilde{v}) - (u*v) &= (\tilde{u} - u)*v +
+(\tilde{v} - v)*u + (\tilde{u} - u)*(\tilde{v} - v) \\
+\frac{u'}{v'} - \frac{u}{v} &= (u'-u) - (v'-v) * \frac{1}{v} * 
+u,
+\end{align*}
+We write $\tilde{e}$ to denote an expression with 
+deltas (for relative error) and epsilons (for absolute error); 
+so $\tilde{u} - u$ is just the absolute error in computing the 
+formula $u$ in floating-point (rather than in the real numbers).
+
+Consider the expression for the absolute
+forward error of \lstinline{carbonGas}, which looks like 
+\begin{align*}
+ \texttt{Rabs}((\tilde{u}*(1+\delta_2) + \epsilon_7 - 
+ \tilde{v}) * (1 + \delta_6) + \epsilon_0 - (u - v)).
+\end{align*}
+Applying \lstinline{error_rewrites}
+produces -- supposing that $\tilde{u}$, $\tilde{v}$, $u$, and 
+$v$ are 
+opaque -- three subgoals:
+\paragraph{subgoal 1:}$\texttt{Rabs} (\tilde{u}*(1+\delta_2)*(1 
++ \delta_6) + 
+\epsilon_7 -  u) \le \ ?e3$
+
+\paragraph{subgoal 2:}
+$\texttt{Rabs}(\tilde{v} * (1 + \delta_6) - v)  \le \ ?e2$
+
+\paragraph{subgoal 3:}
+$\texttt{Rabs}(\epsilon_0) \le \ ?e1$
+
+where the total error is now bounded by $e3 + e2 + e1$. 
+
+Note that the subexpressions in the above subgoals are smaller 
+and 
+contain related terms. For these reasons, using the 
+\lstinline{field_simplify+interval} tactic is potentially more 
+tractable. However, in 
+some cases, the recursion stops before it fully decomposes a 
+subexpression into a form that \lstinline{interval} can provide 
+a decent bound on. In this case, as long as all rational 
+expressions have been decently decomposed by the division case 
+in \lstinline{error_rewrites}, the \lstinline{prune} tactic can 
+be used successfully. 
+
+There are some cases when \lstinline{error_rewrites} causes Coq 
+to crash: on expressions with a large number of operations 
+(approximately 40). This occurs because 
+\lstinline{error_rewrites} simply produces too many subgoals. 
+As an example, consider that the 
+\lstinline{carbonGas} benchmark has 11 floating-point 
+operations and that \lstinline{error_rewrites} produces 125 
+subgoals (and this is even after \lstinline{error_rewrites} has 
+automatically discharged a few!). 
+
+\chapter{Annotations}
+
+Floating-point error analysis can be slightly more precise
+in certain cases:
+
+\begin{description}
+\item[Denorm:]  When the result of a calculation is known to be a
+  \emph{denormal} (also called \emph{subnormal}) number---a tiny
+  number within $2^{e_\mathrm{min}}$ of zero---then it has only
+  an additive error.  That is, $(a+b)+\epsilon$ instead of
+  $(a+b)(1+\delta)+\epsilon$.
+\item[Norm:]
+   When the result of a calculation is known to be a
+   \emph{normal} number---that is, bounded away from zero by
+   at least $2^{e_\mathrm{min}}$---then it has only
+  a relative error.  That is, $(a+b)(1+\delta)$ instead of
+  $(a+b)(1+\delta)+\epsilon$.
+\item[Sterbenz:]  When $a,b$ satisfy $\frac{1}{2} < \frac{a}{b} < 2$,
+  then the floating point subtraction $a-b$ is exact, no relative
+  error $\delta$, no absolute error $\epsilon$.
+\end{description}
+
+You can annotate these cases in your functional model using these functions:
+
+\begin{lstlisting}
+Definition Norm {A}(x: A) := x.
+Definition Denorm {A}(x: A) := x.
+Definition Sterbenz {A}(x: A) := x.
+\end{lstlisting}
+
+As you can see, these are just identity functions, so semantically they
+do nothing.  But they guide VCFloat's reifier to mark its internal
+abstract-syntax tree.  This will cause additional proof obligations
+(subgoals) at stage 1, to \emph{prove} that such-and-such a subexpression
+is normal, or denormal, or Sterbenz; but will cause fewer
+deltas and epsilons to be generated at stage 2.
+
+In our running example we could write,
+\begin{lstlisting}
+Definition h := (1/32)%F32.
+Definition F(x: ftype Tsingle) : ftype Tsingle := Sterbenz(3.0-x)%F32.  
+Definition step (x v: ftype Tsingle) := Norm(x + h*(v+(h/2)*F(x)))%F32.
+\end{lstlisting}
+
+\chapter{Verified Software Toolchain}
+
+You can use the Verified Software Toolchain (VST) to prove that a C program
+correctly implements a floating-point functional model.
+
+Along with importing \lstinline{VST.floyd.proofauto} and
+the other standard boilerplate that introduces a VST proof,
+you will want:
+
+\begin{lstlisting}
+From vcfloat Require Import FPCompCert Float_notations.
+Require Import float_model.  (* your functional model *)
+\end{lstlisting}
+
+It is not necessary to import all of vcfloat.VCFloat; the imports shown
+are enough to connect CompCert's definitions for floating point
+to VCFloat's definitions.  CompCert and VCFloat use different names
+for the same underlying Flocq floating-point types:
+
+\begin{lstlisting}
+Eval compute in compcert.lib.Floats.float32.   (* = Binary.binary_float 24 128 *)
+Eval compute in ftype Tsingle.   $~~~~~~~~~~~~~~~$              (* = Binary.binary_float 24 128 *)
+Eval compute in compcert.lib.Floats.float.  $~$   (* = Binary.binary_float 53 1024 *)
+Eval compute in ftype Tdouble.   $~~~~~~~~~~~~~$              (* = Binary.binary_float 53 1024 *)
+\end{lstlisting}
+
+In your VST assertions (funspecs, loop invariants,
+etc.), use the VCFloat names for those types.
+For example, here we write \lstinline{ftype Tsingle} instead of
+\lstinline{float32}:
+
+\begin{lstlisting}
+Definition force_spec :=
+ DECLARE _force
+ WITH  q : ftype Tsingle
+ PRE [ tfloat ] PROP() PARAMS(Vsingle q) SEP()
+ POST [ tfloat ] PROP() RETURN (Vsingle (F q)) SEP().
+\end{lstlisting}
+
+There are two useful tactics to convert CompCert-style float notations to VCFloat-style notations.  Immediately after \lstinline{start_function} you
+can write,
+
+\begin{lstlisting}
+start_function.
+subst MORE_COMMANDS; unfold abbreviate; canonicalize_float_constants.
+\end{lstlisting}
+
+The tactic \lstinline{canonicalize_float_constants} converts
+all of the floating-point literals in the AST of your function-body
+into a VCFloat style, which makes them easier to reason about
+(and to relate to your functional model).
+
+The following tactic is useful \emph{after} going \lstinline{forward}
+through a sequence of C statements that perform floating-point
+operations:
+\begin{lstlisting}
+autorewrite with float_elim in *.
+\end{lstlisting}
+It converts \lstinline{Float32.add $x$ $y$} to \lstinline{($x$+$y$)%F32},
+  and similarly for other operators.
+
+That's it!  Other than these conversions, you use VST in
+a completely standard way.  
+
+\subsection*{Exactly matching the functional model}
+
+When using VST or any other tool to prove that a program correctly
+implements a functional model, take care to
+match it exactly.  For example, in floating point the
+associative law $(a+b)+c=a+(b+c)$ does not hold.
+
+The commutative law $a+b=b+a$ may hold \emph{only if
+neither $a$ nor $b$ is a NaN}, depending on how your target
+machine propagates NaNs.  Therefore, if your C program
+computes $a+b$ while the functional model computes $b+a$,
+you will be able to prove it correct only if you propagate
+the invariant that $a$ is finite and $b$ is finite.
+It's certainly possible to propagate such invariants, but
+it's simpler if you don't have to.
+
+\chapter{Bibliography}
+
+\quad VCFloat 1.0 was built in 2015 and described in,\newline
+\textbf{A unified Coq framework for verifying C programs with floating-point computations}, by Tahina Ramananandro, Paul Mountcastle, Beno\^{\i}t  Meister, and Richard Lethin, in \emph{Proceedings of the 5th ACM SIGPLAN Conference on Certified Programs and Proofs (CPP'16)}, pages 15--26, 2016\newline (https://doi.org/10.1145/2854065.2854066).
+\vspace\baselineskip
+
+VCFloat 2.0 was built 2021-2022 and described in,\newline
+\textbf{VCFloat2: Floating-point error analysis in Coq},
+by Andrew W. Appel and Ariel E. Kellison,
+October 2022  (distributed as doc/vcfloat2.pdf in the vcfloat repo).
+\vspace\baselineskip
+
+VCFloat 2.0 is applied and demonstrated in,\newline
+\textbf{Verified numerical methods for ordinary differential equations},
+by Ariel E. Kellison and Andrew W. Appel,
+in \emph{15th International Workshop on Numerical Software Verification (NSV'22)}, August 2022.
+
+
+
+\end{document}

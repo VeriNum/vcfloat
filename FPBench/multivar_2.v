@@ -1,5 +1,5 @@
-From vcfloat Require Import Automate Prune FPLang FPLangOpt RAux Rounding Reify Float_notations.
-Require Import IntervalFlocq3.Tactic.
+Require Import vcfloat.VCFloat.
+Require Import Interval.Tactic.
 Import Binary List ListNotations.
 Set Bullet Behavior "Strict Subproofs".
 Section WITHNANS.
@@ -12,7 +12,7 @@ Definition nonlin2_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list nonlin2_bmap_list) in exact z).
 
 Definition nonlin2 (x : ftype Tdouble) (y : ftype Tdouble) := 
-  cast Tdouble _ (let t := (x * y)%F64 in
+  cast Tdouble (let t := (x * y)%F64 in
   ((t - (1)%F64)%F64 / ((t * t)%F64 - (1)%F64)%F64)%F64).
 
 Definition nonlin2_expr := 
@@ -40,7 +40,7 @@ Definition himmilbeau_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list himmilbeau_bmap_list) in exact z).
 
 Definition himmilbeau (x1 : ftype Tdouble) (x2 : ftype Tdouble) := 
-  cast Tdouble _ (let a := (((x1 * x1)%F64 + x2)%F64 - (11)%F64)%F64 in
+  cast Tdouble (let a := (((x1 * x1)%F64 + x2)%F64 - (11)%F64)%F64 in
   let b := ((x1 + (x2 * x2)%F64)%F64 - (7)%F64)%F64 in
   ((a * a)%F64 + (b * b)%F64)%F64).
 
@@ -69,7 +69,7 @@ Definition jetengine_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list jetengine_bmap_list) in exact z).
 
 Definition jetengine (x1 : ftype Tdouble) (x2 : ftype Tdouble) := 
-  cast Tdouble _ (let t := (((((3)%F64 * x1)%F64 * x1)%F64 + ((2)%F64 * x2)%F64)%F64 - x1)%F64 in
+  cast Tdouble (let t := (((((3)%F64 * x1)%F64 * x1)%F64 + ((2)%F64 * x2)%F64)%F64 - x1)%F64 in
   let t_42_ := (((((3)%F64 * x1)%F64 * x1)%F64 - ((2)%F64 * x2)%F64)%F64 - x1)%F64 in
   let d := ((x1 * x1)%F64 + (1)%F64)%F64 in
   let s := (t / d)%F64 in

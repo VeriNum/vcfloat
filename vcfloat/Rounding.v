@@ -51,10 +51,10 @@ Author: Tahina Ramananandro <ramananandro@reservoir.com>
 VCFloat: core and annotated languages for floating-point operations.
 *)
 
-Require Import IntervalFlocq3.Tactic.
+Require Import Interval.Tactic.
 From vcfloat Require Export RAux.
-From Flocq3 Require Import Binary Bits Core.
-From compcert Require Import lib.IEEE754_extra lib.Floats.
+From Flocq Require Import Binary Bits Core.
+From vcfloat Require Import IEEE754_extra. (* lib.Floats. *)
 Require compcert.lib.Maps.  
 Require Coq.MSets.MSetAVL.
 Require vcfloat.Fprop_absolute.
@@ -457,7 +457,7 @@ Proof.
   unfold make_rounding.
   destruct kn;
   inversion 1; subst; simpl; intros;
-  repeat (apply Max.max_lub; auto with arith).
+  repeat (apply Nat.max_lub; auto with arith).
 Qed.
 
 Definition error_bound ty k :=
@@ -889,11 +889,11 @@ Proof.
     intros.
     destruct (rndval si shift x1) as (r1 & si1 & s1) eqn:EQ1.
     destruct (rndval si1 s1 x2) as (r2 & si2 & s2) eqn:EQ2.
-    eapply le_trans.
+    eapply Nat.le_trans.
     {
       eapply IHx1; eauto.
     }
-    eapply le_trans.
+    eapply Nat.le_trans.
     {
       eapply IHx2; eauto.
     }
@@ -901,7 +901,7 @@ Proof.
 - (* Unop *)
   intros.
   destruct (rndval si shift x) as (r1 & si1 & s1) eqn:EQ1.
-  eapply le_trans.
+  eapply Nat.le_trans.
   {
     eapply IHx; eauto.
   }
@@ -923,7 +923,7 @@ Proof.
     destruct (rndval si shift x1) as (r1 & si1 & s1) eqn:EQ1.
     destruct (rndval si1 s1 x2) as (r2 & si2 & s2) eqn:EQ2.
     eapply rnd_of_binop_shift_le; eauto.
-    eapply le_trans.
+    eapply Nat.le_trans.
     {
       eapply IHx1; eauto.
     }
@@ -952,7 +952,7 @@ Proof.
     etransitivity.
     {
       eapply rnd_of_binop_shift_unchanged; eauto.
-      eapply lt_le_trans; [ eassumption | ].
+      eapply Nat.lt_le_trans; [ eassumption | ].
       etransitivity.
       {
         eapply rndval_shift_incr; eauto.
@@ -962,7 +962,7 @@ Proof.
     etransitivity.
     {
       eapply IHx2; eauto.
-      eapply lt_le_trans; [ eassumption | ].
+      eapply Nat.lt_le_trans; [ eassumption | ].
       eapply rndval_shift_incr; eauto.
     }
     eapply IHx1; eauto.
@@ -972,7 +972,7 @@ Proof.
   etransitivity.
   {
     eapply rnd_of_unop_shift_unchanged; eauto.
-    eapply lt_le_trans; [ eassumption | ].
+    eapply Nat.lt_le_trans; [ eassumption | ].
     eapply rndval_shift_incr; eauto.
   }
   eapply IHx; eauto.
@@ -1116,11 +1116,11 @@ Proof.
   rewrite MSET.union_spec.
   destruct 1.
   {
-    eapply lt_le_trans.
+    eapply Nat.lt_le_trans.
     { eapply IHe1; eauto. }
     apply Nat.le_max_l.
   }
-  eapply lt_le_trans.
+  eapply Nat.lt_le_trans.
   { eapply IHe2; eauto. }
   apply Nat.le_max_r.
 Qed.
@@ -1308,7 +1308,7 @@ Proof.
     subst;
     inversion H; clear H; subst;
     simpl;
-    try rewrite Max.max_0_r;
+    try rewrite Nat.max_0_r;
     auto with arith.
   Transparent Zminus.
 Qed.
@@ -1390,7 +1390,7 @@ Proof.
     destruct 1; try contradiction.
     Opaque Zminus. inversion H; clear H; subst. Transparent Zminus.
     simpl.
-    apply Max.max_0_r.
+    apply Nat.max_0_r.
 -
   destruct 1; try contradiction.
   Opaque Zminus. inversion H; clear H; subst. Transparent Zminus.
@@ -1430,13 +1430,13 @@ Proof.
       simpl.
       eapply make_rounding_shift_le; eauto.
       simpl.
-      apply Max.max_lub; auto.
+      apply Nat.max_lub; auto.
     }
     apply rounding_cond_ast_shift_cond in H1.
     rewrite H1.
     simpl.
     apply make_rounding_shift_incr in EQ.
-    apply Max.max_lub; lia.
+    apply Nat.max_lub; lia.
   }
   {
     intro K.
@@ -1446,14 +1446,14 @@ Proof.
     {
       inversion H1; clear H1; subst.
       simpl.
-      rewrite Max.max_0_r.
-      apply Max.max_lub; lia.
+      rewrite Nat.max_0_r.
+      apply Nat.max_lub; lia.
     }
     destruct H1; try contradiction.
     inversion H1; clear H1; subst.
     simpl.
-    rewrite Max.max_0_r.
-    apply Max.max_lub; lia.
+    rewrite Nat.max_0_r.
+    apply Nat.max_lub; lia.
   }
   {
     intro K.
@@ -1580,7 +1580,7 @@ Proof.
     destruct H0; try contradiction.
     inversion H0; clear H0; subst.
     simpl.
-    rewrite Max.max_0_r.
+    rewrite Nat.max_0_r.
     assumption.
   * intros. inversion H; clear H; subst. inversion H1.
   * intros. inversion H; clear H; subst. inversion H1.
@@ -1848,30 +1848,38 @@ Proof.
 
   {
     (* plus *)
-    generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
-    rewrite Raux.Rlt_bool_true by (unfold round_mode; lra).
+    generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
+    change (SpecFloat.fexp _ _) with (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
+    change (BinarySingleNaN.round_mode _) with ZnearestE.
+    rewrite Raux.Rlt_bool_true by lra.
     destruct 1 as (? & ? & _).
     auto.
   }
   {
     (* minus *)
-    generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
-    rewrite Raux.Rlt_bool_true by (unfold round_mode; lra).
+    generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
+    change (SpecFloat.fexp _ _) with (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
+    change (BinarySingleNaN.round_mode _) with ZnearestE.
+    rewrite Raux.Rlt_bool_true by lra.
     destruct 1 as (? & ? & _).
     auto.
   }
   {
     (* mult *)
-    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE e1 e2).
-    rewrite Raux.Rlt_bool_true by (unfold round_mode; lra).
+    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE e1 e2).
+    change (SpecFloat.fexp _ _) with (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
+    change (BinarySingleNaN.round_mode _) with ZnearestE.
+    rewrite Raux.Rlt_bool_true by lra.
     rewrite F1. rewrite F2.
     simpl andb.
     destruct 1 as (? & ? & _).
     auto.
   }
   (* div *)
-  generalize (fun K => Bdiv_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (div_nan _) mode_NE e1 e2 K).
-  rewrite Raux.Rlt_bool_true by (unfold round_mode; lra).
+  generalize (fun K => Bdiv_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (div_nan _) BinarySingleNaN.mode_NE e1 e2 K).
+    change (SpecFloat.fexp _ _) with (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
+    change (BinarySingleNaN.round_mode _) with ZnearestE.
+    rewrite Raux.Rlt_bool_true by lra.
   rewrite F1.
   destruct 1 as (? & ? & _).
   {
@@ -1917,7 +1925,7 @@ Proof.
   repeat rewrite B2R_correct in *.
     cbn -[Zminus] in * |- * ;
     rewrite V1 in * |- *.
-    generalize (Bsqrt_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (sqrt_nan _) mode_NE e1).
+    generalize (Bsqrt_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (sqrt_nan _) BinarySingleNaN.mode_NE e1).
     destruct 1 as (? & ? & _).
     split; auto.
     specialize (COND _ (or_introl _ (refl_equal _))).
@@ -2119,13 +2127,13 @@ Proof.
         etransitivity.
         {
           eapply rnd_of_binop_shift_unchanged; eauto.
-          eapply lt_le_trans; [ eassumption | ].
+          eapply Nat.lt_le_trans; [ eassumption | ].
           etransitivity.
           eapply rndval_with_cond_shift_cond; [ | eassumption ] ; eauto.
           eapply rndval_shift_incr; eauto.
         }
         eapply rndval_shift_unchanged; eauto.
-        eapply lt_le_trans; [ eassumption | ].
+        eapply Nat.lt_le_trans; [ eassumption | ].
         eapply rndval_with_cond_shift_cond; eauto.
       }
       apply H1. apply in_or_app. right. apply in_or_app. auto.
@@ -2142,7 +2150,7 @@ Proof.
         subst.
         symmetry.
         eapply rnd_of_binop_shift_unchanged; eauto.
-        eapply lt_le_trans; [ eassumption | ].
+        eapply Nat.lt_le_trans; [ eassumption | ].
         eapply rndval_with_cond_shift_cond; [ | eassumption ] ; eauto.
       }
       apply H1. apply in_or_app. right. apply in_or_app. auto.
@@ -2167,7 +2175,7 @@ Proof.
     symmetry in V2.
 
     rewrite <- (reval_error_ext errors1_2) in V1
-     by (intros; apply E2; eapply lt_le_trans; [ eassumption | eapply rndval_shift_le; eauto]).
+     by (intros; apply E2; eapply Nat.lt_le_trans; [ eassumption | eapply rndval_shift_le; eauto]).
     destruct b.
    + (* rounded binary operator *)
         simpl.
@@ -2188,7 +2196,7 @@ Proof.
           intros.
           apply Nat.max_lub.
           {
-            eapply le_trans; [ eapply rndval_shift_le; eauto | ].
+            eapply Nat.le_trans; [ eapply rndval_shift_le; eauto | ].
             eapply rndval_shift_incr; eauto.
           }
           eapply rndval_shift_le; eauto.
@@ -2209,9 +2217,9 @@ Proof.
             simpl in H3.
             
             eapply make_rounding_shift_unchanged; eauto.
-            eapply lt_le_trans; eauto.
+            eapply Nat.lt_le_trans; eauto.
             etransitivity; try eassumption.
-            apply Max.max_lub; eauto using rndval_shift_le.
+            apply Nat.max_lub; eauto using rndval_shift_le.
             etransitivity; [ eapply rndval_shift_le; eauto | ].
             eapply rndval_shift_incr; eauto.
           }
@@ -2224,7 +2232,7 @@ Proof.
           apply reval_error_ext.
           intros.
           apply E.
-          eapply lt_le_trans; [ eassumption | ].
+          eapply Nat.lt_le_trans; [ eassumption | ].
           etransitivity; [ eapply rndval_shift_le; eauto | ].
           eapply rndval_shift_incr; eauto.
         }
@@ -2233,7 +2241,7 @@ Proof.
           apply reval_error_ext.
           intros.
           apply E.
-          eapply lt_le_trans; [ eassumption | ].
+          eapply Nat.lt_le_trans; [ eassumption | ].
           eapply rndval_shift_le; eauto.
         }
         rewrite <- W1, <- W2 in *.
@@ -2286,14 +2294,14 @@ Proof.
         etransitivity.
         {
           eapply E.
-          eapply lt_le_trans; [ eassumption | ].
+          eapply Nat.lt_le_trans; [ eassumption | ].
           etransitivity; [ eapply rndval_shift_incr; eauto | ].
           eapply rndval_shift_incr; eauto.
         }
         etransitivity.
         {
           eapply E2.
-          eapply lt_le_trans; [ eassumption | ].
+          eapply Nat.lt_le_trans; [ eassumption | ].
           eapply rndval_shift_incr; eauto.
         }
         eauto.
@@ -2311,7 +2319,7 @@ Proof.
         specialize (H1 _ EB2).
         specialize (H1' _ EB2).
 
-        generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
+        generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
         intro K.
         change ( Z.pos
                    (fprecp (type_lub (type_of_expr e1) (type_of_expr e2))))
@@ -2337,7 +2345,7 @@ Proof.
             etransitivity.
             {
               eapply E2.
-              eapply lt_le_trans; [ eassumption | ].
+              eapply Nat.lt_le_trans; [ eassumption | ].
               eapply rndval_shift_incr; eauto.
             }
             auto.
@@ -2345,11 +2353,11 @@ Proof.
           exfalso.
           pose proof 
           (abs_B2R_lt_emax _ _
-            (cast (type_lub (type_of_expr e1) (type_of_expr e2)) 
+            (@cast _ (type_lub (type_of_expr e1) (type_of_expr e2)) 
                   (type_of_expr e1) (fval env e1))).
           pose proof 
           (abs_B2R_lt_emax _ _
-            (cast (type_lub (type_of_expr e1) (type_of_expr e2)) 
+            (@cast _ (type_lub (type_of_expr e1) (type_of_expr e2)) 
                   (type_of_expr e2) (fval env e2))).
           rewrite <- V1 in H3.
           rewrite <- V2 in H4.
@@ -2381,7 +2389,7 @@ Proof.
           etransitivity.
           {
             eapply E2.
-            eapply lt_le_trans; [ eassumption | ].
+            eapply Nat.lt_le_trans; [ eassumption | ].
             eapply rndval_shift_incr; eauto.
           }
           eauto.
@@ -2396,11 +2404,11 @@ Proof.
          {
           rewrite V1 in ZERO.
           pose proof (abs_B2R_lt_emax _ _
-          (cast (type_lub (type_of_expr e1) (type_of_expr e2)) 
+          (@cast _ (type_lub (type_of_expr e1) (type_of_expr e2)) 
             (type_of_expr e2) (fval env e2))).
           destruct minus.
           {
-            generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
+            generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
             rewrite ZERO.
             rewrite Rminus_0_l.
             rewrite Generic_fmt.round_opp.
@@ -2420,7 +2428,7 @@ Proof.
             }
             apply generic_format_B2R.
           }
-          generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
+          generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
           rewrite ZERO.
           rewrite Rplus_0_l.
           rewrite Generic_fmt.round_generic; try typeclasses eauto.
@@ -2440,11 +2448,11 @@ Proof.
         }
         rewrite V2 in ZERO.
         pose proof (abs_B2R_lt_emax _ _
-        (cast (type_lub (type_of_expr e1) (type_of_expr e2)) 
+        (@cast _ (type_lub (type_of_expr e1) (type_of_expr e2)) 
           (type_of_expr e1) (fval env e1))).
         destruct minus.
         {
-          generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
+          generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
           rewrite ZERO.
           rewrite Rminus_0_r.
           rewrite Generic_fmt.round_generic; try typeclasses eauto.
@@ -2462,7 +2470,7 @@ Proof.
           }
           apply generic_format_B2R.
         }
-        generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) mode_NE _ _ F1 F2).
+        generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
         rewrite ZERO.
         rewrite Rplus_0_r.
         rewrite Generic_fmt.round_generic; try typeclasses eauto.
@@ -2507,7 +2515,7 @@ Proof.
       intros; subst.
       symmetry.
       eapply rnd_of_unop_shift_unchanged; eauto.
-      eapply lt_le_trans; eauto.
+      eapply Nat.lt_le_trans; eauto.
       eapply rndval_with_cond_shift_cond; eauto.
     }
     apply H1. apply in_or_app. auto.
@@ -2548,7 +2556,7 @@ Proof.
         apply rounding_cond_ast_shift in H3.
         simpl in H3.
         eapply rnd_of_unop_shift_unchanged; eauto.
-        eapply lt_le_trans; eauto.
+        eapply Nat.lt_le_trans; eauto.
         etransitivity; try eassumption.
       }
       eapply H1.
@@ -2566,7 +2574,7 @@ Proof.
       apply reval_error_ext.
       intros.
       apply E.
-      eapply lt_le_trans; [ eassumption | ].
+      eapply Nat.lt_le_trans; [ eassumption | ].
       eapply rndval_shift_le; eauto.
     }
     rewrite <- W1 in V1.
@@ -2604,7 +2612,7 @@ Proof.
     etransitivity.
     {
       eapply E.
-      eapply lt_le_trans; [eassumption | ].
+      eapply Nat.lt_le_trans; [eassumption | ].
       eapply rndval_shift_incr; eauto.
     }
     eauto.
@@ -2627,13 +2635,12 @@ Proof.
     rewrite Z.leb_le in H.
     apply center_Z_correct in H.
     assert (B2_FIN := B2_finite (type_of_expr e) (Z.neg pow) (proj2 H)).
-    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.neg pow)) (fval env e)).
-    generalize (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.neg pow)) (fval env e)).
+    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 (type_of_expr e) (Z.neg pow)) (fval env e)).
+    generalize (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 (type_of_expr e) (Z.neg pow)) (fval env e)).
     rewrite Rmult_comm.
-    generalize (B2_correct _ (Z.neg pow) H).
-    repeat rewrite B2R_correct.
-    intro K.
-    rewrite K.
+    change (SpecFloat.fexp (fprec (type_of_expr e)) (femax (type_of_expr e)))
+     with  (FLT_exp (3 - femax (type_of_expr e) - fprec (type_of_expr e)) (fprec (type_of_expr e))).
+    rewrite (B2_correct _ (Z.neg pow) H).
     replace (Z.neg pow) with (- Z.pos pow)%Z in * |- * by reflexivity.   
     rewrite Raux.bpow_opp.
     rewrite FLT_format_div_beta_1; try typeclasses eauto.
@@ -2708,13 +2715,17 @@ Proof.
       generalize (B2_finite (type_of_expr e) (Z.of_N pow) (proj2 H)).
       intro B2_FIN.
       generalize
-          (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.of_N pow)) (fval env e)).
+          (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 (type_of_expr e) (Z.of_N pow)) (fval env e)).
       generalize
-         (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) mode_NE (B2 (type_of_expr e) (Z.of_N pow)) (fval env e)).
+         (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 (type_of_expr e) (Z.of_N pow)) (fval env e)).
       rewrite Rmult_comm.
       replace (Z.of_N (pow + 1)) with (Z.of_N pow + 1)%Z in H by (rewrite N2Z.inj_add; simpl; ring).
-      assert (K := B2_correct _ _ H).
-      rewrite K.
+      specialize (H1 _ (or_introl _ (refl_equal _)) _ EB1).
+      simpl in H1.
+      rewrite F2R_eq, <- B2F_F2R_B2R, V1 in H1.
+      rewrite (B2_correct _ _ H) in H1|-*.
+    change (SpecFloat.fexp (fprec (type_of_expr e)) (femax (type_of_expr e)))
+     with  (FLT_exp (3 - femax (type_of_expr e) - fprec (type_of_expr e)) (fprec (type_of_expr e))).
       rewrite FLT_format_mult_beta_n; try typeclasses eauto.
       rewrite F1.
       rewrite B2_FIN.
@@ -2732,13 +2743,6 @@ Proof.
         rewrite L.
         ring.
       }
-      specialize (H1 _ (or_introl _ (refl_equal _))).
-      specialize (H1 _ EB1).
-      simpl in H1.
-      rewrite F2R_eq in H1.
-      rewrite <- B2F_F2R_B2R in H1.
-      rewrite V1 in H1.
-      rewrite K in H1.
       rewrite Rmult_comm.
       lra.
 
@@ -2764,7 +2768,7 @@ Proof.
     rewrite type_leb_le in LEB.
     inversion LEB.
     generalize ((fun J1 =>
-                  Bconv_widen_exact _ _ _ _ J1 (fprec_gt_0 _) (fprec_lt_femax _) (Z.le_ge _ _ H3) (Z.le_ge _ _ H4) (conv_nan _ _) mode_NE _ F1) ltac:( typeclasses eauto ) ).
+                  Bconv_widen_exact _ _ _ _ J1 (fprec_gt_0 _) (fprec_lt_femax _) (Z.le_ge _ _ H3) (Z.le_ge _ _ H4) (conv_nan _ _) BinarySingleNaN.mode_NE _ F1) ltac:( typeclasses eauto ) ).
     destruct 1 as (K & L & _).
     symmetry in K.
     rewrite <- V1 in K.
@@ -2792,7 +2796,7 @@ Proof.
       apply rounding_cond_ast_shift in H3.
       simpl in H3.
       eapply make_rounding_shift_unchanged; eauto.
-      eapply lt_le_trans; eauto.
+      eapply Nat.lt_le_trans; eauto.
       etransitivity; try eassumption.
     }
     eapply H1.
@@ -2804,8 +2808,8 @@ Proof.
   specialize (K L _ EB1 _ L'  (fun x : Z => negb (Z.even x))); clear L L'.
   destruct K as (errors2 & E & R & EB).
   rewrite V1 in R.
-  generalize (Bconv_correct _ _ _ _ (fprec_gt_0 _) (fprec_lt_femax ty) (conv_nan _ _) mode_NE _ F1).
-  unfold round_mode.
+  generalize (Bconv_correct _ _ _ _ (fprec_gt_0 _) (fprec_lt_femax ty) (conv_nan _ _) BinarySingleNaN.mode_NE _ F1).
+  unfold BinarySingleNaN.round_mode.
   rewrite <- R.
   rewrite Raux.Rlt_bool_true.
   {
@@ -2817,7 +2821,7 @@ Proof.
     etransitivity.
     {
       eapply E.
-      eapply lt_le_trans; eauto.
+      eapply Nat.lt_le_trans; eauto.
       eapply rndval_shift_incr; eauto.
     }
     auto.

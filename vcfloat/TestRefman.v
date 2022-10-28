@@ -1,7 +1,4 @@
-(** TestPaper.v:  examples taken from the paper,
-  "VCFloat2: Floating-point error analysis in Coq"
- Copyright (C) 2022 Andrew W. Appel and Ariel Kellison.
-*)
+(** TestRefman.v:  examples from the  reference manual. *)
 
 Require Import vcfloat.VCFloat.
 Require Import Interval.Tactic.
@@ -12,42 +9,19 @@ Set Bullet Behavior "Strict Subproofs".
 Open Scope R_scope.
 
 Section WITHNANS.
-
-(** NANS:  Each different computer architecture supports the same IEEE-754
-  floating-point standard, but with slightly different Not-a-number (NAN) behavior.
-  That behavior is encapsulated in a Nans typeclass.  You can instantiate that
-  appropriate for your own architecture; but all the demos in this file are
-  independent of the Nans details, so we can leave it abstract, like this: *)
 Context {NANS: Nans}.
 
-(** We will demonstrate VCfloat on a symplectic ODE (ordinary differential 
-  equation) integration for a simple harmonic oscillator. *)
 
 Definition h := (1/32)%F32.
-Definition F(x: ftype Tsingle) : ftype Tsingle := Sterbenz(3.0-x)%F32.  
-Definition step (x v: ftype Tsingle) := (Norm(x + h*(v+(h/2)*F(x))))%F32.
+Definition F(x: ftype Tsingle) : ftype Tsingle := (3.0-x)%F32.  
+Definition step (x v: ftype Tsingle) := (x + h*(v+(h/2)*F(x)))%F32.
 
-(** In deep-embedded (syntactic) expressons, variables are represented
-  by "ident"ifiers, which are actually small positive numbers. *)
 Definition _x : ident := 1%positive.  (* Variable name for position *)
 Definition _v : ident := 2%positive.  (* Variable name for velocity *)
 
-(** These two lines compute a deep-embedded "expr"ession from
-  a shallow-embedded Coq expression.  *)
-Definition step' := ltac:(let e' := 
-  HO_reify_float_expr constr:([_x; _v]) step in exact e').
+Definition step' := ltac:(let e' := HO_reify_float_expr constr:([_x; _v]) step in exact e').
 
-Print step'.  (* Demonstrates what step' looks like *)
-
-(** When interpreting deep-embedded expressions, "Var"iables will appear
-  which are labeled by identifiers such as "_x" and "_v".  We want a
-  "varmap" for looking up the values of those variables.  We'll compute
-  that varmap in two stages.  Step one, given values "x" and "v", 
-  make an association list mapping _x to x, and _v to v,  each labeled
-  by its floating-point type.  *)
-
-Definition step_vmap_list (x v : ftype Tsingle) := 
-   [(_x, existT ftype _ x);(_v, existT ftype _ v)].
+Definition step_vmap_list (x v : ftype Tsingle) := [(_x, existT ftype _ x);(_v, existT ftype _ v)].
 
 (** Step two, build that into "varmap" data structure, taking care to
   compute it into a lookup-tree ___here___, not later in each place
@@ -59,9 +33,28 @@ Definition step_vmap (x v : ftype Tsingle) : valmap :=
   deep-embedded "expr"ession, you can get back the shallow embedding
    by applying the "fval" function *)
 
-Lemma reflect_reify : forall x v, 
-             fval (env_ (step_vmap x v)) step' = step x v.
+Definition reflected_step (x v: ftype Tsingle) :=
+   fval (env_ (step_vmap x v)) step'.
+
+Lemma reflect_reify : forall x v, reflected_step x v = step x v.
 Proof. reflexivity. Qed.
+
+Definition step_realmodel' (x v: ftype Tsingle) : R :=
+   FT2R x + (1/32)*(FT2R v + ((1/32)/2)*(3- FT2R x)).
+
+
+Coercion FT2R: ftype >-> R.
+
+Definition step_realmodel (x v: ftype Tsingle) : R :=
+   x + (1/32)*(v + ((1/32)/2)*(3-x)).
+
+Lemma correspond_floatmodel_realmodel: 
+  forall x v, rval (env_ (step_vmap x v)) step' = step_realmodel x v.
+Proof. intros.
+ unfold step_realmodel.
+ simpl.
+ repeat f_equal; compute; lra.
+Qed. 
 
 (** To create the boundsmap, first we make an association list.  This one says
    that    2.0 <= x <= 4.0   and   -2.0 <= v <= 2.0  *)
@@ -107,7 +100,7 @@ intro.
  prove_rndval; interval.
 -
 prove_roundoff_bound2.
-prune_terms (cutoff 100).
+prune_terms (cutoff 30).
 do_interval.
 Defined.
 

@@ -55,8 +55,8 @@ the real-number semantics of floating-point computations.
 Require Export vcfloat.Float_lemmas.
 Require Export vcfloat.FPLang.
 Import RAux.
-Import compcert.lib.IEEE754_extra.
-Import compcert.lib.Floats.
+Import vcfloat.IEEE754_extra.
+(*Import compcert.lib.Floats. *)
 Require Export vcfloat.LibTac.
 Require Export vcfloat.BigRAux.
 Set Bullet Behavior "Strict Subproofs". (* because LibTac screws it up *)
@@ -487,7 +487,7 @@ Definition fshift_mult (e'1 e'2: expr) :=
    let ty := type_lub (type_of_expr e'1) (type_of_expr e'2) in
         match fcval_nonrec e'1 with
           | Some c1' =>
-            let c1 := cast ty _ c1' in
+            let c1 := cast ty c1' in
             if Binary.Bsign _ _ c1 then Binop (Rounded2 MULT None) e'1 e'2
             else
             let n := to_power_2 c1 in
@@ -501,7 +501,7 @@ Definition fshift_mult (e'1 e'2: expr) :=
           | None =>
             match fcval_nonrec e'2 with
               | Some c2' =>
-                let c2 := cast ty _ c2' in
+                let c2 := cast ty c2' in
                 if Binary.Bsign _ _ c2 then Binop (Rounded2 MULT None) e'1 e'2
                 else
                 let n := to_power_2 c2 in
@@ -781,7 +781,7 @@ Fixpoint fshift_div (e: FPLang.expr) {struct e}: FPLang.expr :=
       let ty := type_lub (type_of_expr e'1) (type_of_expr e'2) in
       match (fcval_nonrec e'2) with
             | Some c2' =>
-                let c2 := cast ty _ c2' in
+                let c2 := cast ty c2' in
                 match (Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) c2) with
                   | Some z' => 
                     let n1 := to_power_2_pos c2 in
@@ -841,7 +841,7 @@ Local Hint Extern 2 (Binary.is_finite _ _ _ = true) =>
 
 Lemma cast_preserves_bf_equiv tfrom tto (b1 b2: Binary.binary_float (fprec tfrom) (femax tfrom)) :
   binary_float_equiv b1 b2 -> 
-  binary_float_equiv (cast tto tfrom b1) (cast tto tfrom b2).
+  binary_float_equiv (@cast _ tto tfrom b1) (@cast _ tto tfrom b2).
 Proof.
 intros.
 destruct b1, b2; simpl; inversion H; clear H; subst; auto;
@@ -1048,8 +1048,8 @@ Local Lemma Bmult_div_inverse_equiv ty:
   Binary.is_finite _ _ z = true ->
   Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
   binary_float_equiv
-  (Binary.Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) Binary.mode_NE x z) 
-  (Binary.Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) Binary.mode_NE x y) .
+  (Binary.Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) BinarySingleNaN.mode_NE x z) 
+  (Binary.Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) BinarySingleNaN.mode_NE x y) .
 Proof. intros. apply binary_float_equiv_sym; apply Bdiv_mult_inverse_equiv; auto. Qed.
 
 Theorem Bmult_div_inverse_equiv2 ty:
@@ -1059,12 +1059,12 @@ Theorem Bmult_div_inverse_equiv2 ty:
   Binary.is_finite _ _ z = true ->
   Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
   binary_float_equiv
-  (Binary.Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) Binary.mode_NE x2 z)
-  (Binary.Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) Binary.mode_NE x1 y) .
+  (Binary.Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) BinarySingleNaN.mode_NE x2 z)
+  (Binary.Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) BinarySingleNaN.mode_NE x1 y) .
 Proof. intros. apply binary_float_equiv_sym; apply Bdiv_mult_inverse_equiv2; auto. Qed.
 
 Lemma uncast_finite_strict:
-  forall t t2 f, Binary.is_finite_strict (fprec t) (femax t) (cast t t2 f) = true ->
+  forall t t2 f, Binary.is_finite_strict (fprec t) (femax t) (@cast _ t t2 f) = true ->
         Binary.is_finite_strict _ _ f = true.
 Proof.
 intros.
