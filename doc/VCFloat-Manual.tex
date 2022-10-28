@@ -556,48 +556,85 @@ Rabs (-1/2048 * d0 * v_x + -1/2048 * d * v_x + 2047/2048 * d1 * v_x +
 \end{lstlisting}
 in which not as many terms have been neglected.  But either way,
 \lstinline{interval} solves the goal.
-
-\chapter{error\_rewrites} Suppose your expression for the absolute
-forward floating-point error does not expand into a nice multinomial
-that can be handled by the VCFloat \lstinline{prune} tactic. An example
+\chapter{error\_rewrites} Suppose an expression for the absolute
+forward error (1) does not expand into a nice multinomial
+that is tractable for the \lstinline{prune} tactic, and (2) is 
+so large (as a meausure of the number of operations after 
+rounding) that applying the \lstinline{field_simplify+interval} 
+tactic causes Coq to crash. An example
 of such a problem is the \lstinline{carbonGas} benchmark from the
 FPBench benchmark suite:
-\begin{lstlisting}
-carbonGas($v$) := P + A * (N/$v$) * (N/$v$) * ($v$ - N * B) - K * N * T
+\begin{lstlisting} 
+carbonGas($v$):= P+A*(N/$v$)*(N/$v$)*($v$-N*B)-K*N*T
 \end{lstlisting}
-where \lstinline{A,B,K,N,P,T} are constants.
-The rounded expression for \lstinline{carbonGas} with its associated
-$\delta$s and $\epsilon$s as it appears below the line in a Coq proof is
-too long for us to include here. Because $v$ appears in the denominator,
-VCFloat's \lstinline{prune} tactic won't simplify this very much.
-The remaining options
-introduced so far would be to try the \lstinline{field_simplify} tactic
-followed by the \lstinline{interval} tactic; applying such a chain of
-tactics causes Coq to crash. 
-
-To solve such goals,
-the \lstinline{error_rewrites} tactic implements
-recusively decomposes the expression for the absolute forward error into smaller
-subexpressions of related terms, using 
-the following equalities,
+where \lstinline{A,B,K,N,P,T} are constants. Because $v$ 
+appears in the denominator of terms in \lstinline{carbonGas},
+VCFloat's \lstinline{prune} tactic won't simplify the 
+expression enough for \lstinline{interval} to produce a decent 
+bound. A tactic that can be used in cases like this is 
+\lstinline{error_rewrites}, which will recursively
+decompose a main proof goal for absolute forward error into 
+subgoals of smaller subexpressions on related terms using the 
+following equalities.  
+ 
 \begin{align*}
- (\tilde{u} - \tilde{v}) - (u-v) &~=~ (\tilde{u} - u) -
+ (\tilde{u} - \tilde{v}) - (u-v) &= (\tilde{u} - u) -
 (\tilde{v} - v) \\
- (\tilde{u} + \tilde{v}) - (u+v) &~=~ (\tilde{u} - u) +
+ (\tilde{u} + \tilde{v}) - (u+v) &= (\tilde{u} - u) +
 (\tilde{v} - v) \\ 
-(\tilde{u} * \tilde{v}) - (u*v) ~&~=~ (\tilde{u} - u)*v +
-(\tilde{v} - v)*u + (\tilde{u} - u)*(\tilde{v} - v) 
+(\tilde{u} * \tilde{v}) - (u*v) &= (\tilde{u} - u)*v +
+(\tilde{v} - v)*u + (\tilde{u} - u)*(\tilde{v} - v) \\
+\frac{u'}{v'} - \frac{u}{v} &= (u'-u) - (v'-v) * \frac{1}{v} * 
+u,
 \end{align*}
-We write $\tilde{u}$ for the expression $u$ with deltas (for relative error)
-and epsilons (for absolute error); so $\tilde{u} - u$ is just
-the absolute error in computing the formula $u$ in floating-point
-(rather than in the real numbers).
-For each subformula such as
-$\tilde{u} - u$ or $\tilde{v} - v$,
-a separate Coq goal finds an upper bound.
-Each such subgoal is simple enough
-to solve by \lstinline{prune} (or \lstinline{field_simplify})
-followed by \lstinline{interval}.
+We write $\tilde{e}$ to denote an expression with 
+deltas (for relative error) and epsilons (for absolute error); 
+so $\tilde{u} - u$ is just the absolute error in computing the 
+formula $u$ in floating-point (rather than in the real numbers).
+
+Consider the expression for the absolute
+forward error of \lstinline{carbonGas}, which looks like 
+\begin{align*}
+ \texttt{Rabs}((\tilde{u}*(1+\delta_2) + \epsilon_7 - 
+ \tilde{v}) * (1 + \delta_6) + \epsilon_0 - (u - v)).
+\end{align*}
+Applying \lstinline{error_rewrites}
+produces -- supposing that $\tilde{u}$, $\tilde{v}$, $u$, and 
+$v$ are 
+opaque -- three subgoals:
+\paragraph{subgoal 1:}$\texttt{Rabs} (\tilde{u}*(1+\delta_2)*(1 
++ \delta_6) + 
+\epsilon_7 -  u) \le \ ?e3$
+
+\paragraph{subgoal 2:}
+$\texttt{Rabs}(\tilde{v} * (1 + \delta_6) - v)  \le \ ?e2$
+
+\paragraph{subgoal 3:}
+$\texttt{Rabs}(\epsilon_0) \le \ ?e1$
+
+where the total error is now bounded by $e3 + e2 + e1$. 
+
+Note that the subexpressions in the above subgoals are smaller 
+and 
+contain related terms. For these reasons, using the 
+\lstinline{field_simplify+interval} tactic is potentially more 
+tractable. However, in 
+some cases, the recursion stops before it fully decomposes a 
+subexpression into a form that \lstinline{interval} can provide 
+a decent bound on. In this case, as long as all rational 
+expressions have been decently decomposed by the division case 
+in \lstinline{error_rewrites}, the \lstinline{prune} tactic can 
+be used successfully. 
+
+There are some cases when \lstinline{error_rewrites} causes Coq 
+to crash: on expressions with a large number of operations 
+(approximately 40). This occurs because 
+\lstinline{error_rewrites} simply produces too many subgoals. 
+As an example, consider that the 
+\lstinline{carbonGas} benchmark has 11 floating-point 
+operations and that \lstinline{error_rewrites} produces 125 
+subgoals (and this is even after \lstinline{error_rewrites} has 
+automatically discharged a few!). 
 
 \chapter{Annotations}
 
