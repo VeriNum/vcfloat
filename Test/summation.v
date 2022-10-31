@@ -109,7 +109,7 @@ Qed.
 
 
 Lemma prove_rndoff' :
-  forall (a b : ftype Tsingle) vmap n,
+  forall (a b : ftype Tsingle) n,
   (2 <= n )%nat ->
   let e  := / 2 * Raux.bpow Zaux.radix2 (3 - femax Tsingle - fprec Tsingle) in
   let d := / 2 * Raux.bpow Zaux.radix2 (- fprec Tsingle + 1) in
@@ -121,15 +121,12 @@ Lemma prove_rndoff' :
   prove_roundoff_bound (@bmap Tsingle) (vmap a b) (@sum_expr Tsingle a b) 
      (Rabs ( FT2R a + FT2R b) * d + e).
 Proof.
-intros ? ?  ?  ? ? ? ? ? ? ?bnd1 ?bnd2.
+intros ?  ?  ? ? ? ? ? ? ?bnd1 ?bnd2.
 prove_roundoff_bound.
 - 
 prove_rndval.
 clear BOUND BOUND0.
 (* prove_rndval SHOULD SUBST V_A  & V_B ABOVE THE LINE *)
-assert (Ha : FT2R v_a = FT2R a) by admit.
-assert (Hb : FT2R v_b = FT2R b) by admit.
-rewrite Ha, Hb; clear Ha Hb.
 simpl in e; simpl in d.
 assert (Rabs (1 + u0) <= 1 + d) as Hu2. 
 { subst e; eapply Rle_trans;
@@ -153,11 +150,6 @@ apply not_0_INR; try lia.
 -
 prove_roundoff_bound2.
 clear BOUND BOUND0.
-(* prove_roundoff_bound2 SHOULD SUBST V_A  & V_B IN
-  RHS *)
-assert (Ha : v_a = a) by admit.
-assert (Hb : v_b = b) by admit.
-rewrite Ha, Hb; clear Ha Hb.
 try apply Rabs_le in bnd1, bnd2.
 match goal with |- context[Rabs ?a <= _] =>
 field_simplify a
@@ -173,6 +165,6 @@ apply Rabs_triang | eapply Rle_trans; [apply Rplus_le_compat; [rewrite Rabs_mult
       [ apply Rabs_pos | apply Rabs_pos |   apply Rle_refl | apply Hd ] | 
   apply Rle_refl ]  | apply He0 ] | ]  ].
 nra.
-Admitted.
+Qed.
 
 End WITHNANS.

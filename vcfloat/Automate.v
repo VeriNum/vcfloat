@@ -354,6 +354,28 @@ Ltac invert_rndval_with_cond' :=
 
 Ltac process_one_bound B := 
    apply boundsmap_denote_pred_e in B; 
+   lazymatch type of B
+   with
+   | match Maps.PTree.get ?i ?vmap with | _ => _  end =>
+
+       let z := constr:(i) in
+       let z := eval compute in z in
+       change i with z in *;
+       let t := fresh "t" in 
+       let u := constr:(Maps.PTree.get z vmap) in
+       let u' := eval hnf in u in
+       match u' with
+       | Some _ =>  change u with u'
+       | _ => let v := fresh "v" i in 
+                  destruct u as [[t v]|]; [ | solve [contradiction B]]
+       end;
+       let B' := fresh in 
+       destruct B as [B' B]; try subst t;
+       try match type of B' with ?x = ?y => constr_eq x y; clear B' end
+   end.
+
+(* old version: 
+   apply boundsmap_denote_pred_e in B; 
    match type of B with match Maps.PTree.get ?i ?vmap with _ => _ end =>
       let z := constr:(i) in let z := eval compute in z in change i with z in *;
      let t := fresh "t" in 
@@ -366,6 +388,7 @@ Ltac process_one_bound B :=
       destruct B as [? B];
       subst t
     end.
+*)
 
 Ltac process_boundsmap_denote := 
  lazymatch goal with
