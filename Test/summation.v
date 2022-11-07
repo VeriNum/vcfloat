@@ -162,11 +162,10 @@ apply tech_Rplus; try nra.
 apply pos_INR.
 Qed.
 
-
 Lemma prove_rndoff' :
   forall (a b : ftype Tsingle) ,
-  let e  := / 2 * Raux.bpow Zaux.radix2 (3 - femax Tsingle - fprec Tsingle) in
-  let d := / 2 * Raux.bpow Zaux.radix2 (- fprec Tsingle + 1) in
+  let e  := powerRZ 2 (3 - femax Tsingle - fprec Tsingle - 1) in
+  let d := powerRZ 2 (- fprec Tsingle) in
       let ov := powerRZ 2 (femax Tsingle) in
   Rabs (FT2R a + FT2R b) <= (ov - 2 * e) / (1 + d) -> 
   prove_roundoff_bound (@bmap Tsingle) (vmap a b) (@sum_expr Tsingle a b) 
@@ -232,8 +231,8 @@ Qed.
 
 
 Definition error_rel (n : nat) (r : R) : R :=
-  let e  := / 2 * Raux.bpow Zaux.radix2 (3 - femax Tsingle - fprec Tsingle) in
-  let d := / 2 * Raux.bpow Zaux.radix2 (- fprec Tsingle + 1) in
+  let e  :=powerRZ 2 (3 - femax Tsingle - fprec Tsingle - 1)  in
+  let d := powerRZ 2 (- fprec Tsingle)  in
   if (2 <=? Z.of_nat n) then 
     ((INR n-1) * (Rabs r * d + e) * (1 + d)^( n -2))
   else 0%R.
@@ -251,8 +250,8 @@ Proof. reflexivity. Qed.
 Lemma prove_rndoff:
   forall (a b : ftype Tsingle),
   boundsmap_denote (@bmap Tsingle) (vmap a b) ->
-  let e  := / 2 * Raux.bpow Zaux.radix2 (3 - femax Tsingle - fprec Tsingle) in
-  let d := / 2 * Raux.bpow Zaux.radix2 (- fprec Tsingle + 1) in
+  let e  :=powerRZ 2 (3 - femax Tsingle - fprec Tsingle - 1)  in
+  let d := powerRZ 2 (- fprec Tsingle)  in
       let ov := powerRZ 2 (femax Tsingle) in
   Rabs (FT2R a + FT2R b) <= (ov - 2 * e) / (1 + d) -> 
       Rabs ( FT2R a + FT2R b - FT2R (BPLUS Tsingle a b)) <=
@@ -373,8 +372,8 @@ Qed.
 Lemma prove_rndoff_n :
   forall (l : list (ftype Tsingle)) fs rs ,
   sum_rel_F l fs -> sum_rel_R (map FT2R l) rs ->
-  let e  := / 2 * Raux.bpow Zaux.radix2 (3 - femax Tsingle - fprec Tsingle) in
-  let d  := / 2 * Raux.bpow Zaux.radix2 (- fprec Tsingle + 1) in 
+  let e  :=powerRZ 2 (3 - femax Tsingle - fprec Tsingle - 1)  in
+  let d := powerRZ 2 (- fprec Tsingle)  in
   let ov := powerRZ 2 (femax Tsingle) in
   let n := length l in 
   let A := (INR n - 1)*(1+d)^(n-2) in
@@ -607,7 +606,7 @@ set (ea:= bpow Zaux.radix2 (3 - femax Tsingle - fprec Tsingle)).
 simpl in ea. subst ea.
 set (ea:= bpow Zaux.radix2 (- fprec Tsingle + 1)).
 simpl in ea. subst ea.
-simpl in e, d.
+(*simpl in e, d.*)
 fold e d ov  A'.
 intros.
 eapply Rle_trans.
@@ -621,8 +620,7 @@ apply le_div2; auto.
 apply Rplus_le_compat_l.
 apply Rmult_le_compat; auto.
 apply Rplus_le_le_0_compat; try nra.
-apply Rplus_le_compat_r.
-apply Rmult_le_compat_r; try subst d; try nra.
+nra.
 +
 fold d in A'. 
 fold A'.
@@ -630,19 +628,27 @@ apply Rplus_le_compat_l.
 apply Ropp_le_contravar. 
 apply Rmult_le_compat; try nra.
 apply Rmult_le_pos; auto; try subst e; try nra.
-try subst d; try nra.
+apply powerRZ_le. lra.
 apply Rmult_le_compat; auto;
 try subst e; try nra.
+apply powerRZ_le. lra.
 }
 }
 
 eapply prove_rndoff.
+{
+assert (is_finite (fprec Tsingle) (femax Tsingle) s0 = true) by admit.
+assert (is_finite (fprec Tsingle) (femax Tsingle) a = true) by admit.
+apply boundsmap_denote_i;  [ | repeat split]. 
+repeat split;
+ (eexists; split; [ reflexivity | ]; split; [reflexivity | ]; split; [ assumption | ]).
 admit.
+admit.
+}
 set (ea:= bpow Zaux.radix2 (3 - femax Tsingle - fprec Tsingle)).
 simpl in ea. subst ea.
 set (ea:= bpow Zaux.radix2 (- fprec Tsingle + 1)).
 simpl in ea. subst ea.
-simpl in e, d.
 fold e d ov.
 eapply Rle_trans.
 apply Rabs_triang.
@@ -650,7 +656,6 @@ eapply Rle_trans.
 apply Rplus_le_compat.
 apply H1.
 simpl; auto.
-
 
 assert (
 Rabs (s - FT2R s0) <= error_rel (length l + 1) s).
@@ -661,33 +666,21 @@ set (ea:= bpow Zaux.radix2 (3 - femax Tsingle - fprec Tsingle)).
 simpl in ea. subst ea.
 set (ea:= bpow Zaux.radix2 (- fprec Tsingle + 1)).
 simpl in ea. subst ea.
-simpl in e, d.
 fold e d ov  A'.
 intros.
 eapply Rle_trans.
 apply H1.
 simpl; auto.
-{ 
+assert (0 <= d) by lra.
 apply le_div.
-try subst d; interval.
-apply le_div2; auto.
-+
+subst d. interval.
+apply le_div2; try lra.
 apply Rplus_le_compat_l.
-apply Rmult_le_compat; auto.
-apply Rplus_le_le_0_compat; try nra.
-apply Rplus_le_compat_r.
-apply Rmult_le_compat_r; try subst d; try nra.
-+
-fold d in A'. 
-fold A'.
-apply Rplus_le_compat_l.
-apply Ropp_le_contravar. 
 apply Rmult_le_compat; try nra.
-apply Rmult_le_pos; auto; try subst e; try nra.
-try subst d; try nra.
-apply Rmult_le_compat; auto;
-try subst e; try nra.
-}
+assert (0 <= e) by (compute; lra).
+assert (A'*e*(1+d) <= A*e*(1+d)); [ | lra].
+apply Rmult_le_compat_r; try lra.
+apply Rmult_le_compat_r; try lra.
 }
 }
 assert (Rabs (FT2R s0) <= error_rel (length l + 1) s + Rabs (s)).
@@ -744,7 +737,6 @@ set (ea:= bpow Zaux.radix2 (3 - femax Tsingle - fprec Tsingle)).
 simpl in ea. subst ea.
 set (ea:= bpow Zaux.radix2 (- fprec Tsingle + 1)).
 simpl in ea. subst ea.
-simpl in e, d.
 fold e d ov.
 assert (Rabs s <=
 (ov - 2 * e - A * e * (1 + d)) / (1 + (A * d  + 1) * INR n) / (1 + d) * INR n).
@@ -898,7 +890,6 @@ set (ea:= bpow Zaux.radix2 (3 - femax Tsingle - fprec Tsingle)).
 simpl in ea. subst ea.
 set (ea:= bpow Zaux.radix2 (- fprec Tsingle + 1)).
 simpl in ea. subst ea.
-simpl in e, d.
 fold e d ov  A'.
 intros.
 eapply Rle_trans.
@@ -922,8 +913,9 @@ apply Ropp_le_contravar.
 apply Rmult_le_compat; try nra.
 apply Rmult_le_pos; auto; try subst e; try nra.
 try subst d; try nra.
-apply Rmult_le_compat; auto;
-try subst e; try nra.
+apply powerRZ_le. lra.
+apply Rmult_le_compat; auto; try lra.
+apply powerRZ_le. lra.
 }
 rewrite Rabs_minus_sym in H.
 apply Rcomplements.Rle_minus_l.
@@ -939,7 +931,6 @@ set (ea:= bpow Zaux.radix2 (3 - femax Tsingle - fprec Tsingle)).
 simpl in ea. subst ea.
 set (ea:= bpow Zaux.radix2 (- fprec Tsingle + 1)).
 simpl in ea. subst ea.
-simpl in e, d.
 fold e d ov.
  
 
@@ -986,62 +977,34 @@ apply Rmult_le_compat; try nra.
 nra.
 apply H4.
 assert (
-FT2R a * d * 1 <= (FT2R a * d) * INR n * (1 + d) ^ (n - 1) ).
+FT2R a * d * 1 <= (FT2R a * d) * INR n * (1 + d) ^ (n - 1) ). {
 apply Rmult_le_compat; try nra.
-try subst d; try nra.
 replace (FT2R a * d) with (FT2R a * d * 1) at 1.
-apply Rmult_le_compat; try nra.
-try subst d; try nra.
+apply Rmult_le_compat; try nra. nra.
+}
 subst n; simpl (length (a :: l)).
 replace 1 with (INR 1) by (simpl; nra).
 rewrite Rmult_1_r in H4.
 apply H4.
 apply Rle_refl.
-nra.
 assert (e * 1 <= e * (1 + d) ^ (n - 1)).
 {
 apply Rmult_le_compat; try nra.
-subst e; nra.
+apply powerRZ_le. lra.
 }
 rewrite Rmult_1_r in H4.
-apply H4.
 fold e d A n.
 replace (A * (s * d + e) * (1 + d)) with
 ((INR n - 1) * (1 + d) ^ (n - 1) * (s * d + e)).
 apply Req_le.
-nra.
+(*nra.*)
 replace (A * (s * d + e) * (1 + d)) with
 (A * (1 + d) *(s * d + e)).
 f_equal; subst A.
 replace (1 + d) with ((1+d)^ 1) at 3.
 rewrite Rmult_assoc.
-rewrite <- Rdef_pow_add.
 f_equal; try nra.
 f_equal.
-apply Nat.add_sub_eq_r.
-ring_simplify.
-replace (n- 2 + 2)%nat with (n-0)%nat.
-lia.
-rewrite Nat.sub_add; auto; lia.
-
-nra.
-nra.
-rewrite plus_INR.
-simpl; nra.
-
-apply Nat.add_sub_eq_r.
-rewrite Nat.add_sub_swap; auto.
-ring_simplify.
-replace (n- 2 + 2)%nat with (n-0)%nat; auto; lia.
-
-subst n.
-simpl (length (a :: l)).
-replace (S (length l)) with (length l +1)%nat; lia.
-subst n.
-simpl (length (a :: l)).
-replace (S (length l)) with (length l +1)%nat; auto.
-apply symmetry.
-rewrite  <- Nat.add_1_r; auto.
 Admitted.
 
 
