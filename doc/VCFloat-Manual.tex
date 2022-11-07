@@ -378,7 +378,7 @@ Proof.
 intros.
 prove_roundoff_bound.
 -
- prove_rndval.
+ prove_rndval.  $\mbox{\qquad\qquad\emph{(* see section~\ref{goal1} *)}}$
  all: interval.
 - 
  prove_roundoff_bound2.
@@ -386,16 +386,20 @@ prove_roundoff_bound.
  do_interval.
 Qed.
 \end{lstlisting}
-Step one, \lstinline{prove_roundoff_bound}, is always the same,
-and leaves two subgoals (delimited by ``bullets'').
+To prove a \lstinline{prove_roundoff_bound} theorem,
+use the \lstinline{prove_roundoff_bound} tactic.
+It leaves two subgoals (delimited by ``bullets'').
+
 The first subgoal is always proved with \lstinline{prove_rndval},
 which leaves a few verification conditions.
 In this case, there are three: proving that the additions
-and subtractions do not overflow.  In general the subgoals
+and subtractions do not overflow.  Usually the subgoals
 left by \lstinline{prove_rndval} are easy to prove using the Coq
 Interval package, as shown here by \lstinline{all:interval}.
+Section~\ref{goal1} explains and discusses these goals.
 
-The second subgoal is always proved by
+The second subgoal
+is always proved by
 \lstinline{prove_roundoff_bound2}, which leaves
 one subgoal.  In this case the subgoal is,
 
@@ -404,7 +408,7 @@ NANS : Nans
 v_v : R, $\qquad$ BOUND : -2 $\le$ v_v $\le$ 2
 v_x : R, $\qquad$ BOUND0 : 2 $\le$ v_x $\le$ 4
 e0 : R, $\qquad$ E : Rabs e0 $\le$ powerRZ 2 (-150)
-d : R, $\qquad$ E0 : Rabs d $\le$ powerRZ 2 (-24)
+d : R, $~\qquad$ E0 : Rabs d $\le$ powerRZ 2 (-24)
 e1 : R, $\qquad$ E1 : Rabs e1 $\le$ powerRZ 2 (-150)
 e2 : R, $\qquad$ E2 : Rabs e2 $\le$ powerRZ 2 (-150)
 d0 : R, $\qquad$ E3 : Rabs d0 $\le$ powerRZ 2 (-24)
@@ -436,6 +440,52 @@ cases one must do some work to prepare the goal for solution by
 Interval.  Later chapters will explain.
 In this example, we use the \lstinline{prune_terms} tactic.
 Then the goal solves by \lstinline{do_interval}.
+
+\chapter{Verification conditions}
+\label{goal1}
+The first subgoal left by the \lstinline{prove_roundoff_bound} tactic
+takes the form,
+\begin{lstlisting}
+prove_rndval bmap vmap step'
+\end{lstlisting}
+which encapsulates all the \emph{verification conditions} for
+evaluating the floating-point expressions.  These VCs include that
+certain subexpressions don't overflow into infinities or NaNs,
+that certain subexpressions don't underflow into subnormal numbers,
+or even that certain subexpressions \emph{always} underflow.
+
+The \lstinline{prove_rndval} tactic exps 
+the \lstinline{prove_rndval} goal into one subgoal per VC.
+A typical subgoal might be equivalent to this:
+
+\begin{lstlisting}
+2 goals
+NANS : Nans
+v_v, v_x : ftype Tsingle
+BOUND : -2 <= FT2R v_v <= 2
+BOUND0 : -2 <= FT2R v_x <= 2
+e1, d1, e2, e3, d2, e4 : R
+H : Rabs e1 <= powerRZ 2 (-150)
+H0 : Rabs d1 <= powerRZ 2 (-24)
+H1 : Rabs e2 <= powerRZ 2 (-150)
+H2 : Rabs e3 <= powerRZ 2 (-150)
+H3 : Rabs d2 <= powerRZ 2 (-24)
+H4 : Rabs e4 <= powerRZ 2 (-150)
+______________________________________(1/2)
+0 < powerRZ 2 128 - Rabs (((FT2R v_x + (powerRZ 2 (-5) * FT2R v_v + e4)) * (1 + d2)
+                             + e3 + (powerRZ 2 (-11) * - FT2R v_x + e2)) * (1 + d1) + e1)
+\end{lstlisting}
+
+This is basically a proof that the floating point evaluation
+of our formula on $x$ and $v$ does not
+overflow.  That is, $0 < 2^{128}-|E|$, where
+$E$ is some function of $x$ and $v$.
+$E$ has the same order of magnitude as $x$ and $v$---both of which are bounded
+by 4.   So it should be \emph{extremely easy} to prove this
+inequality, and indeed, just calling the \lstinline{interval}
+tactic does the job.  It's often the case that \emph{all} the
+subgoals of the \lstinline{prove_rndval} tactic are
+immediately provably this way.
 
 \chapter{Letting VCFloat calculate the accuracy bound}
 

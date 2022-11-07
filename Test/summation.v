@@ -4,6 +4,7 @@ From Flocq Require Import Binary.
 Import List ListNotations.
 
 From vcfloat Require Import FPLang FPLangOpt RAux Rounding Reify Float_notations Automate.
+Require Import Interval.Tactic.
 Set Bullet Behavior "Strict Subproofs". 
 
 
@@ -67,8 +68,6 @@ Definition bmap {ty} : boundsmap :=
 Definition sum_expr {ty} (a b : ftype ty) := ltac :( let e' :=
   HO_reify_float_expr constr:([_a; _b]) (BPLUS ty) in exact e').
 
-
-Require Import Interval.Tactic.
 
 Lemma real_lt_1 :
 forall a b c,
