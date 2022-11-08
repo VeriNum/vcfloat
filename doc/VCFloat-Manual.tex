@@ -485,7 +485,7 @@ by 4.   So it should be \emph{extremely easy} to prove this
 inequality, and indeed, just calling the \lstinline{interval}
 tactic does the job.  It's often the case that \emph{all} the
 subgoals of the \lstinline{prove_rndval} tactic are
-immediately provably this way.
+immediately provable this way.
 
 \chapter{Letting VCFloat calculate the accuracy bound}
 
@@ -859,10 +859,20 @@ the invariant that $a$ is finite and $b$ is finite.
 It's certainly possible to propagate such invariants, but
 it's simpler if you don't have to.
 
+\chapter{Examples}
+
+VCFloat comes with several worked examples, in the Test and FPBench directories:
+\begin{description}
+\item[Test/TestRefman.v]  the running example from this reference manual
+\item[Test/TestPaper.v]  the (similar) running example from ``VCFloat2: Floating-point error analysis in Coq''
+\item[Test/summation.v]  An example of a relative error bound (this example is still a work in progress)
+\item[FPBench/$*$.v]  examples from the FPBench benchmark suite (fpbench.org)
+\end{description}
+
 \chapter{Bibliography}
 
 \quad VCFloat 1.0 was built in 2015 and described in,\newline
-\textbf{A unified Coq framework for verifying C programs with floating-point computations}, by Tahina Ramananandro, Paul Mountcastle, Beno\^{\i}t  Meister, and Richard Lethin, in \emph{Proceedings of the 5th ACM SIGPLAN Conference on Certified Programs and Proofs (CPP'16)}, pages 15--26, 2016\newline (https://doi.org/10.1145/2854065.2854066).
+\textbf{A unified Coq framework for verifying C programs with floating-point computations}, by Tahina Ramananandro, Paul Mountcastle, Beno\^{\i}t  Meister, and Richard Lethin, in \emph{Proceedings of the 5th ACM SIGPLAN Conference on Certified Programs and Proofs (CPP'16)}, pages 15--26, 2016 (https://doi.org/10.1145/2854065.2854066).
 \vspace\baselineskip
 
 VCFloat 2.0 was built 2021-2022 and described in,\newline
