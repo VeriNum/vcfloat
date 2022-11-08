@@ -368,6 +368,8 @@ Ltac process_one_bound B :=
        | Some _ =>  change u with u'
        | _ => let v := fresh "v" i in 
                   destruct u as [[t v]|]; [ | solve [contradiction B]]
+       | _ => let v := fresh "v" in 
+                  destruct u as [[t v]|]; [ | solve [contradiction B]]
        end;
        let B' := fresh in 
        destruct B as [B' B]; try subst t;
@@ -545,7 +547,7 @@ Ltac process_conds :=
    cbv [error_bound bpow radix2 femax fprec fprecp Z.sub Z.add Z.opp 
      Z.pos_sub Z.succ_double Pos.pred_double Z.mul 
       radix_val Pos.iter Pos.add Pos.succ Pos.mul]  in H;
-      eapply adjust_bound in H; [ | compute; reflexivity]).
+      (eapply adjust_bound in H; [ | compute; reflexivity])).
 
 Lemma fshift_div_fshift_fcval_type {NANS: Nans} {V : Type}:
       forall e : expr, @type_of_expr V (fshift_div (fshift (fcval e))) = @type_of_expr V e.

@@ -170,8 +170,8 @@ Proof. intros; apply Rle_lt_trans with b; auto. Qed.
 
 Lemma bnd_lt_overflow n :
   (2 <= n )%nat ->
-  let e  := / 2 * Raux.bpow Zaux.radix2 (3 - femax Tsingle - fprec Tsingle) in
-  let d  := / 2 * Raux.bpow Zaux.radix2 (- fprec Tsingle + 1) in
+  let e  := powerRZ 2 (-150) in 
+  let d  := powerRZ 2 (-24) in
   let sov := (powerRZ 2 (femax Tsingle) - 2 * e) / (1 + d) in
   let A  := (INR n - 1) * (1 + d)^(n-2) in
   let bnd := (sov - A * e) * (1 / ((A * d + 1) * INR n + 1)) * (INR n + 1) in 
@@ -187,8 +187,8 @@ subst sov. fold ov.
 replace (0x1p128%xR) with ov by (subst ov; simpl; nra).
 
 assert (
-((INR n - 1) * (1 + / 2 * / IZR (Z.pow_pos 2 23)) ^ (n - 2) *
- (/ 2 * / IZR (Z.pow_pos 2 23)) + 1) * INR n + 1 <> 0).
+((INR n - 1) * (1 + powerRZ 2 (-24)) ^ (n - 2) *
+ powerRZ 2 (-24) + 1) * INR n + 1 <> 0).
 {
 apply tech_Rplus; try nra.
 apply Rmult_le_pos; try interval.
@@ -197,8 +197,7 @@ apply Rmult_le_pos; try interval.
 apply Rmult_le_pos; try interval.
 apply Rle_0_minus.
 apply le_INR in H; interval.
-apply pow_le;
-try nra.
+apply pow_le; interval.
 apply pos_INR.
 }
 
@@ -212,8 +211,7 @@ assert (H1: 1 = (1 + d) ^ 0) by nra.
 eapply Rle_trans; [ rewrite H1  | apply Rle_refl]; apply Rle_pow; 
   subst d; simpl; try nra; try lia.
 apply Rcomplements.Rlt_div_r.
- try subst d; try nra.
-  simpl; nra.
+ try subst d; simpl; nra. 
 
 rewrite <- Rcomplements.Rlt_minus_r.
 
@@ -238,29 +236,34 @@ replace (e * INR n) with (1 * e * INR n) by nra;
   apply lem; try lia; try interval.
 
 apply Ropp_lt_contravar. 
-try subst e; simpl; interval.
+try subst e; interval.
 
 
 field_simplify;
-try field; try subst d; simpl; try nra.
+try field; try subst d; simpl; nra.
 
-split; try field; try subst d; simpl; try nra.
-try interval.
+split; try field; try subst d; interval.
 
-split; try field; try subst A; try subst d; simpl; try nra.
+subst A; split; interval.
 
 field.
-split; try field; try subst A; try subst d; simpl; try nra; auto.
-split; try field; try subst A; try subst d; simpl; try nra; auto.
+subst A; split; [ |split].
 apply tech_Rplus; try nra.
-apply pos_INR.
+apply Rmult_le_pos; [ | apply pos_INR].
+apply Rplus_le_le_0_compat; [ | lra].
+apply Rmult_le_pos; [ | interval].
+apply Rmult_le_pos.
+clear - H. destruct n; try lia. destruct n; try lia. rewrite !S_INR.
+pose proof (pos_INR n); lra.
+apply pow_le. subst d; simpl; lra. subst d; simpl; lra.
+pose proof (pos_INR n); lra.
 Qed.
 
 
 Lemma prove_rndoff' :
   forall (a b : ftype Tsingle) ,
-  let e  := / 2 * Raux.bpow Zaux.radix2 (3 - femax Tsingle - fprec Tsingle) in
-  let d := / 2 * Raux.bpow Zaux.radix2 (- fprec Tsingle + 1) in
+  let e := powerRZ 2 (-150) in 
+  let d := powerRZ 2 (-24) in 
       let ov := powerRZ 2 (femax Tsingle) in
   Rabs (FT2R a + FT2R b) <= (ov - 2 * e) / (1 + d) -> 
   prove_roundoff_bound (@bmap Tsingle) (vmap a b) (@sum_expr Tsingle a b) 
@@ -271,7 +274,6 @@ prove_roundoff_bound.
 - 
 prove_rndval.
 clear BOUND BOUND0.
-simpl in e; simpl in d.
 assert (Rabs (1 + u0) <= 1 + d) as Hu2. 
 { subst e; eapply Rle_trans;
  [apply Rabs_triang | eapply Rplus_le_compat;
@@ -304,7 +306,7 @@ interval.
 subst ov; simpl; nra.
 field.
 subst d.
-apply tech_Rplus; try nra.
+interval.
 -
 prove_roundoff_bound2.
 clear BOUND BOUND0.
@@ -325,8 +327,6 @@ nra.
 Qed.
 
 
-
-
 Lemma reflect_reify_sumF : 
   forall a b,
   fval (env_ (vmap a b)) (@sum_expr Tsingle a b) = sum (BPLUS Tsingle)  a b .
@@ -340,8 +340,8 @@ Proof. reflexivity. Qed.
 Lemma prove_rndoff:
   forall (a b : ftype Tsingle),
   boundsmap_denote (@bmap Tsingle) (vmap a b) ->
-  let e  := / 2 * Raux.bpow Zaux.radix2 (3 - femax Tsingle - fprec Tsingle) in
-  let d := / 2 * Raux.bpow Zaux.radix2 (- fprec Tsingle + 1) in
+  let e  := powerRZ 2 (-150) in 
+  let d := powerRZ 2 (-24) in
       let ov := powerRZ 2 (femax Tsingle) in
   Rabs (FT2R a + FT2R b) <= (ov - 2 * e) / (1 + d) -> 
       Rabs ( FT2R a + FT2R b - FT2R (BPLUS Tsingle a b)) <=
@@ -459,8 +459,8 @@ apply length_not_empty_lt;auto.
 Qed.
 
 Definition error_rel (n : nat) (r : R) : R :=
-  let e  := / 2 * Raux.bpow Zaux.radix2 (3 - femax Tsingle - fprec Tsingle) in
-  let d := / 2 * Raux.bpow Zaux.radix2 (- fprec Tsingle + 1) in
+  let e  := powerRZ 2 (-150) in
+  let d := powerRZ 2 (-24) in
   if (1 <=? Z.of_nat n) then 
     ((1 + d)^(n-1) - 1) * (Rabs r + e/d)
   else 0%R.
@@ -475,8 +475,8 @@ simpl in ea; subst ea.
 Lemma prove_rndoff_n :
   forall (l : list (ftype Tsingle)) fs rs rs_abs,
   sum_rel_F l fs -> sum_rel_R (map FT2R l) rs -> sum_rel_R (map Rabs (map FT2R l)) rs_abs ->
-  let e  := / 2 * Raux.bpow Zaux.radix2 (3 - femax Tsingle - fprec Tsingle) in
-  let d  := / 2 * Raux.bpow Zaux.radix2 (- fprec Tsingle + 1) in 
+  let e  := powerRZ 2 (-150) in
+  let d  := powerRZ 2 (-24) in 
   let ov := powerRZ 2 (femax Tsingle) in
   let n := length l in 
   let A := (1 + d)^(n-1) - 1 in
@@ -509,7 +509,6 @@ subst; simpl.
 rewrite (sum_rel_F_single a fs H).
 rewrite (sum_rel_R_single (FT2R a) rs H0).
 cbv [error_rel]; simpl.
-simpl in e, d.
 fold e d.
 split.
 *
@@ -520,7 +519,6 @@ field_simplify_Rabs.
 rewrite Rabs_R0.
 field_simplify.
 nra.
-subst d; interval.
 +
 (* start common *)
 assert (Hifn : 1 <=? Z.of_nat n = true).
@@ -542,7 +540,6 @@ apply Z.le_sub_le_add_r.
 ring_simplify.
 replace 0%Z with (Z.of_nat 0)%Z by lia.
 apply inj_le.
-Search ( 0<= length _).
 apply length_not_empty_nat'; auto.
 }
 assert (Hif2: 1 <=? Z.of_nat (length l) = true).
@@ -670,7 +667,6 @@ unfold error_rel.
 rewrite Hif2.
 rewrite Hif1.
 write_tsingle.
-simpl in e, d.
 fold e d.
 apply Rmult_le_compat_r; auto.
 apply Rplus_le_le_0_compat.
@@ -681,15 +677,12 @@ apply Rplus_le_compat_r; auto.
 
 (* end common *)
 
-
-
 inversion H1; subst; clear H1.
 inversion H0; subst; clear H0.
 inversion H; subst; clear H.
 fold sum_rel_F in H5.
 fold sum_rel_R in H6.
 fold sum_rel_R in H7.
-simpl in e, d.
 
 assert (IHLp:
 forall a0 : ftype Tsingle,
@@ -898,7 +891,7 @@ field_simplify.
 rewrite Rplus_comm.
 apply Rplus_le_compat; try nra.
 subst e d ov.
-nra.
+interval.
 -
 apply H2.
 simpl; auto.
@@ -921,7 +914,7 @@ apply Private.RT2.IH.A.TaylorValuator.TM.TMI.Ropp_le_0.
 apply Rmult_le_pos; try nra.
 apply Rmult_le_pos; try nra.
 apply Rmult_le_pos; try nra.
-subst e; nra.
+apply powerRZ_le; lra.
 subst d; interval.
 -
 repeat constructor.
@@ -992,6 +985,7 @@ assert (HFIN : A)
 end.
 {
 destruct (prove_rndoff' a s1 ); auto. 
+
 }
 split; auto.
 
