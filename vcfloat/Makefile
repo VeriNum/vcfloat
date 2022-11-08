@@ -7,17 +7,19 @@ COQC=coqc
 COQDEP=coqdep
 COQFLAGS := $(shell cat _CoqProject)
 
-target: Test.vo TestPaper.vo Test2.vo VCFloat.vo
+target:  vcfloat2 tests
+
+tests: ../Test/Test.vo ../Test/TestPaper.vo ../Test/Test2.vo ../Test/summation.vo
 
 # the vcfloat2 target is the core VCFloat tool for VCFloat2 users who don't need
 # CompCert-based reification
-vcfloat2: Automate.vo Prune.vo FPCompCert.vo
+vcfloat2:  VCFloat.vo FPCompCert.vo
 
 %.vo: %.v
 	$(COQC) $(COQFLAGS) $*.v
 
 depend: 
-	$(COQDEP) $(COQFLAGS) *.v cverif/*.v > .depend
+	$(COQDEP) $(COQFLAGS) *.v cverif/*.v ../Test/*.v > .depend
 
 all_clean:
 	rm *.vo *.vok *.vos *.glob

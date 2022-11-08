@@ -40,7 +40,7 @@ We can state this more formally with a bit of notation.
 Let \lstinline{%F64} be a notation scope in which
   \lstinline{*} and \lstinline{+} and are interpreted
   as double-precision (64-bit) floating-point operators
-  and 5.7 is interpreted as a double-precision floating-point constant;
+  and \lstinline{5.7} is interpreted as a double-precision floating-point constant;
   let $R$ be the function that
   injects a floating-point value into the reals.  Then we might prove
   that
@@ -82,7 +82,7 @@ VCFloat2 provides
 \begin{enumerate}
 \item Write down your floating-point functional model as Coq functions on floating-point values.
 \item Pick identifiers for your variables and apply a tactic to reify your model.
-\item Automatically derive a real-value functional model.
+\item Automatically derive a real-valued functional model.
 \item Specify bounds for your input variables, in a \lstinline{boundsmap}.
 \item State a roundoff-error theorem, and start the proof using the
   \lstinline{prove_rndval} tactic.
@@ -108,7 +108,7 @@ variables, constants, and subexpressions that belong to floating-point
 \emph{types}.  We will start with the types.
 
 \begin{lstlisting}
-type : Type $\mbox{\qquad\qquad\emph{each floating-point format is described as a}~\textsf{type}}$
+type : Type $\mbox{\quad\qquad\qquad\emph{each floating-point format is described as a}~\textsf{type}}$
 ftype: type -> Type $\mbox{\qquad\emph{a floating-point number in format \(\mathsf{t}\) belongs to Coq type} \textsf{ftype(t)}}$
 TYPE : forall (precp : positive) (femax: Z), (fprecp<femax) -> (1<fprecp) -> type.
 Tsingle: type := TYPE 24 128 I I.
@@ -137,8 +137,11 @@ typeclass \lstinline{Nans}.
 
 The good news is that if your computation never produces any
 NaNs, then it won't matter which instance of the \lstinline{Nans}
-typeclass you use.
-Then you can parameterize your float-functional-model as follows:
+typeclass you use.  And VCFloat helps you prove that your computation
+never produces NaNs.
+Then you can parameterize your float-functional-model
+over a \lstinline{NANS} parameter
+ as follows:
 
 \begin{lstlisting}
 Section WITHNANS.
@@ -147,6 +150,11 @@ Context {NANS: Nans}.
 $\mbox{\emph{\ldots your functional model goes here }}$
 End WITHNANS.
 \end{lstlisting}
+That is, the \lstinline{NANS} variable can be instantiated with
+\emph{any} architecture-specific which-nans-to-use structure,
+and then your float-functional-model will consult this NANS
+structure whenever it produces a not-a-number, which you will prove
+is never.
 
 \chapter{Notation Scopes}
 These notation scopes (and their delimiters) come with VCFloat:
@@ -248,8 +256,17 @@ In order to do round-off analysis one generally needs \emph{bounds}
 in the input variables:
 For example, what are the lowest and highest possible
 values of $x$ and $v$ in our example?
-One specifies that using a \lstinline{boundsmap}.
+We gather information about each variable
+(name, floating-point type, low-bound, high-bound) into
+a \lstinline{boundsmap}, which maps variable-identifiers to
+\lstinline{varinfo} structures.
+\begin{lstlisting}
+Record varinfo := {var_type: type; var_name: ident; var_lobound: R; var_hibound: R}.
+\end{lstlisting}
 
+To create the \lstinline{boundsmap}
+first make a list of \lstinline{varinfo}s,
+then use some \lstinline{ltac} boilerplate to compute.
 \begin{lstlisting}
 Definition step_bmap_list : list varinfo := 
   [ Build_varinfo Tsingle _x 2 4 ;  Build_varinfo Tsingle _v (-2)  2 ].
@@ -258,10 +275,6 @@ Definition step_bmap : boundsmap :=
    ltac:(let z := compute_PTree (boundsmap_of_list $\mathit{step\_bmap\_list}$) in exact z).
 \end{lstlisting}
 In the first definition, we make a list of \lstinline{varinfo} structures.
-
-\begin{lstlisting}
-Record varinfo := {var_type: type; var_name: ident; var_lobound: R; var_hibound: R}.
-\end{lstlisting}
 For each parameter of the functional model, we specify its floating-point precision, its identifier, its lowest possible input value,
 and its highest possible input value.  
 We put these into a list---in our example, \lstinline{step_bmap_list}.
@@ -271,7 +284,8 @@ a line of boilerplate that always looks the same
 as shown above).
 
 
-\chapter{Varmap and reflection}
+\chapter{Valmap and reflection}
+\label{valmap}
 
 You can \emph{reflect} the abstract-syntax tree (such as \lstinline{step'})
 back into a functional model (such as \lstinline{step}).
@@ -319,7 +333,7 @@ Definition step_realmodel' (x v: ftype Tsingle) : R := FT2R x + (1/32)*(FT2R v +
 You can make this look prettier using a coercion:
 
 \begin{lstlisting}
-Coercion FT2R: ftype >-> R.
+Coercion FT2R: ftype >$ $-$ $> R.
 
 Definition step_realmodel (x v: ftype Tsingle) : R :=  x + (1/32)*(v + ((1/32)/2)*(3-x)).
 \end{lstlisting}
@@ -342,7 +356,7 @@ functional model.  Here's an example of such a theorem:
 \begin{lstlisting}
 Lemma prove_roundoff_bound_step:  forall $\mathit{vmap}$, prove_roundoff_bound step_bmap $\mathit{vmap}$ step'  (/ 4000000).
 \end{lstlisting}
-This says, for any varmap \emph{vmap}
+This says, for any valmap \emph{vmap}
 containing values for $x$ and $v$
 that are within the bounds specified by \lstinline{step_bmap},
 the difference between the floating-point
@@ -359,11 +373,12 @@ next chapter.
 
 Here is how we prove the theorem:
 \begin{lstlisting}
+Lemma prove_roundoff_bound_step:  forall $\mathit{vmap}$, prove_roundoff_bound step_bmap $\mathit{vmap}$ step'  (/ 4000000).
 Proof.
 intros.
 prove_roundoff_bound.
 -
- prove_rndval.
+ prove_rndval.  $\mbox{\qquad\qquad\emph{(* see section~\ref{goal1} *)}}$
  all: interval.
 - 
  prove_roundoff_bound2.
@@ -371,16 +386,20 @@ prove_roundoff_bound.
  do_interval.
 Qed.
 \end{lstlisting}
-Step one, \lstinline{prove_roundoff_bound}, is always the same,
-and leaves two subgoals (delimited by ``bullets'').
+To prove a \lstinline{prove_roundoff_bound} theorem,
+use the \lstinline{prove_roundoff_bound} tactic.
+It leaves two subgoals (delimited by ``bullets'').
+
 The first subgoal is always proved with \lstinline{prove_rndval},
 which leaves a few verification conditions.
 In this case, there are three: proving that the additions
-and subtractions do not overflow.  In general the subgoals
+and subtractions do not overflow.  Usually the subgoals
 left by \lstinline{prove_rndval} are easy to prove using the Coq
 Interval package, as shown here by \lstinline{all:interval}.
+Section~\ref{goal1} explains and discusses these goals.
 
-The second subgoal is always proved by
+The second subgoal
+is always proved by
 \lstinline{prove_roundoff_bound2}, which leaves
 one subgoal.  In this case the subgoal is,
 
@@ -389,7 +408,7 @@ NANS : Nans
 v_v : R, $\qquad$ BOUND : -2 $\le$ v_v $\le$ 2
 v_x : R, $\qquad$ BOUND0 : 2 $\le$ v_x $\le$ 4
 e0 : R, $\qquad$ E : Rabs e0 $\le$ powerRZ 2 (-150)
-d : R, $\qquad$ E0 : Rabs d $\le$ powerRZ 2 (-24)
+d : R, $~\qquad$ E0 : Rabs d $\le$ powerRZ 2 (-24)
 e1 : R, $\qquad$ E1 : Rabs e1 $\le$ powerRZ 2 (-150)
 e2 : R, $\qquad$ E2 : Rabs e2 $\le$ powerRZ 2 (-150)
 d0 : R, $\qquad$ E3 : Rabs d0 $\le$ powerRZ 2 (-24)
@@ -422,7 +441,53 @@ Interval.  Later chapters will explain.
 In this example, we use the \lstinline{prune_terms} tactic.
 Then the goal solves by \lstinline{do_interval}.
 
-\chapter{When the accuracy bound is unknown}
+\chapter{Verification conditions}
+\label{goal1}
+The first subgoal left by the \lstinline{prove_roundoff_bound} tactic
+takes the form,
+\begin{lstlisting}
+prove_rndval bmap vmap step'
+\end{lstlisting}
+which encapsulates all the \emph{verification conditions} for
+evaluating the floating-point expressions.  These VCs include that
+certain subexpressions don't overflow into infinities or NaNs,
+that certain subexpressions don't underflow into subnormal numbers,
+or even that certain subexpressions \emph{always} underflow.
+
+The \lstinline{prove_rndval} tactic exps 
+the \lstinline{prove_rndval} goal into one subgoal per VC.
+A typical subgoal might be equivalent to this:
+
+\begin{lstlisting}
+2 goals
+NANS : Nans
+v_v, v_x : ftype Tsingle
+BOUND : -2 <= FT2R v_v <= 2
+BOUND0 : 2 <= FT2R v_x <= 4
+e1, d1, e2, e3, d2, e4 : R
+H : Rabs e1 <= powerRZ 2 (-150)
+H0 : Rabs d1 <= powerRZ 2 (-24)
+H1 : Rabs e2 <= powerRZ 2 (-150)
+H2 : Rabs e3 <= powerRZ 2 (-150)
+H3 : Rabs d2 <= powerRZ 2 (-24)
+H4 : Rabs e4 <= powerRZ 2 (-150)
+______________________________________(1/2)
+0 < powerRZ 2 128 - Rabs (((FT2R v_x + (powerRZ 2 (-5) * FT2R v_v + e4)) * (1 + d2)
+                             + e3 + (powerRZ 2 (-11) * - FT2R v_x + e2)) * (1 + d1) + e1)
+\end{lstlisting}
+
+This is basically a proof that the floating point evaluation
+of our formula on $x$ and $v$ does not
+overflow.  That is, $0 < 2^{128}-|E|$, where
+$E$ is some function of $x$ and $v$.
+$E$ has the same order of magnitude as $x$ and $v$---both of which are bounded
+by 4.   So it should be \emph{extremely easy} to prove this
+inequality, and indeed, just calling the \lstinline{interval}
+tactic does the job.  It's often the case that \emph{all} the
+subgoals of the \lstinline{prove_rndval} tactic are
+immediately provably this way.
+
+\chapter{Letting VCFloat calculate the accuracy bound}
 
 You can ask VCFloat not only to \emph{prove} an accuracy bound,
 but to \emph{calculate and prove} the bound if you don't know it
@@ -442,7 +507,7 @@ our ``step'' example, one could state this theorem:
 Lemma find_and_prove_roundoff_bound_step :
   find_and_prove_roundoff_bound step_bmap step'.
 Proof.
-eexi$$sts.
+eexi$ $sts.
 intro.
 prove_roundoff_bound.
 -
@@ -516,7 +581,7 @@ Applying the \lstinline{interval} tactic solves this goal immediately.
 But \lstinline{field_simplify} is not the best tool for this job;
 we use it here only to illustrate the principle of (automatically) expanding the
 formula into a multinomial and symbolically canceling terms.
-There are two problems: (1) the multinomial can have an exponential number of terms, most of which are negligible; and (2) nonlinear floating-point functional models do not expand into nice multinomials.
+There are two problems: (1) the multinomial can have an exponential number of terms, most of which are negligible; and (2) floating-point functional models do not always expand into nice multinomials.
 
 \chapter{prune\_terms}
 
@@ -557,10 +622,10 @@ Rabs (-1/2048 * d0 * v_x + -1/2048 * d * v_x + 2047/2048 * d1 * v_x +
 in which not as many terms have been neglected.  But either way,
 \lstinline{interval} solves the goal.
 \chapter{error\_rewrites} Suppose an expression for the absolute
-forward error (1) does not expand into a nice multinomial
-that is tractable for the \lstinline{prune} tactic, and (2) is 
-so large (as a meausure of the number of operations after 
-rounding) that applying the \lstinline{field_simplify+interval} 
+forward error does not expand into a nice multinomial
+that is tractable for the \lstinline{prune_terms} tactic;
+suppose it such a large expression
+that applying the \lstinline{field_simplify+interval} 
 tactic causes Coq to crash. An example
 of such a problem is the \lstinline{carbonGas} benchmark from the
 FPBench benchmark suite:
@@ -569,7 +634,7 @@ carbonGas($v$):= P+A*(N/$v$)*(N/$v$)*($v$-N*B)-K*N*T
 \end{lstlisting}
 where \lstinline{A,B,K,N,P,T} are constants. Because $v$ 
 appears in the denominator of terms in \lstinline{carbonGas},
-VCFloat's \lstinline{prune} tactic won't simplify the 
+VCFloat's \lstinline{prune_terms} tactic won't simplify the 
 expression enough for \lstinline{interval} to produce a decent 
 bound. A tactic that can be used in cases like this is 
 \lstinline{error_rewrites}, which will recursively
@@ -585,7 +650,7 @@ following equalities.
 (\tilde{u} * \tilde{v}) - (u*v) &= (\tilde{u} - u)*v +
 (\tilde{v} - v)*u + (\tilde{u} - u)*(\tilde{v} - v) \\
 \frac{u'}{v'} - \frac{u}{v} &= (u'-u) - (v'-v) * \frac{1}{v} * 
-u,
+u
 \end{align*}
 We write $\tilde{e}$ to denote an expression with 
 deltas (for relative error) and epsilons (for absolute error); 
@@ -612,9 +677,11 @@ $\texttt{Rabs}(\tilde{v} * (1 + \delta_6) - v)  \le \ ?e2$
 \paragraph{subgoal 3:}
 $\texttt{Rabs}(\epsilon_0) \le \ ?e1$
 
-where the total error is now bounded by $e3 + e2 + e1$. 
+\noindent where $?e1,?e2,?e3$ are unification variables
+to be determined in subproofs, and
+the total error is now bounded by $e3 + e2 + e1$. 
 
-Note that the subexpressions in the above subgoals are smaller 
+The subexpressions in the above subgoals are smaller 
 and 
 contain related terms. For these reasons, using the 
 \lstinline{field_simplify+interval} tactic is potentially more 
@@ -623,7 +690,7 @@ some cases, the recursion stops before it fully decomposes a
 subexpression into a form that \lstinline{interval} can provide 
 a decent bound on. In this case, as long as all rational 
 expressions have been decently decomposed by the division case 
-in \lstinline{error_rewrites}, the \lstinline{prune} tactic can 
+in \lstinline{error_rewrites}, the \lstinline{prune_terms} tactic can 
 be used successfully. 
 
 There are some cases when \lstinline{error_rewrites} causes Coq 
@@ -635,6 +702,38 @@ As an example, consider that the
 operations and that \lstinline{error_rewrites} produces 125 
 subgoals (and this is even after \lstinline{error_rewrites} has 
 automatically discharged a few!). 
+
+\chapter{Abstract \emph{versus} transparent valmap}
+
+Many simple applications of VCFloat prove a theorem,
+``Given \lstinline{boundsmap} $\mathit{bm}$,
+for any \lstinline{valmap} $\mathit{vm}$ that satisfies the
+low-bound/high-bound constraints in $\mathit{bm}$,
+the round-off error will be less than $A$.''
+In such a case it works well to quantify over $\mathit{vm}$,
+a variable representing a valmap.
+
+But sometimes you want to prove an accuracy bound that's
+a function of the input variables (such as a relative error bound).
+Or you may have have additional constraints on the variables
+in $\mathit{vm}$.
+In such cases you can use an advanced technique:
+quantify over the individual variables, with additional constraints
+expressed directly in Coq as needed, and then state a
+\lstinline{prove_roundoff_bound} theorem on a transparently
+constructed valmap.  We illustrate here (and see Test/summation.v
+for a full demonstration).
+
+Section~\ref{valmap} showed how to construct \lstinline{step_valmap}
+from the individual variables $x$ and $v$.  You can leverage this
+to state a roundoff theorem by quantifying over $x$ and $v$:
+\begin{lstlisting}
+Lemma prove_rndoff' :
+  forall (x v : ftype Tsingle),
+  let accuracy := $\mbox{\emph{some function of x and v}}$
+  my_extra_constraint x v ->   
+  prove_roundoff_bound step_bmap (step_vmap x v) step' accuracy.
+\end{lstlisting}  
 
 \chapter{Annotations}
 
