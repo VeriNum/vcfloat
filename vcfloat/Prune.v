@@ -3418,6 +3418,24 @@ Ltac RtoFloat x :=
    let y := eval compute in y in
    exact y.
 
+Definition some_nan64:  {x : binary_float 53 1024 | is_nan _ _ x = true}.
+exists (B754_nan 53 1024 false 1 (eq_refl _)). reflexivity.
+Defined.
+
+Require Import vcfloat.Float_notations.
+
+Ltac ShowBound bound :=
+  let y := constr:((proj1_sig bound)) in
+  let y := eval simpl in y in
+  let y := RtoFloat' y in
+  let y := constr:(BSN2B _ _ some_nan64 (@BinarySingleNaN.SF2B 53 1024 (FloatOps.Prim2SF y) (eq_refl _))) in
+  let y := eval compute in y in
+  match y with  B754_finite 53 1024 ?s ?m ?e ?H =>
+     let z := constr:(b64_B754_finite s m e H) in 
+     idtac "ShowBound" bound z; exact z
+  end.
+
+(*
 Ltac ShowBound bound :=
   let y := constr:(proj1_sig bound) in
   let y := eval simpl in y in 
@@ -3429,6 +3447,6 @@ Ltac ShowBound' bound :=
   let y := constr:(proj1_sig bound) in
   let y := eval simpl in y in 
   idtac "ShowBound" bound y; exact tt.
-
+*)
 
 

@@ -32,7 +32,7 @@ time "do_interval" do_interval.
 Defined.
 
 Definition nonlin2_bound_val := Eval simpl in nonlin2_bound.
-Compute ltac:(ShowBound' nonlin2_bound_val).
+Check ltac:(ShowBound nonlin2_bound_val).
 
 Definition himmilbeau_bmap_list := [Build_varinfo Tdouble 1%positive (-5) (5);Build_varinfo Tdouble 2%positive (-5) (5)].
 
@@ -61,7 +61,7 @@ time "do_interval" do_interval.
 Defined.
 
 Definition himmilbeau_bound_val := Eval simpl in himmilbeau_bound.
-Compute ltac:(ShowBound' himmilbeau_bound_val).
+Check ltac:(ShowBound himmilbeau_bound_val).
 
 Definition jetengine_bmap_list := [Build_varinfo Tdouble 1%positive (-5) (5);Build_varinfo Tdouble 2%positive (-20) (5)].
 
@@ -98,7 +98,7 @@ try apply Rle_refl).
 Defined.
 
 Definition jetengine_bound_val := Eval simpl in jetengine_bound.
-Compute ltac:(ShowBound' jetengine_bound_val).
+Check ltac:(ShowBound jetengine_bound_val).
 
 End WITHNANS.
 Close Scope R_scope.

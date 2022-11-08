@@ -31,7 +31,7 @@ time "do_interval" do_interval.
 Defined.
 
 Definition delta4_bound_val := Eval simpl in delta4_bound.
-Compute ltac:(ShowBound' delta4_bound_val).
+Check ltac:(ShowBound delta4_bound_val).
 
 Definition delta_bmap_list := [Build_varinfo Tdouble 1%positive (4) (63504e-4);Build_varinfo Tdouble 2%positive (4) (63504e-4);Build_varinfo Tdouble 3%positive (4) (63504e-4);Build_varinfo Tdouble 4%positive (4) (63504e-4);Build_varinfo Tdouble 5%positive (4) (63504e-4);Build_varinfo Tdouble 6%positive (4) (63504e-4)].
 
@@ -58,6 +58,6 @@ time "do_interval" do_interval.
 Defined.
 
 Definition delta_bound_val := Eval simpl in delta_bound.
-Compute ltac:(ShowBound' delta_bound_val).
+Check ltac:(ShowBound delta_bound_val).
 
 End WITHNANS.
