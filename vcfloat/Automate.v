@@ -508,6 +508,32 @@ Ltac process_conds :=
  (apply Forall_cons; [process_eval_cond' | process_conds ]) || apply Forall_nil.
 *)
 
+Lemma Rmult_Rinv_IZR: forall a b, 
+   Rmult (RinvImpl.Rinv (IZR a)) (RinvImpl.Rinv (IZR b)) = 
+   RinvImpl.Rinv (IZR (a*b)%Z).
+Proof.
+intros. 
+rewrite <- Rinv_mult.
+f_equal.
+symmetry; apply mult_IZR.
+Qed.
+
+Lemma adjust_bound: 
+  forall (u: R) (i: positive) (j: Z), 
+   u <= /2 * / IZR (Z.pow_pos 2 i) ->
+   (j = Zneg (1 + i)) ->
+  u <= powerRZ 2 j.
+Proof.
+intros.
+rewrite Rmult_Rinv_IZR in H.
+change (u <= / IZR (Z.pow_pos 2 1 * Z.pow_pos 2 i)) in H.
+rewrite <- Zpower.Zpower_pos_is_exp in H.
+rewrite IZR_Zpower_pos in H.
+subst j.
+rewrite <- powerRZ_neg' in H.
+apply H.
+Qed.
+
 Ltac process_conds := 
   repeat simple apply conj; 
   try simple apply Logic.I;
@@ -517,8 +543,9 @@ Ltac process_conds :=
      let y := constr:(x) in let y := eval hnf in y in change x with y in H
    end;
    cbv [error_bound bpow radix2 femax fprec fprecp Z.sub Z.add Z.opp 
-     Z.pos_sub Z.succ_double Pos.pred_double Z.pow_pos Z.mul 
-      radix_val Pos.iter Pos.add Pos.succ Pos.mul]  in H).
+     Z.pos_sub Z.succ_double Pos.pred_double Z.mul 
+      radix_val Pos.iter Pos.add Pos.succ Pos.mul]  in H;
+      eapply adjust_bound in H; [ | compute; reflexivity]).
 
 Lemma fshift_div_fshift_fcval_type {NANS: Nans} {V : Type}:
       forall e : expr, @type_of_expr V (fshift_div (fshift (fcval e))) = @type_of_expr V e.
@@ -711,87 +738,6 @@ destruct H.
 constructor; auto.
 Qed.
 
-(* BEGIN a kind of hack, though reasonably efficient, to clean up
-  the goals left by prove_rndval. *)
-
-Fixpoint log2opt (p: positive) : option Z :=
- match p with
- | xH => Some 0%Z
- | xO p' => match log2opt p' with Some n => Some (Z.succ n) | _ => None end
- | _ => None
- end.
-
-Lemma log2opt_correct: forall p n,
- log2opt p = Some n ->
- (0 <= n)%Z /\ Zpos p = (2 ^ n)%Z.
-Proof.
-induction p; simpl; intros.
-discriminate.
-destruct (log2opt p) eqn:?H; try discriminate.
-inversion H; clear H; subst.
-specialize (IHp _ (eq_refl _)).
-destruct IHp.
-split. lia.
-rewrite Z.pow_succ_r by lia.
-rewrite <- H1.
-lia.
-inversion H; clear H; subst.
-split; lia.
-Qed.
-
-Lemma Rmult_Rinv_IZR: forall a b, 
-   Rmult (RinvImpl.Rinv (IZR a)) (RinvImpl.Rinv (IZR b)) = 
-   RinvImpl.Rinv (IZR (a*b)%Z).
-Proof.
-intros. 
-rewrite <- Rinv_mult.
-f_equal.
-symmetry; apply mult_IZR.
-Qed.
-
-Lemma simplify_to_pow_aux:
- forall a b b',
-   log2opt a = Some b ->
-   (- (Z.succ b))%Z = b' -> 
-  Rmult (RinvImpl.Rinv (IZR (Zpos (xO xH))))
-         (RinvImpl.Rinv (IZR (Zpos a))) = powerRZ 2 b'.
-Proof.
-intros. subst b'.
-apply log2opt_correct in H.
-destruct H.
-rewrite H0. clear H0 a.
-rewrite Rmult_Rinv_IZR.
-rewrite Rpower.powerRZ_Rpower by lra.
-rewrite opp_IZR.
-rewrite Rpower_Ropp.
-f_equal.
-rewrite <- Z.pow_succ_r by lia.
-rewrite <- (Z2Nat.id (Z.succ b)) by lia.
-rewrite <- pow_IZR.
-rewrite <- Rpower_pow by lra.
-f_equal.
-rewrite INR_IZR_INZ.
-auto.
-Qed.
-
-Ltac simplify_to_pow_pos :=
-repeat 
-match goal with 
-| H: _ _ (Rmult (RinvImpl.Rinv (IZR (Zpos (xO xH))))
-         (RinvImpl.Rinv
-            (IZR (Zpos ?x))))
-  |- _ => let a := constr:(log2opt x) in
-               let a := eval cbv [ log2opt ] in a in
-               lazymatch a with 
-               | Some ?n => let n' := constr:((-(Z.succ n))%Z) in
-                                      let n' := eval compute in n'  in
-                             rewrite (simplify_to_pow_aux x n n' (eq_refl _) (eq_refl _)) in *|-
-               end
-end.
-
-(* BEGIN a kind of hack, though reasonably efficient, to clean up
-  the goals left by prove_rndval. *)
-
 Ltac prove_rndval := 
  (* if necessary, convert goal into a prove_rndval'   goal*)
  lazymatch goal with
@@ -897,9 +843,7 @@ Ltac prove_rndval :=
  
   (* now process the boundsmap above the line, and the conds below the line *)
   process_boundsmap_denote;
-  process_conds;
-  simplify_to_pow_pos.
-
+  process_conds.
 
 Lemma errors_bounded_e:
   forall errors t0 k0 m, errors_bounded (t0, k0, m) errors ->
