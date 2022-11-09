@@ -21,13 +21,13 @@ Lemma kepler0_bound:
 	find_and_prove_roundoff_bound kepler0_bmap kepler0_expr.
 Proof.
 idtac "Starting kepler0".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2;
-time "prune_terms" (prune_terms (cutoff 30)).
-time "do_interval" do_interval.
+time "kepler0" (
+try (eexists; intro; prove_roundoff_bound);
+try (prove_rndval; interval);
+try (
+prove_roundoff_bound2;
+(prune_terms (cutoff 30));
+ do_interval)).
 Defined.
 
 Check ltac:(ShowBound (proj1_sig kepler0_bound)).
@@ -47,13 +47,13 @@ Lemma kepler1_bound:
 	find_and_prove_roundoff_bound kepler1_bmap kepler1_expr.
 Proof.
 idtac "Starting kepler1".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2.
-time "prune_terms" (prune_terms (cutoff 30)).
-time "do_interval" do_interval.
+time "kepler1" (
+try (eexists; intro; prove_roundoff_bound);
+try (prove_rndval; interval);
+try (
+prove_roundoff_bound2;
+(prune_terms (cutoff 30));
+ do_interval)).
 Defined.
 
 Check ltac:(ShowBound (proj1_sig kepler1_bound)).
@@ -73,13 +73,13 @@ Lemma kepler2_bound:
 	find_and_prove_roundoff_bound kepler2_bmap kepler2_expr.
 Proof.
 idtac "Starting kepler2".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2.
-time "prune_terms" (prune_terms (cutoff 60)).
-time "do_interval" do_interval.
+time "kepler2" (
+try (eexists; intro; prove_roundoff_bound);
+try (prove_rndval; interval);
+try (
+prove_roundoff_bound2;
+(prune_terms (cutoff 60));
+ do_interval)).
 Defined.
 
 Check ltac:(ShowBound (proj1_sig kepler2_bound)).
