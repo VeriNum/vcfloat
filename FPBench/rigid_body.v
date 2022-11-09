@@ -21,13 +21,10 @@ Lemma rigidbody1_bound:
 	find_and_prove_roundoff_bound rigidbody1_bmap rigidbody1_expr.
 Proof.
 idtac "Starting rigidbody1".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2;
-time "prune_terms" (prune_terms (cutoff 30)).
-time "do_interval" do_interval.
+time "rigidbody1" (
+try (eexists; intro; prove_roundoff_bound);
+try (prove_rndval; interval);
+try (prove_roundoff_bound2; prune_terms (cutoff 30); do_interval)).
 Defined.
 
 Check ltac:(ShowBound (proj1_sig rigidbody1_bound)).
@@ -47,13 +44,10 @@ Lemma rigidbody2_bound:
 	find_and_prove_roundoff_bound rigidbody2_bmap rigidbody2_expr.
 Proof.
 idtac "Starting rigidbody2".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2;
-time "prune_terms" (prune_terms (cutoff 30)).
-time "do_interval" do_interval.
+time "rigidbody2" (
+try (eexists; intro; prove_roundoff_bound);
+try (prove_rndval; interval);
+try (prove_roundoff_bound2; prune_terms (cutoff 30); do_interval)).
 Defined.
 
 Check ltac:(ShowBound (proj1_sig rigidbody2_bound)).
