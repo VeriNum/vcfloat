@@ -99,7 +99,7 @@ try apply H;
 try apply Rle_refl).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig verhulst_bound)p).
+Check ltac:(ShowBound (proj1_sig verhulst_bound)).
 
 Definition intro_45_example_45_mixed_bmap_list := [Build_varinfo Tsingle 1%positive (1) (999)].
 
