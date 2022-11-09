@@ -44,34 +44,27 @@ time "goal 1" (
 field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect v, 
- i_depth 20) as H'; apply H'; apply Rle_refl
-end).
-+
-time "goal 1" (
-field_simplify_Rabs;
-match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+ i_depth 17) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 2" (
+field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH,  
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+interval_intro (Rabs a) with (i_bisect vxH, 
+i_bisect v0, i_depth 17) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 3" (
 match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end). (*
+interval_intro (Rabs a) with (i_bisect vxH,  
+i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
+end).
 +
 time "goal 4" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end). *)
+i_bisect v0, i_depth 16) as H'; apply H'; apply Rle_refl
+end).
 Defined.
 
 Check ltac:(ShowBound (proj1_sig doppler1_bound)).
@@ -119,26 +112,26 @@ time "goal 1" (
 field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect v, 
- i_depth 20) as H'; apply H'; apply Rle_refl
+ i_depth 15) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 2" (
 field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 3" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH,  
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 4" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
 end).
 Defined.
 
@@ -188,26 +181,26 @@ time "goal 1" (
 field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect v, 
- i_depth 20) as H'; apply H'; apply Rle_refl
+ i_depth 15) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 2" (
 field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 3" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH,  
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+i_bisect v0, i_depth 14) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 4" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
 end).
 Defined.
 

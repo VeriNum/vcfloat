@@ -523,17 +523,15 @@ Qed.
 Lemma adjust_bound: 
   forall (u: R) (i: positive) (j: Z), 
    u <= /2 * / IZR (Z.pow_pos 2 i) ->
-   (j = Zneg (1 + i)) ->
-  u <= powerRZ 2 j.
+   (j = Zpos (1 + i)) ->
+  u <= / IZR (2 ^ j).
 Proof.
-intros.
+intros. subst j.
 rewrite Rmult_Rinv_IZR in H.
-change (u <= / IZR (Z.pow_pos 2 1 * Z.pow_pos 2 i)) in H.
-rewrite <- Zpower.Zpower_pos_is_exp in H.
-rewrite IZR_Zpower_pos in H.
-subst j.
-rewrite <- powerRZ_neg' in H.
-apply H.
+replace (2 ^ Z.pos (1 + i))%Z with  (2 * Z.pow_pos 2 i)%Z; auto.
+replace (Z.pos (1+i)) with (1 + Z.pos i)%Z by lia.
+rewrite Z.pow_add_r by lia.
+reflexivity.
 Qed.
 
 Ltac process_conds := 
@@ -1113,7 +1111,7 @@ f_equal.
 apply positive_nat_Z.
 Qed.
 
-Ltac compute_powerRZ := 
+Ltac compute_powerRZ :=  (* obsolete? *)
 change (powerRZ ?b (Z.neg ?x)) with (powerRZ b (Z.opp (Z.pos x))) in *;
 rewrite <- power_RZ_inv in *
   by (let H := fresh  in intro H; apply eq_IZR in H; discriminate H);
@@ -1127,6 +1125,15 @@ repeat match goal with
   change x with y in *
 end.
 
+Ltac compute_Zpow := 
+repeat match goal with
+ | |- context [Z.pow ?a ?b] =>
+  let x := constr:(Z.pow a b) in let y := eval compute in x in
+  change x with y in *
+ | H: context [Z.pow ?a ?b] |- _ =>
+  let x := constr:(Z.pow a b) in let y := eval compute in x in
+  change x with y in *
+end.
 
 Ltac unfold_rval :=
  match goal with |- context [rval ?env ?x] =>
@@ -1232,11 +1239,7 @@ end;
            |  Rle (Rabs ?a) (error_bound _ Denormal2') => 
                    let d := fresh "e" in set (d := a) in *; clearbody d
            end;
-           unfold error_bound in E;
-           simpl bpow in E;
-           rewrite Zpower_pos_powerRZ in E; 
-           rewrite mul_hlf_powerRZ in E;
-           simpl Z.sub in E;
+            (eapply adjust_bound in E; [ | compute; reflexivity]);
            apply Forall_inv_tail in H0);
  try match type of H0 with Forall _ (Maps.PTree.elements Maps.PTree.Empty) => clear H0 end;
  try match type of H0 with Forall _ nil => clear H0 end;
@@ -1509,7 +1512,7 @@ match goal with H: _ = @FT2R _ _ |- _ => rewrite <- H; clear H end;
      set (e' := @FT2R Tsingle e) in *; clearbody e'; clear e; rename e' into e
   end;
  (* clean up all powerRZ expressions *)
- try compute_powerRZ.
+ try compute_Zpow.
  (* Don't do field simplify , it can blow things up, and the interval tactic
    doesn't actually need it.
  match goal with |- context [Rabs ?a <= _] => field_simplify a end.
