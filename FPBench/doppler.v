@@ -23,14 +23,11 @@ Lemma doppler1_bound:
 	find_and_prove_roundoff_bound doppler1_bmap doppler1_expr.
 Proof.
 idtac "Starting doppler1".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2.  
-time "error rewrites" error_rewrites.
-all : (time "prune"
-(prune_terms (cutoff 30);
+time "doppler1" (
+(eexists; intro; prove_roundoff_bound);
+try (prove_rndval; interval);
+try (prove_roundoff_bound2; error_rewrites;
+((prune_terms (cutoff 30);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
   rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
 end;
@@ -38,42 +35,18 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
                       let G := fresh "G" in
                       interval_intro (Rabs e) as G ;
                       eapply Rle_trans;
-                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)).
-+
-time "goal 1" (
-field_simplify_Rabs;
-match goal with |- Rabs ?a <= _ =>
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)));
+try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect v, 
  i_depth 17) as H'; apply H'; apply Rle_refl
-end).
-+
-time "goal 2" (
-field_simplify_Rabs;
-match goal with |- Rabs ?a <= _ =>
+end;
+try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
 i_bisect v0, i_depth 17) as H'; apply H'; apply Rle_refl
-end).
-+
-time "goal 3" (
-match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH,  
-i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
-end).
-+
-time "goal 4" (
-match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 16) as H'; apply H'; apply Rle_refl
 end).
 Defined.
 
 Check ltac:(ShowBound (proj1_sig doppler1_bound)).
-
-Goal proj1_sig doppler1_bound <= 4.5e-13.
-simpl.
-interval.
-Qed.
-
 
 Definition doppler2_bmap_list := [Build_varinfo Tdouble 1%positive (-125) (125);Build_varinfo Tdouble 2%positive (15) (25000);Build_varinfo Tdouble 3%positive (-40) (60)].
 
@@ -91,14 +64,11 @@ Lemma doppler2_bound:
 	find_and_prove_roundoff_bound doppler2_bmap doppler2_expr.
 Proof.
 idtac "Starting doppler2".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2.
-time "error rewrites" error_rewrites. 
-all : (time "prune"
-(prune_terms (cutoff 30);
+time "doppler2" (
+(eexists; intro; prove_roundoff_bound);
+try (prove_rndval; interval);
+try (prove_roundoff_bound2; error_rewrites;
+((prune_terms (cutoff 30);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
   rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
 end;
@@ -106,32 +76,14 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
                       let G := fresh "G" in
                       interval_intro (Rabs e) as G ;
                       eapply Rle_trans;
-                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)).
-+ 
-time "goal 1" (
-field_simplify_Rabs;
-match goal with |- Rabs ?a <= _ =>
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)));
+try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect v, 
- i_depth 15) as H'; apply H'; apply Rle_refl
-end).
-+
-time "goal 2" (
-field_simplify_Rabs;
-match goal with |- Rabs ?a <= _ =>
+ i_depth 17) as H'; apply H'; apply Rle_refl
+end;
+try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
-end).
-+
-time "goal 3" (
-match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH,  
-i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
-end).
-+
-time "goal 4" (
-match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
+i_bisect v0, i_depth 17) as H'; apply H'; apply Rle_refl
 end).
 Defined.
 
@@ -160,14 +112,11 @@ Lemma doppler3_bound:
 	find_and_prove_roundoff_bound doppler3_bmap doppler3_expr.
 Proof.
 idtac "Starting doppler3".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2.
-time "error rewrites" error_rewrites.
-all : (time "prune"
-(prune_terms (cutoff 30);
+time "doppler3" (
+(eexists; intro; prove_roundoff_bound);
+try (prove_rndval; interval);
+try (prove_roundoff_bound2; error_rewrites;
+((prune_terms (cutoff 30);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
   rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
 end;
@@ -175,43 +124,18 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
                       let G := fresh "G" in
                       interval_intro (Rabs e) as G ;
                       eapply Rle_trans;
-                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)).
-+ 
-time "goal 1" (
-field_simplify_Rabs;
-match goal with |- Rabs ?a <= _ =>
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)));
+try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect v, 
- i_depth 15) as H'; apply H'; apply Rle_refl
-end).
-+
-time "goal 2" (
-field_simplify_Rabs;
-match goal with |- Rabs ?a <= _ =>
+ i_depth 14) as H'; apply H'; apply Rle_refl
+end;
+try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
-end).
-+
-time "goal 3" (
-match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH,  
 i_bisect v0, i_depth 14) as H'; apply H'; apply Rle_refl
-end).
-+
-time "goal 4" (
-match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
 end).
 Defined.
 
 Check ltac:(ShowBound (proj1_sig doppler3_bound)).
-
-Lemma check_doppler3_bound :
-proj1_sig doppler3_bound <= 2e-13.
-Proof.
-simpl.
-interval.
-Qed.
 
 
 End WITHNANS.
