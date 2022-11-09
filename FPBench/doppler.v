@@ -44,40 +44,32 @@ time "goal 1" (
 field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect v, 
- i_depth 20) as H'; apply H'; apply Rle_refl
-end).
-+
-time "goal 1" (
-field_simplify_Rabs;
-match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+ i_depth 17) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 2" (
+field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH,  
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+interval_intro (Rabs a) with (i_bisect vxH, 
+i_bisect v0, i_depth 17) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 3" (
 match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end). (*
+interval_intro (Rabs a) with (i_bisect vxH,  
+i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
+end).
 +
 time "goal 4" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
-end). *)
+i_bisect v0, i_depth 16) as H'; apply H'; apply Rle_refl
+end).
 Defined.
 
-Definition doppler1_bound_val := Eval simpl in doppler1_bound.
-Compute ltac:(ShowBound doppler1_bound_val).
+Check ltac:(ShowBound (proj1_sig doppler1_bound)).
 
-Goal proj1_sig doppler1_bound_val <= 4.5e-13.
+Goal proj1_sig doppler1_bound <= 4.5e-13.
 simpl.
 interval.
 Qed.
@@ -120,34 +112,33 @@ time "goal 1" (
 field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect v, 
- i_depth 20) as H'; apply H'; apply Rle_refl
+ i_depth 15) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 2" (
 field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 3" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH,  
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 4" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
 end).
 Defined.
 
-Definition doppler2_bound_val := Eval simpl in doppler2_bound.
-Compute ltac:(ShowBound doppler2_bound_val).
+Check ltac:(ShowBound (proj1_sig doppler2_bound)).
 
 Lemma check_doppler2_bound :
-proj1_sig doppler2_bound_val <= 1.19e-12.
+proj1_sig doppler2_bound <= 1.19e-12.
 Proof.
 simpl.
 interval.
@@ -190,35 +181,33 @@ time "goal 1" (
 field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect v, 
- i_depth 20) as H'; apply H'; apply Rle_refl
+ i_depth 15) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 2" (
 field_simplify_Rabs;
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 3" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH,  
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+i_bisect v0, i_depth 14) as H'; apply H'; apply Rle_refl
 end).
 +
 time "goal 4" (
 match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+i_bisect v0, i_depth 15) as H'; apply H'; apply Rle_refl
 end).
 Defined.
 
-
-Definition doppler3_bound_val := Eval simpl in doppler3_bound.
-Compute ltac:(ShowBound doppler3_bound_val).
+Check ltac:(ShowBound (proj1_sig doppler3_bound)).
 
 Lemma check_doppler3_bound :
-proj1_sig doppler3_bound_val <= 2e-13.
+proj1_sig doppler3_bound <= 2e-13.
 Proof.
 simpl.
 interval.
