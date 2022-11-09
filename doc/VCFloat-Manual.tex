@@ -85,10 +85,10 @@ VCFloat2 provides
 \item Automatically derive a real-valued functional model.
 \item Specify bounds for your input variables, in a \lstinline{boundsmap}.
 \item State a roundoff-error theorem, and start the proof using the
-  \lstinline{prove_rndval} tactic.
+  \lstinline{prove_rndval} tactic; this leaves two subgoals, ``stage 1'' and ``stage 2''.
 \item Prove the stage-1 verification conditions; usually this is as easy as
   writing \lstinline{all:interval}.
-\item Finish proving the main theorem; sometimes this is completely automatic, sometimes you have to assist.
+\item Prove the stage-2 goal; sometimes this is completely automatic, sometimes you have to assist.
 \item (optional) Prove that your C program correctly implements the functional model.
 \item (optional) Prove that your real-valued model accurately approximates the
   mathematical quantity of interest.
@@ -211,7 +211,30 @@ float step (float x, float v) { return x+h*(v+h/2.0f)*F(x); }
 \chapter{Reification}
 
 VCFloat will \emph{reify} your functional model into the internal
-syntax tree that it uses.  In order to do this, it will need
+syntax tree that it uses.
+
+To represent \emph{in a logic} a function analyzing logical formulas
+of type $\tau$, one cannot write a function with type $\tau\rightarrow
+\mathsf{Prop}$; one must operate on \emph{syntactic
+representations} of floating-point formulas.
+VCFloat's \lstinline{expr} type is for abstract-syntax trees of
+formulas (you can do \lstinline{Print expr} in Coq to see).
+One can then define in the logic a 
+\emph{reflect} function of type $\mathsf{expr}\rightarrow \tau$.
+VCFloat has \lstinline{fval} to reflect back to floating-point
+expressions, and \lstinline{rval} to reflect into real-valued formulas.
+(You can do \lstinline{Check fval} or \lstinline{Check rval}.)
+
+The opposite process, \emph{reification,} converting
+from a formula into its abstract-syntax tree, 
+cannot be done \emph{within} the logic, but it can be done
+by an Ltac program.  VCFloat provides
+the tactic \lstinline{HO_reify_float_expr}.
+One cannot prove a tactic correct, but
+you do get a per-instance guarantee
+for each $f:\tau$ by checking that $\mathsf{reflect}(\mathsf{reify}(f))=f$.
+
+The reifier will need
 a \emph{name} for each of your variables.
 VCFloat's name type is the Coq positive numbers.
 In our example the variables are $x$ and $v$, and
@@ -368,8 +391,8 @@ Recall, of course, that ``the floating-point interpretation of \lstinline{step'}
 and ``the real-number interpretation of \lstinline{step'}''
 is exactly our real-valued functional model.
 
-What if we didn't know the accuracy 1/400000 in advance?  See the
-next chapter.
+What if we didn't know the accuracy 1/400000 in advance?
+VCFloat can calculate it; see Section~\ref{calculate-bound}.
 
 Here is how we prove the theorem:
 \begin{lstlisting}
@@ -397,6 +420,8 @@ and subtractions do not overflow.  Usually the subgoals
 left by \lstinline{prove_rndval} are easy to prove using the Coq
 Interval package, as shown here by \lstinline{all:interval}.
 Section~\ref{goal1} explains and discusses these goals.
+
+\pagebreak 
 
 The second subgoal
 is always proved by
@@ -454,7 +479,8 @@ certain subexpressions don't overflow into infinities or NaNs,
 that certain subexpressions don't underflow into subnormal numbers,
 or even that certain subexpressions \emph{always} underflow.
 
-The \lstinline{prove_rndval} tactic exps 
+\pagebreak
+The \lstinline{prove_rndval} tactic expands
 the \lstinline{prove_rndval} goal into one subgoal per VC.
 A typical subgoal might be equivalent to this:
 
@@ -488,6 +514,7 @@ subgoals of the \lstinline{prove_rndval} tactic are
 immediately provable this way.
 
 \chapter{Letting VCFloat calculate the accuracy bound}
+\label{calculate-bound}
 
 You can ask VCFloat not only to \emph{prove} an accuracy bound,
 but to \emph{calculate and prove} the bound if you don't know it
@@ -534,7 +561,7 @@ form, $|E'-E|\le A$, where $E$ is the real-valued functional model,
 $E'$ is the real-valued model with deltas and epsilons inserted to
 represent round-off errors, and $A$ is the accuracy bound.
 Goals of this kind can be given to the Coq Interval package to solve.
-Interval works by computing in interval arithmetic,
+Coq.Interval works by computing in interval arithmetic,
 where every number is represented by a pair of floating-point numbers
 representing a lower bound and upper bound.  For example, to subtract
 $a-b$ represented as $(a_\mathrm{lo},a_\mathrm{hi})-(b_\mathrm{lo},b_\mathrm{hi})$,
@@ -585,7 +612,7 @@ There are two problems: (1) the multinomial can have an exponential number of te
 
 \chapter{prune\_terms}
 
-The proof goal at at the end of the last section had many terms
+The proof goal at the end of the last section had many terms
 similar to \lstinline{3*d0*d*d1} where two or more deltas or epsilons
 are multiplied together.  Since the deltas are bounded by $2^{-24}$
 (in single precision) or $2^{-53}$ (in double precision),
@@ -624,7 +651,7 @@ in which not as many terms have been neglected.  But either way,
 \chapter{error\_rewrites} Suppose an expression for the absolute
 forward error does not expand into a nice multinomial
 that is tractable for the \lstinline{prune_terms} tactic;
-suppose it such a large expression
+suppose it is such a large expression
 that applying the \lstinline{field_simplify+interval} 
 tactic causes Coq to crash. An example
 of such a problem is the \lstinline{carbonGas} benchmark from the
@@ -705,28 +732,26 @@ automatically discharged a few!).
 
 \chapter{Abstract \emph{versus} transparent valmap}
 
-Many simple applications of VCFloat prove a theorem,
-``Given \lstinline{boundsmap} $\mathit{bm}$,
-for any \lstinline{valmap} $\mathit{vm}$ that satisfies the
-low-bound/high-bound constraints in $\mathit{bm}$,
-the round-off error will be less than $A$.''
-In such a case it works well to quantify over $\mathit{vm}$,
-a variable representing a valmap.
+When you have proved a \lstinline{prove_roundoff_bound} theorem
+as described in the previous sections, then you may want to
+use that in the proof of other theorems about your floating-point
+program.  Since \lstinline{prove_roundoff_bound} quantifies over
+all valmaps, you can apply it to a particular valmap.
 
-But sometimes you want to prove an accuracy bound that's
-a function of the input variables (such as a relative error bound).
-Or you may have have additional constraints on the variables
-in $\mathit{vm}$.
-In such cases you can use an advanced technique:
-quantify over the individual variables, with additional constraints
-expressed directly in Coq as needed, and then state a
-\lstinline{prove_roundoff_bound} theorem on a transparently
-constructed valmap.  We illustrate here (and see Test/summation.v
-for a full demonstration).
+For example, \lstinline{step_vmap} defined in Section~\ref{valmap}
+takes floating-point values $x$ and $v$, and produces a valmap.
+That is, \lstinline{step_vmap 3.1 0.7} is the valmap with
+position 3.1 and velocity 0.7.  You could apply the
+\lstinline{prove_roundoff_bound_step} theorem to this valmap
+to prove that, when the program is run with arguments
+3.1 and 0.7, then its roundoff error will be less than 1/4000000.
 
-Section~\ref{valmap} showed how to construct \lstinline{step_valmap}
-from the individual variables $x$ and $v$.  You can leverage this
-to state a roundoff theorem by quantifying over $x$ and $v$:
+In that theorem, the \emph{vmap} is a quantified variable---it is
+abstract.  But you can also prove a \lstinline{prove_roundoff_bound}
+theorem with a less-abstract vmap.
+
+For example, a theorem like this one (and see Test/summation.v
+for another example):
 \begin{lstlisting}
 Lemma prove_rndoff' :
   forall (x v : ftype Tsingle),
@@ -734,6 +759,14 @@ Lemma prove_rndoff' :
   my_extra_constraint x v ->   
   prove_roundoff_bound step_bmap (step_vmap x v) step' accuracy.
 \end{lstlisting}  
+
+This example illustrates another thing as well:  Suppose you have
+extra constraints on your variables, besides just the boundsmap.
+You can state these constraints as an extra hypothesis
+in the theorem, and the proof tactics (such as \lstinline{interval}) can
+make use of them.  You can also prove a theorem in which the
+accuracy bound is dependent on the variables in your valmap---for example,
+a \emph{relative error} bound.
 
 \chapter{Annotations}
 
