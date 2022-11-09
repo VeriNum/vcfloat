@@ -76,7 +76,7 @@ Defined.
 
 Check ltac:(ShowBound (proj1_sig doppler1_bound)).
 
-Goal proj1_sig doppler1_bound_val <= 4.5e-13.
+Goal proj1_sig doppler1_bound <= 4.5e-13.
 simpl.
 interval.
 Qed.
@@ -145,7 +145,7 @@ Defined.
 Check ltac:(ShowBound (proj1_sig doppler2_bound)).
 
 Lemma check_doppler2_bound :
-proj1_sig doppler2_bound_val <= 1.19e-12.
+proj1_sig doppler2_bound <= 1.19e-12.
 Proof.
 simpl.
 interval.
@@ -211,10 +211,10 @@ i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
 end).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig doppler3_bound_val)).
+Check ltac:(ShowBound (proj1_sig doppler3_bound)).
 
 Lemma check_doppler3_bound :
-proj1_sig doppler3_bound_val <= 2e-13.
+proj1_sig doppler3_bound <= 2e-13.
 Proof.
 simpl.
 interval.

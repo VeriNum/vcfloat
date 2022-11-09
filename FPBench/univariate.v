@@ -62,7 +62,7 @@ Defined.
 
 Check ltac:(ShowBound (proj1_sig predatorprey_bound)).
 
-Goal proj1_sig predatorprey_bound_val <= 3.1e-16.
+Goal proj1_sig predatorprey_bound <= 3.1e-16.
 simpl; interval. Qed.
 
 Definition verhulst_bmap_list := [Build_varinfo Tdouble 1%positive (1e-1) (3e-1)].
@@ -188,7 +188,7 @@ Defined.
 Check ltac:(ShowBound (proj1_sig carbongas_bound)).
 
 Lemma check_doppler3_bound :
-proj1_sig carbongas_bound_val <= 2.5e-8.
+proj1_sig carbongas_bound <= 2.5e-8.
 Proof.
 simpl.
 interval.

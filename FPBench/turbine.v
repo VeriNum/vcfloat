@@ -71,7 +71,7 @@ Defined.
 
 Check ltac:(ShowBound (proj1_sig turbine1_bound)).
 
-Goal proj1_sig turbine1_bound_val <= 7.9e-14.
+Goal proj1_sig turbine1_bound <= 7.9e-14.
 simpl.
 interval.
 Qed.
@@ -140,7 +140,7 @@ Defined.
 
 Check ltac:(ShowBound (proj1_sig turbine2_bound)).
 
-Goal proj1_sig turbine2_bound_val <= 1.2e-13.
+Goal proj1_sig turbine2_bound <= 1.2e-13.
 simpl; interval.
 Qed.
 
@@ -209,7 +209,7 @@ Defined.
 
 Check ltac:(ShowBound (proj1_sig turbine3_bound)).
 
-Goal proj1_sig turbine3_bound_val <= 6.1e-14.
+Goal proj1_sig turbine3_bound <= 6.1e-14.
 simpl.
 interval.
 Qed.
