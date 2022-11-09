@@ -6,32 +6,6 @@ Section WITHNANS.
 Context {NANS:Nans}.
 Open Scope R_scope.
 
-Definition nonlin2_bmap_list := [Build_varinfo Tdouble 1%positive (1001e-3) (2);Build_varinfo Tdouble 2%positive (1001e-3) (2)].
-
-Definition nonlin2_bmap :=
- ltac:(let z := compute_PTree (boundsmap_of_list nonlin2_bmap_list) in exact z).
-
-Definition nonlin2 (x : ftype Tdouble) (y : ftype Tdouble) := 
-  cast Tdouble (let t := (x * y)%F64 in
-  ((t - (1)%F64)%F64 / ((t * t)%F64 - (1)%F64)%F64)%F64).
-
-Definition nonlin2_expr := 
- ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive]) nonlin2 in exact e').
-
-Lemma nonlin2_bound:
-	find_and_prove_roundoff_bound nonlin2_bmap nonlin2_expr.
-Proof.
-idtac "Starting nonlin2".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2;
-time "prune_terms" (prune_terms (cutoff 30)).
-time "do_interval" do_interval.
-Defined.
-
-Check ltac:(ShowBound (proj1_sig nonlin2_bound)).
 
 Definition himmilbeau_bmap_list := [Build_varinfo Tdouble 1%positive (-5) (5);Build_varinfo Tdouble 2%positive (-5) (5)].
 
@@ -50,13 +24,10 @@ Lemma himmilbeau_bound:
 	find_and_prove_roundoff_bound himmilbeau_bmap himmilbeau_expr.
 Proof.
 idtac "Starting himmilbeau".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2;
-time "prune_terms" (prune_terms (cutoff 30)).
-time "do_interval" do_interval.
+time "himmilbeau" (
+try (eexists; intro; prove_roundoff_bound);
+try (prove_rndval; interval);
+try (prove_roundoff_bound2; prune_terms (cutoff 30); do_interval)).
 Defined.
 
 Check ltac:(ShowBound (proj1_sig himmilbeau_bound)).
@@ -81,18 +52,16 @@ Lemma jetengine_bound:
 	find_and_prove_roundoff_bound jetengine_bmap jetengine_expr.
 Proof.
 idtac "Starting jetengine".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2.
-time "interval_intro" match goal with |- Rabs ?a <= _ =>
+time "jetengine" (
+try (eexists; intro; prove_roundoff_bound);
+try (prove_rndval; interval);
+try (prove_roundoff_bound2;
+try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, i_bisect v, i_depth 12) as H
-end.
-time "apply bound" (
-eapply Rle_trans;
+end;
+(eapply Rle_trans;
 try apply H;
-try apply Rle_refl).
+try apply Rle_refl))).
 Defined.
 
 Check ltac:(ShowBound (proj1_sig jetengine_bound)).
