@@ -23,13 +23,11 @@ Lemma predatorprey_bound:
 	find_and_prove_roundoff_bound predatorprey_bmap predatorprey_expr.
 Proof.
 idtac "Starting predatorprey".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2.
-time "error rewrites" error_rewrites. 
-all : (time "prune"
+time "predatorprey" (
+eexists; intro; prove_roundoff_bound;
+try (prove_rndval; interval); try interval;
+try ( prove_roundoff_bound2); try error_rewrites;
+try (
 (prune_terms (cutoff 70);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
   rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
@@ -42,22 +40,14 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
                       [apply G | apply Rminus_plus_le_minus; apply Rle_refl]);
                       try (interval_intro (Rabs e) as G;
                       eapply Rle_trans;
-                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl]) end)).
-{
-time "goal 1" (
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl]) end));
+try (
 try rewrite Rsqr_pow2;
 try field_simplify_Rabs;
 try match goal with |-Rabs ?a <= _ =>
 interval_intro (Rabs a) upper with 
 (i_bisect vxH, i_depth 17) as H'
-end; apply H').
-}
-all : time "remaining" (
-try rewrite Rsqr_pow2;
-try match goal with |-Rabs ?a <= _ =>
-interval_intro (Rabs a) upper with 
-(i_bisect vxH, i_depth 17) as H'
-end; apply H').
+end; apply H')).
 Defined.
 
 Check ltac:(ShowBound (proj1_sig predatorprey_bound)).
@@ -82,61 +72,23 @@ Lemma verhulst_bound:
 	find_and_prove_roundoff_bound verhulst_bmap verhulst_expr.
 Proof.
 idtac "Starting verhulst".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2.
-time "field_simplify" match goal with |-Rabs ?a <= _ =>
+time "verhulst" (
+try (eexists; intro; prove_roundoff_bound);
+try (prove_rndval; interval);
+try prove_roundoff_bound2;
+try match goal with |-Rabs ?a <= _ =>
 field_simplify a ; try split; try unfold id; try field; try nra; try interval
-end. 
-time "interval_intro" match goal with |- Rabs ?a <= _ =>
+end;
+try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, i_depth 15) as H
-end.
-time "apply bound" (
+end;
+try (
 eapply Rle_trans;
 try apply H;
-try apply Rle_refl).
+try apply Rle_refl)).
 Defined.
 
 Check ltac:(ShowBound (proj1_sig verhulst_bound)).
-
-Definition intro_45_example_45_mixed_bmap_list := [Build_varinfo Tsingle 1%positive (1) (999)].
-
-Definition intro_45_example_45_mixed_bmap :=
- ltac:(let z := compute_PTree (boundsmap_of_list intro_45_example_45_mixed_bmap_list) in exact z).
-
-Definition intro_45_example_45_mixed (t : ftype Tsingle) := 
-  cast Tsingle (let t_1 := let t1_2 := (t + (1)%F32)%F32 in
-      (cast Tdouble (t) / cast Tdouble (t1_2))%F64 in
-  cast Tsingle (t_1)).
-
-Definition intro_45_example_45_mixed_expr := 
- ltac:(let e' :=  HO_reify_float_expr constr:([1%positive]) intro_45_example_45_mixed in exact e').
-
-Lemma intro_45_example_45_mixed_bound:
-	find_and_prove_roundoff_bound intro_45_example_45_mixed_bmap intro_45_example_45_mixed_expr.
-Proof.
-idtac "Starting intro_45_example_45_mixed".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2.
-unfold id.
-time "field_simplify" match goal with |-Rabs ?a <= _ =>
-field_simplify a ; try split; try unfold id; try field; try nra; try interval
-end. 
-time "interval_intro" match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH, i_depth 15) as H
-end.
-time "apply bound" (
-eapply Rle_trans;
-try apply H;
-try apply Rle_refl).
-Defined.
-
-Check ltac:(ShowBound (proj1_sig intro_45_example_45_mixed_bound)).
 
 Definition carbongas_bmap_list := [Build_varinfo Tdouble 1%positive (1e-1) (5e-1)].
 
@@ -160,75 +112,62 @@ Lemma carbongas_bound:
 	find_and_prove_roundoff_bound carbongas_bmap carbongas_expr.
 Proof.
 idtac "Starting carbongas".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2.
-time "error rewrites" error_rewrites.
-all : (time "prune"
+time "carbongas" (
+try (eexists; intro; prove_roundoff_bound);
+try (prove_rndval; interval);
+try (prove_roundoff_bound2; error_rewrites);
+try (
 (prune_terms (cutoff 60);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
   rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
-end)).
-all: (try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
+end));
+(try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
                       try (interval_intro (Rabs e) as G; 
                       eapply Rle_trans;
-                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl]) end).
-all: (
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl]) end);
+try (
 try field_simplify_Rabs ;
 try match goal with |-Rabs ?a <= _ =>
   try (interval_intro (Rabs a) upper with 
   (i_taylor vxH, i_bisect vxH, i_depth 15) as H' ; apply H');
   try (interval_intro (Rabs a) upper as H' ; apply H') end;
-  apply Rle_refl).
+  apply Rle_refl)).
 Defined.
-
 
 Check ltac:(ShowBound (proj1_sig carbongas_bound)).
 
-Lemma check_doppler3_bound :
-proj1_sig carbongas_bound <= 2.5e-8.
-Proof.
-simpl.
-interval.
-Qed.
+Definition t_div_t1_bmap_list := [Build_varinfo Tdouble 1%positive (0) (999)].
 
+Definition t_div_t1_bmap :=
+ ltac:(let z := compute_PTree (boundsmap_of_list t_div_t1_bmap_list) in exact z).
 
-Definition nonlin1_bmap_list := [Build_varinfo Tdouble 1%positive (0) (999)].
-
-Definition nonlin1_bmap :=
- ltac:(let z := compute_PTree (boundsmap_of_list nonlin1_bmap_list) in exact z).
-
-Definition nonlin1 (z : ftype Tdouble) := 
+Definition t_div_t1 (z : ftype Tdouble) := 
   cast Tdouble ((z / (z + (1)%F64)%F64)%F64).
 
-Definition nonlin1_expr := 
- ltac:(let e' :=  HO_reify_float_expr constr:([1%positive]) nonlin1 in exact e').
+Definition t_div_t1_expr := 
+ ltac:(let e' :=  HO_reify_float_expr constr:([1%positive]) t_div_t1 in exact e').
 
-Lemma nonlin1_bound:
-	find_and_prove_roundoff_bound nonlin1_bmap nonlin1_expr.
+Lemma t_div_t1_bound:
+	find_and_prove_roundoff_bound t_div_t1_bmap t_div_t1_expr.
 Proof.
-idtac "Starting nonlin1".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2.
-time "field_simplify" match goal with |-Rabs ?a <= _ =>
+idtac "Starting t_div_t1".
+try (eexists; intro; prove_roundoff_bound);
+try (prove_rndval; interval);
+try (prove_roundoff_bound2);
+try match goal with |-Rabs ?a <= _ =>
 field_simplify a; try split; try field; try nra; try interval
-end.
-time "interval_intro" match goal with |-Rabs ?a <= _ =>
+end;
+try match goal with |-Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_taylor vxH, i_degree 10, i_bisect vxH,
 i_depth 10)
-end.
-time "apply bound" (
+end;
+try (
 eapply Rle_trans;
 try apply H;
 try apply Rle_refl).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig nonlin1_bound)).
+Check ltac:(ShowBound (proj1_sig t_div_t1_bound)).
 
 
 End WITHNANS.
