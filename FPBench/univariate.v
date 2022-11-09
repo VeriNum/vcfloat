@@ -151,6 +151,7 @@ Lemma t_div_t1_bound:
 	find_and_prove_roundoff_bound t_div_t1_bmap t_div_t1_expr.
 Proof.
 idtac "Starting t_div_t1".
+time "t_div_t1_bound" (
 try (eexists; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try (prove_roundoff_bound2);
@@ -164,7 +165,7 @@ end;
 try (
 eapply Rle_trans;
 try apply H;
-try apply Rle_refl).
+try apply Rle_refl)).
 Defined.
 
 Check ltac:(ShowBound (proj1_sig t_div_t1_bound)).
