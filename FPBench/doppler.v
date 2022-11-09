@@ -74,8 +74,7 @@ i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
 end). *)
 Defined.
 
-Definition doppler1_bound_val := Eval simpl in doppler1_bound.
-Check ltac:(ShowBound doppler1_bound_val).
+Check ltac:(ShowBound (proj1_sig doppler1_bound)).
 
 Goal proj1_sig doppler1_bound_val <= 4.5e-13.
 simpl.
@@ -143,8 +142,7 @@ i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
 end).
 Defined.
 
-Definition doppler2_bound_val := Eval simpl in doppler2_bound.
-Check ltac:(ShowBound doppler2_bound_val).
+Check ltac:(ShowBound (proj1_sig doppler2_bound)).
 
 Lemma check_doppler2_bound :
 proj1_sig doppler2_bound_val <= 1.19e-12.
@@ -213,9 +211,7 @@ i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
 end).
 Defined.
 
-
-Definition doppler3_bound_val := Eval simpl in doppler3_bound.
-Check ltac:(ShowBound doppler3_bound_val).
+Check ltac:(ShowBound (proj1_sig doppler3_bound_val)).
 
 Lemma check_doppler3_bound :
 proj1_sig doppler3_bound_val <= 2e-13.

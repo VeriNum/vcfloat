@@ -30,8 +30,7 @@ time "prune_terms" (prune_terms (cutoff 30)).
 time "do_interval" do_interval.
 Defined.
 
-Definition kepler0_bound_val := Eval simpl in kepler0_bound.
-Check ltac:(ShowBound kepler0_bound_val).
+Check ltac:(ShowBound (proj1_sig kepler0_bound)).
 
 Definition kepler1_bmap_list := [Build_varinfo Tdouble 1%positive (4) (636e-2);Build_varinfo Tdouble 2%positive (4) (636e-2);Build_varinfo Tdouble 3%positive (4) (636e-2);Build_varinfo Tdouble 4%positive (4) (636e-2)].
 
@@ -57,8 +56,7 @@ time "prune_terms" (prune_terms (cutoff 30)).
 time "do_interval" do_interval.
 Defined.
 
-Definition kepler1_bound_val := Eval simpl in kepler1_bound.
-Check ltac:(ShowBound kepler1_bound_val).
+Check ltac:(ShowBound (proj1_sig kepler1_bound)).
 
 Definition kepler2_bmap_list := [Build_varinfo Tdouble 1%positive (4) (636e-2);Build_varinfo Tdouble 2%positive (4) (636e-2);Build_varinfo Tdouble 3%positive (4) (636e-2);Build_varinfo Tdouble 4%positive (4) (636e-2);Build_varinfo Tdouble 5%positive (4) (636e-2);Build_varinfo Tdouble 6%positive (4) (636e-2)].
 
@@ -84,8 +82,7 @@ time "prune_terms" (prune_terms (cutoff 60)).
 time "do_interval" do_interval.
 Defined.
 
-Definition kepler2_bound_val := Eval simpl in kepler2_bound.
-Check ltac:(ShowBound kepler2_bound_val).
+Check ltac:(ShowBound (proj1_sig kepler2_bound)).
 
 End WITHNANS.
 Close Scope R_scope.

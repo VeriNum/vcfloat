@@ -60,8 +60,7 @@ interval_intro (Rabs a) upper with
 end; apply H').
 Defined.
 
-Definition predatorprey_bound_val := Eval simpl in predatorprey_bound.
-Check ltac:(ShowBound predatorprey_bound_val).
+Check ltac:(ShowBound (proj1_sig predatorprey_bound)).
 
 Goal proj1_sig predatorprey_bound_val <= 3.1e-16.
 simpl; interval. Qed.
@@ -100,8 +99,7 @@ try apply H;
 try apply Rle_refl).
 Defined.
 
-Definition verhulst_bound_val := Eval simpl in verhulst_bound.
-Check ltac:(ShowBound verhulst_bound_val).
+Check ltac:(ShowBound (proj1_sig verhulst_bound)p).
 
 Definition intro_45_example_45_mixed_bmap_list := [Build_varinfo Tsingle 1%positive (1) (999)].
 
@@ -138,8 +136,7 @@ try apply H;
 try apply Rle_refl).
 Defined.
 
-Definition intro_45_example_45_mixed_bound_val := Eval simpl in intro_45_example_45_mixed_bound.
-Check ltac:(ShowBound intro_45_example_45_mixed_bound_val).
+Check ltac:(ShowBound (proj1_sig intro_45_example_45_mixed_bound)).
 
 Definition carbongas_bmap_list := [Build_varinfo Tdouble 1%positive (1e-1) (5e-1)].
 
@@ -188,8 +185,7 @@ try match goal with |-Rabs ?a <= _ =>
 Defined.
 
 
-Definition carbongas_bound_val := Eval simpl in carbongas_bound.
-Check ltac:(ShowBound carbongas_bound_val).
+Check ltac:(ShowBound (proj1_sig carbongas_bound)).
 
 Lemma check_doppler3_bound :
 proj1_sig carbongas_bound_val <= 2.5e-8.
@@ -232,8 +228,7 @@ try apply H;
 try apply Rle_refl).
 Defined.
 
-Definition nonlin1_bound_val := Eval simpl in nonlin1_bound.
-Check ltac:(ShowBound nonlin1_bound_val).
+Check ltac:(ShowBound (proj1_sig nonlin1_bound)).
 
 
 End WITHNANS.

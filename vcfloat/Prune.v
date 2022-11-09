@@ -3424,9 +3424,11 @@ Defined.
 
 Require Import vcfloat.Float_notations.
 
-Ltac ShowBound bound :=
-  let y := constr:((proj1_sig bound)) in
-  let y := eval simpl in y in
+Ltac ShowBound bound := 
+  match type of bound with
+  | ?t => first [unify t R | fail 1 "ShowBound expects an argument of type R but" bound "has type" t]
+  end;
+  let y := eval simpl in bound in
   let y := RtoFloat' y in
   let y := constr:(BSN2B _ _ some_nan64 (@BinarySingleNaN.SF2B 53 1024 (FloatOps.Prim2SF y) (eq_refl _))) in
   let y := eval compute in y in

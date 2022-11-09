@@ -69,8 +69,7 @@ interval_intro (Rabs a) as H'; apply H'; apply Rle_refl
 end)).
 Defined.
 
-Definition turbine1_bound_val := Eval simpl in turbine1_bound.
-Check ltac:(ShowBound turbine1_bound_val).
+Check ltac:(ShowBound (proj1_sig turbine1_bound)).
 
 Goal proj1_sig turbine1_bound_val <= 7.9e-14.
 simpl.
@@ -139,8 +138,7 @@ interval_intro (Rabs a) as H'; apply H'; apply Rle_refl
 end)).
 Defined.
 
-Definition turbine2_bound_val := Eval simpl in turbine2_bound.
-Check ltac:(ShowBound turbine2_bound_val).
+Check ltac:(ShowBound (proj1_sig turbine2_bound)).
 
 Goal proj1_sig turbine2_bound_val <= 1.2e-13.
 simpl; interval.
@@ -209,8 +207,7 @@ interval_intro (Rabs a) as H'; apply H'; apply Rle_refl
 end)).
 Defined.
 
-Definition turbine3_bound_val := Eval simpl in turbine3_bound.
-Check ltac:(ShowBound turbine3_bound_val).
+Check ltac:(ShowBound (proj1_sig turbine3_bound)).
 
 Goal proj1_sig turbine3_bound_val <= 6.1e-14.
 simpl.

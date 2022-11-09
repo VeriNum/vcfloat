@@ -30,8 +30,7 @@ time "prune_terms" (prune_terms (cutoff 30)).
 time "do_interval" do_interval.
 Defined.
 
-Definition rigidbody1_bound_val := Eval simpl in rigidbody1_bound.
-Check ltac:(ShowBound rigidbody1_bound_val).
+Check ltac:(ShowBound (proj1_sig rigidbody1_bound)).
 
 Definition rigidbody2_bmap_list := [Build_varinfo Tdouble 1%positive (-15) (15);Build_varinfo Tdouble 2%positive (-15) (15);Build_varinfo Tdouble 3%positive (-15) (15)].
 
@@ -57,8 +56,7 @@ time "prune_terms" (prune_terms (cutoff 30)).
 time "do_interval" do_interval.
 Defined.
 
-Definition rigidbody2_bound_val := Eval simpl in rigidbody2_bound.
-Check ltac:(ShowBound rigidbody2_bound_val).
+Check ltac:(ShowBound (proj1_sig rigidbody2_bound)).
 
 End WITHNANS.
 Close Scope R_scope.
