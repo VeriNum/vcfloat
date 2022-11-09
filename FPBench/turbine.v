@@ -23,14 +23,11 @@ Lemma turbine1_bound:
 	find_and_prove_roundoff_bound turbine1_bmap turbine1_expr.
 Proof.
 idtac "Starting turbine1".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2. 
-time "error rewrites" error_rewrites.
-all : (time "prune"
-(prune_terms (cutoff 70);
+time "turbine1" (
+try (eexists; intro; prove_roundoff_bound);
+try (prove_rndval; interval);
+try (prove_roundoff_bound2; error_rewrites);
+try (prune_terms (cutoff 70);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
   rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
 end;
@@ -38,8 +35,7 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
                       let G := fresh "G" in
                       interval_intro (Rabs e) as G ;
                       eapply Rle_trans;
-                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)).
-all : ( time "remaining" (
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end);
 try rewrite Rsqr_pow2;
 try field_simplify_Rabs;
 try match goal with |- Rabs ?a <= _ =>
@@ -66,7 +62,7 @@ i_bisect vxH, i_depth 20) as H'; apply H'; apply Rle_refl
 end;
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) as H'; apply H'; apply Rle_refl
-end)).
+end).
 Defined.
 
 Check ltac:(ShowBound (proj1_sig turbine1_bound)).
@@ -92,14 +88,12 @@ Lemma turbine2_bound:
 	find_and_prove_roundoff_bound turbine2_bmap turbine2_expr.
 Proof.
 idtac "Starting turbine2".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval.
--
-time "prove_roundoff_bound2" prove_roundoff_bound2. 
-time "error rewrites" error_rewrites.
-all : (time "prune"
-(prune_terms (cutoff 70);
+time "turbine2" (
+try (eexists; intro; prove_roundoff_bound);
+try (prove_rndval; interval);
+try prove_roundoff_bound2;
+try error_rewrites;
+try ((prune_terms (cutoff 70);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
   rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
 end;
@@ -107,8 +101,7 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
                       let G := fresh "G" in
                       interval_intro (Rabs e) as G ;
                       eapply Rle_trans;
-                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)) .
-all : ( time "remaining" (
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end));
 try rewrite Rsqr_pow2;
 try field_simplify_Rabs;
 try match goal with |- Rabs ?a <= _ =>
@@ -135,7 +128,7 @@ i_bisect vxH, i_depth 20) as H'; apply H'; apply Rle_refl
 end;
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) as H'; apply H'; apply Rle_refl
-end)).
+end).
 Defined.
 
 Check ltac:(ShowBound (proj1_sig turbine2_bound)).
@@ -160,15 +153,12 @@ Lemma turbine3_bound:
 	find_and_prove_roundoff_bound turbine3_bmap turbine3_expr.
 Proof.
 idtac "Starting turbine3".
-eexists. intro. prove_roundoff_bound.
--
-time "prove_rndval" prove_rndval; time "interval" interval with (i_prec 128).
-
--
-time "prove_roundoff_bound2" prove_roundoff_bound2. 
-time "error rewrites" error_rewrites.
-all : (time "prune"
-(prune_terms (cutoff 70);
+time "turbine2" (
+try (eexists; intro; prove_roundoff_bound);
+try (prove_rndval; interval);
+try prove_roundoff_bound2;
+try error_rewrites;
+try ((prune_terms (cutoff 70);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
   rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
 end;
@@ -176,9 +166,8 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
                       let G := fresh "G" in
                       interval_intro (Rabs e) as G ;
                       eapply Rle_trans;
-                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)). 
-all : ( time "remaining" (
-try rewrite Rsqr_pow2;
+                      [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end));
+(try rewrite Rsqr_pow2;
 try field_simplify_Rabs;
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with ( i_bisect vxH,
