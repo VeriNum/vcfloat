@@ -65,13 +65,8 @@ interval_intro (Rabs a) as H'; apply H'; apply Rle_refl
 end).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig turbine1_bound)).
-
-Goal proj1_sig turbine1_bound <= 7.9e-14.
-simpl.
-interval.
-Qed.
-
+Lemma check_turbine1_bound: ltac:(CheckBound turbine1_bound 7.9e-14%F64).
+Proof. reflexivity. Qed.
 
 Definition turbine2_bmap_list := [Build_varinfo Tdouble 1%positive (-45e-1) (-3e-1);Build_varinfo Tdouble 2%positive (4e-1) (9e-1);Build_varinfo Tdouble 3%positive (38e-1) (78e-1)].
 
@@ -131,11 +126,8 @@ interval_intro (Rabs a) as H'; apply H'; apply Rle_refl
 end).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig turbine2_bound)).
-
-Goal proj1_sig turbine2_bound <= 1.2e-13.
-simpl; interval.
-Qed.
+Lemma check_turbine2_bound: ltac:(CheckBound turbine2_bound 1.2e-13%F64).
+Proof. reflexivity. Qed.
 
 Definition turbine3_bmap_list := [Build_varinfo Tdouble 1%positive (-45e-1) (-3e-1);Build_varinfo Tdouble 2%positive (4e-1) (9e-1);Build_varinfo Tdouble 3%positive (38e-1) (78e-1)].
 
@@ -196,13 +188,8 @@ interval_intro (Rabs a) as H'; apply H'; apply Rle_refl
 end)).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig turbine3_bound)).
-
-Goal proj1_sig turbine3_bound <= 6.1e-14.
-simpl.
-interval.
-Qed.
-
+Lemma check_turbine3_bound: ltac:(CheckBound turbine3_bound 6.1e-14%F64).
+Proof. reflexivity. Qed.
 
 End WITHNANS.
 Close Scope R_scope.

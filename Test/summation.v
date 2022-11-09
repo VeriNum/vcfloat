@@ -4,6 +4,7 @@ From Flocq Require Import Binary.
 Import List ListNotations.
 
 From vcfloat Require Import FPLang FPLangOpt RAux Rounding Reify Float_notations Automate.
+Require Import Interval.Tactic.
 Set Bullet Behavior "Strict Subproofs". 
 
 
@@ -160,9 +161,6 @@ Definition bmap {ty} : boundsmap :=
 Definition sum_expr {ty} (a b : ftype ty) := ltac :( let e' :=
   HO_reify_float_expr constr:([_a; _b]) (BPLUS ty) in exact e').
 
-
-Require Import Interval.Tactic.
-
 Lemma real_lt_1 :
 forall a b c,
 a <= b -> b < c -> a < c.
@@ -170,8 +168,8 @@ Proof. intros; apply Rle_lt_trans with b; auto. Qed.
 
 Lemma bnd_lt_overflow n :
   (2 <= n )%nat ->
-  let e  := powerRZ 2 (-150) in 
-  let d  := powerRZ 2 (-24) in
+  let e  := / IZR (2 ^ 150)    in 
+  let d  := / IZR (2 ^ 24) in
   let sov := (powerRZ 2 (femax Tsingle) - 2 * e) / (1 + d) in
   let A  := (INR n - 1) * (1 + d)^(n-2) in
   let bnd := (sov - A * e) * (1 / ((A * d + 1) * INR n + 1)) * (INR n + 1) in 
@@ -187,8 +185,8 @@ subst sov. fold ov.
 replace (0x1p128%xR) with ov by (subst ov; simpl; nra).
 
 assert (
-((INR n - 1) * (1 + powerRZ 2 (-24)) ^ (n - 2) *
- powerRZ 2 (-24) + 1) * INR n + 1 <> 0).
+((INR n - 1) * (1 + / IZR (2 ^ 24)) ^ (n - 2) *
+ / IZR (2 ^ 24) + 1) * INR n + 1 <> 0).
 {
 apply tech_Rplus; try nra.
 apply Rmult_le_pos; try interval.
@@ -262,8 +260,8 @@ Qed.
 
 Lemma prove_rndoff' :
   forall (a b : ftype Tsingle) ,
-  let e := powerRZ 2 (-150) in 
-  let d := powerRZ 2 (-24) in 
+  let e := / IZR (2 ^ 150) in 
+  let d := / IZR (2 ^ 24) in 
       let ov := powerRZ 2 (femax Tsingle) in
   Rabs (FT2R a + FT2R b) <= (ov - 2 * e) / (1 + d) -> 
   prove_roundoff_bound (@bmap Tsingle) (vmap a b) (@sum_expr Tsingle a b) 
@@ -340,8 +338,8 @@ Proof. reflexivity. Qed.
 Lemma prove_rndoff:
   forall (a b : ftype Tsingle),
   boundsmap_denote (@bmap Tsingle) (vmap a b) ->
-  let e  := powerRZ 2 (-150) in 
-  let d := powerRZ 2 (-24) in
+  let e  := / IZR (2 ^ 150) in 
+  let d := / IZR (2 ^ 24) in
       let ov := powerRZ 2 (femax Tsingle) in
   Rabs (FT2R a + FT2R b) <= (ov - 2 * e) / (1 + d) -> 
       Rabs ( FT2R a + FT2R b - FT2R (BPLUS Tsingle a b)) <=
@@ -459,8 +457,8 @@ apply length_not_empty_lt;auto.
 Qed.
 
 Definition error_rel (n : nat) (r : R) : R :=
-  let e  := powerRZ 2 (-150) in
-  let d := powerRZ 2 (-24) in
+  let e  := / IZR (2 ^ 150) in
+  let d := / IZR (2 ^ 24) in
   if (1 <=? Z.of_nat n) then 
     ((1 + d)^(n-1) - 1) * (Rabs r + e/d)
   else 0%R.
@@ -475,8 +473,8 @@ simpl in ea; subst ea.
 Lemma prove_rndoff_n :
   forall (l : list (ftype Tsingle)) fs rs rs_abs,
   sum_rel_F l fs -> sum_rel_R (map FT2R l) rs -> sum_rel_R (map Rabs (map FT2R l)) rs_abs ->
-  let e  := powerRZ 2 (-150) in
-  let d  := powerRZ 2 (-24) in 
+  let e  := / IZR (2 ^ 150) in
+  let d  := / IZR (2 ^ 24) in 
   let ov := powerRZ 2 (femax Tsingle) in
   let n := length l in 
   let A := (1 + d)^(n-1) - 1 in
@@ -517,8 +515,7 @@ simpl; auto.
 *
 field_simplify_Rabs.
 rewrite Rabs_R0.
-field_simplify.
-nra.
+field_simplify; nra.
 +
 (* start common *)
 assert (Hifn : 1 <=? Z.of_nat n = true).
@@ -914,8 +911,8 @@ apply Private.RT2.IH.A.TaylorValuator.TM.TMI.Ropp_le_0.
 apply Rmult_le_pos; try nra.
 apply Rmult_le_pos; try nra.
 apply Rmult_le_pos; try nra.
-apply powerRZ_le; lra.
-subst d; interval.
+unfold e; nra.
+unfold d; nra.
 -
 repeat constructor.
 }

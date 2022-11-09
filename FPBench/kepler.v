@@ -30,7 +30,8 @@ prove_roundoff_bound2;
  do_interval)).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig kepler0_bound)).
+Lemma check_kepler0_bound: ltac:(CheckBound kepler0_bound 2.2005e-13%F64).
+Proof. reflexivity. Qed.
 
 Definition kepler1_bmap_list := [Build_varinfo Tdouble 1%positive (4) (636e-2);Build_varinfo Tdouble 2%positive (4) (636e-2);Build_varinfo Tdouble 3%positive (4) (636e-2);Build_varinfo Tdouble 4%positive (4) (636e-2)].
 
@@ -56,7 +57,8 @@ prove_roundoff_bound2;
  do_interval)).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig kepler1_bound)).
+Lemma check_kepler1_bound: ltac:(CheckBound kepler1_bound 1.69e-12%F64).
+Proof. reflexivity. Qed.
 
 Definition kepler2_bmap_list := [Build_varinfo Tdouble 1%positive (4) (636e-2);Build_varinfo Tdouble 2%positive (4) (636e-2);Build_varinfo Tdouble 3%positive (4) (636e-2);Build_varinfo Tdouble 4%positive (4) (636e-2);Build_varinfo Tdouble 5%positive (4) (636e-2);Build_varinfo Tdouble 6%positive (4) (636e-2)].
 
@@ -82,7 +84,8 @@ prove_roundoff_bound2;
  do_interval)).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig kepler2_bound)).
+Lemma check_kepler2_bound: ltac:(CheckBound kepler2_bound 6.2e-12%F64).
+Proof. reflexivity. Qed.
 
 End WITHNANS.
 Close Scope R_scope.

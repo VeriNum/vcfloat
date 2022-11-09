@@ -30,7 +30,8 @@ time "prune_terms" (prune_terms (cutoff 30)).
 time "do_interval" do_interval.
 Defined.
 
-Check ltac:(ShowBound (proj1_sig delta4_bound)).
+Lemma check_delta4_bound: ltac:(CheckBound delta4_bound 2.51e-13%F64).
+Proof. reflexivity. Qed.
 
 Definition delta_bmap_list := [Build_varinfo Tdouble 1%positive (4) (63504e-4);Build_varinfo Tdouble 2%positive (4) (63504e-4);Build_varinfo Tdouble 3%positive (4) (63504e-4);Build_varinfo Tdouble 4%positive (4) (63504e-4);Build_varinfo Tdouble 5%positive (4) (63504e-4);Build_varinfo Tdouble 6%positive (4) (63504e-4)].
 
@@ -56,6 +57,7 @@ time "prune_terms" (prune_terms (cutoff 30)).
 time "do_interval" do_interval.
 Defined.
 
-Check ltac:(ShowBound (proj1_sig delta_bound)).
+Lemma check_delta_bound: ltac:(CheckBound delta_bound 6.2e-12%F64).
+Proof. reflexivity. Qed.
 
 End WITHNANS.

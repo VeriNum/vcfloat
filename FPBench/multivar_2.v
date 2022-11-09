@@ -30,7 +30,8 @@ try (prove_rndval; interval);
 try (prove_roundoff_bound2; prune_terms (cutoff 30); do_interval)).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig himmilbeau_bound)).
+Lemma check_himmilbeau_bound: ltac:(CheckBound himmilbeau_bound 2.31e-12%F64).
+Proof. reflexivity. Qed.
 
 Definition jetengine_bmap_list := [Build_varinfo Tdouble 1%positive (-5) (5);Build_varinfo Tdouble 2%positive (-20) (5)].
 
@@ -64,7 +65,8 @@ try apply H;
 try apply Rle_refl))).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig jetengine_bound)).
+Lemma check_jetengine_bound: ltac:(CheckBound jetengine_bound 1.4e02%F64).
+Proof. reflexivity. Qed.
 
 End WITHNANS.
 Close Scope R_scope.

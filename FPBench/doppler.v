@@ -46,7 +46,8 @@ i_bisect v0, i_depth 17) as H'; apply H'; apply Rle_refl
 end).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig doppler1_bound)).
+Lemma check_doppler1_bound: ltac:(CheckBound doppler1_bound 4.5e-13%F64).
+Proof. reflexivity. Qed.
 
 Definition doppler2_bmap_list := [Build_varinfo Tdouble 1%positive (-125) (125);Build_varinfo Tdouble 2%positive (15) (25000);Build_varinfo Tdouble 3%positive (-40) (60)].
 
@@ -87,14 +88,8 @@ i_bisect v0, i_depth 17) as H'; apply H'; apply Rle_refl
 end).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig doppler2_bound)).
-
-Lemma check_doppler2_bound :
-proj1_sig doppler2_bound <= 1.19e-12.
-Proof.
-simpl.
-interval.
-Qed.
+Lemma check_doppler2_bound: ltac:(CheckBound doppler2_bound 1.2e-12%F64).
+Proof. reflexivity. Qed.
 
 Definition doppler3_bmap_list := [Build_varinfo Tdouble 1%positive (-30) (120);Build_varinfo Tdouble 2%positive (320) (20300);Build_varinfo Tdouble 3%positive (-50) (30)].
 
@@ -135,7 +130,8 @@ i_bisect v0, i_depth 14) as H'; apply H'; apply Rle_refl
 end).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig doppler3_bound)).
+Lemma check_doppler3_bound: ltac:(CheckBound doppler3_bound 2.0e-13%F64).
+Proof. reflexivity. Qed.
 
 
 End WITHNANS.

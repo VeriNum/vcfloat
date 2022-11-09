@@ -50,10 +50,8 @@ interval_intro (Rabs a) upper with
 end; apply H')).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig predatorprey_bound)).
-
-Goal proj1_sig predatorprey_bound <= 3.1e-16.
-simpl; interval. Qed.
+Lemma check_predatorprey_bound: ltac:(CheckBound predatorprey_bound 3.1e-16%F64).
+Proof. reflexivity. Qed.
 
 Definition verhulst_bmap_list := [Build_varinfo Tdouble 1%positive (1e-1) (3e-1)].
 
@@ -88,7 +86,8 @@ try apply H;
 try apply Rle_refl)).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig verhulst_bound)).
+Lemma check_verhulst_bound: ltac:(CheckBound verhulst_bound 2.3e-16%F64).
+Proof. reflexivity. Qed.
 
 Definition carbongas_bmap_list := [Build_varinfo Tdouble 1%positive (1e-1) (5e-1)].
 
@@ -134,7 +133,8 @@ try match goal with |-Rabs ?a <= _ =>
   apply Rle_refl)).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig carbongas_bound)).
+Lemma check_carbongas_bound: ltac:(CheckBound carbongas_bound 2.5e-08%F64).
+Proof. reflexivity. Qed.
 
 Definition t_div_t1_bmap_list := [Build_varinfo Tdouble 1%positive (0) (999)].
 
@@ -168,7 +168,8 @@ try apply H;
 try apply Rle_refl)).
 Defined.
 
-Check ltac:(ShowBound (proj1_sig t_div_t1_bound)).
+Lemma check_t_div_t1_bound: ltac:(CheckBound t_div_t1_bound 4.4e-16%F64).
+Proof. reflexivity. Qed.
 
 
 End WITHNANS.
