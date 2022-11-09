@@ -101,7 +101,7 @@ try apply Rle_refl).
 Defined.
 
 Definition verhulst_bound_val := Eval simpl in verhulst_bound.
-Check ltac:(ShowBound' verhulst_bound_val).
+Check ltac:(ShowBound verhulst_bound_val).
 
 Definition intro_45_example_45_mixed_bmap_list := [Build_varinfo Tsingle 1%positive (1) (999)].
 
@@ -139,7 +139,7 @@ try apply Rle_refl).
 Defined.
 
 Definition intro_45_example_45_mixed_bound_val := Eval simpl in intro_45_example_45_mixed_bound.
-Check ltac:(ShowBound' intro_45_example_45_mixed_bound_val).
+Check ltac:(ShowBound intro_45_example_45_mixed_bound_val).
 
 Definition carbongas_bmap_list := [Build_varinfo Tdouble 1%positive (1e-1) (5e-1)].
 
