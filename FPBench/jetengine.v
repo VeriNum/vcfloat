@@ -29,16 +29,17 @@ idtac "Starting jetengine".
 time "jetengine" (
 try (eexists; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
-try (prove_roundoff_bound2;
+try (prove_roundoff_bound2);
 try match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH, i_bisect v, i_depth 12) as H
+interval_intro (Rabs a) with (i_bisect vxH, i_bisect v, i_depth 17) as H
 end;
-(eapply Rle_trans;
+try (
+eapply Rle_trans;
 try apply H;
-try apply Rle_refl))).
+try apply Rle_refl)).
 Defined.
 
-Lemma check_jetengine_bound: ltac:(CheckBound jetengine_bound 1.4e02%F64).
+Lemma check_jetengine_bound: ltac:(CheckBound jetengine_bound 2.89e02%F64).
 Proof. reflexivity. Qed.
 
 End WITHNANS.
