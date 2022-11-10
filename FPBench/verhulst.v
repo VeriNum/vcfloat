@@ -26,10 +26,8 @@ idtac "Starting verhulst".
 time "verhulst" (
 try (eexists; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
-try prove_roundoff_bound2;
-try match goal with |-Rabs ?a <= _ =>
-field_simplify a ; try split; try unfold id; try field; try nra; try interval
-end;
+try (prove_roundoff_bound2; field_simplify_Rabs);
+try (eexists; intro; prove_roundoff_bound);
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, i_depth 15) as H
 end;
@@ -39,7 +37,7 @@ try apply H;
 try apply Rle_refl)).
 Defined.
 
-Lemma check_verhulst_bound: ltac:(CheckBound verhulst_bound 2.3e-16%F64).
+Lemma check_verhulst_bound: ltac:(CheckBound verhulst_bound 2.33e-16%F64).
 Proof. reflexivity. Qed.
 
 
