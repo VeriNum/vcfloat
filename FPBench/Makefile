@@ -8,8 +8,9 @@ all: _CoqProject target
 _CoqProject: Makefile
 	echo $(COQFLAGS) >_CoqProject
 
-target: doppler.vo univariate.vo multivar_2.vo \
-     kepler.vo rigid_body.vo turbine.vo
+target: doppler1.vo doppler2.vo doppler3.vo predatorprey.vo verhulst.vo carbongas.vo t_div_t1.vo\
+     kepler1.vo kepler2.vo kepler3.vo rigid_body1.v rigid_body2.v turbine1.vo turbine2.vo\
+     turbine3.vo jetengine.vo himilbeau.vo
 
 %.vo: %.v 
 	$(COQC) $(COQFLAGS) $*.v

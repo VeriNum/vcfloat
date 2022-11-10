@@ -1,0 +1,17 @@
+DIGEST e4f893545e4a03e04d207a134ac12519
+Fvcfloat.BigRAux
+R2076:2090 vcfloat.BigQAux <> <> lib
+R2108:2121 vcfloat.Q2RAux <> <> lib
+R2139:2153 Flocq.Core.Raux <> <> lib
+def 2188:2193 <> BigQ2R
+binder 2195:2195 <> x:1
+R2200:2202 Coq.Reals.Rdefinitions <> Q2R def
+R2205:2213 Bignums.BigQ.BigQ BigQ to_Q def
+R2215:2215 vcfloat.BigRAux <> x:1 var
+inst 2236:2248 <> BigQ2R_proper
+R2253:2258 Coq.Classes.Morphisms <> Proper class
+R2277:2282 vcfloat.BigRAux <> BigQ2R def
+R2268:2272 Coq.Classes.Morphisms ProperNotations ::signature_scope:x_'==>'_x not
+R2261:2267 Bignums.BigQ.BigQ BigQ eq def
+R2273:2274 Coq.Init.Logic <> eq ind
+R2323:2328 vcfloat.BigRAux <> BigQ2R def

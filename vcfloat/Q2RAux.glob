@@ -1,0 +1,23 @@
+DIGEST 4d66fb1807dd3c82e193507587663ad0
+Fvcfloat.Q2RAux
+R2045:2050 Coq.QArith.QArith <> <> lib
+R2052:2057 Coq.QArith.Qreals <> <> lib
+R2059:2073 Flocq.Core.Raux <> <> lib
+R2075:2079 Coq.Reals.Reals <> <> lib
+inst 2119:2128 <> Q2R_proper
+R2133:2138 Coq.Classes.Morphisms <> Proper class
+R2153:2155 Coq.Reals.Rdefinitions <> Q2R def
+R2144:2148 Coq.Classes.Morphisms ProperNotations ::signature_scope:x_'==>'_x not
+R2141:2143 Coq.QArith.QArith_base <> Qeq def
+R2149:2150 Coq.Init.Logic <> eq ind
+R2195:2208 Coq.QArith.Qreals <> Qeq_eqR thm
+R2195:2208 Coq.QArith.Qreals <> Qeq_eqR thm
+prf 2237:2248 <> Q2R_inject_Z
+binder 2250:2250 <> n:1
+R2271:2273 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R2255:2257 Coq.Reals.Rdefinitions <> Q2R def
+R2260:2267 Coq.QArith.QArith_base <> inject_Z def
+R2269:2269 vcfloat.Q2RAux <> n:1 var
+R2274:2276 Coq.Reals.Rdefinitions <> IZR def
+R2278:2278 vcfloat.Q2RAux <> n:1 var
+R2297:2299 Coq.Reals.Rdefinitions <> Q2R def

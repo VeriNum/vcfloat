@@ -1,0 +1,2886 @@
+DIGEST 4db219f33fe5c96e6629ae657402e8b0
+Fvcfloat.FPLangOpt
+R2130:2149 vcfloat.Float_lemmas <> <> lib
+R2167:2180 vcfloat.FPLang <> <> lib
+R2190:2193 vcfloat.RAux <> <> mod
+R2203:2223 vcfloat.IEEE754_extra <> <> mod
+R2274:2287 vcfloat.LibTac <> <> lib
+R2305:2319 vcfloat.BigRAux <> <> lib
+def 2408:2424 <> rounded_binop_eqb
+R2434:2446 vcfloat.FPLang <> rounded_binop ind
+binder 2427:2428 <> r1:1
+binder 2430:2431 <> r2:2
+R2450:2453 Coq.Init.Datatypes <> bool ind
+R2470:2471 vcfloat.FPLangOpt <> r2:2 var
+R2466:2467 vcfloat.FPLangOpt <> r1:1 var
+R2484:2487 vcfloat.FPLang <> PLUS constr
+R2490:2493 vcfloat.FPLang <> PLUS constr
+R2498:2501 Coq.Init.Datatypes <> true constr
+R2509:2513 vcfloat.FPLang <> MINUS constr
+R2516:2520 vcfloat.FPLang <> MINUS constr
+R2525:2528 Coq.Init.Datatypes <> true constr
+R2536:2539 vcfloat.FPLang <> MULT constr
+R2542:2545 vcfloat.FPLang <> MULT constr
+R2550:2553 Coq.Init.Datatypes <> true constr
+R2561:2563 vcfloat.FPLang <> DIV constr
+R2566:2568 vcfloat.FPLang <> DIV constr
+R2573:2576 Coq.Init.Datatypes <> true constr
+R2592:2596 Coq.Init.Datatypes <> false constr
+prf 2612:2631 <> rounded_binop_eqb_eq
+binder 2633:2634 <> r1:5
+binder 2636:2637 <> r2:6
+R2673:2677 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R2666:2668 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R2643:2659 vcfloat.FPLangOpt <> rounded_binop_eqb def
+R2661:2662 vcfloat.FPLangOpt <> r1:5 var
+R2664:2665 vcfloat.FPLangOpt <> r2:6 var
+R2669:2672 Coq.Init.Datatypes <> true constr
+R2680:2682 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R2678:2679 vcfloat.FPLangOpt <> r1:5 var
+R2683:2684 vcfloat.FPLangOpt <> r2:6 var
+def 2769:2790 <> rounding_knowledge_eqb
+R2800:2817 vcfloat.FPLang <> rounding_knowledge ind
+binder 2793:2794 <> r1:7
+binder 2796:2797 <> r2:8
+R2821:2824 Coq.Init.Datatypes <> bool ind
+R2841:2842 vcfloat.FPLangOpt <> r2:8 var
+R2837:2838 vcfloat.FPLangOpt <> r1:7 var
+R2855:2860 vcfloat.FPLang <> Normal constr
+R2863:2868 vcfloat.FPLang <> Normal constr
+R2873:2876 Coq.Init.Datatypes <> true constr
+R2884:2891 vcfloat.FPLang <> Denormal constr
+R2894:2901 vcfloat.FPLang <> Denormal constr
+R2906:2909 Coq.Init.Datatypes <> true constr
+R2925:2929 Coq.Init.Datatypes <> false constr
+prf 2945:2969 <> rounding_knowledge_eqb_eq
+binder 2971:2972 <> r1:11
+binder 2974:2975 <> r2:12
+R3016:3020 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R3009:3011 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R2981:3002 vcfloat.FPLangOpt <> rounding_knowledge_eqb def
+R3004:3005 vcfloat.FPLangOpt <> r1:11 var
+R3007:3008 vcfloat.FPLangOpt <> r2:12 var
+R3012:3015 Coq.Init.Datatypes <> true constr
+R3023:3025 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R3021:3022 vcfloat.FPLangOpt <> r1:11 var
+R3026:3027 vcfloat.FPLangOpt <> r2:12 var
+R3112:3115 Coq.Bool.Bool <> <> mod
+def 3130:3138 <> binop_eqb
+binder 3140:3141 <> b1:13
+binder 3143:3144 <> b2:14
+R3161:3162 vcfloat.FPLangOpt <> b2:14 var
+R3157:3158 vcfloat.FPLangOpt <> b1:13 var
+R3175:3182 vcfloat.FPLang <> Rounded2 constr
+R3192:3199 vcfloat.FPLang <> Rounded2 constr
+R3242:3245 Coq.Init.Datatypes <> ::bool_scope:x_'&&'_x not
+R3217:3233 vcfloat.FPLangOpt <> rounded_binop_eqb def
+R3246:3255 vcfloat.LibTac <> option_eqb def
+R3257:3278 vcfloat.FPLangOpt <> rounding_knowledge_eqb def
+R3292:3304 vcfloat.FPLang <> SterbenzMinus constr
+R3307:3319 vcfloat.FPLang <> SterbenzMinus constr
+R3324:3327 Coq.Init.Datatypes <> true constr
+R3335:3342 vcfloat.FPLang <> PlusZero constr
+R3363:3370 vcfloat.FPLang <> PlusZero constr
+R3421:3424 Coq.Init.Datatypes <> ::bool_scope:x_'&&'_x not
+R3399:3406 Coq.Bool.Bool <> eqb def
+R3425:3432 Coq.Bool.Bool <> eqb def
+R3470:3474 Coq.Init.Datatypes <> false constr
+prf 3490:3501 <> binop_eqb_eq
+binder 3503:3504 <> b1:17
+binder 3506:3507 <> b2:18
+R3535:3539 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R3528:3530 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R3513:3521 vcfloat.FPLangOpt <> binop_eqb def
+R3523:3524 vcfloat.FPLangOpt <> b1:17 var
+R3526:3527 vcfloat.FPLangOpt <> b2:18 var
+R3531:3534 Coq.Init.Datatypes <> true constr
+R3542:3544 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R3540:3541 vcfloat.FPLangOpt <> b1:17 var
+R3545:3546 vcfloat.FPLangOpt <> b2:18 var
+R3630:3642 Coq.Bool.Bool <> andb_true_iff thm
+R3662:3681 vcfloat.FPLangOpt <> rounded_binop_eqb_eq thm
+R3703:3715 vcfloat.LibTac <> option_eqb_eq thm
+R3717:3741 vcfloat.FPLangOpt <> rounding_knowledge_eqb_eq thm
+R3766:3782 Coq.Bool.Bool <> eqb_true_iff thm
+R3630:3642 Coq.Bool.Bool <> andb_true_iff thm
+R3630:3642 Coq.Bool.Bool <> andb_true_iff thm
+R3630:3642 Coq.Bool.Bool <> andb_true_iff thm
+R3630:3642 Coq.Bool.Bool <> andb_true_iff thm
+R3662:3681 vcfloat.FPLangOpt <> rounded_binop_eqb_eq thm
+R3662:3681 vcfloat.FPLangOpt <> rounded_binop_eqb_eq thm
+R3662:3681 vcfloat.FPLangOpt <> rounded_binop_eqb_eq thm
+R3703:3715 vcfloat.LibTac <> option_eqb_eq thm
+R3717:3741 vcfloat.FPLangOpt <> rounding_knowledge_eqb_eq thm
+R3703:3715 vcfloat.LibTac <> option_eqb_eq thm
+R3717:3741 vcfloat.FPLangOpt <> rounding_knowledge_eqb_eq thm
+R3703:3715 vcfloat.LibTac <> option_eqb_eq thm
+R3717:3741 vcfloat.FPLangOpt <> rounding_knowledge_eqb_eq thm
+R3766:3782 Coq.Bool.Bool <> eqb_true_iff thm
+R3766:3782 Coq.Bool.Bool <> eqb_true_iff thm
+R3766:3782 Coq.Bool.Bool <> eqb_true_iff thm
+R3766:3782 Coq.Bool.Bool <> eqb_true_iff thm
+R3766:3782 Coq.Bool.Bool <> eqb_true_iff thm
+R3766:3782 Coq.Bool.Bool <> eqb_true_iff thm
+def 3827:3842 <> rounded_unop_eqb
+binder 3844:3845 <> u1:19
+binder 3847:3848 <> u2:20
+R3865:3866 vcfloat.FPLangOpt <> u2:20 var
+R3861:3862 vcfloat.FPLangOpt <> u1:19 var
+R3879:3882 vcfloat.FPLang <> SQRT constr
+R3885:3888 vcfloat.FPLang <> SQRT constr
+R3893:3896 Coq.Init.Datatypes <> true constr
+R3904:3911 vcfloat.FPLang <> InvShift constr
+R3920:3927 vcfloat.FPLang <> InvShift constr
+R3951:3954 Coq.Init.Datatypes <> ::bool_scope:x_'&&'_x not
+R3938:3944 Coq.PArith.BinPos Pos eqb def
+R3955:3962 Coq.Bool.Bool <> eqb def
+R3984:3988 Coq.Init.Datatypes <> false constr
+prf 4004:4022 <> rounded_unop_eqb_eq
+binder 4024:4025 <> u1:23
+binder 4027:4028 <> u2:24
+R4063:4067 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R4056:4058 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R4034:4049 vcfloat.FPLangOpt <> rounded_unop_eqb def
+R4051:4052 vcfloat.FPLangOpt <> u1:23 var
+R4054:4055 vcfloat.FPLangOpt <> u2:24 var
+R4059:4062 Coq.Init.Datatypes <> true constr
+R4070:4072 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R4068:4069 vcfloat.FPLangOpt <> u1:23 var
+R4073:4074 vcfloat.FPLangOpt <> u2:24 var
+R4156:4173 Coq.Bool.Bool <> andb_true_iff thm
+R4191:4200 Coq.PArith.BinPos Pos eqb_eq thm
+R4219:4226 Coq.NArith.BinNat N eqb_eq thm
+R4240:4256 Coq.Bool.Bool <> eqb_true_iff thm
+R4156:4173 Coq.Bool.Bool <> andb_true_iff thm
+R4156:4173 Coq.Bool.Bool <> andb_true_iff thm
+R4191:4200 Coq.PArith.BinPos Pos eqb_eq thm
+R4191:4200 Coq.PArith.BinPos Pos eqb_eq thm
+R4219:4226 Coq.NArith.BinNat N eqb_eq thm
+R4240:4256 Coq.Bool.Bool <> eqb_true_iff thm
+R4240:4256 Coq.Bool.Bool <> eqb_true_iff thm
+def 4301:4314 <> exact_unop_eqb
+binder 4316:4317 <> u1:25
+binder 4319:4320 <> u2:26
+R4337:4338 vcfloat.FPLangOpt <> u2:26 var
+R4333:4334 vcfloat.FPLangOpt <> u1:25 var
+R4351:4353 vcfloat.FPLang <> Abs constr
+R4356:4358 vcfloat.FPLang <> Abs constr
+R4363:4366 Coq.Init.Datatypes <> true constr
+R4374:4376 vcfloat.FPLang <> Opp constr
+R4379:4381 vcfloat.FPLang <> Opp constr
+R4386:4389 Coq.Init.Datatypes <> true constr
+R4397:4401 vcfloat.FPLang <> Shift constr
+R4410:4414 vcfloat.FPLang <> Shift constr
+R4437:4440 Coq.Init.Datatypes <> ::bool_scope:x_'&&'_x not
+R4426:4430 Coq.NArith.BinNat N eqb def
+R4441:4448 Coq.Bool.Bool <> eqb def
+R4470:4474 Coq.Init.Datatypes <> false constr
+prf 4490:4506 <> exact_unop_eqb_eq
+binder 4508:4509 <> u1:29
+binder 4511:4512 <> u2:30
+R4545:4549 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R4538:4540 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R4518:4531 vcfloat.FPLangOpt <> exact_unop_eqb def
+R4533:4534 vcfloat.FPLangOpt <> u1:29 var
+R4536:4537 vcfloat.FPLangOpt <> u2:30 var
+R4541:4544 Coq.Init.Datatypes <> true constr
+R4552:4554 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R4550:4551 vcfloat.FPLangOpt <> u1:29 var
+R4555:4556 vcfloat.FPLangOpt <> u2:30 var
+R4640:4657 Coq.Bool.Bool <> andb_true_iff thm
+R4675:4684 Coq.PArith.BinPos Pos eqb_eq thm
+R4703:4710 Coq.NArith.BinNat N eqb_eq thm
+R4724:4740 Coq.Bool.Bool <> eqb_true_iff thm
+R4640:4657 Coq.Bool.Bool <> andb_true_iff thm
+R4640:4657 Coq.Bool.Bool <> andb_true_iff thm
+R4675:4684 Coq.PArith.BinPos Pos eqb_eq thm
+R4703:4710 Coq.NArith.BinNat N eqb_eq thm
+R4703:4710 Coq.NArith.BinNat N eqb_eq thm
+R4724:4740 Coq.Bool.Bool <> eqb_true_iff thm
+R4724:4740 Coq.Bool.Bool <> eqb_true_iff thm
+def 4784:4791 <> unop_eqb
+binder 4793:4794 <> u1:31
+binder 4796:4797 <> u2:32
+R4814:4815 vcfloat.FPLangOpt <> u2:32 var
+R4810:4811 vcfloat.FPLangOpt <> u1:31 var
+R4828:4835 vcfloat.FPLang <> Rounded1 constr
+R4845:4852 vcfloat.FPLang <> Rounded1 constr
+R4894:4897 Coq.Init.Datatypes <> ::bool_scope:x_'&&'_x not
+R4870:4885 vcfloat.FPLangOpt <> rounded_unop_eqb def
+R4898:4907 vcfloat.LibTac <> option_eqb def
+R4909:4930 vcfloat.FPLangOpt <> rounding_knowledge_eqb def
+R4944:4949 vcfloat.FPLang <> Exact1 constr
+R4955:4960 vcfloat.FPLang <> Exact1 constr
+R4968:4981 vcfloat.FPLangOpt <> exact_unop_eqb def
+R4995:5000 vcfloat.FPLang <> CastTo constr
+R5010:5015 vcfloat.FPLang <> CastTo constr
+R5049:5052 Coq.Init.Datatypes <> ::bool_scope:x_'&&'_x not
+R5033:5040 vcfloat.FPCore <> type_eqb def
+R5053:5062 vcfloat.LibTac <> option_eqb def
+R5064:5085 vcfloat.FPLangOpt <> rounding_knowledge_eqb def
+R5107:5111 Coq.Init.Datatypes <> false constr
+prf 5127:5137 <> unop_eqb_eq
+binder 5139:5140 <> u1:35
+binder 5142:5143 <> u2:36
+R5170:5174 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R5163:5165 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R5149:5156 vcfloat.FPLangOpt <> unop_eqb def
+R5158:5159 vcfloat.FPLangOpt <> u1:35 var
+R5161:5162 vcfloat.FPLangOpt <> u2:36 var
+R5166:5169 Coq.Init.Datatypes <> true constr
+R5177:5179 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R5175:5176 vcfloat.FPLangOpt <> u1:35 var
+R5180:5181 vcfloat.FPLangOpt <> u2:36 var
+R5269:5281 Coq.Bool.Bool <> andb_true_iff thm
+R5269:5281 Coq.Bool.Bool <> andb_true_iff thm
+R5269:5281 Coq.Bool.Bool <> andb_true_iff thm
+R5296:5314 vcfloat.FPLangOpt <> rounded_unop_eqb_eq thm
+R5296:5314 vcfloat.FPLangOpt <> rounded_unop_eqb_eq thm
+R5296:5314 vcfloat.FPLangOpt <> rounded_unop_eqb_eq thm
+R5330:5342 vcfloat.LibTac <> option_eqb_eq thm
+R5344:5368 vcfloat.FPLangOpt <> rounding_knowledge_eqb_eq thm
+R5330:5342 vcfloat.LibTac <> option_eqb_eq thm
+R5344:5368 vcfloat.FPLangOpt <> rounding_knowledge_eqb_eq thm
+R5330:5342 vcfloat.LibTac <> option_eqb_eq thm
+R5344:5368 vcfloat.FPLangOpt <> rounding_knowledge_eqb_eq thm
+R5412:5428 vcfloat.FPLangOpt <> exact_unop_eqb_eq thm
+R5412:5428 vcfloat.FPLangOpt <> exact_unop_eqb_eq thm
+R5412:5428 vcfloat.FPLangOpt <> exact_unop_eqb_eq thm
+R5469:5481 Coq.Bool.Bool <> andb_true_iff thm
+R5469:5481 Coq.Bool.Bool <> andb_true_iff thm
+R5469:5481 Coq.Bool.Bool <> andb_true_iff thm
+R5494:5504 vcfloat.FPCore <> type_eqb_eq thm
+R5494:5504 vcfloat.FPCore <> type_eqb_eq thm
+R5494:5504 vcfloat.FPCore <> type_eqb_eq thm
+R5518:5530 vcfloat.LibTac <> option_eqb_eq thm
+R5532:5556 vcfloat.FPLangOpt <> rounding_knowledge_eqb_eq thm
+R5518:5530 vcfloat.LibTac <> option_eqb_eq thm
+R5532:5556 vcfloat.FPLangOpt <> rounding_knowledge_eqb_eq thm
+R5518:5530 vcfloat.LibTac <> option_eqb_eq thm
+R5532:5556 vcfloat.FPLangOpt <> rounding_knowledge_eqb_eq thm
+sec 5598:5605 <> WITHVARS
+binder 5617:5617 <> V:37
+R5628:5634 vcfloat.FPCore <> VarType class
+R5636:5636 vcfloat.FPLangOpt <> V:37 var
+binder 5622:5625 <> VARS:38
+R5656:5659 vcfloat.FPCore <> Nans class
+binder 5650:5653 <> NANS:39
+def 5675:5686 <> fcval_nonrec
+R5692:5695 vcfloat.FPLang <> expr ind
+binder 5689:5689 <> e:40
+R5699:5704 Coq.Init.Datatypes <> option ind
+R5707:5711 vcfloat.FPCore <> ftype def
+R5714:5725 vcfloat.FPLang <> type_of_expr def
+R5727:5727 vcfloat.FPLangOpt <> e:40 var
+R5742:5742 vcfloat.FPLangOpt <> e:40 var
+R5757:5762 Coq.Init.Datatypes <> option ind
+R5765:5769 vcfloat.FPCore <> ftype def
+R5772:5783 vcfloat.FPLang <> type_of_expr def
+R5794:5795 vcfloat.FPLangOpt <> e':41 var
+R5791:5791 vcfloat.FPLangOpt <> WITHVARS.V var
+R5810:5814 vcfloat.FPLang <> Const constr
+R5819:5819 Coq.Reals.Rtopology <> f proj
+R5824:5827 Coq.Init.Datatypes <> Some constr
+R5842:5845 Coq.Init.Datatypes <> None constr
+prf 5861:5880 <> fcval_nonrec_correct
+binder 5882:5882 <> e:42
+binder 5894:5894 <> v:43
+R5920:5935 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R5911:5913 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R5897:5908 vcfloat.FPLangOpt <> fcval_nonrec def
+R5910:5910 vcfloat.FPLangOpt <> e:42 var
+R5914:5917 Coq.Init.Datatypes <> Some constr
+R5919:5919 vcfloat.FPLangOpt <> v:43 var
+binder 5943:5945 <> env:44
+R5958:5960 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R5948:5951 vcfloat.FPLang <> fval def
+R5953:5955 vcfloat.FPLangOpt <> env:44 var
+R5957:5957 vcfloat.FPLangOpt <> e:42 var
+R5961:5961 vcfloat.FPLangOpt <> v:43 var
+def 6049:6070 <> option_pair_of_options
+binder 6073:6073 <> A:45
+binder 6075:6075 <> B:46
+R6082:6087 Coq.Init.Datatypes <> option ind
+R6089:6089 vcfloat.FPLangOpt <> A:45 var
+binder 6079:6079 <> a:47
+R6096:6101 Coq.Init.Datatypes <> option ind
+R6103:6103 vcfloat.FPLangOpt <> B:46 var
+binder 6093:6093 <> b:48
+R6120:6120 vcfloat.FPLangOpt <> b:48 var
+R6117:6117 vcfloat.FPLangOpt <> a:47 var
+R6133:6136 Coq.Init.Datatypes <> Some constr
+R6142:6145 Coq.Init.Datatypes <> Some constr
+R6153:6156 Coq.Init.Datatypes <> Some constr
+R6158:6158 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R6161:6162 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R6165:6165 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R6181:6184 Coq.Init.Datatypes <> None constr
+prf 6200:6229 <> option_pair_of_options_correct
+binder 6232:6232 <> A:51
+binder 6234:6234 <> B:52
+R6241:6246 Coq.Init.Datatypes <> option ind
+R6248:6248 vcfloat.FPLangOpt <> A:51 var
+binder 6238:6238 <> a:53
+R6255:6260 Coq.Init.Datatypes <> option ind
+R6262:6262 vcfloat.FPLangOpt <> B:52 var
+binder 6252:6252 <> b:54
+binder 6265:6266 <> a':55
+binder 6268:6269 <> b':56
+R6316:6321 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R6300:6302 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R6274:6295 vcfloat.FPLangOpt <> option_pair_of_options def
+R6299:6299 vcfloat.FPLangOpt <> b:54 var
+R6297:6297 vcfloat.FPLangOpt <> a:53 var
+R6303:6306 Coq.Init.Datatypes <> Some constr
+R6308:6308 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R6311:6312 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R6315:6315 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R6309:6310 vcfloat.FPLangOpt <> a':55 var
+R6313:6314 vcfloat.FPLangOpt <> b':56 var
+R6333:6336 Coq.Init.Logic <> ::type_scope:x_'/\'_x not
+R6323:6325 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R6322:6322 vcfloat.FPLangOpt <> a:53 var
+R6326:6329 Coq.Init.Datatypes <> Some constr
+R6331:6332 vcfloat.FPLangOpt <> a':55 var
+R6338:6340 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R6337:6337 vcfloat.FPLangOpt <> b:54 var
+R6341:6344 Coq.Init.Datatypes <> Some constr
+R6346:6347 vcfloat.FPLangOpt <> b':56 var
+R6366:6387 vcfloat.FPLangOpt <> option_pair_of_options def
+def 6492:6496 <> fcval
+R6502:6505 vcfloat.FPLang <> expr ind
+binder 6499:6499 <> e:57
+R6520:6523 vcfloat.FPLang <> expr ind
+R6536:6536 vcfloat.FPLangOpt <> e:57 var
+R6549:6553 vcfloat.FPLang <> Binop constr
+R6583:6587 vcfloat.FPLangOpt <> fcval:58 def
+binder 6576:6578 <> e'1:60
+R6612:6616 vcfloat.FPLangOpt <> fcval:58 def
+binder 6605:6607 <> e'2:61
+R6636:6657 vcfloat.FPLangOpt <> option_pair_of_options def
+R6679:6690 vcfloat.FPLangOpt <> fcval_nonrec def
+R6692:6694 vcfloat.FPLangOpt <> e'2:61 var
+R6660:6671 vcfloat.FPLangOpt <> fcval_nonrec def
+R6673:6675 vcfloat.FPLangOpt <> e'1:60 var
+R6712:6715 Coq.Init.Datatypes <> Some constr
+R6717:6717 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R6720:6721 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R6724:6724 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R6739:6743 vcfloat.FPLang <> Const constr
+R6748:6759 vcfloat.FPLang <> fop_of_binop def
+R6766:6775 vcfloat.FPCore <> cast_lub_l def
+R6786:6795 vcfloat.FPCore <> cast_lub_r def
+R6816:6819 Coq.Init.Datatypes <> None constr
+R6824:6828 vcfloat.FPLang <> Binop constr
+R6832:6834 vcfloat.FPLangOpt <> e'1:60 var
+R6836:6838 vcfloat.FPLangOpt <> e'2:61 var
+R6856:6859 vcfloat.FPLang <> Unop constr
+R6884:6888 vcfloat.FPLangOpt <> fcval:58 def
+R6890:6890 vcfloat.FPLangOpt <> e:57 var
+binder 6878:6879 <> e':62
+R6907:6918 vcfloat.FPLangOpt <> fcval_nonrec def
+R6920:6921 vcfloat.FPLangOpt <> e':62 var
+R6938:6941 Coq.Init.Datatypes <> Some constr
+R6948:6952 vcfloat.FPLang <> Const constr
+R6957:6967 vcfloat.FPLang <> fop_of_unop def
+R6991:6994 vcfloat.FPLang <> Unop constr
+R6998:6999 vcfloat.FPLangOpt <> e':62 var
+R7022:7022 vcfloat.FPLangOpt <> e:57 var
+prf 7038:7047 <> fcval_type
+binder 7049:7049 <> e:63
+R7076:7078 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R7054:7065 vcfloat.FPLang <> type_of_expr def
+R7068:7072 vcfloat.FPLangOpt <> fcval def
+R7074:7074 vcfloat.FPLangOpt <> e:63 var
+R7079:7090 vcfloat.FPLang <> type_of_expr def
+R7092:7092 vcfloat.FPLangOpt <> e:63 var
+R7148:7159 vcfloat.FPLangOpt <> fcval_nonrec def
+R7162:7166 vcfloat.FPLangOpt <> fcval def
+R7148:7159 vcfloat.FPLangOpt <> fcval_nonrec def
+R7162:7166 vcfloat.FPLangOpt <> fcval def
+R7219:7230 vcfloat.FPLangOpt <> fcval_nonrec def
+R7233:7237 vcfloat.FPLangOpt <> fcval def
+R7219:7230 vcfloat.FPLangOpt <> fcval_nonrec def
+R7233:7237 vcfloat.FPLangOpt <> fcval def
+R7288:7299 vcfloat.FPLangOpt <> fcval_nonrec def
+R7302:7306 vcfloat.FPLangOpt <> fcval def
+R7288:7299 vcfloat.FPLangOpt <> fcval_nonrec def
+R7302:7306 vcfloat.FPLangOpt <> fcval def
+prf 7391:7408 <> fcval_correct_bool
+binder 7410:7412 <> env:64
+binder 7414:7414 <> e:65
+R7469:7471 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R7419:7434 vcfloat.FPCore <> binary_float_eqb def
+R7458:7461 vcfloat.FPLang <> fval def
+R7463:7465 vcfloat.FPLangOpt <> env:64 var
+R7467:7467 vcfloat.FPLangOpt <> e:65 var
+R7437:7440 vcfloat.FPLang <> fval def
+R7442:7444 vcfloat.FPLangOpt <> env:64 var
+R7447:7451 vcfloat.FPLangOpt <> fcval def
+R7453:7453 vcfloat.FPLangOpt <> e:65 var
+R7472:7475 Coq.Init.Datatypes <> true constr
+R7521:7539 vcfloat.FPCore <> binary_float_eqb_eq thm
+R7521:7539 vcfloat.FPCore <> binary_float_eqb_eq thm
+R7573:7591 vcfloat.FPCore <> binary_float_eqb_eq thm
+R7573:7591 vcfloat.FPCore <> binary_float_eqb_eq thm
+R7629:7650 vcfloat.FPLangOpt <> option_pair_of_options def
+R7679:7690 vcfloat.FPLangOpt <> fcval_nonrec def
+R7693:7697 vcfloat.FPLangOpt <> fcval def
+R7653:7664 vcfloat.FPLangOpt <> fcval_nonrec def
+R7667:7671 vcfloat.FPLangOpt <> fcval def
+R7629:7650 vcfloat.FPLangOpt <> option_pair_of_options def
+R7679:7690 vcfloat.FPLangOpt <> fcval_nonrec def
+R7693:7697 vcfloat.FPLangOpt <> fcval def
+R7653:7664 vcfloat.FPLangOpt <> fcval_nonrec def
+R7667:7671 vcfloat.FPLangOpt <> fcval def
+R7750:7779 vcfloat.FPLangOpt <> option_pair_of_options_correct thm
+R7750:7779 vcfloat.FPLangOpt <> option_pair_of_options_correct thm
+R7834:7853 vcfloat.FPLangOpt <> fcval_nonrec_correct thm
+R7834:7853 vcfloat.FPLangOpt <> fcval_nonrec_correct thm
+R7892:7911 vcfloat.FPLangOpt <> fcval_nonrec_correct thm
+R7892:7911 vcfloat.FPLangOpt <> fcval_nonrec_correct thm
+R7964:7973 vcfloat.FPCore <> cast_lub_l def
+R7976:7985 vcfloat.FPCore <> cast_lub_r def
+R8043:8046 vcfloat.FPLang <> fval def
+R8053:8057 vcfloat.FPLangOpt <> fcval def
+R8043:8046 vcfloat.FPLang <> fval def
+R8053:8057 vcfloat.FPLangOpt <> fcval def
+R8083:8086 vcfloat.FPLang <> fval def
+R8083:8086 vcfloat.FPLang <> fval def
+R8115:8118 vcfloat.FPLang <> fval def
+R8125:8129 vcfloat.FPLangOpt <> fcval def
+R8115:8118 vcfloat.FPLang <> fval def
+R8125:8129 vcfloat.FPLangOpt <> fcval def
+R8155:8158 vcfloat.FPLang <> fval def
+R8155:8158 vcfloat.FPLang <> fval def
+R8183:8192 vcfloat.FPLangOpt <> fcval_type thm
+R8183:8192 vcfloat.FPLangOpt <> fcval_type thm
+R8183:8192 vcfloat.FPLangOpt <> fcval_type thm
+R8209:8218 vcfloat.FPLangOpt <> fcval_type thm
+R8209:8218 vcfloat.FPLangOpt <> fcval_type thm
+R8209:8218 vcfloat.FPLangOpt <> fcval_type thm
+R8265:8283 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8265:8283 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8265:8283 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8265:8283 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8265:8283 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8265:8283 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8265:8283 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8265:8283 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8347:8356 vcfloat.FPCore <> cast_lub_l def
+R8359:8368 vcfloat.FPCore <> cast_lub_r def
+R8420:8423 vcfloat.FPLang <> fval def
+R8430:8434 vcfloat.FPLangOpt <> fcval def
+R8420:8423 vcfloat.FPLang <> fval def
+R8430:8434 vcfloat.FPLangOpt <> fcval def
+R8458:8461 vcfloat.FPLang <> fval def
+R8458:8461 vcfloat.FPLang <> fval def
+R8488:8491 vcfloat.FPLang <> fval def
+R8498:8502 vcfloat.FPLangOpt <> fcval def
+R8488:8491 vcfloat.FPLang <> fval def
+R8498:8502 vcfloat.FPLangOpt <> fcval def
+R8526:8529 vcfloat.FPLang <> fval def
+R8526:8529 vcfloat.FPLang <> fval def
+R8552:8561 vcfloat.FPLangOpt <> fcval_type thm
+R8552:8561 vcfloat.FPLangOpt <> fcval_type thm
+R8552:8561 vcfloat.FPLangOpt <> fcval_type thm
+R8576:8585 vcfloat.FPLangOpt <> fcval_type thm
+R8576:8585 vcfloat.FPLangOpt <> fcval_type thm
+R8576:8585 vcfloat.FPLangOpt <> fcval_type thm
+R8628:8646 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8628:8646 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8628:8646 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8628:8646 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8628:8646 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8628:8646 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8628:8646 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8628:8646 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8685:8696 vcfloat.FPLangOpt <> fcval_nonrec def
+R8699:8703 vcfloat.FPLangOpt <> fcval def
+R8685:8696 vcfloat.FPLangOpt <> fcval_nonrec def
+R8699:8703 vcfloat.FPLangOpt <> fcval def
+R8731:8750 vcfloat.FPLangOpt <> fcval_nonrec_correct thm
+R8731:8750 vcfloat.FPLangOpt <> fcval_nonrec_correct thm
+R8820:8823 vcfloat.FPLang <> fval def
+R8830:8834 vcfloat.FPLangOpt <> fcval def
+R8820:8823 vcfloat.FPLang <> fval def
+R8830:8834 vcfloat.FPLangOpt <> fcval def
+R8857:8860 vcfloat.FPLang <> fval def
+R8857:8860 vcfloat.FPLang <> fval def
+R8882:8891 vcfloat.FPLangOpt <> fcval_type thm
+R8882:8891 vcfloat.FPLangOpt <> fcval_type thm
+R8882:8891 vcfloat.FPLangOpt <> fcval_type thm
+R8941:8959 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8941:8959 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8941:8959 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8941:8959 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8941:8959 vcfloat.FPCore <> binary_float_eqb_eq thm
+R8941:8959 vcfloat.FPCore <> binary_float_eqb_eq thm
+R9019:9022 vcfloat.FPLang <> fval def
+R9029:9033 vcfloat.FPLangOpt <> fcval def
+R9019:9022 vcfloat.FPLang <> fval def
+R9029:9033 vcfloat.FPLangOpt <> fcval def
+R9054:9057 vcfloat.FPLang <> fval def
+R9054:9057 vcfloat.FPLang <> fval def
+R9077:9086 vcfloat.FPLangOpt <> fcval_type thm
+R9077:9086 vcfloat.FPLangOpt <> fcval_type thm
+R9077:9086 vcfloat.FPLangOpt <> fcval_type thm
+R9130:9148 vcfloat.FPCore <> binary_float_eqb_eq thm
+R9130:9148 vcfloat.FPCore <> binary_float_eqb_eq thm
+R9130:9148 vcfloat.FPCore <> binary_float_eqb_eq thm
+R9130:9148 vcfloat.FPCore <> binary_float_eqb_eq thm
+R9130:9148 vcfloat.FPCore <> binary_float_eqb_eq thm
+R9130:9148 vcfloat.FPCore <> binary_float_eqb_eq thm
+prf 9179:9204 <> binary_float_eqb_eq_strong
+binder 9206:9208 <> ty1:66
+binder 9210:9212 <> ty2:67
+R9219:9223 vcfloat.FPCore <> ftype def
+R9225:9227 vcfloat.FPLangOpt <> ty1:66 var
+binder 9215:9216 <> e1:68
+R9235:9239 vcfloat.FPCore <> ftype def
+R9241:9243 vcfloat.FPLangOpt <> ty2:67 var
+binder 9231:9232 <> e2:69
+R9278:9283 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R9271:9273 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R9249:9264 vcfloat.FPCore <> binary_float_eqb def
+R9269:9270 vcfloat.FPLangOpt <> e2:69 var
+R9266:9267 vcfloat.FPLangOpt <> e1:68 var
+R9274:9277 Coq.Init.Datatypes <> true constr
+R9298:9300 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R9295:9297 vcfloat.FPLangOpt <> ty1:66 var
+R9301:9303 vcfloat.FPLangOpt <> ty2:67 var
+binder 9291:9292 <> EQ:70
+R9349:9351 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R9310:9325 vcfloat.FPCore <> binary_float_eqb def
+R9331:9339 Coq.Init.Logic <> eq_rect_r def
+R9346:9347 vcfloat.FPLangOpt <> EQ:70 var
+R9343:9344 vcfloat.FPLangOpt <> e2:69 var
+R9327:9328 vcfloat.FPLangOpt <> e1:68 var
+R9352:9355 Coq.Init.Datatypes <> true constr
+prf 9629:9641 <> fcval_correct
+binder 9643:9645 <> env:71
+binder 9647:9647 <> e:72
+R9670:9672 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R9652:9655 vcfloat.FPLang <> fval def
+R9657:9659 vcfloat.FPLangOpt <> env:71 var
+R9662:9666 vcfloat.FPLangOpt <> fcval def
+R9668:9668 vcfloat.FPLangOpt <> e:72 var
+R9673:9681 Coq.Init.Logic <> eq_rect_r def
+R9699:9708 vcfloat.FPLangOpt <> fcval_type thm
+R9710:9710 vcfloat.FPLangOpt <> e:72 var
+R9686:9689 vcfloat.FPLang <> fval def
+R9691:9693 vcfloat.FPLangOpt <> env:71 var
+R9695:9695 vcfloat.FPLangOpt <> e:72 var
+R9729:9747 vcfloat.FPCore <> binary_float_eqb_eq thm
+R9729:9747 vcfloat.FPCore <> binary_float_eqb_eq thm
+R9758:9783 vcfloat.FPLangOpt <> binary_float_eqb_eq_strong thm
+R9758:9783 vcfloat.FPLangOpt <> binary_float_eqb_eq_strong thm
+R9794:9811 vcfloat.FPLangOpt <> fcval_correct_bool thm
+R9794:9811 vcfloat.FPLangOpt <> fcval_correct_bool thm
+prf 9826:9844 <> is_finite_eq_rect_r
+binder 9846:9848 <> ty1:73
+binder 9850:9852 <> ty2:74
+R9858:9862 vcfloat.FPCore <> ftype def
+R9864:9866 vcfloat.FPLangOpt <> ty2:74 var
+binder 9855:9855 <> f:75
+R9883:9885 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R9880:9882 vcfloat.FPLangOpt <> ty1:73 var
+R9886:9888 vcfloat.FPLangOpt <> ty2:74 var
+binder 9876:9877 <> EQ:76
+R9933:9935 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R9894:9909 Flocq.IEEE754.Binary <> is_finite def
+R9916:9924 Coq.Init.Logic <> eq_rect_r def
+R9930:9931 vcfloat.FPLangOpt <> EQ:76 var
+R9928:9928 vcfloat.FPLangOpt <> f:75 var
+R9936:9951 Flocq.IEEE754.Binary <> is_finite def
+R9957:9957 vcfloat.FPLangOpt <> f:75 var
+prf 10003:10015 <> B2R_eq_rect_r
+binder 10017:10019 <> ty1:77
+binder 10021:10023 <> ty2:78
+R10029:10033 vcfloat.FPCore <> ftype def
+R10035:10037 vcfloat.FPLangOpt <> ty2:78 var
+binder 10026:10026 <> f:79
+R10054:10056 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R10051:10053 vcfloat.FPLangOpt <> ty1:77 var
+R10057:10059 vcfloat.FPLangOpt <> ty2:78 var
+binder 10047:10048 <> EQ:80
+R10098:10100 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R10065:10074 Flocq.IEEE754.Binary <> B2R def
+R10081:10089 Coq.Init.Logic <> eq_rect_r def
+R10095:10096 vcfloat.FPLangOpt <> EQ:80 var
+R10093:10093 vcfloat.FPLangOpt <> f:79 var
+R10101:10110 Flocq.IEEE754.Binary <> B2R def
+R10116:10116 vcfloat.FPLangOpt <> f:79 var
+R10163:10168 Coq.QArith.Qreals <> <> mod
+def 10234:10239 <> F2BigQ
+R10249:10258 Flocq.Core.Zaux <> radix rec
+binder 10242:10245 <> beta:81
+R10266:10275 Flocq.Core.Defs <> float rec
+R10277:10280 vcfloat.FPLangOpt <> beta:81 var
+binder 10262:10262 <> f:82
+R10294:10294 vcfloat.FPLangOpt <> f:82 var
+R10310:10318 Flocq.Core.Defs <> Fnum proj
+R10310:10318 Flocq.Core.Defs <> Fnum proj
+R10310:10318 Flocq.Core.Defs <> Fnum proj
+R10329:10337 Flocq.Core.Defs <> Fexp proj
+R10329:10337 Flocq.Core.Defs <> Fexp proj
+R10359:10366 Bignums.BigQ.BigQ BigQ mul def
+R10369:10375 Bignums.BigQ.BigQ BigQ Qz constr
+R10378:10386 Bignums.BigZ.BigZ BigZ of_Z def
+R10396:10405 Bignums.BigQ.BigQ BigQ power def
+R10408:10414 Bignums.BigQ.BigQ BigQ Qz constr
+R10417:10425 Bignums.BigZ.BigZ BigZ of_Z def
+R10428:10441 Flocq.Core.Zaux <> radix_val proj
+R10443:10446 vcfloat.FPLangOpt <> beta:81 var
+prf 10471:10489 <> Q2R_Qpower_positive
+binder 10491:10491 <> p:84
+binder 10503:10503 <> q:85
+R10535:10537 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R10510:10512 Coq.Reals.Rdefinitions <> Q2R def
+R10515:10529 Coq.QArith.QArith_base <> Qpower_positive def
+R10531:10531 vcfloat.FPLangOpt <> q:85 var
+R10533:10533 vcfloat.FPLangOpt <> p:84 var
+R10543:10545 Coq.Reals.Rfunctions <> ::R_scope:x_'^'_x not
+R10538:10540 Coq.Reals.Rdefinitions <> Q2R def
+R10542:10542 vcfloat.FPLangOpt <> q:85 var
+R10546:10555 Coq.PArith.BinPos Pos to_nat def
+R10557:10557 vcfloat.FPLangOpt <> p:84 var
+R10610:10623 Coq.PArith.Pnat Pos2Nat inj_xI thm
+R10610:10623 Coq.PArith.Pnat Pos2Nat inj_xI thm
+R10610:10623 Coq.PArith.Pnat Pos2Nat inj_xI thm
+R10656:10662 Coq.Reals.Rfunctions <> pow_add thm
+R10656:10662 Coq.Reals.Rfunctions <> pow_add thm
+R10656:10662 Coq.Reals.Rfunctions <> pow_add thm
+R10656:10662 Coq.Reals.Rfunctions <> pow_add thm
+R10656:10662 Coq.Reals.Rfunctions <> pow_add thm
+R10656:10662 Coq.Reals.Rfunctions <> pow_add thm
+R10695:10702 Coq.QArith.Qreals <> Q2R_mult thm
+R10695:10702 Coq.QArith.Qreals <> Q2R_mult thm
+R10695:10702 Coq.QArith.Qreals <> Q2R_mult thm
+R10695:10702 Coq.QArith.Qreals <> Q2R_mult thm
+R10695:10702 Coq.QArith.Qreals <> Q2R_mult thm
+R10695:10702 Coq.QArith.Qreals <> Q2R_mult thm
+R10771:10784 Coq.PArith.Pnat Pos2Nat inj_xO thm
+R10771:10784 Coq.PArith.Pnat Pos2Nat inj_xO thm
+R10771:10784 Coq.PArith.Pnat Pos2Nat inj_xO thm
+R10817:10823 Coq.Reals.Rfunctions <> pow_add thm
+R10817:10823 Coq.Reals.Rfunctions <> pow_add thm
+R10817:10823 Coq.Reals.Rfunctions <> pow_add thm
+R10817:10823 Coq.Reals.Rfunctions <> pow_add thm
+R10817:10823 Coq.Reals.Rfunctions <> pow_add thm
+R10817:10823 Coq.Reals.Rfunctions <> pow_add thm
+R10856:10863 Coq.QArith.Qreals <> Q2R_mult thm
+R10856:10863 Coq.QArith.Qreals <> Q2R_mult thm
+R10856:10863 Coq.QArith.Qreals <> Q2R_mult thm
+R10856:10863 Coq.QArith.Qreals <> Q2R_mult thm
+prf 10943:10949 <> Q2R_pow
+binder 10951:10951 <> q:86
+binder 10953:10953 <> z:87
+R10968:10973 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R10958:10959 Coq.Init.Logic <> ::type_scope:'~'_x not
+R10961:10964 Coq.QArith.QArith_base <> ::Q_scope:x_'=='_x not
+R10960:10960 vcfloat.FPLangOpt <> q:86 var
+R10985:10987 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R10974:10976 Coq.Reals.Rdefinitions <> Q2R def
+R10980:10982 Coq.QArith.QArith_base <> ::Q_scope:x_'^'_x not
+R10979:10979 vcfloat.FPLangOpt <> q:86 var
+R10983:10983 vcfloat.FPLangOpt <> z:87 var
+R10988:10994 Coq.Reals.Rfunctions <> powerRZ def
+R10997:10999 Coq.Reals.Rdefinitions <> Q2R def
+R11001:11001 vcfloat.FPLangOpt <> q:86 var
+R11004:11004 vcfloat.FPLangOpt <> z:87 var
+R11033:11039 Coq.Reals.Rfunctions <> powerRZ def
+R11042:11047 Coq.QArith.QArith_base <> Qpower def
+R11079:11081 Coq.Reals.Rdefinitions <> Q2R def
+R11116:11134 vcfloat.FPLangOpt <> Q2R_Qpower_positive thm
+R11116:11134 vcfloat.FPLangOpt <> Q2R_Qpower_positive thm
+R11151:11157 Coq.QArith.Qreals <> Q2R_inv thm
+R11151:11157 Coq.QArith.Qreals <> Q2R_inv thm
+R11151:11157 Coq.QArith.Qreals <> Q2R_inv thm
+R11151:11157 Coq.QArith.Qreals <> Q2R_inv thm
+R11187:11205 vcfloat.FPLangOpt <> Q2R_Qpower_positive thm
+R11187:11205 vcfloat.FPLangOpt <> Q2R_Qpower_positive thm
+R11220:11247 Coq.QArith.Qpower <> Qpower_not_0_positive thm
+R11220:11247 Coq.QArith.Qpower <> Qpower_not_0_positive thm
+prf 11276:11283 <> F2BigQ2R
+binder 11285:11288 <> beta:88
+binder 11290:11290 <> f:89
+R11317:11319 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R11295:11300 vcfloat.BigRAux <> BigQ2R def
+R11303:11308 vcfloat.FPLangOpt <> F2BigQ def
+R11310:11313 vcfloat.FPLangOpt <> beta:88 var
+R11315:11315 vcfloat.FPLangOpt <> f:89 var
+R11320:11322 vcfloat.FPCore <> F2R def
+R11324:11327 vcfloat.FPLangOpt <> beta:88 var
+R11329:11329 vcfloat.FPLangOpt <> f:89 var
+R11379:11384 vcfloat.BigRAux <> BigQ2R def
+R11397:11409 Bignums.BigQ.BigQ BigQ spec_mul thm
+R11397:11409 Bignums.BigQ.BigQ BigQ spec_mul thm
+R11397:11409 Bignums.BigQ.BigQ BigQ spec_mul thm
+R11422:11436 Bignums.BigQ.BigQ BigQ spec_power thm
+R11422:11436 Bignums.BigQ.BigQ BigQ spec_power thm
+R11422:11436 Bignums.BigQ.BigQ BigQ spec_power thm
+R11456:11464 vcfloat.BigQAux <> to_Q_bigZ thm
+R11456:11464 vcfloat.BigQAux <> to_Q_bigZ thm
+R11456:11464 vcfloat.BigQAux <> to_Q_bigZ thm
+R11456:11464 vcfloat.BigQAux <> to_Q_bigZ thm
+R11456:11464 vcfloat.BigQAux <> to_Q_bigZ thm
+R11456:11464 vcfloat.BigQAux <> to_Q_bigZ thm
+R11484:11497 Bignums.BigZ.BigZ BigZ spec_of_Z thm
+R11484:11497 Bignums.BigZ.BigZ BigZ spec_of_Z thm
+R11484:11497 Bignums.BigZ.BigZ BigZ spec_of_Z thm
+R11484:11497 Bignums.BigZ.BigZ BigZ spec_of_Z thm
+R11484:11497 Bignums.BigZ.BigZ BigZ spec_of_Z thm
+R11484:11497 Bignums.BigZ.BigZ BigZ spec_of_Z thm
+R11510:11517 Coq.QArith.Qreals <> Q2R_mult thm
+R11510:11517 Coq.QArith.Qreals <> Q2R_mult thm
+R11510:11517 Coq.QArith.Qreals <> Q2R_mult thm
+R11530:11536 vcfloat.FPLangOpt <> Q2R_pow thm
+R11530:11536 vcfloat.FPLangOpt <> Q2R_pow thm
+R11530:11536 vcfloat.FPLangOpt <> Q2R_pow thm
+R11530:11536 vcfloat.FPLangOpt <> Q2R_pow thm
+R11562:11573 vcfloat.Q2RAux <> Q2R_inject_Z thm
+R11562:11573 vcfloat.Q2RAux <> Q2R_inject_Z thm
+R11562:11573 vcfloat.Q2RAux <> Q2R_inject_Z thm
+R11562:11573 vcfloat.Q2RAux <> Q2R_inject_Z thm
+R11562:11573 vcfloat.Q2RAux <> Q2R_inject_Z thm
+R11562:11573 vcfloat.Q2RAux <> Q2R_inject_Z thm
+R11622:11633 Flocq.Core.Raux <> bpow_powerRZ thm
+R11622:11633 Flocq.Core.Raux <> bpow_powerRZ thm
+R11622:11633 Flocq.Core.Raux <> bpow_powerRZ thm
+R11677:11684 Coq.QArith.QArith_base <> inject_Z def
+R11677:11684 Coq.QArith.QArith_base <> inject_Z def
+R11715:11732 Coq.QArith.QArith_base <> inject_Z_injective thm
+R11715:11732 Coq.QArith.QArith_base <> inject_Z_injective thm
+R11715:11732 Coq.QArith.QArith_base <> inject_Z_injective thm
+R11749:11763 Flocq.Core.Zaux <> radix_gt_0 thm
+R11749:11763 Flocq.Core.Zaux <> radix_gt_0 thm
+def 11796:11801 <> B2BigQ
+binder 11804:11807 <> prec:90
+binder 11809:11812 <> emax:91
+binder 11815:11815 <> b:92
+R11820:11825 vcfloat.FPLangOpt <> F2BigQ def
+R11831:11833 vcfloat.FPCore <> B2F def
+R11835:11838 vcfloat.FPLangOpt <> prec:90 var
+R11840:11843 vcfloat.FPLangOpt <> emax:91 var
+R11845:11845 vcfloat.FPLangOpt <> b:92 var
+prf 11856:11863 <> B2BigQ2R
+binder 11866:11869 <> prec:93
+binder 11871:11874 <> emax:94
+binder 11877:11877 <> b:95
+R11904:11906 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R11882:11891 Flocq.IEEE754.Binary <> B2R def
+R11903:11903 vcfloat.FPLangOpt <> b:95 var
+R11898:11901 vcfloat.FPLangOpt <> emax:94 var
+R11893:11896 vcfloat.FPLangOpt <> prec:93 var
+R11907:11912 vcfloat.BigRAux <> BigQ2R def
+R11915:11920 vcfloat.FPLangOpt <> B2BigQ def
+R11922:11922 vcfloat.FPLangOpt <> b:95 var
+R11942:11947 vcfloat.FPLangOpt <> B2BigQ def
+R11960:11967 vcfloat.FPLangOpt <> F2BigQ2R thm
+R11960:11967 vcfloat.FPLangOpt <> F2BigQ2R thm
+R11960:11967 vcfloat.FPLangOpt <> F2BigQ2R thm
+R11980:11990 vcfloat.FPCore <> B2F_F2R_B2R thm
+R11980:11990 vcfloat.FPCore <> B2F_F2R_B2R thm
+R11980:11990 vcfloat.FPCore <> B2F_F2R_B2R thm
+R12003:12008 vcfloat.FPCore <> F2R_eq thm
+R12003:12008 vcfloat.FPCore <> F2R_eq thm
+R12003:12008 vcfloat.FPCore <> F2R_eq thm
+def 12041:12044 <> blog
+R12053:12056 Bignums.BigZ.BigZ <> bigZ abbrev
+binder 12047:12050 <> base:96
+R12066:12068 Coq.Init.Datatypes <> nat ind
+binder 12060:12063 <> accu:97
+R12075:12078 Bignums.BigZ.BigZ <> bigZ abbrev
+binder 12072:12072 <> z:98
+R12088:12090 Coq.Init.Datatypes <> nat ind
+binder 12082:12085 <> fuel:99
+R12108:12110 Coq.Init.Datatypes <> nat ind
+R12123:12126 vcfloat.FPLangOpt <> fuel:99 var
+R12139:12139 Coq.Init.Datatypes <> O constr
+R12144:12144 Coq.Init.Datatypes <> O constr
+R12152:12152 Coq.Init.Datatypes <> S constr
+R12172:12179 Bignums.BigZ.BigZ BigZ eqb def
+R12181:12181 vcfloat.FPLangOpt <> z:98 var
+R12183:12190 Bignums.BigZ.BigZ BigZ one def
+R12242:12254 Bignums.BigZ.BigZ BigZ div_eucl def
+R12256:12256 vcfloat.FPLangOpt <> z:98 var
+R12258:12261 vcfloat.FPLangOpt <> base:96 var
+R12232:12232 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R12234:12235 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R12237:12237 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R12277:12284 Bignums.BigZ.BigZ BigZ eqb def
+R12288:12296 Bignums.BigZ.BigZ BigZ zero def
+R12351:12351 Coq.Init.Datatypes <> O constr
+R12311:12314 vcfloat.FPLangOpt <> blog:100 def
+R12322:12322 Coq.Init.Datatypes <> S constr
+R12324:12327 vcfloat.FPLangOpt <> accu:97 var
+R12316:12319 vcfloat.FPLangOpt <> base:96 var
+R12203:12206 vcfloat.FPLangOpt <> accu:97 var
+def 12372:12381 <> to_power_2
+binder 12384:12387 <> prec:102
+binder 12389:12392 <> emax:103
+R12399:12417 Flocq.IEEE754.Binary <> binary_float ind
+R12424:12427 vcfloat.FPLangOpt <> emax:103 var
+R12419:12422 vcfloat.FPLangOpt <> prec:102 var
+binder 12396:12396 <> x:104
+R12444:12449 vcfloat.FPLangOpt <> B2BigQ def
+R12451:12451 vcfloat.FPLangOpt <> x:104 var
+binder 12439:12439 <> y:105
+R12473:12485 Bignums.BigZ.BigZ BigZ div_eucl def
+R12488:12491 vcfloat.BigQAux <> Bnum def
+R12493:12493 vcfloat.FPLangOpt <> y:105 var
+R12497:12504 Bignums.BigZ.BigZ BigZ Pos constr
+R12507:12510 vcfloat.BigQAux <> Bden def
+R12512:12512 vcfloat.FPLangOpt <> y:105 var
+R12463:12463 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R12465:12466 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R12468:12468 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R12521:12528 Coq.NArith.BinNat N of_nat def
+R12531:12534 vcfloat.FPLangOpt <> blog def
+R12537:12545 Bignums.BigZ.BigZ BigZ of_Z def
+R12550:12550 Coq.Init.Datatypes <> O constr
+R12555:12562 Coq.ZArith.BinInt Z to_nat def
+R12564:12567 vcfloat.FPLangOpt <> emax:103 var
+def 12585:12598 <> to_inv_power_2
+binder 12601:12604 <> prec:106
+binder 12606:12609 <> emax:107
+R12616:12634 Flocq.IEEE754.Binary <> binary_float ind
+R12641:12644 vcfloat.FPLangOpt <> emax:107 var
+R12636:12639 vcfloat.FPLangOpt <> prec:106 var
+binder 12613:12613 <> x:108
+R12661:12668 Bignums.BigQ.BigQ BigQ inv def
+R12671:12676 vcfloat.FPLangOpt <> B2BigQ def
+R12678:12678 vcfloat.FPLangOpt <> x:108 var
+binder 12656:12656 <> y:109
+R12701:12713 Bignums.BigZ.BigZ BigZ div_eucl def
+R12716:12719 vcfloat.BigQAux <> Bnum def
+R12721:12721 vcfloat.FPLangOpt <> y:109 var
+R12725:12732 Bignums.BigZ.BigZ BigZ Pos constr
+R12735:12738 vcfloat.BigQAux <> Bden def
+R12740:12740 vcfloat.FPLangOpt <> y:109 var
+R12691:12691 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R12693:12694 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R12696:12696 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R12749:12758 Coq.PArith.BinPos Pos of_nat def
+R12761:12764 vcfloat.FPLangOpt <> blog def
+R12767:12775 Bignums.BigZ.BigZ BigZ of_Z def
+R12780:12780 Coq.Init.Datatypes <> O constr
+R12785:12792 Coq.ZArith.BinInt Z to_nat def
+R12794:12797 vcfloat.FPLangOpt <> emax:107 var
+def 12815:12825 <> fshift_mult
+R12837:12840 vcfloat.FPLang <> expr ind
+binder 12828:12830 <> e'1:110
+binder 12832:12834 <> e'2:111
+R12859:12866 vcfloat.FPCore <> type_lub def
+R12869:12880 vcfloat.FPLang <> type_of_expr def
+R12882:12884 vcfloat.FPLangOpt <> e'1:110 var
+R12888:12899 vcfloat.FPLang <> type_of_expr def
+R12901:12903 vcfloat.FPLangOpt <> e'2:111 var
+binder 12853:12854 <> ty:112
+R12923:12934 vcfloat.FPLangOpt <> fcval_nonrec def
+R12936:12938 vcfloat.FPLangOpt <> e'1:110 var
+R12957:12960 Coq.Init.Datatypes <> Some constr
+R12991:12994 vcfloat.FPCore <> cast def
+R12996:12997 vcfloat.FPLangOpt <> ty:112 var
+binder 12985:12986 <> c1:113
+R13021:13032 Flocq.IEEE754.Binary <> Bsign def
+R13038:13039 vcfloat.FPLangOpt <> c1:113 var
+R13119:13128 vcfloat.FPLangOpt <> to_power_2 def
+R13130:13131 vcfloat.FPLangOpt <> c1:113 var
+binder 13114:13114 <> n:114
+R13151:13166 vcfloat.FPCore <> binary_float_eqb def
+R13172:13173 vcfloat.Float_lemmas <> B2 def
+R13175:13176 vcfloat.FPLangOpt <> ty:112 var
+R13179:13184 Coq.ZArith.BinInt Z of_N def
+R13186:13186 vcfloat.FPLangOpt <> n:114 var
+R13168:13169 vcfloat.FPLangOpt <> c1:113 var
+R13305:13318 vcfloat.FPLangOpt <> to_inv_power_2 def
+R13320:13321 vcfloat.FPLangOpt <> c1:113 var
+binder 13300:13300 <> n:115
+R13343:13358 vcfloat.FPCore <> binary_float_eqb def
+R13364:13365 vcfloat.Float_lemmas <> B2 def
+R13367:13368 vcfloat.FPLangOpt <> ty:112 var
+R13371:13372 Coq.ZArith.BinInt <> ::Z_scope:'-'_x not
+R13373:13377 Coq.ZArith.BinInt Z pos abbrev
+R13379:13379 vcfloat.FPLangOpt <> n:115 var
+R13360:13361 vcfloat.FPLangOpt <> c1:113 var
+R13489:13493 vcfloat.FPLang <> Binop constr
+R13496:13503 vcfloat.FPLang <> Rounded2 constr
+R13505:13508 vcfloat.FPLang <> MULT constr
+R13510:13513 Coq.Init.Datatypes <> None constr
+R13516:13518 vcfloat.FPLangOpt <> e'1:110 var
+R13520:13522 vcfloat.FPLangOpt <> e'2:111 var
+R13402:13405 vcfloat.FPLang <> Unop constr
+R13408:13415 vcfloat.FPLang <> Rounded1 constr
+R13418:13425 vcfloat.FPLang <> InvShift constr
+R13427:13427 vcfloat.FPLangOpt <> n:115 var
+R13429:13433 Coq.Init.Datatypes <> false constr
+R13436:13439 Coq.Init.Datatypes <> None constr
+R13443:13446 vcfloat.FPLang <> Unop constr
+R13449:13454 vcfloat.FPLang <> CastTo constr
+R13456:13457 vcfloat.FPLangOpt <> ty:112 var
+R13459:13462 Coq.Init.Datatypes <> None constr
+R13465:13467 vcfloat.FPLangOpt <> e'2:111 var
+R13207:13210 vcfloat.FPLang <> Unop constr
+R13213:13218 vcfloat.FPLang <> Exact1 constr
+R13221:13225 vcfloat.FPLang <> Shift constr
+R13227:13227 vcfloat.FPLangOpt <> n:114 var
+R13229:13233 Coq.Init.Datatypes <> false constr
+R13238:13241 vcfloat.FPLang <> Unop constr
+R13244:13249 vcfloat.FPLang <> CastTo constr
+R13251:13252 vcfloat.FPLangOpt <> ty:112 var
+R13254:13257 Coq.Init.Datatypes <> None constr
+R13260:13262 vcfloat.FPLangOpt <> e'2:111 var
+R13046:13050 vcfloat.FPLang <> Binop constr
+R13053:13060 vcfloat.FPLang <> Rounded2 constr
+R13062:13065 vcfloat.FPLang <> MULT constr
+R13067:13070 Coq.Init.Datatypes <> None constr
+R13073:13075 vcfloat.FPLangOpt <> e'1:110 var
+R13077:13079 vcfloat.FPLangOpt <> e'2:111 var
+R13536:13539 Coq.Init.Datatypes <> None constr
+R13562:13573 vcfloat.FPLangOpt <> fcval_nonrec def
+R13575:13577 vcfloat.FPLangOpt <> e'2:111 var
+R13600:13603 Coq.Init.Datatypes <> Some constr
+R13638:13641 vcfloat.FPCore <> cast def
+R13643:13644 vcfloat.FPLangOpt <> ty:112 var
+binder 13632:13633 <> c2:116
+R13672:13683 Flocq.IEEE754.Binary <> Bsign def
+R13689:13690 vcfloat.FPLangOpt <> c2:116 var
+R13778:13787 vcfloat.FPLangOpt <> to_power_2 def
+R13789:13790 vcfloat.FPLangOpt <> c2:116 var
+binder 13773:13773 <> n:117
+R13814:13829 vcfloat.FPCore <> binary_float_eqb def
+R13835:13836 vcfloat.Float_lemmas <> B2 def
+R13838:13839 vcfloat.FPLangOpt <> ty:112 var
+R13842:13847 Coq.ZArith.BinInt Z of_N def
+R13849:13849 vcfloat.FPLangOpt <> n:117 var
+R13831:13832 vcfloat.FPLangOpt <> c2:116 var
+R13979:13992 vcfloat.FPLangOpt <> to_inv_power_2 def
+R13994:13995 vcfloat.FPLangOpt <> c2:116 var
+binder 13974:13974 <> n:118
+R14021:14036 vcfloat.FPCore <> binary_float_eqb def
+R14042:14043 vcfloat.Float_lemmas <> B2 def
+R14045:14046 vcfloat.FPLangOpt <> ty:112 var
+R14049:14050 Coq.ZArith.BinInt <> ::Z_scope:'-'_x not
+R14051:14055 Coq.ZArith.BinInt Z pos abbrev
+R14057:14057 vcfloat.FPLangOpt <> n:118 var
+R14038:14039 vcfloat.FPLangOpt <> c2:116 var
+R14174:14178 vcfloat.FPLang <> Binop constr
+R14181:14188 vcfloat.FPLang <> Rounded2 constr
+R14190:14193 vcfloat.FPLang <> MULT constr
+R14195:14198 Coq.Init.Datatypes <> None constr
+R14201:14203 vcfloat.FPLangOpt <> e'1:110 var
+R14205:14207 vcfloat.FPLangOpt <> e'2:111 var
+R14084:14087 vcfloat.FPLang <> Unop constr
+R14090:14097 vcfloat.FPLang <> Rounded1 constr
+R14100:14107 vcfloat.FPLang <> InvShift constr
+R14109:14109 vcfloat.FPLangOpt <> n:118 var
+R14111:14114 Coq.Init.Datatypes <> true constr
+R14117:14120 Coq.Init.Datatypes <> None constr
+R14124:14127 vcfloat.FPLang <> Unop constr
+R14130:14135 vcfloat.FPLang <> CastTo constr
+R14137:14138 vcfloat.FPLangOpt <> ty:112 var
+R14140:14143 Coq.Init.Datatypes <> None constr
+R14146:14148 vcfloat.FPLangOpt <> e'1:110 var
+R13874:13877 vcfloat.FPLang <> Unop constr
+R13880:13885 vcfloat.FPLang <> Exact1 constr
+R13888:13892 vcfloat.FPLang <> Shift constr
+R13894:13894 vcfloat.FPLangOpt <> n:117 var
+R13896:13899 Coq.Init.Datatypes <> true constr
+R13904:13907 vcfloat.FPLang <> Unop constr
+R13910:13915 vcfloat.FPLang <> CastTo constr
+R13917:13918 vcfloat.FPLangOpt <> ty:112 var
+R13920:13923 Coq.Init.Datatypes <> None constr
+R13926:13928 vcfloat.FPLangOpt <> e'1:110 var
+R13697:13701 vcfloat.FPLang <> Binop constr
+R13704:13711 vcfloat.FPLang <> Rounded2 constr
+R13713:13716 vcfloat.FPLang <> MULT constr
+R13718:13721 Coq.Init.Datatypes <> None constr
+R13724:13726 vcfloat.FPLangOpt <> e'1:110 var
+R13728:13730 vcfloat.FPLangOpt <> e'2:111 var
+R14225:14228 Coq.Init.Datatypes <> None constr
+R14233:14237 vcfloat.FPLang <> Binop constr
+R14240:14247 vcfloat.FPLang <> Rounded2 constr
+R14249:14252 vcfloat.FPLang <> MULT constr
+R14254:14257 Coq.Init.Datatypes <> None constr
+R14260:14262 vcfloat.FPLangOpt <> e'1:110 var
+R14264:14266 vcfloat.FPLangOpt <> e'2:111 var
+def 14325:14330 <> fshift
+R14336:14346 vcfloat.FPLang <> expr ind
+binder 14333:14333 <> e:119
+R14361:14371 vcfloat.FPLang <> expr ind
+R14384:14384 vcfloat.FPLangOpt <> e:119 var
+R14397:14401 vcfloat.FPLang <> Binop constr
+R14431:14436 vcfloat.FPLangOpt <> fshift:120 def
+binder 14424:14426 <> e'1:122
+R14461:14466 vcfloat.FPLangOpt <> fshift:120 def
+binder 14454:14456 <> e'2:123
+R14483:14491 vcfloat.FPLangOpt <> binop_eqb def
+R14496:14503 vcfloat.FPLang <> Rounded2 constr
+R14505:14508 vcfloat.FPLang <> MULT constr
+R14510:14513 Coq.Init.Datatypes <> None constr
+R14558:14562 vcfloat.FPLang <> Binop constr
+R14566:14568 vcfloat.FPLangOpt <> e'1:122 var
+R14570:14572 vcfloat.FPLangOpt <> e'2:123 var
+R14527:14537 vcfloat.FPLangOpt <> fshift_mult def
+R14539:14541 vcfloat.FPLangOpt <> e'1:122 var
+R14543:14545 vcfloat.FPLangOpt <> e'2:123 var
+R14580:14583 vcfloat.FPLang <> Unop constr
+R14592:14595 vcfloat.FPLang <> Unop constr
+R14600:14605 vcfloat.FPLangOpt <> fshift:120 def
+R14607:14607 vcfloat.FPLangOpt <> e:119 var
+R14621:14621 vcfloat.FPLangOpt <> e:119 var
+prf 14637:14647 <> fshift_type
+binder 14649:14649 <> e:124
+R14677:14679 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R14654:14665 vcfloat.FPLang <> type_of_expr def
+R14668:14673 vcfloat.FPLangOpt <> fshift def
+R14675:14675 vcfloat.FPLangOpt <> e:124 var
+R14680:14691 vcfloat.FPLang <> type_of_expr def
+R14693:14693 vcfloat.FPLangOpt <> e:124 var
+R14737:14747 vcfloat.FPLangOpt <> fshift_mult def
+R14779:14787 vcfloat.FPLangOpt <> binop_eqb def
+R14792:14799 vcfloat.FPLang <> Rounded2 constr
+R14801:14804 vcfloat.FPLang <> MULT constr
+R14806:14809 Coq.Init.Datatypes <> None constr
+R14779:14787 vcfloat.FPLangOpt <> binop_eqb def
+R14792:14799 vcfloat.FPLang <> Rounded2 constr
+R14801:14804 vcfloat.FPLang <> MULT constr
+R14806:14809 Coq.Init.Datatypes <> None constr
+R14837:14848 vcfloat.FPLangOpt <> binop_eqb_eq thm
+R14837:14848 vcfloat.FPLangOpt <> binop_eqb_eq thm
+R14899:14910 vcfloat.FPLangOpt <> fcval_nonrec def
+R14913:14918 vcfloat.FPLangOpt <> fshift def
+R14940:14951 vcfloat.FPLangOpt <> fcval_nonrec def
+R14954:14959 vcfloat.FPLangOpt <> fshift def
+R14899:14910 vcfloat.FPLangOpt <> fcval_nonrec def
+R14913:14918 vcfloat.FPLangOpt <> fshift def
+R14940:14951 vcfloat.FPLangOpt <> fcval_nonrec def
+R14954:14959 vcfloat.FPLangOpt <> fshift def
+R14985:14996 Flocq.IEEE754.Binary <> Bsign def
+R14985:14996 Flocq.IEEE754.Binary <> Bsign def
+R15075:15080 vcfloat.FPLangOpt <> fshift def
+R15075:15080 vcfloat.FPLangOpt <> fshift def
+R15237:15239 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R15203:15214 vcfloat.FPLang <> type_of_expr def
+R15237:15239 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R15203:15214 vcfloat.FPLang <> type_of_expr def
+R15314:15325 Coq.Init.Datatypes <> id def
+R15422:15424 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R15388:15399 vcfloat.FPLang <> type_of_expr def
+R15422:15424 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R15388:15399 vcfloat.FPLang <> type_of_expr def
+R15488:15499 Coq.Init.Datatypes <> id def
+R15545:15556 Flocq.IEEE754.Binary <> Bsign def
+R15545:15556 Flocq.IEEE754.Binary <> Bsign def
+R15664:15666 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R15630:15641 vcfloat.FPLang <> type_of_expr def
+R15664:15666 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R15630:15641 vcfloat.FPLang <> type_of_expr def
+R15731:15742 Coq.Init.Datatypes <> id def
+R15839:15841 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R15805:15816 vcfloat.FPLang <> type_of_expr def
+R15839:15841 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R15805:15816 vcfloat.FPLang <> type_of_expr def
+R15905:15916 Coq.Init.Datatypes <> id def
+prf 16042:16056 <> fshift_correct'
+binder 16058:16060 <> env:125
+binder 16062:16062 <> e:126
+R16117:16119 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R16066:16081 vcfloat.FPCore <> binary_float_eqb def
+R16106:16109 vcfloat.FPLang <> fval def
+R16111:16113 vcfloat.FPLangOpt <> env:125 var
+R16115:16115 vcfloat.FPLangOpt <> e:126 var
+R16084:16087 vcfloat.FPLang <> fval def
+R16089:16091 vcfloat.FPLangOpt <> env:125 var
+R16094:16099 vcfloat.FPLangOpt <> fshift def
+R16101:16101 vcfloat.FPLangOpt <> e:126 var
+R16120:16123 Coq.Init.Datatypes <> true constr
+R16162:16172 vcfloat.FPLangOpt <> fshift_mult def
+R16183:16201 vcfloat.FPCore <> binary_float_eqb_eq thm
+R16183:16201 vcfloat.FPCore <> binary_float_eqb_eq thm
+R16225:16243 vcfloat.FPCore <> binary_float_eqb_eq thm
+R16225:16243 vcfloat.FPCore <> binary_float_eqb_eq thm
+R16608:16615 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R16300:16315 vcfloat.FPCore <> binary_float_eqb def
+R16381:16392 vcfloat.FPLang <> fop_of_binop def
+R16410:16417 vcfloat.FPCore <> type_lub def
+R16420:16431 vcfloat.FPLang <> type_of_expr def
+R16438:16449 vcfloat.FPLang <> type_of_expr def
+R16470:16479 vcfloat.FPCore <> cast_lub_l def
+R16482:16493 vcfloat.FPLang <> type_of_expr def
+R16500:16511 vcfloat.FPLang <> type_of_expr def
+R16518:16521 vcfloat.FPLang <> fval def
+R16546:16555 vcfloat.FPCore <> cast_lub_r def
+R16558:16569 vcfloat.FPLang <> type_of_expr def
+R16576:16587 vcfloat.FPLang <> type_of_expr def
+R16594:16597 vcfloat.FPLang <> fval def
+R16327:16330 vcfloat.FPLang <> fval def
+R16337:16341 vcfloat.FPLang <> Binop constr
+R16346:16351 vcfloat.FPLangOpt <> fshift def
+R16358:16363 vcfloat.FPLangOpt <> fshift def
+R16616:16619 Coq.Init.Datatypes <> true constr
+R16608:16615 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R16300:16315 vcfloat.FPCore <> binary_float_eqb def
+R16381:16392 vcfloat.FPLang <> fop_of_binop def
+R16410:16417 vcfloat.FPCore <> type_lub def
+R16420:16431 vcfloat.FPLang <> type_of_expr def
+R16438:16449 vcfloat.FPLang <> type_of_expr def
+R16470:16479 vcfloat.FPCore <> cast_lub_l def
+R16482:16493 vcfloat.FPLang <> type_of_expr def
+R16500:16511 vcfloat.FPLang <> type_of_expr def
+R16518:16521 vcfloat.FPLang <> fval def
+R16546:16555 vcfloat.FPCore <> cast_lub_r def
+R16558:16569 vcfloat.FPLang <> type_of_expr def
+R16576:16587 vcfloat.FPLang <> type_of_expr def
+R16594:16597 vcfloat.FPLang <> fval def
+R16327:16330 vcfloat.FPLang <> fval def
+R16337:16341 vcfloat.FPLang <> Binop constr
+R16346:16351 vcfloat.FPLangOpt <> fshift def
+R16358:16363 vcfloat.FPLangOpt <> fshift def
+R16616:16619 Coq.Init.Datatypes <> true constr
+R16680:16683 vcfloat.FPLang <> fval def
+R16690:16695 vcfloat.FPLangOpt <> fshift def
+R16680:16683 vcfloat.FPLang <> fval def
+R16690:16695 vcfloat.FPLangOpt <> fshift def
+R16721:16724 vcfloat.FPLang <> fval def
+R16731:16736 vcfloat.FPLangOpt <> fshift def
+R16721:16724 vcfloat.FPLang <> fval def
+R16731:16736 vcfloat.FPLangOpt <> fshift def
+R16765:16775 vcfloat.FPLangOpt <> fshift_type thm
+R16765:16775 vcfloat.FPLangOpt <> fshift_type thm
+R16765:16775 vcfloat.FPLangOpt <> fshift_type thm
+R16765:16775 vcfloat.FPLangOpt <> fshift_type thm
+R16765:16775 vcfloat.FPLangOpt <> fshift_type thm
+R16765:16775 vcfloat.FPLangOpt <> fshift_type thm
+R16804:16822 vcfloat.FPCore <> binary_float_eqb_eq thm
+R16804:16822 vcfloat.FPCore <> binary_float_eqb_eq thm
+R16852:16870 vcfloat.FPCore <> binary_float_eqb_eq thm
+R16852:16870 vcfloat.FPCore <> binary_float_eqb_eq thm
+R16900:16918 vcfloat.FPCore <> binary_float_eqb_eq thm
+R16900:16918 vcfloat.FPCore <> binary_float_eqb_eq thm
+R16957:16965 vcfloat.FPLangOpt <> binop_eqb def
+R16970:16977 vcfloat.FPLang <> Rounded2 constr
+R16979:16982 vcfloat.FPLang <> MULT constr
+R16984:16987 Coq.Init.Datatypes <> None constr
+R16957:16965 vcfloat.FPLangOpt <> binop_eqb def
+R16970:16977 vcfloat.FPLang <> Rounded2 constr
+R16979:16982 vcfloat.FPLang <> MULT constr
+R16984:16987 Coq.Init.Datatypes <> None constr
+R17022:17033 vcfloat.FPLangOpt <> binop_eqb_eq thm
+R17022:17033 vcfloat.FPLangOpt <> binop_eqb_eq thm
+R17067:17078 vcfloat.FPLangOpt <> fcval_nonrec def
+R17081:17086 vcfloat.FPLangOpt <> fshift def
+R17116:17127 vcfloat.FPLangOpt <> fcval_nonrec def
+R17130:17135 vcfloat.FPLangOpt <> fshift def
+R17067:17078 vcfloat.FPLangOpt <> fcval_nonrec def
+R17081:17086 vcfloat.FPLangOpt <> fshift def
+R17116:17127 vcfloat.FPLangOpt <> fcval_nonrec def
+R17130:17135 vcfloat.FPLangOpt <> fshift def
+R17172:17183 Flocq.IEEE754.Binary <> Bsign def
+R17172:17183 Flocq.IEEE754.Binary <> Bsign def
+R17222:17232 vcfloat.FPLangOpt <> fshift_type thm
+R17222:17232 vcfloat.FPLangOpt <> fshift_type thm
+R17254:17259 vcfloat.FPLangOpt <> fshift def
+R17254:17259 vcfloat.FPLangOpt <> fshift def
+R17423:17441 vcfloat.FPCore <> binary_float_eqb_eq thm
+R17423:17441 vcfloat.FPCore <> binary_float_eqb_eq thm
+R17546:17548 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R17495:17510 vcfloat.FPCore <> binary_float_eqb def
+R17513:17516 vcfloat.FPLang <> fval def
+R17546:17548 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R17495:17510 vcfloat.FPCore <> binary_float_eqb def
+R17513:17516 vcfloat.FPLang <> fval def
+R17620:17629 vcfloat.FPCore <> cast_lub_l def
+R17632:17641 vcfloat.FPCore <> cast_lub_r def
+R17689:17692 vcfloat.FPLang <> fval def
+R17699:17704 vcfloat.FPLangOpt <> fshift def
+R17689:17692 vcfloat.FPLang <> fval def
+R17699:17704 vcfloat.FPLangOpt <> fshift def
+R17752:17762 vcfloat.FPLangOpt <> fshift_type thm
+R17752:17762 vcfloat.FPLangOpt <> fshift_type thm
+R17752:17762 vcfloat.FPLangOpt <> fshift_type thm
+R17799:17817 vcfloat.FPCore <> binary_float_eqb_eq thm
+R17799:17817 vcfloat.FPCore <> binary_float_eqb_eq thm
+R17861:17879 vcfloat.FPCore <> binary_float_eqb_eq thm
+R17861:17879 vcfloat.FPCore <> binary_float_eqb_eq thm
+R17931:17949 vcfloat.FPCore <> binary_float_eqb_eq thm
+R17931:17949 vcfloat.FPCore <> binary_float_eqb_eq thm
+R18090:18092 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R18039:18054 vcfloat.FPCore <> binary_float_eqb def
+R18057:18060 vcfloat.FPLang <> fval def
+R18090:18092 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R18039:18054 vcfloat.FPCore <> binary_float_eqb def
+R18057:18060 vcfloat.FPLang <> fval def
+R18186:18197 Coq.Init.Datatypes <> id def
+R18217:18226 vcfloat.FPCore <> cast_lub_l def
+R18246:18255 vcfloat.FPCore <> cast_lub_r def
+R18303:18306 vcfloat.FPLang <> fval def
+R18313:18318 vcfloat.FPLangOpt <> fshift def
+R18303:18306 vcfloat.FPLang <> fval def
+R18313:18318 vcfloat.FPLangOpt <> fshift def
+R18366:18376 vcfloat.FPLangOpt <> fshift_type thm
+R18366:18376 vcfloat.FPLangOpt <> fshift_type thm
+R18366:18376 vcfloat.FPLangOpt <> fshift_type thm
+R18413:18431 vcfloat.FPCore <> binary_float_eqb_eq thm
+R18413:18431 vcfloat.FPCore <> binary_float_eqb_eq thm
+R18475:18493 vcfloat.FPCore <> binary_float_eqb_eq thm
+R18475:18493 vcfloat.FPCore <> binary_float_eqb_eq thm
+R18545:18563 vcfloat.FPCore <> binary_float_eqb_eq thm
+R18545:18563 vcfloat.FPCore <> binary_float_eqb_eq thm
+R18659:18662 vcfloat.FPLang <> fval def
+R18669:18674 vcfloat.FPLangOpt <> fshift def
+R18659:18662 vcfloat.FPLang <> fval def
+R18669:18674 vcfloat.FPLangOpt <> fshift def
+R18698:18708 vcfloat.FPLangOpt <> fshift_type thm
+R18698:18708 vcfloat.FPLangOpt <> fshift_type thm
+R18698:18708 vcfloat.FPLangOpt <> fshift_type thm
+R18741:18759 vcfloat.FPCore <> binary_float_eqb_eq thm
+R18741:18759 vcfloat.FPCore <> binary_float_eqb_eq thm
+R18799:18817 vcfloat.FPCore <> binary_float_eqb_eq thm
+R18799:18817 vcfloat.FPCore <> binary_float_eqb_eq thm
+R18861:18872 Flocq.IEEE754.Binary <> Bsign def
+R18861:18872 Flocq.IEEE754.Binary <> Bsign def
+R18911:18921 vcfloat.FPLangOpt <> fshift_type thm
+R18911:18921 vcfloat.FPLangOpt <> fshift_type thm
+R18943:18948 vcfloat.FPLangOpt <> fshift def
+R18943:18948 vcfloat.FPLangOpt <> fshift def
+R19112:19130 vcfloat.FPCore <> binary_float_eqb_eq thm
+R19112:19130 vcfloat.FPCore <> binary_float_eqb_eq thm
+R19237:19239 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R19186:19201 vcfloat.FPCore <> binary_float_eqb def
+R19204:19207 vcfloat.FPLang <> fval def
+R19237:19239 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R19186:19201 vcfloat.FPCore <> binary_float_eqb def
+R19204:19207 vcfloat.FPLang <> fval def
+R19312:19321 vcfloat.FPCore <> cast_lub_l def
+R19341:19350 vcfloat.FPCore <> cast_lub_r def
+R19398:19401 vcfloat.FPLang <> fval def
+R19408:19413 vcfloat.FPLangOpt <> fshift def
+R19398:19401 vcfloat.FPLang <> fval def
+R19408:19413 vcfloat.FPLangOpt <> fshift def
+R19461:19471 vcfloat.FPLangOpt <> fshift_type thm
+R19461:19471 vcfloat.FPLangOpt <> fshift_type thm
+R19461:19471 vcfloat.FPLangOpt <> fshift_type thm
+R19508:19526 vcfloat.FPCore <> binary_float_eqb_eq thm
+R19508:19526 vcfloat.FPCore <> binary_float_eqb_eq thm
+R19570:19588 vcfloat.FPCore <> binary_float_eqb_eq thm
+R19570:19588 vcfloat.FPCore <> binary_float_eqb_eq thm
+R19640:19658 vcfloat.FPCore <> binary_float_eqb_eq thm
+R19640:19658 vcfloat.FPCore <> binary_float_eqb_eq thm
+R19799:19801 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R19748:19763 vcfloat.FPCore <> binary_float_eqb def
+R19766:19769 vcfloat.FPLang <> fval def
+R19799:19801 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R19748:19763 vcfloat.FPCore <> binary_float_eqb def
+R19766:19769 vcfloat.FPLang <> fval def
+R19895:19904 vcfloat.FPCore <> cast_lub_l def
+R19924:19933 vcfloat.FPCore <> cast_lub_r def
+R19981:19984 vcfloat.FPLang <> fval def
+R19991:19996 vcfloat.FPLangOpt <> fshift def
+R19981:19984 vcfloat.FPLang <> fval def
+R19991:19996 vcfloat.FPLangOpt <> fshift def
+R20044:20054 vcfloat.FPLangOpt <> fshift_type thm
+R20044:20054 vcfloat.FPLangOpt <> fshift_type thm
+R20044:20054 vcfloat.FPLangOpt <> fshift_type thm
+R20091:20109 vcfloat.FPCore <> binary_float_eqb_eq thm
+R20091:20109 vcfloat.FPCore <> binary_float_eqb_eq thm
+R20153:20171 vcfloat.FPCore <> binary_float_eqb_eq thm
+R20153:20171 vcfloat.FPCore <> binary_float_eqb_eq thm
+R20223:20241 vcfloat.FPCore <> binary_float_eqb_eq thm
+R20223:20241 vcfloat.FPCore <> binary_float_eqb_eq thm
+R20335:20338 vcfloat.FPLang <> fval def
+R20345:20350 vcfloat.FPLangOpt <> fshift def
+R20335:20338 vcfloat.FPLang <> fval def
+R20345:20350 vcfloat.FPLangOpt <> fshift def
+R20374:20384 vcfloat.FPLangOpt <> fshift_type thm
+R20374:20384 vcfloat.FPLangOpt <> fshift_type thm
+R20374:20384 vcfloat.FPLangOpt <> fshift_type thm
+R20417:20435 vcfloat.FPCore <> binary_float_eqb_eq thm
+R20417:20435 vcfloat.FPCore <> binary_float_eqb_eq thm
+R20475:20493 vcfloat.FPCore <> binary_float_eqb_eq thm
+R20475:20493 vcfloat.FPCore <> binary_float_eqb_eq thm
+R20595:20598 vcfloat.FPLang <> fval def
+R20605:20610 vcfloat.FPLangOpt <> fshift def
+R20595:20598 vcfloat.FPLang <> fval def
+R20605:20610 vcfloat.FPLangOpt <> fshift def
+R20636:20639 vcfloat.FPLang <> fval def
+R20646:20651 vcfloat.FPLangOpt <> fshift def
+R20636:20639 vcfloat.FPLang <> fval def
+R20646:20651 vcfloat.FPLangOpt <> fshift def
+R20680:20690 vcfloat.FPLangOpt <> fshift_type thm
+R20680:20690 vcfloat.FPLangOpt <> fshift_type thm
+R20680:20690 vcfloat.FPLangOpt <> fshift_type thm
+R20680:20690 vcfloat.FPLangOpt <> fshift_type thm
+R20680:20690 vcfloat.FPLangOpt <> fshift_type thm
+R20680:20690 vcfloat.FPLangOpt <> fshift_type thm
+R20719:20737 vcfloat.FPCore <> binary_float_eqb_eq thm
+R20719:20737 vcfloat.FPCore <> binary_float_eqb_eq thm
+R20767:20785 vcfloat.FPCore <> binary_float_eqb_eq thm
+R20767:20785 vcfloat.FPCore <> binary_float_eqb_eq thm
+R20815:20833 vcfloat.FPCore <> binary_float_eqb_eq thm
+R20815:20833 vcfloat.FPCore <> binary_float_eqb_eq thm
+R20901:20904 vcfloat.FPLang <> fval def
+R20911:20916 vcfloat.FPLangOpt <> fshift def
+R20901:20904 vcfloat.FPLang <> fval def
+R20911:20916 vcfloat.FPLangOpt <> fshift def
+R20933:20943 vcfloat.FPLangOpt <> fshift_type thm
+R20933:20943 vcfloat.FPLangOpt <> fshift_type thm
+R20933:20943 vcfloat.FPLangOpt <> fshift_type thm
+R20964:20982 vcfloat.FPCore <> binary_float_eqb_eq thm
+R20964:20982 vcfloat.FPCore <> binary_float_eqb_eq thm
+R21009:21027 vcfloat.FPCore <> binary_float_eqb_eq thm
+R21009:21027 vcfloat.FPCore <> binary_float_eqb_eq thm
+prf 21057:21070 <> fshift_correct
+binder 21072:21074 <> env:127
+binder 21076:21076 <> e:128
+R21100:21102 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R21081:21084 vcfloat.FPLang <> fval def
+R21086:21088 vcfloat.FPLangOpt <> env:127 var
+R21091:21096 vcfloat.FPLangOpt <> fshift def
+R21098:21098 vcfloat.FPLangOpt <> e:128 var
+R21103:21111 Coq.Init.Logic <> eq_rect_r def
+R21129:21139 vcfloat.FPLangOpt <> fshift_type thm
+R21141:21141 vcfloat.FPLangOpt <> e:128 var
+R21116:21119 vcfloat.FPLang <> fval def
+R21121:21123 vcfloat.FPLangOpt <> env:127 var
+R21125:21125 vcfloat.FPLangOpt <> e:128 var
+R21160:21178 vcfloat.FPCore <> binary_float_eqb_eq thm
+R21160:21178 vcfloat.FPCore <> binary_float_eqb_eq thm
+R21189:21214 vcfloat.FPLangOpt <> binary_float_eqb_eq_strong thm
+R21189:21214 vcfloat.FPLangOpt <> binary_float_eqb_eq_strong thm
+R21225:21239 vcfloat.FPLangOpt <> fshift_correct' thm
+R21225:21239 vcfloat.FPLangOpt <> fshift_correct' thm
+def 21259:21272 <> to_power_2_pos
+binder 21275:21278 <> prec:129
+binder 21280:21283 <> emax:130
+R21290:21308 Flocq.IEEE754.Binary <> binary_float ind
+R21315:21318 vcfloat.FPLangOpt <> emax:130 var
+R21310:21313 vcfloat.FPLangOpt <> prec:129 var
+binder 21287:21287 <> x:131
+R21335:21340 vcfloat.FPLangOpt <> B2BigQ def
+R21342:21342 vcfloat.FPLangOpt <> x:131 var
+binder 21330:21330 <> y:132
+R21364:21376 Bignums.BigZ.BigZ BigZ div_eucl def
+R21379:21382 vcfloat.BigQAux <> Bnum def
+R21384:21384 vcfloat.FPLangOpt <> y:132 var
+R21388:21395 Bignums.BigZ.BigZ BigZ Pos constr
+R21398:21401 vcfloat.BigQAux <> Bden def
+R21403:21403 vcfloat.FPLangOpt <> y:132 var
+R21354:21354 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R21356:21357 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R21359:21359 Coq.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R21412:21421 Coq.PArith.BinPos Pos of_nat def
+R21424:21427 vcfloat.FPLangOpt <> blog def
+R21430:21438 Bignums.BigZ.BigZ BigZ of_Z def
+R21443:21443 Coq.Init.Datatypes <> O constr
+R21448:21455 Coq.ZArith.BinInt Z to_nat def
+R21457:21460 vcfloat.FPLangOpt <> emax:130 var
+def 21476:21485 <> fshift_div
+R21491:21501 vcfloat.FPLang <> expr ind
+binder 21488:21488 <> e:133
+R21516:21526 vcfloat.FPLang <> expr ind
+R21539:21539 vcfloat.FPLangOpt <> e:133 var
+R21552:21556 vcfloat.FPLang <> Binop constr
+R21586:21595 vcfloat.FPLangOpt <> fshift_div:134 def
+binder 21579:21581 <> e'1:136
+R21620:21629 vcfloat.FPLangOpt <> fshift_div:134 def
+binder 21613:21615 <> e'2:137
+R21646:21654 vcfloat.FPLangOpt <> binop_eqb def
+R21659:21666 vcfloat.FPLang <> Rounded2 constr
+R21668:21670 vcfloat.FPLang <> DIV constr
+R21672:21675 Coq.Init.Datatypes <> None constr
+R22616:22620 vcfloat.FPLang <> Binop constr
+R22624:22626 vcfloat.FPLangOpt <> e'1:136 var
+R22628:22630 vcfloat.FPLangOpt <> e'2:137 var
+R21699:21706 vcfloat.FPCore <> type_lub def
+R21709:21720 vcfloat.FPLang <> type_of_expr def
+R21722:21724 vcfloat.FPLangOpt <> e'1:136 var
+R21728:21739 vcfloat.FPLang <> type_of_expr def
+R21741:21743 vcfloat.FPLangOpt <> e'2:137 var
+binder 21693:21694 <> ty:138
+R21762:21773 vcfloat.FPLangOpt <> fcval_nonrec def
+R21775:21777 vcfloat.FPLangOpt <> e'2:137 var
+R21799:21802 Coq.Init.Datatypes <> Some constr
+R21837:21840 vcfloat.FPCore <> cast def
+R21842:21843 vcfloat.FPLangOpt <> ty:138 var
+binder 21831:21832 <> c2:139
+R21875:21888 vcfloat.IEEE754_extra <> Bexact_inverse def
+R21948:21949 vcfloat.FPLangOpt <> c2:139 var
+R21929:21942 vcfloat.FPCore <> fprec_lt_femax thm
+R21944:21945 vcfloat.FPLangOpt <> ty:138 var
+R21913:21922 vcfloat.FPCore <> fprec_gt_0 inst
+R21924:21925 vcfloat.FPLangOpt <> ty:138 var
+R21902:21906 vcfloat.FPCore <> femax proj
+R21908:21909 vcfloat.FPLangOpt <> ty:138 var
+R21891:21895 vcfloat.FPCore <> fprec proj
+R21897:21898 vcfloat.FPLangOpt <> ty:138 var
+R21977:21980 Coq.Init.Datatypes <> Some constr
+R22019:22032 vcfloat.FPLangOpt <> to_power_2_pos def
+R22034:22035 vcfloat.FPLangOpt <> c2:139 var
+binder 22013:22014 <> n1:140
+R22063:22078 vcfloat.FPCore <> binary_float_eqb def
+R22084:22085 vcfloat.Float_lemmas <> B2 def
+R22087:22088 vcfloat.FPLangOpt <> ty:138 var
+R22091:22095 Coq.ZArith.BinInt Z neg abbrev
+R22097:22098 vcfloat.FPLangOpt <> n1:140 var
+R22250:22263 vcfloat.FPLangOpt <> to_inv_power_2 def
+R22265:22266 vcfloat.FPLangOpt <> c2:139 var
+binder 22244:22245 <> n2:141
+R22294:22309 vcfloat.FPCore <> binary_float_eqb def
+R22315:22316 vcfloat.Float_lemmas <> B2 def
+R22318:22319 vcfloat.FPLangOpt <> ty:138 var
+R22322:22326 Coq.ZArith.BinInt Z pos abbrev
+R22328:22329 vcfloat.FPLangOpt <> n2:141 var
+R22465:22469 vcfloat.FPLang <> Binop constr
+R22473:22475 vcfloat.FPLangOpt <> e'1:136 var
+R22477:22479 vcfloat.FPLangOpt <> e'2:137 var
+R22358:22361 vcfloat.FPLang <> Unop constr
+R22364:22369 vcfloat.FPLang <> Exact1 constr
+R22372:22376 vcfloat.FPLang <> Shift constr
+R22379:22386 Coq.NArith.BinNat N of_nat def
+R22389:22398 Coq.PArith.BinPos Pos to_nat def
+R22400:22401 vcfloat.FPLangOpt <> n2:141 var
+R22405:22408 Coq.Init.Datatypes <> true constr
+R22413:22416 vcfloat.FPLang <> Unop constr
+R22419:22424 vcfloat.FPLang <> CastTo constr
+R22426:22427 vcfloat.FPLangOpt <> ty:138 var
+R22429:22432 Coq.Init.Datatypes <> None constr
+R22435:22437 vcfloat.FPLangOpt <> e'1:136 var
+R22127:22130 vcfloat.FPLang <> Unop constr
+R22133:22140 vcfloat.FPLang <> Rounded1 constr
+R22143:22150 vcfloat.FPLang <> InvShift constr
+R22152:22153 vcfloat.FPLangOpt <> n1:140 var
+R22155:22158 Coq.Init.Datatypes <> true constr
+R22161:22164 Coq.Init.Datatypes <> None constr
+R22168:22171 vcfloat.FPLang <> Unop constr
+R22174:22179 vcfloat.FPLang <> CastTo constr
+R22181:22182 vcfloat.FPLangOpt <> ty:138 var
+R22184:22187 Coq.Init.Datatypes <> None constr
+R22190:22192 vcfloat.FPLangOpt <> e'1:136 var
+R22501:22504 Coq.Init.Datatypes <> None constr
+R22509:22513 vcfloat.FPLang <> Binop constr
+R22517:22519 vcfloat.FPLangOpt <> e'1:136 var
+R22521:22523 vcfloat.FPLangOpt <> e'2:137 var
+R22560:22563 Coq.Init.Datatypes <> None constr
+R22568:22572 vcfloat.FPLang <> Binop constr
+R22576:22578 vcfloat.FPLangOpt <> e'1:136 var
+R22580:22582 vcfloat.FPLangOpt <> e'2:137 var
+R22638:22641 vcfloat.FPLang <> Unop constr
+R22650:22653 vcfloat.FPLang <> Unop constr
+R22658:22667 vcfloat.FPLangOpt <> fshift_div:134 def
+R22669:22669 vcfloat.FPLangOpt <> e:133 var
+R22683:22683 vcfloat.FPLangOpt <> e:133 var
+prf 22700:22714 <> fshift_type_div
+binder 22716:22716 <> e:142
+R22748:22750 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R22721:22732 vcfloat.FPLang <> type_of_expr def
+R22735:22744 vcfloat.FPLangOpt <> fshift_div def
+R22746:22746 vcfloat.FPLangOpt <> e:142 var
+R22751:22762 vcfloat.FPLang <> type_of_expr def
+R22764:22764 vcfloat.FPLangOpt <> e:142 var
+R22830:22838 vcfloat.FPLangOpt <> binop_eqb def
+R22843:22850 vcfloat.FPLang <> Rounded2 constr
+R22852:22854 vcfloat.FPLang <> DIV constr
+R22856:22859 Coq.Init.Datatypes <> None constr
+R22830:22838 vcfloat.FPLangOpt <> binop_eqb def
+R22843:22850 vcfloat.FPLang <> Rounded2 constr
+R22852:22854 vcfloat.FPLang <> DIV constr
+R22856:22859 Coq.Init.Datatypes <> None constr
+R22903:22914 vcfloat.FPLangOpt <> binop_eqb_eq thm
+R22903:22914 vcfloat.FPLangOpt <> binop_eqb_eq thm
+R22953:22964 vcfloat.FPLangOpt <> fcval_nonrec def
+R22967:22976 vcfloat.FPLangOpt <> fshift_div def
+R22953:22964 vcfloat.FPLangOpt <> fcval_nonrec def
+R22967:22976 vcfloat.FPLangOpt <> fshift_div def
+R23040:23049 vcfloat.FPLangOpt <> fshift_div def
+R23040:23049 vcfloat.FPLangOpt <> fshift_div def
+R23121:23134 vcfloat.IEEE754_extra <> Bexact_inverse def
+R23121:23134 vcfloat.IEEE754_extra <> Bexact_inverse def
+R23243:23245 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R23209:23220 vcfloat.FPLang <> type_of_expr def
+R23243:23245 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R23209:23220 vcfloat.FPLang <> type_of_expr def
+R23303:23314 Coq.Init.Datatypes <> id def
+prf 23372:23394 <> binary_float_equiv_refl
+binder 23405:23408 <> prec:143
+binder 23410:23413 <> emax:144
+binder 23415:23415 <> x:145
+R23423:23440 vcfloat.FPCore <> binary_float_equiv def
+R23442:23445 vcfloat.FPLangOpt <> prec:143 var
+R23447:23450 vcfloat.FPLangOpt <> emax:144 var
+R23452:23452 vcfloat.FPLangOpt <> x:145 var
+R23454:23454 vcfloat.FPLangOpt <> x:145 var
+R23696:23698 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R23674:23689 Flocq.IEEE754.Binary <> is_finite def
+R23699:23702 Coq.Init.Datatypes <> true constr
+R23758:23760 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R23734:23747 vcfloat.IEEE754_extra <> Bexact_inverse def
+R23761:23764 Coq.Init.Datatypes <> Some constr
+R23758:23760 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R23734:23747 vcfloat.IEEE754_extra <> Bexact_inverse def
+R23761:23764 Coq.Init.Datatypes <> Some constr
+R23795:23817 vcfloat.IEEE754_extra <> is_finite_strict_finite thm
+R23837:23858 vcfloat.IEEE754_extra <> Bexact_inverse_correct thm
+prf 23903:23925 <> cast_preserves_bf_equiv
+binder 23927:23931 <> tfrom:146
+binder 23933:23935 <> tto:147
+R23945:23963 Flocq.IEEE754.Binary <> binary_float ind
+R23980:23984 vcfloat.FPCore <> femax proj
+R23986:23990 vcfloat.FPLangOpt <> tfrom:146 var
+R23966:23970 vcfloat.FPCore <> fprec proj
+R23972:23976 vcfloat.FPLangOpt <> tfrom:146 var
+binder 23938:23939 <> b1:148
+binder 23941:23942 <> b2:149
+R24022:24028 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R23998:24015 vcfloat.FPCore <> binary_float_equiv def
+R24020:24021 vcfloat.FPLangOpt <> b2:149 var
+R24017:24018 vcfloat.FPLangOpt <> b1:148 var
+R24029:24046 vcfloat.FPCore <> binary_float_equiv def
+R24073:24076 vcfloat.FPCore <> cast def
+R24080:24082 vcfloat.FPLangOpt <> tto:147 var
+R24084:24088 vcfloat.FPLangOpt <> tfrom:146 var
+R24090:24091 vcfloat.FPLangOpt <> b2:149 var
+R24050:24053 vcfloat.FPCore <> cast def
+R24057:24059 vcfloat.FPLangOpt <> tto:147 var
+R24061:24065 vcfloat.FPLangOpt <> tfrom:146 var
+R24067:24068 vcfloat.FPLangOpt <> b1:148 var
+R24186:24206 vcfloat.FPCore <> binary_float_eq_equiv thm
+R24186:24206 vcfloat.FPCore <> binary_float_eq_equiv thm
+R24186:24206 vcfloat.FPCore <> binary_float_eq_equiv thm
+R24186:24206 vcfloat.FPCore <> binary_float_eq_equiv thm
+R24186:24206 vcfloat.FPCore <> binary_float_eq_equiv thm
+R24225:24228 vcfloat.FPCore <> cast def
+R24248:24258 vcfloat.FPCore <> type_eq_dec thm
+R24248:24258 vcfloat.FPCore <> type_eq_dec thm
+R24285:24291 Coq.Init.Logic <> eq_rect scheme
+R24368:24371 vcfloat.FPCore <> cast def
+R24391:24401 vcfloat.FPCore <> type_eq_dec thm
+R24391:24401 vcfloat.FPCore <> type_eq_dec thm
+R24435:24441 Coq.Init.Logic <> eq_rect scheme
+R24470:24490 vcfloat.FPCore <> binary_float_eq_equiv thm
+R24470:24490 vcfloat.FPCore <> binary_float_eq_equiv thm
+R24515:24520 Flocq.IEEE754.Binary <> <> mod
+prf 24530:24552 <> binary_float_equiv_BDIV
+binder 24554:24555 <> ty:150
+R24571:24582 Flocq.IEEE754.Binary <> binary_float ind
+R24596:24600 vcfloat.FPCore <> femax proj
+R24602:24603 vcfloat.FPLangOpt <> ty:150 var
+R24585:24589 vcfloat.FPCore <> fprec proj
+R24591:24592 vcfloat.FPLangOpt <> ty:150 var
+binder 24558:24559 <> b1:151
+binder 24561:24562 <> b2:152
+binder 24564:24565 <> b3:153
+binder 24567:24568 <> b4:154
+R24632:24635 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R24608:24625 vcfloat.FPCore <> binary_float_equiv def
+R24630:24631 vcfloat.FPLangOpt <> b2:152 var
+R24627:24628 vcfloat.FPLangOpt <> b1:151 var
+R24660:24663 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R24636:24653 vcfloat.FPCore <> binary_float_equiv def
+R24658:24659 vcfloat.FPLangOpt <> b4:154 var
+R24655:24656 vcfloat.FPLangOpt <> b3:153 var
+R24664:24681 vcfloat.FPCore <> binary_float_equiv def
+R24700:24703 vcfloat.FPCore <> BDIV def
+R24705:24706 vcfloat.FPLangOpt <> ty:150 var
+R24708:24709 vcfloat.FPLangOpt <> b2:152 var
+R24711:24712 vcfloat.FPLangOpt <> b4:154 var
+R24684:24687 vcfloat.FPCore <> BDIV def
+R24689:24690 vcfloat.FPLangOpt <> ty:150 var
+R24692:24693 vcfloat.FPLangOpt <> b1:151 var
+R24695:24696 vcfloat.FPLangOpt <> b3:153 var
+R24853:24870 vcfloat.FPCore <> binary_float_equiv def
+R24873:24876 vcfloat.FPCore <> BDIV def
+R24853:24870 vcfloat.FPCore <> binary_float_equiv def
+R24873:24876 vcfloat.FPCore <> BDIV def
+R24912:24919 Flocq.IEEE754.Binary <> B754_nan constr
+R24912:24919 Flocq.IEEE754.Binary <> B754_nan constr
+R25071:25091 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25137:25144 Flocq.IEEE754.Binary <> B754_nan constr
+R25137:25144 Flocq.IEEE754.Binary <> B754_nan constr
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25171:25174 vcfloat.FPCore <> BDIV def
+R25176:25180 vcfloat.FPCore <> BINOP def
+R25182:25185 Flocq.IEEE754.Binary <> Bdiv def
+R25187:25195 Flocq.IEEE754.Binary <> build_nan def
+R25197:25214 vcfloat.FPCore <> binary_float_equiv def
+R24993:24996 vcfloat.FPCore <> BDIV def
+R24998:25002 vcfloat.FPCore <> BINOP def
+R25004:25007 Flocq.IEEE754.Binary <> Bdiv def
+R25009:25017 Flocq.IEEE754.Binary <> build_nan def
+R25019:25036 vcfloat.FPCore <> binary_float_equiv def
+R25071:25091 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25071:25091 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25071:25091 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25071:25091 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25071:25091 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25071:25091 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25071:25091 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25071:25091 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25071:25091 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25071:25091 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25071:25091 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25071:25091 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25249:25269 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+R25317:25337 vcfloat.FPCore <> binary_float_eq_equiv thm
+prf 25381:25402 <> binary_float_equiv_BOP
+binder 25404:25405 <> ty:155
+R25421:25432 Flocq.IEEE754.Binary <> binary_float ind
+R25446:25450 vcfloat.FPCore <> femax proj
+R25452:25453 vcfloat.FPLangOpt <> ty:155 var
+R25435:25439 vcfloat.FPCore <> fprec proj
+R25441:25442 vcfloat.FPLangOpt <> ty:155 var
+binder 25408:25409 <> b1:156
+binder 25411:25412 <> b2:157
+binder 25414:25415 <> b3:158
+binder 25417:25418 <> b4:159
+R25468:25472 vcfloat.FPLang <> binop ind
+binder 25465:25465 <> b:160
+R25500:25503 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R25476:25493 vcfloat.FPCore <> binary_float_equiv def
+R25498:25499 vcfloat.FPLangOpt <> b2:157 var
+R25495:25496 vcfloat.FPLangOpt <> b1:156 var
+R25528:25531 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R25504:25521 vcfloat.FPCore <> binary_float_equiv def
+R25526:25527 vcfloat.FPLangOpt <> b4:159 var
+R25523:25524 vcfloat.FPLangOpt <> b3:158 var
+R25532:25549 vcfloat.FPCore <> binary_float_equiv def
+R25578:25589 vcfloat.FPLang <> fop_of_binop def
+R25591:25591 vcfloat.FPLangOpt <> b:160 var
+R25593:25594 vcfloat.FPLangOpt <> ty:155 var
+R25596:25597 vcfloat.FPLangOpt <> b2:157 var
+R25599:25600 vcfloat.FPLangOpt <> b4:159 var
+R25552:25563 vcfloat.FPLang <> fop_of_binop def
+R25565:25565 vcfloat.FPLangOpt <> b:160 var
+R25567:25568 vcfloat.FPLangOpt <> ty:155 var
+R25570:25571 vcfloat.FPLangOpt <> b1:156 var
+R25573:25574 vcfloat.FPLangOpt <> b3:158 var
+R25670:25687 vcfloat.FPCore <> binary_float_equiv def
+R25690:25701 vcfloat.FPLang <> fop_of_binop def
+R25670:25687 vcfloat.FPCore <> binary_float_equiv def
+R25690:25701 vcfloat.FPLang <> fop_of_binop def
+R25741:25749 Flocq.IEEE754.Binary <> B754_zero constr
+R25741:25749 Flocq.IEEE754.Binary <> B754_zero constr
+R25824:25836 Flocq.IEEE754.Binary <> B754_infinity constr
+R25824:25836 Flocq.IEEE754.Binary <> B754_infinity constr
+R25911:25921 Flocq.IEEE754.Binary <> B754_finite constr
+R25911:25921 Flocq.IEEE754.Binary <> B754_finite constr
+R25945:25965 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25854:25874 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25767:25787 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25767:25787 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25854:25874 vcfloat.FPCore <> binary_float_equiv_eq thm
+R25945:25965 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26190:26207 vcfloat.FPCore <> binary_float_equiv def
+R26210:26221 vcfloat.FPLang <> fop_of_binop def
+R26190:26207 vcfloat.FPCore <> binary_float_equiv def
+R26210:26221 vcfloat.FPLang <> fop_of_binop def
+R26261:26268 Flocq.IEEE754.Binary <> B754_nan constr
+R26261:26268 Flocq.IEEE754.Binary <> B754_nan constr
+R26347:26354 Flocq.IEEE754.Binary <> B754_nan constr
+R26347:26354 Flocq.IEEE754.Binary <> B754_nan constr
+R26403:26423 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26486:26506 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26403:26423 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26486:26506 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26403:26423 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26486:26506 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26403:26423 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26486:26506 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26403:26423 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26486:26506 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26403:26423 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26486:26506 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26403:26423 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26486:26506 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26403:26423 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26486:26506 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26403:26423 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26486:26506 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26403:26423 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26486:26506 vcfloat.FPCore <> binary_float_equiv_eq thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26571:26591 vcfloat.FPCore <> binary_float_eq_equiv thm
+R26668:26679 vcfloat.FPLang <> fop_of_binop def
+R26711:26730 vcfloat.FPLang <> fop_of_rounded_binop def
+R26745:26764 vcfloat.FPLang <> fop_of_rounded_binop def
+R26804:26821 vcfloat.FPCore <> binary_float_equiv def
+R26804:26821 vcfloat.FPCore <> binary_float_equiv def
+R26891:26895 vcfloat.FPCore <> BPLUS def
+R26897:26902 vcfloat.FPCore <> BMINUS def
+R26904:26907 vcfloat.FPCore <> BDIV def
+R26909:26913 vcfloat.FPCore <> BMULT def
+R26915:26919 vcfloat.FPCore <> BINOP def
+R26922:26926 Flocq.IEEE754.Binary <> Bplus def
+R26928:26933 Flocq.IEEE754.Binary <> Bminus def
+R26935:26938 Flocq.IEEE754.Binary <> Bdiv def
+R26940:26944 Flocq.IEEE754.Binary <> Bmult def
+R26946:26954 Flocq.IEEE754.Binary <> build_nan def
+R26956:26973 vcfloat.FPCore <> binary_float_equiv def
+prf 27011:27032 <> binary_float_equiv_UOP
+binder 27034:27035 <> ty:161
+R27045:27056 Flocq.IEEE754.Binary <> binary_float ind
+R27070:27074 vcfloat.FPCore <> femax proj
+R27076:27077 vcfloat.FPLangOpt <> ty:161 var
+R27059:27063 vcfloat.FPCore <> fprec proj
+R27065:27066 vcfloat.FPLangOpt <> ty:161 var
+binder 27038:27039 <> b1:162
+binder 27041:27042 <> b2:163
+R27092:27095 vcfloat.FPLang <> unop ind
+binder 27089:27089 <> u:164
+R27123:27126 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R27099:27116 vcfloat.FPCore <> binary_float_equiv def
+R27121:27122 vcfloat.FPLangOpt <> b2:163 var
+R27118:27119 vcfloat.FPLangOpt <> b1:162 var
+R27127:27144 vcfloat.FPCore <> binary_float_equiv def
+R27169:27179 vcfloat.FPLang <> fop_of_unop def
+R27181:27181 vcfloat.FPLangOpt <> u:164 var
+R27183:27184 vcfloat.FPLangOpt <> ty:161 var
+R27186:27187 vcfloat.FPLangOpt <> b2:163 var
+R27147:27157 vcfloat.FPLang <> fop_of_unop def
+R27159:27159 vcfloat.FPLangOpt <> u:164 var
+R27161:27162 vcfloat.FPLangOpt <> ty:161 var
+R27164:27165 vcfloat.FPLangOpt <> b1:162 var
+R27254:27271 vcfloat.FPCore <> binary_float_equiv def
+R27275:27285 vcfloat.FPLang <> fop_of_unop def
+R27254:27271 vcfloat.FPCore <> binary_float_equiv def
+R27275:27285 vcfloat.FPLang <> fop_of_unop def
+R27321:27335 Flocq.IEEE754.Binary <> B754_nan constr
+R27321:27335 Flocq.IEEE754.Binary <> B754_nan constr
+R27375:27395 vcfloat.FPCore <> binary_float_equiv_eq thm
+R27434:27454 vcfloat.FPCore <> binary_float_eq_equiv thm
+R27375:27395 vcfloat.FPCore <> binary_float_equiv_eq thm
+R27434:27454 vcfloat.FPCore <> binary_float_eq_equiv thm
+R27434:27454 vcfloat.FPCore <> binary_float_eq_equiv thm
+R27375:27395 vcfloat.FPCore <> binary_float_equiv_eq thm
+R27434:27454 vcfloat.FPCore <> binary_float_eq_equiv thm
+R27434:27454 vcfloat.FPCore <> binary_float_eq_equiv thm
+R27375:27395 vcfloat.FPCore <> binary_float_equiv_eq thm
+R27434:27454 vcfloat.FPCore <> binary_float_eq_equiv thm
+R27434:27454 vcfloat.FPCore <> binary_float_eq_equiv thm
+R27568:27578 vcfloat.FPLang <> fop_of_unop def
+R27580:27596 vcfloat.FPLang <> fop_of_exact_unop def
+R27662:27680 vcfloat.FPLang <> fop_of_rounded_unop def
+R27695:27699 Flocq.IEEE754.Binary <> Bsqrt def
+R27701:27712 Flocq.IEEE754.Binary <> Bsqrt def
+R27714:27722 Flocq.IEEE754.Binary <> build_nan def
+R27758:27759 vcfloat.Float_lemmas <> B2 def
+R27765:27766 Coq.ZArith.BinInt <> ::Z_scope:'-'_x not
+R27767:27771 Coq.ZArith.BinInt Z pos abbrev
+R27758:27759 vcfloat.Float_lemmas <> B2 def
+R27765:27766 Coq.ZArith.BinInt <> ::Z_scope:'-'_x not
+R27767:27771 Coq.ZArith.BinInt Z pos abbrev
+R27800:27804 vcfloat.FPCore <> BMULT def
+R27806:27810 vcfloat.FPCore <> BINOP def
+R27812:27816 Flocq.IEEE754.Binary <> Bmult def
+R27818:27826 Flocq.IEEE754.Binary <> build_nan def
+R27858:27859 vcfloat.Float_lemmas <> B2 def
+R27865:27870 Coq.ZArith.BinInt Z of_N def
+R27858:27859 vcfloat.Float_lemmas <> B2 def
+R27865:27870 Coq.ZArith.BinInt Z of_N def
+R27898:27902 vcfloat.FPCore <> BMULT def
+R27904:27908 vcfloat.FPCore <> BINOP def
+R27910:27914 Flocq.IEEE754.Binary <> Bmult def
+R27916:27924 Flocq.IEEE754.Binary <> build_nan def
+R27952:27974 vcfloat.FPLangOpt <> cast_preserves_bf_equiv thm
+R27952:27974 vcfloat.FPLangOpt <> cast_preserves_bf_equiv thm
+prf 28153:28167 <> general_eqb_neq
+binder 28180:28180 <> A:165
+R28188:28191 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R28187:28187 vcfloat.FPLangOpt <> A:165 var
+R28193:28196 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R28192:28192 vcfloat.FPLangOpt <> A:165 var
+R28197:28200 Coq.Init.Datatypes <> bool ind
+binder 28184:28184 <> f:166
+binder 28214:28214 <> x:167
+binder 28216:28216 <> y:168
+R28231:28235 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R28224:28226 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R28219:28219 vcfloat.FPLangOpt <> f:166 var
+R28223:28223 vcfloat.FPLangOpt <> y:168 var
+R28221:28221 vcfloat.FPLangOpt <> x:167 var
+R28227:28230 Coq.Init.Datatypes <> true constr
+R28237:28237 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R28236:28236 vcfloat.FPLangOpt <> x:167 var
+R28238:28238 vcfloat.FPLangOpt <> y:168 var
+binder 28204:28204 <> H:169
+binder 28253:28253 <> x:170
+binder 28255:28255 <> y:171
+R28272:28276 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R28264:28266 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R28259:28259 vcfloat.FPLangOpt <> f:166 var
+R28263:28263 vcfloat.FPLangOpt <> y:171 var
+R28261:28261 vcfloat.FPLangOpt <> x:170 var
+R28267:28271 Coq.Init.Datatypes <> false constr
+R28278:28279 Coq.Init.Logic <> ::type_scope:x_'<>'_x not
+R28277:28277 vcfloat.FPLangOpt <> x:170 var
+R28280:28280 vcfloat.FPLangOpt <> y:171 var
+binder 28427:28427 <> x:172
+binder 28429:28429 <> y:173
+R28445:28449 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R28438:28440 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R28435:28435 vcfloat.FPLangOpt <> x:172 var
+R28437:28437 vcfloat.FPLangOpt <> y:173 var
+R28441:28444 Coq.Init.Datatypes <> true constr
+R28451:28451 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R28450:28450 vcfloat.FPLangOpt <> x:172 var
+R28452:28452 vcfloat.FPLangOpt <> y:173 var
+binder 28427:28427 <> x:174
+binder 28429:28429 <> y:175
+R28445:28449 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R28438:28440 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R28435:28435 vcfloat.FPLangOpt <> x:174 var
+R28437:28437 vcfloat.FPLangOpt <> y:175 var
+R28441:28444 Coq.Init.Datatypes <> true constr
+R28451:28451 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R28450:28450 vcfloat.FPLangOpt <> x:174 var
+R28452:28452 vcfloat.FPLangOpt <> y:175 var
+R28685:28699 vcfloat.FPLangOpt <> general_eqb_neq thm
+prf 28854:28866 <> ifb_cases_lem
+binder 28880:28880 <> A:176
+R28888:28891 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R28887:28887 vcfloat.FPLangOpt <> A:176 var
+R28893:28896 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R28892:28892 vcfloat.FPLangOpt <> A:176 var
+R28897:28900 Coq.Init.Datatypes <> bool ind
+binder 28884:28884 <> f:177
+binder 28914:28914 <> x:178
+binder 28916:28916 <> y:179
+R28931:28935 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R28924:28926 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R28919:28919 vcfloat.FPLangOpt <> f:177 var
+R28923:28923 vcfloat.FPLangOpt <> y:179 var
+R28921:28921 vcfloat.FPLangOpt <> x:178 var
+R28927:28930 Coq.Init.Datatypes <> true constr
+R28937:28937 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R28936:28936 vcfloat.FPLangOpt <> x:178 var
+R28938:28938 vcfloat.FPLangOpt <> y:179 var
+binder 28904:28904 <> H:180
+R28957:28957 vcfloat.FPLangOpt <> A:176 var
+binder 28952:28952 <> x:181
+binder 28954:28954 <> y:182
+binder 28961:28961 <> B:183
+R28970:28970 vcfloat.FPLangOpt <> B:183 var
+binder 28965:28965 <> b:184
+binder 28967:28967 <> c:185
+R28978:28981 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R28977:28977 vcfloat.FPLangOpt <> B:183 var
+binder 28974:28974 <> P:186
+R28991:28991 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R29002:29006 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R28995:28998 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R28993:28993 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R28992:28992 vcfloat.FPLangOpt <> x:181 var
+R28994:28994 vcfloat.FPLangOpt <> y:182 var
+R28999:28999 vcfloat.FPLangOpt <> P:186 var
+R29001:29001 vcfloat.FPLangOpt <> b:184 var
+R29007:29007 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R29019:29025 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R29012:29015 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R29009:29010 Coq.Init.Logic <> ::type_scope:x_'<>'_x not
+R29008:29008 vcfloat.FPLangOpt <> x:181 var
+R29011:29011 vcfloat.FPLangOpt <> y:182 var
+R29016:29016 vcfloat.FPLangOpt <> P:186 var
+R29018:29018 vcfloat.FPLangOpt <> c:185 var
+R29026:29026 vcfloat.FPLangOpt <> P:186 var
+R29032:29032 vcfloat.FPLangOpt <> f:177 var
+R29036:29036 vcfloat.FPLangOpt <> y:182 var
+R29034:29034 vcfloat.FPLangOpt <> x:181 var
+R29050:29050 vcfloat.FPLangOpt <> c:185 var
+R29043:29043 vcfloat.FPLangOpt <> b:184 var
+R29122:29136 vcfloat.FPLangOpt <> general_eqb_neq thm
+R29122:29136 vcfloat.FPLangOpt <> general_eqb_neq thm
+prf 29172:29192 <> binary_float_eqb_lem1
+binder 29204:29207 <> prec:187
+binder 29209:29212 <> emax:188
+binder 29214:29214 <> b:189
+binder 29216:29216 <> c:190
+binder 29219:29219 <> A:191
+R29228:29228 vcfloat.FPLangOpt <> A:191 var
+binder 29223:29223 <> y:192
+binder 29225:29225 <> z:193
+R29236:29239 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R29235:29235 vcfloat.FPLangOpt <> A:191 var
+binder 29232:29232 <> P:194
+R29252:29252 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R29263:29267 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R29256:29259 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R29254:29254 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R29253:29253 vcfloat.FPLangOpt <> b:189 var
+R29255:29255 vcfloat.FPLangOpt <> c:190 var
+R29260:29260 vcfloat.FPLangOpt <> P:194 var
+R29262:29262 vcfloat.FPLangOpt <> y:192 var
+R29271:29278 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R29268:29268 vcfloat.FPLangOpt <> P:194 var
+R29270:29270 vcfloat.FPLangOpt <> z:193 var
+R29279:29279 vcfloat.FPLangOpt <> P:194 var
+R29286:29301 vcfloat.FPCore <> binary_float_eqb def
+R29303:29306 vcfloat.FPLangOpt <> prec:187 var
+R29308:29311 vcfloat.FPLangOpt <> emax:188 var
+R29313:29316 vcfloat.FPLangOpt <> prec:187 var
+R29318:29321 vcfloat.FPLangOpt <> emax:188 var
+R29323:29323 vcfloat.FPLangOpt <> b:189 var
+R29325:29325 vcfloat.FPLangOpt <> c:190 var
+R29339:29339 vcfloat.FPLangOpt <> z:193 var
+R29332:29332 vcfloat.FPLangOpt <> y:192 var
+R29369:29384 vcfloat.FPCore <> binary_float_eqb def
+R29369:29384 vcfloat.FPCore <> binary_float_eqb def
+R29415:29433 vcfloat.FPCore <> binary_float_eqb_eq thm
+R29415:29433 vcfloat.FPCore <> binary_float_eqb_eq thm
+R29521:29541 vcfloat.FPLangOpt <> binary_float_eqb_lem1 thm
+prf 29596:29618 <> Bmult_div_inverse_equiv
+binder 29620:29621 <> ty:195
+R29641:29659 Flocq.IEEE754.Binary <> binary_float ind
+R29673:29677 vcfloat.FPCore <> femax proj
+R29679:29680 vcfloat.FPLangOpt <> ty:195 var
+R29662:29666 vcfloat.FPCore <> fprec proj
+R29668:29669 vcfloat.FPLangOpt <> ty:195 var
+binder 29633:29633 <> x:196
+binder 29635:29635 <> y:197
+binder 29637:29637 <> z:198
+R29716:29721 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R29709:29711 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R29687:29702 Flocq.IEEE754.Binary <> is_finite def
+R29708:29708 vcfloat.FPLangOpt <> y:197 var
+R29712:29715 Coq.Init.Datatypes <> true constr
+R29751:29756 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R29744:29746 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R29722:29737 Flocq.IEEE754.Binary <> is_finite def
+R29743:29743 vcfloat.FPLangOpt <> z:198 var
+R29747:29750 Coq.Init.Datatypes <> true constr
+R29840:29846 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R29831:29833 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R29757:29770 vcfloat.IEEE754_extra <> Bexact_inverse def
+R29830:29830 vcfloat.FPLangOpt <> y:197 var
+R29811:29824 vcfloat.FPCore <> fprec_lt_femax thm
+R29826:29827 vcfloat.FPLangOpt <> ty:195 var
+R29795:29804 vcfloat.FPCore <> fprec_gt_0 inst
+R29806:29807 vcfloat.FPLangOpt <> ty:195 var
+R29784:29788 vcfloat.FPCore <> femax proj
+R29790:29791 vcfloat.FPLangOpt <> ty:195 var
+R29773:29777 vcfloat.FPCore <> fprec proj
+R29779:29780 vcfloat.FPLangOpt <> ty:195 var
+R29834:29837 Coq.Init.Datatypes <> Some constr
+R29839:29839 vcfloat.FPLangOpt <> z:198 var
+R29847:29864 vcfloat.FPCore <> binary_float_equiv def
+R29955:29965 Flocq.IEEE754.Binary <> Bdiv def
+R29994:30000 vcfloat.FPCore <> div_nan meth
+R30002:30003 vcfloat.FPLangOpt <> ty:195 var
+R30006:30028 Flocq.IEEE754.BinarySingleNaN <> mode_NE constr
+R30030:30030 vcfloat.FPLangOpt <> x:196 var
+R30032:30032 vcfloat.FPLangOpt <> y:197 var
+R29974:29987 vcfloat.FPCore <> fprec_lt_femax thm
+R29989:29990 vcfloat.FPLangOpt <> ty:195 var
+R29869:29880 Flocq.IEEE754.Binary <> Bmult def
+R29909:29916 vcfloat.FPCore <> mult_nan meth
+R29918:29919 vcfloat.FPLangOpt <> ty:195 var
+R29922:29944 Flocq.IEEE754.BinarySingleNaN <> mode_NE constr
+R29946:29946 vcfloat.FPLangOpt <> x:196 var
+R29948:29948 vcfloat.FPLangOpt <> z:198 var
+R29889:29902 vcfloat.FPCore <> fprec_lt_femax thm
+R29904:29905 vcfloat.FPLangOpt <> ty:195 var
+R30058:30079 vcfloat.FPCore <> binary_float_equiv_sym thm
+R30088:30110 vcfloat.Float_lemmas <> Bdiv_mult_inverse_equiv thm
+R30058:30079 vcfloat.FPCore <> binary_float_equiv_sym thm
+R30088:30110 vcfloat.Float_lemmas <> Bdiv_mult_inverse_equiv thm
+prf 30133:30156 <> Bmult_div_inverse_equiv2
+binder 30158:30159 <> ty:199
+R30183:30201 Flocq.IEEE754.Binary <> binary_float ind
+R30215:30219 vcfloat.FPCore <> femax proj
+R30221:30222 vcfloat.FPLangOpt <> ty:199 var
+R30204:30208 vcfloat.FPCore <> fprec proj
+R30210:30211 vcfloat.FPLangOpt <> ty:199 var
+binder 30171:30172 <> x1:200
+binder 30174:30175 <> x2:201
+binder 30177:30177 <> y:202
+binder 30179:30179 <> z:203
+R30253:30258 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R30229:30246 vcfloat.FPCore <> binary_float_equiv def
+R30251:30252 vcfloat.FPLangOpt <> x2:201 var
+R30248:30249 vcfloat.FPLangOpt <> x1:200 var
+R30288:30293 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R30281:30283 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R30259:30274 Flocq.IEEE754.Binary <> is_finite def
+R30280:30280 vcfloat.FPLangOpt <> y:202 var
+R30284:30287 Coq.Init.Datatypes <> true constr
+R30323:30328 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R30316:30318 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R30294:30309 Flocq.IEEE754.Binary <> is_finite def
+R30315:30315 vcfloat.FPLangOpt <> z:203 var
+R30319:30322 Coq.Init.Datatypes <> true constr
+R30412:30418 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R30403:30405 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R30329:30342 vcfloat.IEEE754_extra <> Bexact_inverse def
+R30402:30402 vcfloat.FPLangOpt <> y:202 var
+R30383:30396 vcfloat.FPCore <> fprec_lt_femax thm
+R30398:30399 vcfloat.FPLangOpt <> ty:199 var
+R30367:30376 vcfloat.FPCore <> fprec_gt_0 inst
+R30378:30379 vcfloat.FPLangOpt <> ty:199 var
+R30356:30360 vcfloat.FPCore <> femax proj
+R30362:30363 vcfloat.FPLangOpt <> ty:199 var
+R30345:30349 vcfloat.FPCore <> fprec proj
+R30351:30352 vcfloat.FPLangOpt <> ty:199 var
+R30406:30409 Coq.Init.Datatypes <> Some constr
+R30411:30411 vcfloat.FPLangOpt <> z:203 var
+R30419:30436 vcfloat.FPCore <> binary_float_equiv def
+R30527:30537 Flocq.IEEE754.Binary <> Bdiv def
+R30566:30572 vcfloat.FPCore <> div_nan meth
+R30574:30575 vcfloat.FPLangOpt <> ty:199 var
+R30578:30600 Flocq.IEEE754.BinarySingleNaN <> mode_NE constr
+R30602:30603 vcfloat.FPLangOpt <> x1:200 var
+R30605:30605 vcfloat.FPLangOpt <> y:202 var
+R30546:30559 vcfloat.FPCore <> fprec_lt_femax thm
+R30561:30562 vcfloat.FPLangOpt <> ty:199 var
+R30441:30452 Flocq.IEEE754.Binary <> Bmult def
+R30481:30488 vcfloat.FPCore <> mult_nan meth
+R30490:30491 vcfloat.FPLangOpt <> ty:199 var
+R30494:30516 Flocq.IEEE754.BinarySingleNaN <> mode_NE constr
+R30518:30519 vcfloat.FPLangOpt <> x2:201 var
+R30521:30521 vcfloat.FPLangOpt <> z:203 var
+R30461:30474 vcfloat.FPCore <> fprec_lt_femax thm
+R30476:30477 vcfloat.FPLangOpt <> ty:199 var
+R30631:30652 vcfloat.FPCore <> binary_float_equiv_sym thm
+R30661:30684 vcfloat.Float_lemmas <> Bdiv_mult_inverse_equiv2 thm
+R30631:30652 vcfloat.FPCore <> binary_float_equiv_sym thm
+R30661:30684 vcfloat.Float_lemmas <> Bdiv_mult_inverse_equiv2 thm
+prf 30705:30724 <> uncast_finite_strict
+binder 30736:30736 <> t:204
+binder 30738:30739 <> t2:205
+binder 30741:30741 <> f:206
+R30811:30822 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R30804:30806 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R30744:30766 Flocq.IEEE754.Binary <> is_finite_strict def
+R30790:30793 vcfloat.FPCore <> cast def
+R30797:30797 vcfloat.FPLangOpt <> t:204 var
+R30799:30800 vcfloat.FPLangOpt <> t2:205 var
+R30802:30802 vcfloat.FPLangOpt <> f:206 var
+R30779:30783 vcfloat.FPCore <> femax proj
+R30785:30785 vcfloat.FPLangOpt <> t:204 var
+R30769:30773 vcfloat.FPCore <> fprec proj
+R30775:30775 vcfloat.FPLangOpt <> t:204 var
+R30807:30810 Coq.Init.Datatypes <> true constr
+R30852:30854 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R30823:30845 Flocq.IEEE754.Binary <> is_finite_strict def
+R30851:30851 vcfloat.FPLangOpt <> f:206 var
+R30855:30858 Coq.Init.Datatypes <> true constr
+R30883:30886 vcfloat.FPCore <> cast def
+R30904:30914 vcfloat.FPCore <> type_eq_dec thm
+R30904:30914 vcfloat.FPCore <> type_eq_dec thm
+prf 31003:31026 <> is_finite_strict_not_nan
+binder 31038:31041 <> prec:207
+binder 31043:31046 <> emax:208
+binder 31048:31048 <> f:209
+R31093:31096 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R31086:31088 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R31051:31073 Flocq.IEEE754.Binary <> is_finite_strict def
+R31085:31085 vcfloat.FPLangOpt <> f:209 var
+R31080:31083 vcfloat.FPLangOpt <> emax:208 var
+R31075:31078 vcfloat.FPLangOpt <> prec:207 var
+R31089:31092 Coq.Init.Datatypes <> true constr
+R31122:31124 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R31097:31109 Flocq.IEEE754.Binary <> is_nan def
+R31121:31121 vcfloat.FPLangOpt <> f:209 var
+R31116:31119 vcfloat.FPLangOpt <> emax:208 var
+R31111:31114 vcfloat.FPLangOpt <> prec:207 var
+R31125:31129 Coq.Init.Datatypes <> false constr
+prf 31191:31212 <> binary_float_equiv_nan
+binder 31224:31227 <> prec:210
+binder 31229:31232 <> emax:211
+binder 31234:31235 <> f1:212
+binder 31237:31238 <> f2:213
+R31275:31282 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R31269:31270 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R31243:31255 Flocq.IEEE754.Binary <> is_nan def
+R31267:31268 vcfloat.FPLangOpt <> f1:212 var
+R31262:31265 vcfloat.FPLangOpt <> emax:211 var
+R31257:31260 vcfloat.FPLangOpt <> prec:210 var
+R31271:31274 Coq.Init.Datatypes <> true constr
+R31316:31323 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R31309:31311 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R31283:31295 Flocq.IEEE754.Binary <> is_nan def
+R31307:31308 vcfloat.FPLangOpt <> f2:213 var
+R31302:31305 vcfloat.FPLangOpt <> emax:211 var
+R31297:31300 vcfloat.FPLangOpt <> prec:210 var
+R31312:31315 Coq.Init.Datatypes <> true constr
+R31324:31341 vcfloat.FPCore <> binary_float_equiv def
+R31346:31347 vcfloat.FPLangOpt <> f2:213 var
+R31343:31344 vcfloat.FPLangOpt <> f1:212 var
+R31412:31412 Coq.Init.Logic <> I constr
+R31412:31412 Coq.Init.Logic <> I constr
+prf 31427:31449 <> binary_float_equiv_nan1
+binder 31461:31461 <> b:214
+binder 31463:31466 <> prec:215
+binder 31468:31471 <> emax:216
+binder 31473:31474 <> f1:217
+binder 31476:31477 <> f2:218
+R31511:31519 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R31508:31509 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R31482:31494 Flocq.IEEE754.Binary <> is_nan def
+R31506:31507 vcfloat.FPLangOpt <> f1:217 var
+R31501:31504 vcfloat.FPLangOpt <> emax:216 var
+R31496:31499 vcfloat.FPLangOpt <> prec:215 var
+R31510:31510 vcfloat.FPLangOpt <> b:214 var
+R31544:31550 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R31520:31537 vcfloat.FPCore <> binary_float_equiv def
+R31542:31543 vcfloat.FPLangOpt <> f2:218 var
+R31539:31540 vcfloat.FPLangOpt <> f1:217 var
+R31577:31579 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R31551:31563 Flocq.IEEE754.Binary <> is_nan def
+R31575:31576 vcfloat.FPLangOpt <> f2:218 var
+R31570:31573 vcfloat.FPLangOpt <> emax:216 var
+R31565:31568 vcfloat.FPLangOpt <> prec:215 var
+R31580:31580 vcfloat.FPLangOpt <> b:214 var
+prf 31730:31752 <> binary_float_equiv_nan2
+binder 31764:31764 <> b:219
+binder 31766:31769 <> prec:220
+binder 31771:31774 <> emax:221
+binder 31776:31777 <> f1:222
+binder 31779:31780 <> f2:223
+R31814:31822 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R31811:31812 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R31785:31797 Flocq.IEEE754.Binary <> is_nan def
+R31809:31810 vcfloat.FPLangOpt <> f2:223 var
+R31804:31807 vcfloat.FPLangOpt <> emax:221 var
+R31799:31802 vcfloat.FPLangOpt <> prec:220 var
+R31813:31813 vcfloat.FPLangOpt <> b:219 var
+R31847:31853 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R31823:31840 vcfloat.FPCore <> binary_float_equiv def
+R31845:31846 vcfloat.FPLangOpt <> f2:223 var
+R31842:31843 vcfloat.FPLangOpt <> f1:222 var
+R31880:31882 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R31854:31866 Flocq.IEEE754.Binary <> is_nan def
+R31878:31879 vcfloat.FPLangOpt <> f1:222 var
+R31873:31876 vcfloat.FPLangOpt <> emax:221 var
+R31868:31871 vcfloat.FPLangOpt <> prec:220 var
+R31883:31883 vcfloat.FPLangOpt <> b:219 var
+prf 32033:32042 <> Bmult_nan1
+binder 32054:32058 <> fprec:224
+binder 32060:32063 <> emax:225
+binder 32065:32065 <> H:226
+binder 32067:32068 <> H0:227
+binder 32070:32071 <> H1:228
+binder 32073:32074 <> H2:229
+binder 32076:32077 <> f1:230
+binder 32079:32080 <> f2:231
+R32120:32123 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R32113:32115 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R32086:32098 Flocq.IEEE754.Binary <> is_nan def
+R32111:32112 vcfloat.FPLangOpt <> f1:230 var
+R32106:32109 vcfloat.FPLangOpt <> emax:225 var
+R32100:32104 vcfloat.FPLangOpt <> fprec:224 var
+R32116:32119 Coq.Init.Datatypes <> true constr
+R32178:32180 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R32124:32136 Flocq.IEEE754.Binary <> is_nan def
+R32144:32155 Flocq.IEEE754.Binary <> Bmult def
+R32166:32167 vcfloat.FPLangOpt <> H1:228 var
+R32169:32170 vcfloat.FPLangOpt <> H2:229 var
+R32172:32173 vcfloat.FPLangOpt <> f1:230 var
+R32175:32176 vcfloat.FPLangOpt <> f2:231 var
+R32163:32164 vcfloat.FPLangOpt <> H0:227 var
+R32161:32161 vcfloat.FPLangOpt <> H:226 var
+R32181:32184 Coq.Init.Datatypes <> true constr
+prf 32258:32267 <> Bmult_nan2
+binder 32279:32283 <> fprec:232
+binder 32285:32288 <> emax:233
+binder 32290:32290 <> H:234
+binder 32292:32293 <> H0:235
+binder 32295:32296 <> H1:236
+binder 32298:32299 <> H2:237
+binder 32301:32302 <> f1:238
+binder 32304:32305 <> f2:239
+R32345:32348 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R32338:32340 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R32311:32323 Flocq.IEEE754.Binary <> is_nan def
+R32336:32337 vcfloat.FPLangOpt <> f2:239 var
+R32331:32334 vcfloat.FPLangOpt <> emax:233 var
+R32325:32329 vcfloat.FPLangOpt <> fprec:232 var
+R32341:32344 Coq.Init.Datatypes <> true constr
+R32403:32405 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R32349:32361 Flocq.IEEE754.Binary <> is_nan def
+R32369:32380 Flocq.IEEE754.Binary <> Bmult def
+R32391:32392 vcfloat.FPLangOpt <> H1:236 var
+R32394:32395 vcfloat.FPLangOpt <> H2:237 var
+R32397:32398 vcfloat.FPLangOpt <> f1:238 var
+R32400:32401 vcfloat.FPLangOpt <> f2:239 var
+R32388:32389 vcfloat.FPLangOpt <> H0:235 var
+R32386:32386 vcfloat.FPLangOpt <> H:234 var
+R32406:32409 Coq.Init.Datatypes <> true constr
+prf 32497:32505 <> Bdiv_nan1
+binder 32517:32521 <> fprec:240
+binder 32523:32526 <> emax:241
+binder 32528:32528 <> H:242
+binder 32530:32531 <> H0:243
+binder 32533:32534 <> H1:244
+binder 32536:32537 <> H2:245
+binder 32539:32540 <> f1:246
+binder 32542:32543 <> f2:247
+R32583:32586 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R32576:32578 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R32549:32561 Flocq.IEEE754.Binary <> is_nan def
+R32574:32575 vcfloat.FPLangOpt <> f1:246 var
+R32569:32572 vcfloat.FPLangOpt <> emax:241 var
+R32563:32567 vcfloat.FPLangOpt <> fprec:240 var
+R32579:32582 Coq.Init.Datatypes <> true constr
+R32640:32642 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R32587:32599 Flocq.IEEE754.Binary <> is_nan def
+R32607:32617 Flocq.IEEE754.Binary <> Bdiv def
+R32628:32629 vcfloat.FPLangOpt <> H1:244 var
+R32631:32632 vcfloat.FPLangOpt <> H2:245 var
+R32634:32635 vcfloat.FPLangOpt <> f1:246 var
+R32637:32638 vcfloat.FPLangOpt <> f2:247 var
+R32625:32626 vcfloat.FPLangOpt <> H0:243 var
+R32623:32623 vcfloat.FPLangOpt <> H:242 var
+R32643:32646 Coq.Init.Datatypes <> true constr
+prf 32720:32728 <> Bdiv_nan2
+binder 32740:32744 <> fprec:248
+binder 32746:32749 <> emax:249
+binder 32751:32751 <> H:250
+binder 32753:32754 <> H0:251
+binder 32756:32757 <> H1:252
+binder 32759:32760 <> H2:253
+binder 32762:32763 <> f1:254
+binder 32765:32766 <> f2:255
+R32806:32809 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R32799:32801 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R32772:32784 Flocq.IEEE754.Binary <> is_nan def
+R32797:32798 vcfloat.FPLangOpt <> f2:255 var
+R32792:32795 vcfloat.FPLangOpt <> emax:249 var
+R32786:32790 vcfloat.FPLangOpt <> fprec:248 var
+R32802:32805 Coq.Init.Datatypes <> true constr
+R32863:32865 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R32810:32822 Flocq.IEEE754.Binary <> is_nan def
+R32830:32840 Flocq.IEEE754.Binary <> Bdiv def
+R32851:32852 vcfloat.FPLangOpt <> H1:252 var
+R32854:32855 vcfloat.FPLangOpt <> H2:253 var
+R32857:32858 vcfloat.FPLangOpt <> f1:254 var
+R32860:32861 vcfloat.FPLangOpt <> f2:255 var
+R32848:32849 vcfloat.FPLangOpt <> H0:251 var
+R32846:32846 vcfloat.FPLangOpt <> H:250 var
+R32866:32869 Coq.Init.Datatypes <> true constr
+R33061:33071 vcfloat.FPLang <> fop_of_unop def
+R33073:33089 vcfloat.FPLang <> fop_of_exact_unop def
+R33091:33109 vcfloat.FPLang <> fop_of_rounded_unop def
+R33133:33144 vcfloat.FPLang <> fop_of_binop def
+R33146:33165 vcfloat.FPLang <> fop_of_rounded_binop def
+R33167:33176 vcfloat.FPCore <> cast_lub_l def
+R33178:33187 vcfloat.FPCore <> cast_lub_r def
+R33211:33214 vcfloat.FPCore <> BDIV def
+R33216:33220 vcfloat.FPCore <> BMULT def
+R33222:33226 vcfloat.FPCore <> BINOP def
+R33228:33232 vcfloat.FPCore <> BPLUS def
+R33234:33239 vcfloat.FPCore <> BMINUS def
+def 33255:33278 <> binary_float_equiv_loose
+binder 33281:33285 <> prec1:256
+binder 33287:33291 <> emax1:257
+binder 33293:33297 <> prec2:258
+binder 33299:33303 <> emax2:259
+R33312:33323 Flocq.IEEE754.Binary <> binary_float ind
+R33331:33335 vcfloat.FPLangOpt <> emax1:257 var
+R33325:33329 vcfloat.FPLangOpt <> prec1:256 var
+binder 33308:33309 <> b1:260
+R33343:33354 Flocq.IEEE754.Binary <> binary_float ind
+R33362:33366 vcfloat.FPLangOpt <> emax2:259 var
+R33356:33360 vcfloat.FPLangOpt <> prec2:258 var
+binder 33339:33340 <> b2:261
+R33390:33391 vcfloat.FPLangOpt <> b2:261 var
+R33386:33387 vcfloat.FPLangOpt <> b1:260 var
+R33404:33412 Flocq.IEEE754.Binary <> B754_zero constr
+R33422:33430 Flocq.IEEE754.Binary <> B754_zero constr
+R33444:33446 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R33442:33443 vcfloat.FPLangOpt <> b1:260 var
+R33447:33448 vcfloat.FPLangOpt <> b2:261 var
+R33456:33468 Flocq.IEEE754.Binary <> B754_infinity constr
+R33478:33490 Flocq.IEEE754.Binary <> B754_infinity constr
+R33505:33507 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R33503:33504 vcfloat.FPLangOpt <> b1:260 var
+R33508:33509 vcfloat.FPLangOpt <> b2:261 var
+R33517:33524 Flocq.IEEE754.Binary <> B754_nan constr
+R33537:33544 Flocq.IEEE754.Binary <> B754_nan constr
+R33559:33562 Coq.Init.Logic <> True ind
+R33570:33580 Flocq.IEEE754.Binary <> B754_finite constr
+R33598:33608 Flocq.IEEE754.Binary <> B754_finite constr
+R33641:33645 Coq.Init.Logic <> ::type_scope:x_'/\'_x not
+R33636:33638 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R33634:33635 vcfloat.FPLangOpt <> b1:260 var
+R33639:33640 vcfloat.FPLangOpt <> b2:261 var
+R33653:33656 Coq.Init.Logic <> ::type_scope:x_'/\'_x not
+R33648:33650 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R33659:33661 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R33679:33683 Coq.Init.Logic <> False ind
+prf 33699:33727 <> binary_float_equiv_loose_rect
+binder 33739:33740 <> t1:264
+binder 33742:33743 <> t2:265
+R33752:33752 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R33750:33751 vcfloat.FPLangOpt <> t1:264 var
+R33753:33754 vcfloat.FPLangOpt <> t2:265 var
+binder 33746:33747 <> EQ:266
+R33762:33766 vcfloat.FPCore <> ftype def
+R33768:33769 vcfloat.FPLangOpt <> t1:264 var
+binder 33758:33759 <> b1:267
+R33777:33781 vcfloat.FPCore <> ftype def
+R33783:33784 vcfloat.FPLangOpt <> t2:265 var
+binder 33773:33774 <> b2:268
+R33820:33824 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R33790:33813 vcfloat.FPLangOpt <> binary_float_equiv_loose def
+R33818:33819 vcfloat.FPLangOpt <> b2:268 var
+R33815:33816 vcfloat.FPLangOpt <> b1:267 var
+R33825:33842 vcfloat.FPCore <> binary_float_equiv def
+R33848:33856 Coq.Init.Logic <> eq_rect_r def
+R33867:33868 vcfloat.FPLangOpt <> EQ:266 var
+R33864:33865 vcfloat.FPLangOpt <> b2:268 var
+R33858:33862 vcfloat.FPCore <> ftype def
+R33844:33845 vcfloat.FPLangOpt <> b1:267 var
+R33903:33910 Coq.Init.Logic <> iff_refl thm
+R33903:33910 Coq.Init.Logic <> iff_refl thm
+prf 33926:33951 <> binary_float_equiv_loose_i
+binder 33963:33963 <> t:269
+R33973:33977 vcfloat.FPCore <> ftype def
+R33979:33979 vcfloat.FPLangOpt <> t:269 var
+binder 33966:33967 <> b1:270
+binder 33969:33970 <> b2:271
+R34009:34012 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R33985:34002 vcfloat.FPCore <> binary_float_equiv def
+R34007:34008 vcfloat.FPLangOpt <> b2:271 var
+R34004:34005 vcfloat.FPLangOpt <> b1:270 var
+R34013:34036 vcfloat.FPLangOpt <> binary_float_equiv_loose def
+R34041:34042 vcfloat.FPLangOpt <> b2:271 var
+R34038:34039 vcfloat.FPLangOpt <> b1:270 var
+prf 34078:34109 <> binary_float_equiv_loose_tighten
+binder 34121:34124 <> prec:272
+binder 34126:34129 <> emax:273
+R34179:34187 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R34135:34158 vcfloat.FPLangOpt <> binary_float_equiv_loose def
+R34160:34163 vcfloat.FPLangOpt <> prec:272 var
+R34165:34168 vcfloat.FPLangOpt <> emax:273 var
+R34170:34173 vcfloat.FPLangOpt <> prec:272 var
+R34175:34178 vcfloat.FPLangOpt <> emax:273 var
+R34189:34206 vcfloat.FPCore <> binary_float_equiv def
+R34208:34211 vcfloat.FPLangOpt <> prec:272 var
+R34213:34216 vcfloat.FPLangOpt <> emax:273 var
+def 34257:34285 <> binary_float_equiv_loose_refl
+binder 34296:34299 <> prec:274
+binder 34301:34304 <> emax:275
+binder 34306:34306 <> b:276
+R34310:34333 vcfloat.FPLangOpt <> binary_float_equiv_loose def
+R34335:34338 vcfloat.FPLangOpt <> prec:274 var
+R34340:34343 vcfloat.FPLangOpt <> emax:275 var
+R34345:34348 vcfloat.FPLangOpt <> prec:274 var
+R34350:34353 vcfloat.FPLangOpt <> emax:275 var
+R34355:34355 vcfloat.FPLangOpt <> b:276 var
+R34357:34357 vcfloat.FPLangOpt <> b:276 var
+prf 34412:34438 <> binary_float_equiv_loose_eq
+binder 34440:34443 <> prec:277
+binder 34445:34448 <> emax:278
+R34458:34469 Flocq.IEEE754.Binary <> binary_float ind
+R34476:34479 vcfloat.FPLangOpt <> emax:278 var
+R34471:34474 vcfloat.FPLangOpt <> prec:277 var
+binder 34451:34452 <> b1:279
+binder 34454:34455 <> b2:280
+R34516:34519 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R34486:34509 vcfloat.FPLangOpt <> binary_float_equiv_loose def
+R34514:34515 vcfloat.FPLangOpt <> b2:280 var
+R34511:34512 vcfloat.FPLangOpt <> b1:279 var
+R34542:34545 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R34533:34536 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R34520:34525 Flocq.IEEE754.Binary <> is_nan def
+R34531:34532 vcfloat.FPLangOpt <> b1:279 var
+R34537:34541 Coq.Init.Datatypes <> false constr
+R34548:34550 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R34546:34547 vcfloat.FPLangOpt <> b1:279 var
+R34551:34552 vcfloat.FPLangOpt <> b2:280 var
+R34709:34740 Coq.Logic.Classical_Prop <> proof_irrelevance thm
+R34709:34740 Coq.Logic.Classical_Prop <> proof_irrelevance thm
+prf 34755:34782 <> binary_float_equiv_loose_nan
+binder 34794:34798 <> prec1:281
+binder 34800:34804 <> emax1:282
+binder 34806:34810 <> prec2:283
+binder 34812:34816 <> emax2:284
+binder 34818:34819 <> f1:285
+binder 34821:34822 <> f2:286
+R34861:34868 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R34855:34856 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R34827:34839 Flocq.IEEE754.Binary <> is_nan def
+R34853:34854 vcfloat.FPLangOpt <> f1:285 var
+R34847:34851 vcfloat.FPLangOpt <> emax1:282 var
+R34841:34845 vcfloat.FPLangOpt <> prec1:281 var
+R34857:34860 Coq.Init.Datatypes <> true constr
+R34904:34911 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R34897:34899 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R34869:34881 Flocq.IEEE754.Binary <> is_nan def
+R34895:34896 vcfloat.FPLangOpt <> f2:286 var
+R34889:34893 vcfloat.FPLangOpt <> emax2:284 var
+R34883:34887 vcfloat.FPLangOpt <> prec2:283 var
+R34900:34903 Coq.Init.Datatypes <> true constr
+R34912:34935 vcfloat.FPLangOpt <> binary_float_equiv_loose def
+R34940:34941 vcfloat.FPLangOpt <> f2:286 var
+R34937:34938 vcfloat.FPLangOpt <> f1:285 var
+R35006:35006 Coq.Init.Logic <> I constr
+R35006:35006 Coq.Init.Logic <> I constr
+prf 35021:35049 <> binary_float_equiv_loose_nan1
+binder 35061:35061 <> b:287
+binder 35063:35067 <> prec1:288
+binder 35069:35073 <> emax1:289
+binder 35075:35079 <> prec2:290
+binder 35081:35085 <> emax2:291
+binder 35087:35088 <> f1:292
+binder 35090:35091 <> f2:293
+R35127:35135 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R35124:35125 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R35096:35108 Flocq.IEEE754.Binary <> is_nan def
+R35122:35123 vcfloat.FPLangOpt <> f1:292 var
+R35116:35120 vcfloat.FPLangOpt <> emax1:289 var
+R35110:35114 vcfloat.FPLangOpt <> prec1:288 var
+R35126:35126 vcfloat.FPLangOpt <> b:287 var
+R35166:35172 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R35136:35159 vcfloat.FPLangOpt <> binary_float_equiv_loose def
+R35164:35165 vcfloat.FPLangOpt <> f2:293 var
+R35161:35162 vcfloat.FPLangOpt <> f1:292 var
+R35201:35203 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R35173:35185 Flocq.IEEE754.Binary <> is_nan def
+R35199:35200 vcfloat.FPLangOpt <> f2:293 var
+R35193:35197 vcfloat.FPLangOpt <> emax2:291 var
+R35187:35191 vcfloat.FPLangOpt <> prec2:290 var
+R35204:35204 vcfloat.FPLangOpt <> b:287 var
+R35410:35441 vcfloat.FPLangOpt <> binary_float_equiv_loose_tighten thm
+R35657:35679 vcfloat.FPLangOpt <> Bmult_div_inverse_equiv thm
+R35715:35738 vcfloat.FPLangOpt <> Bmult_div_inverse_equiv2 thm
+R35774:35796 vcfloat.FPLangOpt <> cast_preserves_bf_equiv thm
+R35851:35872 vcfloat.FPCore <> binary_float_equiv_sym thm
+R35921:35943 vcfloat.FPLangOpt <> binary_float_equiv_BDIV thm
+R35979:36000 vcfloat.FPLangOpt <> binary_float_equiv_BOP thm
+R36109:36118 vcfloat.FPCore <> cast_lub_l def
+R36121:36130 vcfloat.FPCore <> cast_lub_r def
+R36151:36182 vcfloat.FPLangOpt <> binary_float_equiv_loose_tighten thm
+R36247:36264 vcfloat.FPCore <> binary_float_equiv def
+R36247:36264 vcfloat.FPCore <> binary_float_equiv def
+R36313:36336 vcfloat.FPLangOpt <> binary_float_equiv_loose def
+R36313:36336 vcfloat.FPLangOpt <> binary_float_equiv_loose def
+R36405:36408 vcfloat.FPLang <> fval def
+R36415:36424 vcfloat.FPLangOpt <> fshift_div def
+R36454:36457 vcfloat.FPLang <> fval def
+R36464:36473 vcfloat.FPLangOpt <> fshift_div def
+R36500:36514 vcfloat.FPLangOpt <> fshift_type_div thm
+prf 36574:36592 <> fshift_div_correct'
+binder 36594:36596 <> env:294
+binder 36598:36598 <> e:295
+R36602:36619 vcfloat.FPCore <> binary_float_equiv def
+R36648:36656 Coq.Init.Logic <> eq_rect_r def
+R36678:36692 vcfloat.FPLangOpt <> fshift_type_div thm
+R36665:36668 vcfloat.FPLang <> fval def
+R36670:36672 vcfloat.FPLangOpt <> env:294 var
+R36674:36674 vcfloat.FPLangOpt <> e:295 var
+R36658:36662 vcfloat.FPCore <> ftype def
+R36622:36625 vcfloat.FPLang <> fval def
+R36627:36629 vcfloat.FPLangOpt <> env:294 var
+R36632:36641 vcfloat.FPLangOpt <> fshift_div def
+R36643:36643 vcfloat.FPLangOpt <> e:295 var
+R36712:36740 vcfloat.FPLangOpt <> binary_float_equiv_loose_rect thm
+R36712:36740 vcfloat.FPLangOpt <> binary_float_equiv_loose_rect thm
+R36800:36803 vcfloat.FPLang <> fval def
+R36812:36815 vcfloat.FPLang <> fval def
+R36839:36842 vcfloat.FPLang <> fval def
+R36889:36892 vcfloat.FPLang <> fval def
+R36933:36961 vcfloat.FPLangOpt <> binary_float_equiv_loose_refl def
+R36812:36815 vcfloat.FPLang <> fval def
+R36812:36815 vcfloat.FPLang <> fval def
+R36812:36815 vcfloat.FPLang <> fval def
+R36812:36815 vcfloat.FPLang <> fval def
+R36839:36842 vcfloat.FPLang <> fval def
+R36839:36842 vcfloat.FPLang <> fval def
+R36839:36842 vcfloat.FPLang <> fval def
+R36839:36842 vcfloat.FPLang <> fval def
+R36889:36892 vcfloat.FPLang <> fval def
+R36889:36892 vcfloat.FPLang <> fval def
+R36889:36892 vcfloat.FPLang <> fval def
+R36889:36892 vcfloat.FPLang <> fval def
+R36933:36961 vcfloat.FPLangOpt <> binary_float_equiv_loose_refl def
+R36933:36961 vcfloat.FPLangOpt <> binary_float_equiv_loose_refl def
+R36933:36961 vcfloat.FPLangOpt <> binary_float_equiv_loose_refl def
+R36933:36961 vcfloat.FPLangOpt <> binary_float_equiv_loose_refl def
+R36991:37003 vcfloat.FPLangOpt <> ifb_cases_lem thm
+R37005:37016 vcfloat.FPLangOpt <> binop_eqb_eq thm
+R36991:37003 vcfloat.FPLangOpt <> ifb_cases_lem thm
+R37005:37016 vcfloat.FPLangOpt <> binop_eqb_eq thm
+R37105:37116 vcfloat.FPLangOpt <> fcval_nonrec def
+R37119:37128 vcfloat.FPLangOpt <> fshift_div def
+R37105:37116 vcfloat.FPLangOpt <> fcval_nonrec def
+R37119:37128 vcfloat.FPLangOpt <> fshift_div def
+R37211:37225 vcfloat.FPLangOpt <> fshift_type_div thm
+R37211:37225 vcfloat.FPLangOpt <> fshift_type_div thm
+R37243:37252 vcfloat.FPLangOpt <> fshift_div def
+R37243:37252 vcfloat.FPLangOpt <> fshift_div def
+R37362:37375 vcfloat.IEEE754_extra <> Bexact_inverse def
+R37362:37375 vcfloat.IEEE754_extra <> Bexact_inverse def
+R37478:37497 vcfloat.FPLangOpt <> uncast_finite_strict thm
+R37536:37540 Coq.Init.Logic <> proj1 thm
+R37543:37564 vcfloat.IEEE754_extra <> Bexact_inverse_correct thm
+R37478:37497 vcfloat.FPLangOpt <> uncast_finite_strict thm
+R37536:37540 Coq.Init.Logic <> proj1 thm
+R37543:37564 vcfloat.IEEE754_extra <> Bexact_inverse_correct thm
+R37629:37655 vcfloat.FPLangOpt <> binary_float_equiv_loose_eq thm
+R37629:37655 vcfloat.FPLangOpt <> binary_float_equiv_loose_eq thm
+R37702:37715 Coq.ZArith.Znat <> positive_nat_N thm
+R37702:37715 Coq.ZArith.Znat <> positive_nat_N thm
+R37702:37715 Coq.ZArith.Znat <> positive_nat_N thm
+R37729:37740 vcfloat.FPLangOpt <> fcval_nonrec def
+R37743:37752 vcfloat.FPLangOpt <> fshift_div def
+R37729:37740 vcfloat.FPLangOpt <> fcval_nonrec def
+R37743:37752 vcfloat.FPLangOpt <> fshift_div def
+R37782:37796 vcfloat.FPLangOpt <> fshift_type_div thm
+R37782:37796 vcfloat.FPLangOpt <> fshift_type_div thm
+R37818:37827 vcfloat.FPLangOpt <> fshift_div def
+R37818:37827 vcfloat.FPLangOpt <> fshift_div def
+R37945:37957 Flocq.IEEE754.Binary <> is_nan def
+R37945:37957 Flocq.IEEE754.Binary <> is_nan def
+R37994:38022 vcfloat.FPLangOpt <> binary_float_equiv_loose_nan1 thm
+R38024:38027 Coq.Init.Datatypes <> true constr
+R37994:38022 vcfloat.FPLangOpt <> binary_float_equiv_loose_nan1 thm
+R38024:38027 Coq.Init.Datatypes <> true constr
+R38065:38092 vcfloat.FPLangOpt <> binary_float_equiv_loose_nan thm
+R38140:38143 vcfloat.FPLang <> fval def
+R38065:38092 vcfloat.FPLangOpt <> binary_float_equiv_loose_nan thm
+R38190:38210 vcfloat.FPCore <> binary_float_equiv_eq thm
+R38190:38210 vcfloat.FPCore <> binary_float_equiv_eq thm
+R38385:38394 vcfloat.FPCore <> cast_lub_l def
+R38397:38406 vcfloat.FPCore <> cast_lub_r def
+R38464:38467 vcfloat.FPLang <> fval def
+R38474:38483 vcfloat.FPLangOpt <> fshift_div def
+R38504:38518 vcfloat.FPLangOpt <> fshift_type_div thm
+R38585:38597 Flocq.IEEE754.Binary <> is_nan def
+R38603:38603 Coq.Reals.Rtopology <> f proj
+R38636:38664 vcfloat.FPLangOpt <> binary_float_equiv_loose_nan1 thm
+R38666:38669 Coq.Init.Datatypes <> true constr
+R38709:38712 vcfloat.FPLang <> fval def
+R38721:38724 vcfloat.FPLang <> fval def
+R38759:38780 vcfloat.FPLangOpt <> binary_float_equiv_nan thm
+R38815:38835 vcfloat.FPCore <> binary_float_equiv_eq thm
+R38464:38467 vcfloat.FPLang <> fval def
+R38474:38483 vcfloat.FPLangOpt <> fshift_div def
+R38464:38467 vcfloat.FPLang <> fval def
+R38474:38483 vcfloat.FPLangOpt <> fshift_div def
+R38464:38467 vcfloat.FPLang <> fval def
+R38474:38483 vcfloat.FPLangOpt <> fshift_div def
+R38504:38518 vcfloat.FPLangOpt <> fshift_type_div thm
+R38504:38518 vcfloat.FPLangOpt <> fshift_type_div thm
+R38504:38518 vcfloat.FPLangOpt <> fshift_type_div thm
+R38504:38518 vcfloat.FPLangOpt <> fshift_type_div thm
+R38504:38518 vcfloat.FPLangOpt <> fshift_type_div thm
+R38504:38518 vcfloat.FPLangOpt <> fshift_type_div thm
+R38504:38518 vcfloat.FPLangOpt <> fshift_type_div thm
+R38504:38518 vcfloat.FPLangOpt <> fshift_type_div thm
+R38504:38518 vcfloat.FPLangOpt <> fshift_type_div thm
+R38585:38597 Flocq.IEEE754.Binary <> is_nan def
+R38636:38664 vcfloat.FPLangOpt <> binary_float_equiv_loose_nan1 thm
+R38666:38669 Coq.Init.Datatypes <> true constr
+R38721:38724 vcfloat.FPLang <> fval def
+R38759:38780 vcfloat.FPLangOpt <> binary_float_equiv_nan thm
+R38815:38835 vcfloat.FPCore <> binary_float_equiv_eq thm
+R38585:38597 Flocq.IEEE754.Binary <> is_nan def
+R38636:38664 vcfloat.FPLangOpt <> binary_float_equiv_loose_nan1 thm
+R38666:38669 Coq.Init.Datatypes <> true constr
+R38721:38724 vcfloat.FPLang <> fval def
+R38759:38780 vcfloat.FPLangOpt <> binary_float_equiv_nan thm
+R38815:38835 vcfloat.FPCore <> binary_float_equiv_eq thm
+R38585:38597 Flocq.IEEE754.Binary <> is_nan def
+R38636:38664 vcfloat.FPLangOpt <> binary_float_equiv_loose_nan1 thm
+R38666:38669 Coq.Init.Datatypes <> true constr
+R38721:38724 vcfloat.FPLang <> fval def
+R38759:38780 vcfloat.FPLangOpt <> binary_float_equiv_nan thm
+R38815:38835 vcfloat.FPCore <> binary_float_equiv_eq thm
+R38960:38963 vcfloat.FPLang <> fval def
+R38970:38979 vcfloat.FPLangOpt <> fshift_div def
+R38960:38963 vcfloat.FPLang <> fval def
+R38970:38979 vcfloat.FPLangOpt <> fshift_div def
+R38994:39008 vcfloat.FPLangOpt <> fshift_type_div thm
+R38994:39008 vcfloat.FPLangOpt <> fshift_type_div thm
+R38994:39008 vcfloat.FPLangOpt <> fshift_type_div thm
+R39025:39046 vcfloat.FPLangOpt <> binary_float_equiv_UOP thm
+R39025:39046 vcfloat.FPLangOpt <> binary_float_equiv_UOP thm
+prf 39072:39089 <> fshift_div_correct
+binder 39091:39093 <> env:296
+binder 39095:39095 <> e:297
+R39151:39157 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R39143:39145 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R39100:39112 Flocq.IEEE754.Binary <> is_nan def
+R39119:39122 vcfloat.FPLang <> fval def
+R39124:39126 vcfloat.FPLangOpt <> env:296 var
+R39129:39138 vcfloat.FPLangOpt <> fshift_div def
+R39140:39140 vcfloat.FPLangOpt <> e:297 var
+R39146:39150 Coq.Init.Datatypes <> false constr
+R39181:39183 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R39158:39161 vcfloat.FPLang <> fval def
+R39163:39165 vcfloat.FPLangOpt <> env:296 var
+R39168:39177 vcfloat.FPLangOpt <> fshift_div def
+R39179:39179 vcfloat.FPLangOpt <> e:297 var
+R39184:39192 Coq.Init.Logic <> eq_rect_r def
+R39210:39224 vcfloat.FPLangOpt <> fshift_type_div thm
+R39226:39226 vcfloat.FPLangOpt <> e:297 var
+R39197:39200 vcfloat.FPLang <> fval def
+R39202:39204 vcfloat.FPLangOpt <> env:296 var
+R39206:39206 vcfloat.FPLangOpt <> e:297 var
+R39255:39275 vcfloat.FPCore <> binary_float_equiv_eq thm
+R39255:39275 vcfloat.FPCore <> binary_float_equiv_eq thm
+R39289:39307 vcfloat.FPLangOpt <> fshift_div_correct' thm
+R39289:39307 vcfloat.FPLangOpt <> fshift_div_correct' thm
+def 39341:39352 <> is_zero_expr
+binder 39367:39368 <> ty:298
+R39372:39375 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R39371:39371 vcfloat.FPLangOpt <> WITHVARS.V var
+R39376:39380 vcfloat.FPCore <> ftype def
+R39382:39383 vcfloat.FPLangOpt <> ty:298 var
+binder 39355:39357 <> env:299
+R39390:39400 vcfloat.FPLang <> expr ind
+binder 39387:39387 <> e:300
+R39406:39409 Coq.Init.Datatypes <> bool ind
+R39423:39426 vcfloat.FPLang <> fval def
+R39428:39430 vcfloat.FPLangOpt <> env:299 var
+R39432:39432 vcfloat.FPLangOpt <> e:300 var
+R39442:39457 Flocq.IEEE754.Binary <> B754_zero constr
+R39469:39472 Coq.Init.Datatypes <> true constr
+R39481:39485 Coq.Init.Datatypes <> false constr
+def 39541:39545 <> erase
+R39551:39561 vcfloat.FPLang <> expr ind
+R39569:39569 vcfloat.FPLangOpt <> WITHVARS.V var
+binder 39548:39548 <> e:301
+R39585:39595 vcfloat.FPLang <> expr ind
+R39608:39608 vcfloat.FPLangOpt <> e:301 var
+R39621:39625 vcfloat.FPLang <> Binop constr
+R39628:39635 vcfloat.FPLang <> Rounded2 constr
+R39651:39655 vcfloat.FPLang <> Binop constr
+R39658:39665 vcfloat.FPLang <> Rounded2 constr
+R39669:39672 Coq.Init.Datatypes <> None constr
+R39676:39680 vcfloat.FPLangOpt <> erase:302 def
+R39687:39691 vcfloat.FPLangOpt <> erase:302 def
+R39703:39707 vcfloat.FPLang <> Binop constr
+R39709:39721 vcfloat.FPLang <> SterbenzMinus constr
+R39732:39736 vcfloat.FPLang <> Binop constr
+R39739:39746 vcfloat.FPLang <> Rounded2 constr
+R39748:39752 vcfloat.FPLang <> MINUS constr
+R39754:39757 Coq.Init.Datatypes <> None constr
+R39761:39765 vcfloat.FPLangOpt <> erase:302 def
+R39772:39776 vcfloat.FPLangOpt <> erase:302 def
+R39788:39792 vcfloat.FPLang <> Binop constr
+R39795:39802 vcfloat.FPLang <> PlusZero constr
+R39823:39827 vcfloat.FPLang <> Binop constr
+R39830:39837 vcfloat.FPLang <> Rounded2 constr
+R39866:39869 vcfloat.FPLang <> PLUS constr
+R39855:39859 vcfloat.FPLang <> MINUS constr
+R39872:39875 Coq.Init.Datatypes <> None constr
+R39879:39883 vcfloat.FPLangOpt <> erase:302 def
+R39890:39894 vcfloat.FPLangOpt <> erase:302 def
+R39906:39909 vcfloat.FPLang <> Unop constr
+R39912:39919 vcfloat.FPLang <> Rounded1 constr
+R39931:39934 vcfloat.FPLang <> Unop constr
+R39937:39944 vcfloat.FPLang <> Rounded1 constr
+R39948:39951 Coq.Init.Datatypes <> None constr
+R39955:39959 vcfloat.FPLangOpt <> erase:302 def
+R39961:39961 vcfloat.FPLangOpt <> e:301 var
+R39970:39973 vcfloat.FPLang <> Unop constr
+R39976:39981 vcfloat.FPLang <> CastTo constr
+R39993:39996 vcfloat.FPLang <> Unop constr
+R39999:40004 vcfloat.FPLang <> CastTo constr
+R40008:40011 Coq.Init.Datatypes <> None constr
+R40015:40019 vcfloat.FPLangOpt <> erase:302 def
+R40021:40021 vcfloat.FPLangOpt <> e:301 var
+R40030:40033 vcfloat.FPLang <> Unop constr
+R40042:40045 vcfloat.FPLang <> Unop constr
+R40050:40054 vcfloat.FPLangOpt <> erase:302 def
+R40056:40056 vcfloat.FPLangOpt <> e:301 var
+R40070:40070 vcfloat.FPLangOpt <> e:301 var
+prf 40086:40095 <> erase_type
+binder 40097:40097 <> e:304
+R40122:40124 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R40100:40111 vcfloat.FPLang <> type_of_expr def
+R40114:40118 vcfloat.FPLangOpt <> erase def
+R40120:40120 vcfloat.FPLangOpt <> e:304 var
+R40125:40136 vcfloat.FPLang <> type_of_expr def
+R40138:40138 vcfloat.FPLangOpt <> e:304 var
+prf 40324:40337 <> erase_correct'
+binder 40339:40341 <> env:305
+binder 40343:40343 <> e:306
+R40397:40399 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R40347:40362 vcfloat.FPCore <> binary_float_eqb def
+R40386:40389 vcfloat.FPLang <> fval def
+R40391:40393 vcfloat.FPLangOpt <> env:305 var
+R40395:40395 vcfloat.FPLangOpt <> e:306 var
+R40365:40368 vcfloat.FPLang <> fval def
+R40370:40372 vcfloat.FPLangOpt <> env:305 var
+R40375:40379 vcfloat.FPLangOpt <> erase def
+R40381:40381 vcfloat.FPLangOpt <> e:306 var
+R40400:40403 Coq.Init.Datatypes <> true constr
+R40449:40467 vcfloat.FPCore <> binary_float_eqb_eq thm
+R40449:40467 vcfloat.FPCore <> binary_float_eqb_eq thm
+R40501:40519 vcfloat.FPCore <> binary_float_eqb_eq thm
+R40501:40519 vcfloat.FPCore <> binary_float_eqb_eq thm
+R40554:40563 vcfloat.FPCore <> cast_lub_r def
+R40577:40586 vcfloat.FPCore <> cast_lub_l def
+R40639:40642 vcfloat.FPLang <> fval def
+R40639:40642 vcfloat.FPLang <> fval def
+R40669:40672 vcfloat.FPLang <> fval def
+R40669:40672 vcfloat.FPLang <> fval def
+R40713:40722 vcfloat.FPCore <> cast_lub_r def
+R40725:40734 vcfloat.FPCore <> cast_lub_l def
+R40755:40758 vcfloat.FPLang <> fval def
+R40765:40769 vcfloat.FPLangOpt <> erase def
+R40795:40798 vcfloat.FPLang <> fval def
+R40805:40809 vcfloat.FPLangOpt <> erase def
+R40838:40847 vcfloat.FPLangOpt <> erase_type thm
+R40884:40902 vcfloat.FPCore <> binary_float_eqb_eq thm
+R40932:40950 vcfloat.FPCore <> binary_float_eqb_eq thm
+R40980:40998 vcfloat.FPCore <> binary_float_eqb_eq thm
+R40755:40758 vcfloat.FPLang <> fval def
+R40765:40769 vcfloat.FPLangOpt <> erase def
+R40755:40758 vcfloat.FPLang <> fval def
+R40765:40769 vcfloat.FPLangOpt <> erase def
+R40755:40758 vcfloat.FPLang <> fval def
+R40765:40769 vcfloat.FPLangOpt <> erase def
+R40795:40798 vcfloat.FPLang <> fval def
+R40805:40809 vcfloat.FPLangOpt <> erase def
+R40795:40798 vcfloat.FPLang <> fval def
+R40805:40809 vcfloat.FPLangOpt <> erase def
+R40795:40798 vcfloat.FPLang <> fval def
+R40805:40809 vcfloat.FPLangOpt <> erase def
+R40838:40847 vcfloat.FPLangOpt <> erase_type thm
+R40838:40847 vcfloat.FPLangOpt <> erase_type thm
+R40838:40847 vcfloat.FPLangOpt <> erase_type thm
+R40838:40847 vcfloat.FPLangOpt <> erase_type thm
+R40838:40847 vcfloat.FPLangOpt <> erase_type thm
+R40838:40847 vcfloat.FPLangOpt <> erase_type thm
+R40838:40847 vcfloat.FPLangOpt <> erase_type thm
+R40838:40847 vcfloat.FPLangOpt <> erase_type thm
+R40838:40847 vcfloat.FPLangOpt <> erase_type thm
+R40838:40847 vcfloat.FPLangOpt <> erase_type thm
+R40838:40847 vcfloat.FPLangOpt <> erase_type thm
+R40838:40847 vcfloat.FPLangOpt <> erase_type thm
+R40838:40847 vcfloat.FPLangOpt <> erase_type thm
+R40838:40847 vcfloat.FPLangOpt <> erase_type thm
+R40838:40847 vcfloat.FPLangOpt <> erase_type thm
+R40884:40902 vcfloat.FPCore <> binary_float_eqb_eq thm
+R40884:40902 vcfloat.FPCore <> binary_float_eqb_eq thm
+R40884:40902 vcfloat.FPCore <> binary_float_eqb_eq thm
+R40932:40950 vcfloat.FPCore <> binary_float_eqb_eq thm
+R40932:40950 vcfloat.FPCore <> binary_float_eqb_eq thm
+R40932:40950 vcfloat.FPCore <> binary_float_eqb_eq thm
+R40980:40998 vcfloat.FPCore <> binary_float_eqb_eq thm
+R40980:40998 vcfloat.FPCore <> binary_float_eqb_eq thm
+R40980:40998 vcfloat.FPCore <> binary_float_eqb_eq thm
+R41089:41092 vcfloat.FPLang <> fval def
+R41089:41092 vcfloat.FPLang <> fval def
+R41137:41140 vcfloat.FPLang <> fval def
+R41147:41151 vcfloat.FPLangOpt <> erase def
+R41175:41184 vcfloat.FPLangOpt <> erase_type thm
+R41213:41231 vcfloat.FPCore <> binary_float_eqb_eq thm
+R41256:41274 vcfloat.FPCore <> binary_float_eqb_eq thm
+R41137:41140 vcfloat.FPLang <> fval def
+R41147:41151 vcfloat.FPLangOpt <> erase def
+R41137:41140 vcfloat.FPLang <> fval def
+R41147:41151 vcfloat.FPLangOpt <> erase def
+R41137:41140 vcfloat.FPLang <> fval def
+R41147:41151 vcfloat.FPLangOpt <> erase def
+R41175:41184 vcfloat.FPLangOpt <> erase_type thm
+R41175:41184 vcfloat.FPLangOpt <> erase_type thm
+R41175:41184 vcfloat.FPLangOpt <> erase_type thm
+R41175:41184 vcfloat.FPLangOpt <> erase_type thm
+R41175:41184 vcfloat.FPLangOpt <> erase_type thm
+R41175:41184 vcfloat.FPLangOpt <> erase_type thm
+R41175:41184 vcfloat.FPLangOpt <> erase_type thm
+R41175:41184 vcfloat.FPLangOpt <> erase_type thm
+R41175:41184 vcfloat.FPLangOpt <> erase_type thm
+R41213:41231 vcfloat.FPCore <> binary_float_eqb_eq thm
+R41213:41231 vcfloat.FPCore <> binary_float_eqb_eq thm
+R41213:41231 vcfloat.FPCore <> binary_float_eqb_eq thm
+R41256:41274 vcfloat.FPCore <> binary_float_eqb_eq thm
+R41256:41274 vcfloat.FPCore <> binary_float_eqb_eq thm
+R41256:41274 vcfloat.FPCore <> binary_float_eqb_eq thm
+prf 41304:41316 <> erase_correct
+binder 41318:41320 <> env:307
+binder 41322:41322 <> e:308
+R41345:41347 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R41327:41330 vcfloat.FPLang <> fval def
+R41332:41334 vcfloat.FPLangOpt <> env:307 var
+R41337:41341 vcfloat.FPLangOpt <> erase def
+R41343:41343 vcfloat.FPLangOpt <> e:308 var
+R41348:41356 Coq.Init.Logic <> eq_rect_r def
+R41374:41383 vcfloat.FPLangOpt <> erase_type thm
+R41385:41385 vcfloat.FPLangOpt <> e:308 var
+R41361:41364 vcfloat.FPLang <> fval def
+R41366:41368 vcfloat.FPLangOpt <> env:307 var
+R41370:41370 vcfloat.FPLangOpt <> e:308 var
+R41404:41422 vcfloat.FPCore <> binary_float_eqb_eq thm
+R41404:41422 vcfloat.FPCore <> binary_float_eqb_eq thm
+R41433:41458 vcfloat.FPLangOpt <> binary_float_eqb_eq_strong thm
+R41433:41458 vcfloat.FPLangOpt <> binary_float_eqb_eq_strong thm
+R41469:41482 vcfloat.FPLangOpt <> erase_correct' thm
+R41469:41482 vcfloat.FPLangOpt <> erase_correct' thm
+R41495:41502 vcfloat.FPLangOpt WITHVARS <> sec
