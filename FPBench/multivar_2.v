@@ -20,17 +20,18 @@ Definition himmilbeau (x1 : ftype Tdouble) (x2 : ftype Tdouble) :=
 Definition himmilbeau_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive]) himmilbeau in exact e').
 
-Lemma himmilbeau_bound:
-	find_and_prove_roundoff_bound himmilbeau_bmap himmilbeau_expr.
+Derive himmilbeau_b 
+SuchThat (forall vmap, prove_roundoff_bound himmilbeau_bmap vmap himmilbeau_expr himmilbeau_b)
+As himmilbeau_bound.
 Proof.
 idtac "Starting himmilbeau".
 time "himmilbeau" (
-try (eexists; intro; prove_roundoff_bound);
+try (subst himmilbeau_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try (prove_roundoff_bound2; prune_terms (cutoff 30); do_interval)).
-Defined.
+Qed.
 
-Lemma check_himmilbeau_bound: ltac:(CheckBound himmilbeau_bound 2.31e-12%F64).
+Lemma check_himmilbeau_bound: ltac:(CheckBound himmilbeau_b 2.31e-12%F64).
 Proof. reflexivity. Qed.
 
 Definition jetengine_bmap_list := [Build_varinfo Tdouble 1%positive (-5) (5);Build_varinfo Tdouble 2%positive (-20) (5)].
@@ -49,12 +50,13 @@ Definition jetengine (x1 : ftype Tdouble) (x2 : ftype Tdouble) :=
 Definition jetengine_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive]) jetengine in exact e').
 
-Lemma jetengine_bound:
-	find_and_prove_roundoff_bound jetengine_bmap jetengine_expr.
+Derive jetengine_b 
+SuchThat (forall vmap, prove_roundoff_bound jetengine_bmap vmap jetengine_expr jetengine_b)
+As jetengine_bound.
 Proof.
 idtac "Starting jetengine".
 time "jetengine" (
-try (eexists; intro; prove_roundoff_bound);
+try (subst jetengine_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try (prove_roundoff_bound2;
 try match goal with |- Rabs ?a <= _ =>
@@ -63,9 +65,9 @@ end;
 (eapply Rle_trans;
 try apply H;
 try apply Rle_refl))).
-Defined.
+Qed.
 
-Lemma check_jetengine_bound: ltac:(CheckBound jetengine_bound 1.4e02%F64).
+Lemma check_jetengine_bound: ltac:(CheckBound jetengine_b 1.4e02%F64).
 Proof. reflexivity. Qed.
 
 End WITHNANS.

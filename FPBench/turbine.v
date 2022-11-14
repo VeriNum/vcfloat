@@ -18,13 +18,13 @@ Definition turbine1 (v : ftype Tdouble) (w : ftype Tdouble) (r : ftype Tdouble) 
 Definition turbine1_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) turbine1 in exact e').
 
-
-Lemma turbine1_bound:
-	find_and_prove_roundoff_bound turbine1_bmap turbine1_expr.
+Derive turbine1_b 
+SuchThat (forall vmap, prove_roundoff_bound turbine1_bmap vmap turbine1_expr turbine1_b)
+As turbine1_bound.
 Proof.
 idtac "Starting turbine1".
 time "turbine1" (
-try (eexists; intro; prove_roundoff_bound);
+try (subst turbine1_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try (prove_roundoff_bound2; error_rewrites);
 try (prune_terms (cutoff 70);
@@ -63,9 +63,9 @@ end;
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) as H'; apply H'; apply Rle_refl
 end).
-Defined.
+Qed.
 
-Lemma check_turbine1_bound: ltac:(CheckBound turbine1_bound 7.9e-14%F64).
+Lemma check_turbine1_bound: ltac:(CheckBound turbine1_b 7.9e-14%F64).
 Proof. reflexivity. Qed.
 
 Definition turbine2_bmap_list := [Build_varinfo Tdouble 1%positive (-45e-1) (-3e-1);Build_varinfo Tdouble 2%positive (4e-1) (9e-1);Build_varinfo Tdouble 3%positive (38e-1) (78e-1)].
@@ -79,12 +79,13 @@ Definition turbine2 (v : ftype Tdouble) (w : ftype Tdouble) (r : ftype Tdouble) 
 Definition turbine2_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) turbine2 in exact e').
 
-Lemma turbine2_bound:
-	find_and_prove_roundoff_bound turbine2_bmap turbine2_expr.
+Derive turbine2_b 
+SuchThat (forall vmap, prove_roundoff_bound turbine2_bmap vmap turbine2_expr turbine2_b)
+As turbine2_bound.
 Proof.
 idtac "Starting turbine2".
 time "turbine2" (
-try (eexists; intro; prove_roundoff_bound);
+try (subst turbine2_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try prove_roundoff_bound2;
 try error_rewrites;
@@ -124,9 +125,9 @@ end;
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) as H'; apply H'; apply Rle_refl
 end).
-Defined.
+Qed.
 
-Lemma check_turbine2_bound: ltac:(CheckBound turbine2_bound 1.2e-13%F64).
+Lemma check_turbine2_bound: ltac:(CheckBound turbine2_b 1.2e-13%F64).
 Proof. reflexivity. Qed.
 
 Definition turbine3_bmap_list := [Build_varinfo Tdouble 1%positive (-45e-1) (-3e-1);Build_varinfo Tdouble 2%positive (4e-1) (9e-1);Build_varinfo Tdouble 3%positive (38e-1) (78e-1)].
@@ -140,13 +141,13 @@ Definition turbine3 (v : ftype Tdouble) (w : ftype Tdouble) (r : ftype Tdouble) 
 Definition turbine3_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) turbine3 in exact e').
 
-
-Lemma turbine3_bound:
-	find_and_prove_roundoff_bound turbine3_bmap turbine3_expr.
+Derive turbine3_b 
+SuchThat (forall vmap, prove_roundoff_bound turbine3_bmap vmap turbine3_expr turbine3_b)
+As turbine3_bound.
 Proof.
 idtac "Starting turbine3".
-time "turbine2" (
-try (eexists; intro; prove_roundoff_bound);
+time "turbine3" (
+try (subst turbine3_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try prove_roundoff_bound2;
 try error_rewrites;
@@ -186,9 +187,9 @@ end;
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) as H'; apply H'; apply Rle_refl
 end)).
-Defined.
+Qed.
 
-Lemma check_turbine3_bound: ltac:(CheckBound turbine3_bound 6.1e-14%F64).
+Lemma check_turbine3_bound: ltac:(CheckBound turbine3_b 6.1e-14%F64).
 Proof. reflexivity. Qed.
 
 End WITHNANS.

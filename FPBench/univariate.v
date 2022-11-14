@@ -19,12 +19,13 @@ Definition predatorprey (x : ftype Tdouble) :=
 Definition predatorprey_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive]) predatorprey in exact e').
 
-Lemma predatorprey_bound:
-	find_and_prove_roundoff_bound predatorprey_bmap predatorprey_expr.
+Derive predatorprey_b 
+SuchThat (forall vmap, prove_roundoff_bound predatorprey_bmap vmap predatorprey_expr predatorprey_b)
+As predatorprey_bound.
 Proof.
 idtac "Starting predatorprey".
 time "predatorprey" (
-eexists; intro; prove_roundoff_bound;
+subst predatorprey_b; intro; prove_roundoff_bound;
 try (prove_rndval; interval); try interval;
 try ( prove_roundoff_bound2); try error_rewrites;
 try (
@@ -48,9 +49,9 @@ try match goal with |-Rabs ?a <= _ =>
 interval_intro (Rabs a) upper with 
 (i_bisect vxH, i_depth 17) as H'
 end; apply H')).
-Defined.
+Qed.
 
-Lemma check_predatorprey_bound: ltac:(CheckBound predatorprey_bound 3.1e-16%F64).
+Lemma check_predatorprey_bound: ltac:(CheckBound predatorprey_b 3.1e-16%F64).
 Proof. reflexivity. Qed.
 
 Definition verhulst_bmap_list := [Build_varinfo Tdouble 1%positive (1e-1) (3e-1)].
@@ -66,12 +67,13 @@ Definition verhulst (x : ftype Tdouble) :=
 Definition verhulst_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive]) verhulst in exact e').
 
-Lemma verhulst_bound:
-	find_and_prove_roundoff_bound verhulst_bmap verhulst_expr.
+Derive verhulst_b 
+SuchThat (forall vmap, prove_roundoff_bound verhulst_bmap vmap verhulst_expr verhulst_b)
+As verhulst_bound.
 Proof.
 idtac "Starting verhulst".
 time "verhulst" (
-try (eexists; intro; prove_roundoff_bound);
+try (subst verhulst_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try prove_roundoff_bound2;
 try match goal with |-Rabs ?a <= _ =>
@@ -84,9 +86,9 @@ try (
 eapply Rle_trans;
 try apply H;
 try apply Rle_refl)).
-Defined.
+Qed.
 
-Lemma check_verhulst_bound: ltac:(CheckBound verhulst_bound 2.3e-16%F64).
+Lemma check_verhulst_bound: ltac:(CheckBound verhulst_b 2.33e-16%F64).
 Proof. reflexivity. Qed.
 
 Definition carbongas_bmap_list := [Build_varinfo Tdouble 1%positive (1e-1) (5e-1)].
@@ -106,13 +108,13 @@ Definition carbongas (v : ftype Tdouble) :=
 Definition carbongas_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive]) carbongas in exact e').
 
-
-Lemma carbongas_bound:
-	find_and_prove_roundoff_bound carbongas_bmap carbongas_expr.
+Derive carbongas_b 
+SuchThat (forall vmap, prove_roundoff_bound carbongas_bmap vmap carbongas_expr carbongas_b)
+As carbongas_bound.
 Proof.
 idtac "Starting carbongas".
 time "carbongas" (
-try (eexists; intro; prove_roundoff_bound);
+try (subst carbongas_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try (prove_roundoff_bound2; error_rewrites);
 try (
@@ -131,9 +133,9 @@ try match goal with |-Rabs ?a <= _ =>
   (i_taylor vxH, i_bisect vxH, i_depth 15) as H' ; apply H');
   try (interval_intro (Rabs a) upper as H' ; apply H') end;
   apply Rle_refl)).
-Defined.
+Qed.
 
-Lemma check_carbongas_bound: ltac:(CheckBound carbongas_bound 2.5e-08%F64).
+Lemma check_carbongas_bound: ltac:(CheckBound carbongas_b 2.5e-08%F64).
 Proof. reflexivity. Qed.
 
 Definition t_div_t1_bmap_list := [Build_varinfo Tdouble 1%positive (0) (999)].
@@ -147,12 +149,13 @@ Definition t_div_t1 (z : ftype Tdouble) :=
 Definition t_div_t1_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive]) t_div_t1 in exact e').
 
-Lemma t_div_t1_bound:
-	find_and_prove_roundoff_bound t_div_t1_bmap t_div_t1_expr.
+Derive t_div_t1_b 
+SuchThat (forall vmap, prove_roundoff_bound t_div_t1_bmap vmap t_div_t1_expr t_div_t1_b)
+As t_div_t1_bound.
 Proof.
 idtac "Starting t_div_t1".
 time "t_div_t1_bound" (
-try (eexists; intro; prove_roundoff_bound);
+try (subst t_div_t1_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try (prove_roundoff_bound2);
 try match goal with |-Rabs ?a <= _ =>
@@ -166,9 +169,9 @@ try (
 eapply Rle_trans;
 try apply H;
 try apply Rle_refl)).
-Defined.
+Qed.
 
-Lemma check_t_div_t1_bound: ltac:(CheckBound t_div_t1_bound 4.4e-16%F64).
+Lemma check_t_div_t1_bound: ltac:(CheckBound t_div_t1_b 4.4e-16%F64).
 Proof. reflexivity. Qed.
 
 

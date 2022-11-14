@@ -19,12 +19,13 @@ Definition doppler1 (u : ftype Tdouble) (v : ftype Tdouble) (t : ftype Tdouble) 
 Definition doppler1_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) doppler1 in exact e').
 
-Lemma doppler1_bound:
-	find_and_prove_roundoff_bound doppler1_bmap doppler1_expr.
+Derive doppler1_b 
+SuchThat (forall vmap, prove_roundoff_bound doppler1_bmap vmap doppler1_expr doppler1_b)
+As doppler1_bound.
 Proof.
 idtac "Starting doppler1".
 time "doppler1" (
-(eexists; intro; prove_roundoff_bound);
+(subst doppler1_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try (prove_roundoff_bound2; error_rewrites;
 ((prune_terms (cutoff 30);
@@ -44,9 +45,9 @@ try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
 i_bisect v0, i_depth 17) as H'; apply H'; apply Rle_refl
 end).
-Defined.
+Qed.
 
-Lemma check_doppler1_bound: ltac:(CheckBound doppler1_bound 4.5e-13%F64).
+Lemma check_doppler1_bound: ltac:(CheckBound doppler1_b 4.5e-13%F64).
 Proof. reflexivity. Qed.
 
 Definition doppler2_bmap_list := [Build_varinfo Tdouble 1%positive (-125) (125);Build_varinfo Tdouble 2%positive (15) (25000);Build_varinfo Tdouble 3%positive (-40) (60)].
@@ -61,12 +62,13 @@ Definition doppler2 (u : ftype Tdouble) (v : ftype Tdouble) (t : ftype Tdouble) 
 Definition doppler2_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) doppler2 in exact e').
 
-Lemma doppler2_bound:
-	find_and_prove_roundoff_bound doppler2_bmap doppler2_expr.
+Derive doppler2_b 
+SuchThat (forall vmap, prove_roundoff_bound doppler2_bmap vmap doppler2_expr doppler2_b)
+As doppler2_bound.
 Proof.
 idtac "Starting doppler2".
 time "doppler2" (
-(eexists; intro; prove_roundoff_bound);
+(subst doppler2_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try (prove_roundoff_bound2; error_rewrites;
 ((prune_terms (cutoff 30);
@@ -86,9 +88,9 @@ try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
 i_bisect v0, i_depth 17) as H'; apply H'; apply Rle_refl
 end).
-Defined.
+Qed.
 
-Lemma check_doppler2_bound: ltac:(CheckBound doppler2_bound 1.2e-12%F64).
+Lemma check_doppler2_bound: ltac:(CheckBound doppler2_b 1.2e-12%F64).
 Proof. reflexivity. Qed.
 
 Definition doppler3_bmap_list := [Build_varinfo Tdouble 1%positive (-30) (120);Build_varinfo Tdouble 2%positive (320) (20300);Build_varinfo Tdouble 3%positive (-50) (30)].
@@ -103,12 +105,13 @@ Definition doppler3 (u : ftype Tdouble) (v : ftype Tdouble) (t : ftype Tdouble) 
 Definition doppler3_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) doppler3 in exact e').
 
-Lemma doppler3_bound:
-	find_and_prove_roundoff_bound doppler3_bmap doppler3_expr.
+Derive doppler3_b 
+SuchThat (forall vmap, prove_roundoff_bound doppler3_bmap vmap doppler3_expr doppler3_b)
+As doppler3_bound.
 Proof.
 idtac "Starting doppler3".
 time "doppler3" (
-(eexists; intro; prove_roundoff_bound);
+(subst doppler3_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try (prove_roundoff_bound2; error_rewrites;
 ((prune_terms (cutoff 30);
@@ -128,9 +131,9 @@ try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect vxH, 
 i_bisect v0, i_depth 14) as H'; apply H'; apply Rle_refl
 end).
-Defined.
+Qed.
 
-Lemma check_doppler3_bound: ltac:(CheckBound doppler3_bound 2.0e-13%F64).
+Lemma check_doppler3_bound: ltac:(CheckBound doppler3_b 2.0e-13%F64).
 Proof. reflexivity. Qed.
 
 

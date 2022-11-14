@@ -91,39 +91,34 @@ Qed.
 
 (* The next part demonstrates that you don't have to guess the
   upper bound in advance, to use the tool. *)
-Definition find_and_prove_roundoff_bound (bmap: boundsmap) (e: expr) :=
-  {bound: R | forall vmap, prove_roundoff_bound bmap vmap e bound}.
-
-(* This proof returns a pair, 
-   {bound | proof that it really is a bound for step }
- where "bound" is a simple real-valued expression with only constants. *)
-Lemma find_and_prove_roundoff_bound_step :
-  find_and_prove_roundoff_bound step_bmap step'.
+Derive acc 
+ SuchThat  (forall vmap,  prove_roundoff_bound step_bmap vmap step' acc)
+ As prove_roundoff_bound_x_alt.
 Proof.
-eexists.
-intro.
+intros.
  prove_roundoff_bound.
 -
  prove_rndval; interval.
 -
+subst acc.
 prove_roundoff_bound2.
 prune_terms (cutoff 100).
 do_interval.
-Defined.
+Qed.
+
 
 (* Let's check that the first component of that thing is actually
    simple expression containing a few constants,
    i.e. a concrete bound on the roundoff error of the step function. *)
-Eval hnf in proj1_sig find_and_prove_roundoff_bound_step.
+Print acc.
 
 (* We claimed that the roundoff error is less than 1/4000000; let's check! *)
-Lemma bound_less_than_one_over_four_million:
- proj1_sig find_and_prove_roundoff_bound_step <= 1 / 4000000.
+Lemma bound_less_than_one_over_four_million:  acc <= 1 / 4000000.
 Proof. compute; lra. Qed.
 
 (* Let's make sure the second component really is a proof that
   this is a bound on the roundoff error of the step function *)
-Check proj2_sig find_and_prove_roundoff_bound_step.
+Check prove_roundoff_bound_x_alt.
 
 End WITHNANS.
 

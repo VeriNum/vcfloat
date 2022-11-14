@@ -17,20 +17,21 @@ Definition kepler0 (x1 : ftype Tdouble) (x2 : ftype Tdouble) (x3 : ftype Tdouble
 Definition kepler0_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive;4%positive;5%positive;6%positive]) kepler0 in exact e').
 
-Lemma kepler0_bound:
-	find_and_prove_roundoff_bound kepler0_bmap kepler0_expr.
+Derive kepler0_b 
+SuchThat (forall vmap, prove_roundoff_bound kepler0_bmap vmap kepler0_expr kepler0_b)
+As kepler0_bound.
 Proof.
 idtac "Starting kepler0".
 time "kepler0" (
-try (eexists; intro; prove_roundoff_bound);
+try (subst kepler0_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try (
 prove_roundoff_bound2;
 (prune_terms (cutoff 30));
  do_interval)).
-Defined.
+Qed.
 
-Lemma check_kepler0_bound: ltac:(CheckBound kepler0_bound 2.2005e-13%F64).
+Lemma check_kepler0_bound: ltac:(CheckBound kepler0_b 2.2005e-13%F64).
 Proof. reflexivity. Qed.
 
 Definition kepler1_bmap_list := [Build_varinfo Tdouble 1%positive (4) (636e-2);Build_varinfo Tdouble 2%positive (4) (636e-2);Build_varinfo Tdouble 3%positive (4) (636e-2);Build_varinfo Tdouble 4%positive (4) (636e-2)].
@@ -44,20 +45,21 @@ Definition kepler1 (x1 : ftype Tdouble) (x2 : ftype Tdouble) (x3 : ftype Tdouble
 Definition kepler1_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive;4%positive]) kepler1 in exact e').
 
-Lemma kepler1_bound:
-	find_and_prove_roundoff_bound kepler1_bmap kepler1_expr.
+Derive kepler1_b 
+SuchThat (forall vmap, prove_roundoff_bound kepler1_bmap vmap kepler1_expr kepler1_b)
+As kepler1_bound.
 Proof.
 idtac "Starting kepler1".
 time "kepler1" (
-try (eexists; intro; prove_roundoff_bound);
+try (subst kepler1_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try (
 prove_roundoff_bound2;
 (prune_terms (cutoff 30));
  do_interval)).
-Defined.
+Qed.
 
-Lemma check_kepler1_bound: ltac:(CheckBound kepler1_bound 1.69e-12%F64).
+Lemma check_kepler1_bound: ltac:(CheckBound kepler1_b 1.69e-12%F64).
 Proof. reflexivity. Qed.
 
 Definition kepler2_bmap_list := [Build_varinfo Tdouble 1%positive (4) (636e-2);Build_varinfo Tdouble 2%positive (4) (636e-2);Build_varinfo Tdouble 3%positive (4) (636e-2);Build_varinfo Tdouble 4%positive (4) (636e-2);Build_varinfo Tdouble 5%positive (4) (636e-2);Build_varinfo Tdouble 6%positive (4) (636e-2)].
@@ -71,20 +73,21 @@ Definition kepler2 (x1 : ftype Tdouble) (x2 : ftype Tdouble) (x3 : ftype Tdouble
 Definition kepler2_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive;4%positive;5%positive;6%positive]) kepler2 in exact e').
 
-Lemma kepler2_bound:
-	find_and_prove_roundoff_bound kepler2_bmap kepler2_expr.
+Derive kepler2_b 
+SuchThat (forall vmap, prove_roundoff_bound kepler2_bmap vmap kepler2_expr kepler2_b)
+As kepler2_bound.
 Proof.
 idtac "Starting kepler2".
 time "kepler2" (
-try (eexists; intro; prove_roundoff_bound);
+try (subst kepler2_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try (
 prove_roundoff_bound2;
 (prune_terms (cutoff 60));
  do_interval)).
-Defined.
+Qed.
 
-Lemma check_kepler2_bound: ltac:(CheckBound kepler2_bound 6.2e-12%F64).
+Lemma check_kepler2_bound: ltac:(CheckBound kepler2_b 6.2e-12%F64).
 Proof. reflexivity. Qed.
 
 End WITHNANS.

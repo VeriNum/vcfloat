@@ -149,20 +149,11 @@ prove_roundoff_bound.
  lia.
 Qed.
 
-Definition find_and_prove_roundoff_bound (bmap: boundsmap) (e: expr) :=
-  {bound: R | forall vmap, prove_roundoff_bound bmap vmap e bound}.
-
-Definition prove_roundoff_bound_x_alt:
-    find_and_prove_roundoff_bound leapfrog_bmap x'.
+Derive x_acc 
+ SuchThat  (forall vmap,  prove_roundoff_bound leapfrog_bmap vmap x' x_acc)
+ As prove_roundoff_bound_x_alt.
 Proof.
-exists (/ 4068166). exact prove_roundoff_bound_x.
-Defined.
-
-Lemma find_and_prove_roundoff_bound_x :
-  find_and_prove_roundoff_bound leapfrog_bmap x'.
-Proof.
-eexists.
-intro.
+intros.
  prove_roundoff_bound.
 -
  prove_rndval; interval.
@@ -170,16 +161,11 @@ intro.
 prove_roundoff_bound2.
 match goal with |- Rabs ?a <= _ => field_simplify a end.
 match goal with |- Rabs ?a <= _ => interval_intro (Rabs a) end.
-apply H.
-Defined.
+subst x_acc; apply H.
+Qed.
 
-Lemma find_and_prove_roundoff_bound_x_abstract:
-  find_and_prove_roundoff_bound leapfrog_bmap x'.
-Proof.
-let v := constr:(proj1_sig find_and_prove_roundoff_bound_x)
- in let v := eval hnf in v in exists v.
-exact (proj2_sig find_and_prove_roundoff_bound_x).
-Defined.
+Print x_acc.
+Check prove_roundoff_bound_x_alt.
 
 Lemma prove_roundoff_bound_v:
   forall x v : ftype Tsingle,

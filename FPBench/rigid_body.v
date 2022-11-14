@@ -17,17 +17,19 @@ Definition rigidbody1 (x1 : ftype Tdouble) (x2 : ftype Tdouble) (x3 : ftype Tdou
 Definition rigidbody1_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) rigidbody1 in exact e').
 
-Lemma rigidbody1_bound:
-	find_and_prove_roundoff_bound rigidbody1_bmap rigidbody1_expr.
+
+Derive rigidbody1_b 
+SuchThat (forall vmap, prove_roundoff_bound rigidbody1_bmap vmap rigidbody1_expr rigidbody1_b)
+As rigidbody1_bound.
 Proof.
 idtac "Starting rigidbody1".
 time "rigidbody1" (
-try (eexists; intro; prove_roundoff_bound);
+try (subst rigidbody1_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try (prove_roundoff_bound2; prune_terms (cutoff 30); do_interval)).
-Defined.
+Qed.
 
-Lemma check_rigidbody1_bound: ltac:(CheckBound rigidbody1_bound 3.1e-13%F64).
+Lemma check_rigidbody1_bound: ltac:(CheckBound rigidbody1_b 3.1e-13%F64).
 Proof. reflexivity. Qed.
 
 Definition rigidbody2_bmap_list := [Build_varinfo Tdouble 1%positive (-15) (15);Build_varinfo Tdouble 2%positive (-15) (15);Build_varinfo Tdouble 3%positive (-15) (15)].
@@ -41,17 +43,18 @@ Definition rigidbody2 (x1 : ftype Tdouble) (x2 : ftype Tdouble) (x3 : ftype Tdou
 Definition rigidbody2_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) rigidbody2 in exact e').
 
-Lemma rigidbody2_bound:
-	find_and_prove_roundoff_bound rigidbody2_bmap rigidbody2_expr.
+Derive rigidbody2_b 
+SuchThat (forall vmap, prove_roundoff_bound rigidbody2_bmap vmap rigidbody2_expr rigidbody2_b)
+As rigidbody2_bound.
 Proof.
 idtac "Starting rigidbody2".
 time "rigidbody2" (
-try (eexists; intro; prove_roundoff_bound);
+try (subst rigidbody2_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try (prove_roundoff_bound2; prune_terms (cutoff 30); do_interval)).
-Defined.
+Qed.
 
-Lemma check_rigidbody2_bound: ltac:(CheckBound rigidbody2_bound 3.9e-11%F64).
+Lemma check_rigidbody2_bound: ltac:(CheckBound rigidbody2_b 3.9e-11%F64).
 Proof. reflexivity. Qed.
 
 End WITHNANS.

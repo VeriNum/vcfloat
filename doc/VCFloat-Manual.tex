@@ -521,38 +521,46 @@ but to \emph{calculate and prove} the bound if you don't know it
 in advance.
 
 \begin{lstlisting}
-Definition find_and_prove_roundoff_bound (bmap: boundsmap) (e: expr) :=
-  {bound: R | forall vmap, prove_roundoff_bound bmap vmap e bound}.
+Derive step_b 
+SuchThat  (forall vmap,  prove_roundoff_bound step_bmap vmap step' step_b)
+As prove_step_bound.
+Proof. ...  Qed.
 \end{lstlisting}
-
-This useful definition expresses a dependent pair of a real-valued
-\lstinline{bound} with a proof that this really is a bound
-on the accuracy of a floating-point program.  To use this with
-our ``step'' example, one could state this theorem:
+Here we are using Coq's \lstinline{Derive} command (look it up in the
+Coq manual).  This gives the following initial proof goal:
 
 \begin{lstlisting}
-Lemma find_and_prove_roundoff_bound_step :
-  find_and_prove_roundoff_bound step_bmap step'.
-Proof.
-eexi$ $sts.
-intro.
-prove_roundoff_bound.
--
- prove_rndval; interval.
--
- prove_roundoff_bound2.
- prune_terms (cutoff 30).
- do_interval.
-Defined.
+NANS : Nans
+step_b := ?Goal : R
+______________________________________(1/1)
+forall vmap : valmap,
+prove_roundoff_bound step_bmap vmap step' step_b
 \end{lstlisting}
 
-Within the proof, the only differences are,
-\begin{itemize}
-\item  The \lstinline{eex$$ists} tactic introduces a unification variable
-  for the accuracy parameter.
-\item The proof ends with \lstinline{Defined} instead of \lstinline{Qed}
-  so that when it's done, one can extract the actual value of the bound.
-\end{itemize}
+To prove this, simply \lstinline{subst step_b} to put the
+unification variable \lstinline{?Goal} below the line,
+and proceed with exactly the same proof as
+shown at \lstinline{prove_roundoff_bound_step}.
+Then \lstinline{do_interval} will instantiate the bound.
+
+After the \lstinline{Qed}, there will be two new things
+in the environment:
+\begin{lstlisting}
+step_b : R = 4644337115725828 / 18889465931478580854784 +
+             5910977010728984 * / 9671406556917033397649408
+prove_step_bound:  forall vmap: valmap, prove_roundoff_bound step_bmap vmap step' step_b
+\end{lstlisting}
+
+\paragraph{Displaying bounds in floating point.}
+The bounds derived by the Interval package (via our \lstinline{do_interval}
+tactic) will typically be constructed from rational arithmetic,
+as shown in the \lstinline{step_b} example here.
+To see this as a floating-point number, you can use the \lstinline{ShowBound} tactic.
+\begin{lstlisting}
+Check ltac:(ShowBound step_b).
+(*  2.464803403965517e-7%F64  : Bits.binary64 *)
+\end{lstlisting}
+
 
 \chapter{field\_simplify}
 
@@ -768,6 +776,7 @@ make use of them.  You can also prove a theorem in which the
 accuracy bound is dependent on the variables in your valmap---for example,
 a \emph{relative error} bound.
 
+\pagebreak 
 \chapter{Annotations}
 
 Floating-point error analysis can be slightly more precise
