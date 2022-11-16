@@ -13,7 +13,7 @@ Elpi Db restricted_computation.db lp:{{
     % forall X : T, B -> recurse
     cbv-under-application-of F RF (prod X T BI) (prod X T BO) :- pi x\ decl x X T => cbv-under-application-of F RF (BI x) (BO x).
     % let X : T := V in B -> recurse 
-    cbv-under-application-of F RF (let X T V BI) (let X T V BO) :- pi x\ decl x X T => cbv-under-application-of F RF (BI x) (BO x).
+    cbv-under-application-of F RF (let X T V BI) (let X T V BO) :- pi x\ def x X T V => cbv-under-application-of F RF (BI x) (BO x).
     % application of F -> compute
     % Note: there is also a "coq.reduction.vm.norm" and "coq.reduction.native.norm"
     cbv-under-application-of F RF ((app [ F | _ ]) as TI) TO :- !, @redflags! RF => coq.reduction.cbv.norm TI TO.
