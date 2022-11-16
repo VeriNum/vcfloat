@@ -738,6 +738,88 @@ destruct H.
 constructor; auto.
 Qed.
 
+Lemma fast_apply_rndval_with_cond_correct3 {NANS: Nans}:
+forall (e0: expr)  (bm : boundsmap) (vm : valmap),
+   let e := fshift_div (fshift (fcval e0)) in  
+  expr_valid e = true ->
+  (boundsmap_denote bm vm ->
+   Forall (fun c : (forall ty, positive -> ftype ty) -> Prop => c (env_ vm)) 
+        (snd (rndval_with_cond2 e))) ->
+     prove_rndval' bm vm e0.
+Proof.
+intros. intro.
+pose proof (rndval_with_cond_correct2_opt e0 e e (eq_refl _)
+  (fshift_div_fshift_fcval_type _) H _ _ H1
+  (fshift_div_fshift_fcval_correct _ _)).
+subst e.
+destruct (rndval_with_cond2 _) as [[r s] p].
+auto.
+Qed.
+
+Ltac compute_every f :=
+   let j := fresh "j" in repeat (set (j := f _); compute  in j; subst j).
+
+Ltac prove_rndval :=
+ (* if necessary, convert goal into a prove_rndval'   goal*)
+ lazymatch goal with
+ | |- prove_rndval _ _ _ => apply prove_rndval'_e
+ | |- _ => idtac
+ end;
+
+(*time "1"*) (
+ eapply fast_apply_rndval_with_cond_correct3; [reflexivity | intro ]);
+
+(*time "2a"*) (
+ set (U := fshift_div _); compute in U; subst U);
+
+(*time "2b"*) (
+  cbv [rndval_with_cond2 rndval_with_cond'];
+  compute_every (@type_of_expr ident); 
+  cbv [ mset shifts_MAP empty_shiftmap mempty
+            compcert_map Maps.PMap.set Maps.PMap.init
+            Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
+              Maps.PTree.set0 Pos.of_succ_nat Pos.succ
+            index_of_tr map_nat fst snd
+          rnd_of_cast_with_cond
+          rndval_with_cond' rnd_of_binop_with_cond
+          rnd_of_unop_with_cond is_div
+          Rbinop_of_rounded_binop Runop_of_exact_unop Runop_of_rounded_unop
+          type_of_expr make_rounding round_knowl_denote
+         rounding_cond_ast no_overflow app];
+   compute_every type_leb; 
+   cbv beta iota zeta;
+   apply Forall_nested_and;
+   unfold map at 1 2;
+   red;
+   fold Tsingle; fold Tdouble);
+
+(*time "3" *)
+  (let U := fresh "U" in try set (U := Maps.PTree.Nodes _ );
+   cbv [eval_cond' eval_cond2 reval];
+   compute_every MSET.elements; 
+   try subst U);
+
+(*time "4"*)
+   ( cbv [enum_forall enum_forall'
+         mget shifts_MAP compcert_map Maps.PMap.get Maps.PTree.get fst snd Maps.PTree.get'
+        index_of_tr map_nat Pos.of_succ_nat Pos.succ
+            mset shifts_MAP empty_shiftmap mempty
+            compcert_map Maps.PMap.set Maps.PMap.init
+            Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
+              Maps.PTree.set0 Pos.of_succ_nat Pos.succ
+            index_of_tr map_nat fst snd reval
+         Prog.binary Prog.unary Prog.real_operations
+         Tree.binary_real Tree.unary_real ];
+  repeat change (B2R (fprec ?t) _ ?x) with (@FT2R t x);
+  simpl F2R;
+  cbv [env_]);
+
+  (* now process the boundsmap above the line, and the conds below the line *)
+(*time "5"*)  process_boundsmap_denote;
+(*time "6"*)  process_conds.
+
+(* old version 
+
 Ltac prove_rndval := 
  (* if necessary, convert goal into a prove_rndval'   goal*)
  lazymatch goal with
@@ -844,6 +926,7 @@ Ltac prove_rndval :=
   (* now process the boundsmap above the line, and the conds below the line *)
   process_boundsmap_denote;
   process_conds.
+*)
 
 Lemma errors_bounded_e:
   forall errors t0 k0 m, errors_bounded (t0, k0, m) errors ->
@@ -1597,8 +1680,6 @@ repeat match goal with
  | |- Rabs(- _) <= _ => rewrite Rabs_Ropp 
 end.
 
-
-
 Ltac field_simplify_Rabs :=
 match goal with 
 |- Rabs ?a <= _ =>
@@ -1608,3 +1689,21 @@ try match goal with |-?z <> 0 =>
 field_simplify z; interval
 end)
 end.
+
+Definition hide_constraint {A} (x: A) := x.
+
+Ltac bisect_all_vars t params :=
+  lazymatch goal with
+  | H: ?lo <= ?x <= ?hi |- ?A =>
+    change (hide_constraint (lo <= x <= hi)) in H;
+    lazymatch A with
+    | context [x] =>
+        let params' := constr:(i_bisect x :: params) in 
+          bisect_all_vars t params'
+    | _ => bisect_all_vars t params
+    end
+  | |- _ => unfold hide_constraint in *;
+             Private.do_interval_intro t Interval_helper.ie_none params
+  end.
+
+
