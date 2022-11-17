@@ -17,23 +17,6 @@ Definition turbine1 (v : ftype Tdouble) (w : ftype Tdouble) (r : ftype Tdouble) 
 Definition turbine1_expr := 
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) turbine1 in exact e').
 
-Definition hide_constraint {A} (x: A) := x.
-
-Ltac bisect_all_vars t params :=
-  lazymatch goal with
-  | H: ?lo <= ?x <= ?hi |- ?A =>
-    change (hide_constraint (lo <= x <= hi)) in H;
-    lazymatch A with
-    | context [x] =>
-        let params' := constr:(i_bisect x :: params) in 
-          bisect_all_vars t params'
-    | _ => bisect_all_vars t params
-    end
-  | |- _ => unfold hide_constraint in *;
-             Private.do_interval_intro t Interval_helper.ie_none params
-  end.
-
-(*
 Derive a
 SuchThat 
 (forall (v0 e2 d7 : R)
@@ -49,12 +32,12 @@ intros.
 subst a.
 match goal with |- Rabs ?a <= _ =>
    let G := fresh "G" in 
-   bisect_all_vars constr:(Rabs a) [i_depth 20]; intro G;
+   bisect_all_vars constr:(Rabs a) (@nil interval_tac_parameters); intro G;
    eapply Rle_trans;
    [apply G | apply Rminus_plus_le_minus; apply Rle_refl] 
 end.
 Qed.
-*)
+
 
 Derive turbine1_b 
 SuchThat (forall vmap, prove_roundoff_bound turbine1_bmap vmap turbine1_expr turbine1_b)
