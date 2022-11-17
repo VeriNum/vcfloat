@@ -3,7 +3,7 @@ From Flocq Require Import Binary.
 
 Import List ListNotations.
 
-From vcfloat Require Import FPLang FPLangOpt RAux Rounding Reify Float_notations Automate.
+From vcfloat Require Import VCFloat.
 Require Import Interval.Tactic.
 Set Bullet Behavior "Strict Subproofs". 
 
@@ -149,14 +149,12 @@ Definition vmap_list ty (a b : ftype ty) :=
 Definition vmap {ty} (a b : ftype ty) : valmap :=
  ltac:(let z := compute_PTree (valmap_of_list (vmap_list ty a b)) in exact z).
 
+Definition bmap_list : list varinfo := 
+  [ trivbound_varinfo Tsingle _a;
+    trivbound_varinfo Tsingle _b ].
 
-Definition bmap_list {ty} : list varinfo := 
-  let ov := powerRZ 2 (femax ty) in 
-  [ Build_varinfo Tsingle _a (-ov) ov;
-    Build_varinfo Tsingle _b (-ov) ov ].
-
-Definition bmap {ty} : boundsmap :=
- ltac:(let z := compute_PTree (boundsmap_of_list (@bmap_list ty ) ) in exact z).
+Definition bmap : boundsmap :=
+ ltac:(let z := compute_PTree (boundsmap_of_list bmap_list) in exact z).
 
 Definition sum_expr {ty} (a b : ftype ty) := ltac :( let e' :=
   HO_reify_float_expr constr:([_a; _b]) (BPLUS ty) in exact e').
@@ -264,7 +262,7 @@ Lemma prove_rndoff' :
   let d := / IZR (2 ^ 24) in 
       let ov := powerRZ 2 (femax Tsingle) in
   Rabs (FT2R a + FT2R b) <= (ov - 2 * e) / (1 + d) -> 
-  prove_roundoff_bound (@bmap Tsingle) (vmap a b) (@sum_expr Tsingle a b) 
+  prove_roundoff_bound bmap (vmap a b) (@sum_expr Tsingle a b) 
      (Rabs ( FT2R a + FT2R b) * d + e).
 Proof.
 intros ? ? ? ?  ? bnd.
@@ -324,7 +322,6 @@ apply Rabs_triang | eapply Rle_trans; [apply Rplus_le_compat; [rewrite Rabs_mult
 nra.
 Qed.
 
-
 Lemma reflect_reify_sumF : 
   forall a b,
   fval (env_ (vmap a b)) (@sum_expr Tsingle a b) = sum (BPLUS Tsingle)  a b .
@@ -337,7 +334,7 @@ Proof. reflexivity. Qed.
 
 Lemma prove_rndoff:
   forall (a b : ftype Tsingle),
-  boundsmap_denote (@bmap Tsingle) (vmap a b) ->
+  boundsmap_denote bmap (vmap a b) ->
   let e  := / IZR (2 ^ 150) in 
   let d := / IZR (2 ^ 24) in
       let ov := powerRZ 2 (femax Tsingle) in
@@ -834,85 +831,27 @@ replace (length (map FT2R l)) with (length l); auto.
 rewrite map_length; auto.
 }
 
-assert (HBMD: boundsmap_denote (@bmap Tsingle) (vmap a s1)).
+assert (HBMD: boundsmap_denote bmap (vmap a s1)).
 {
+assert (is_finite (fprec Tsingle) (femax Tsingle) s1 = true). {
+  eapply IHl.
+  apply H5.
+  apply H6.
+  apply H7.
+  write_tsingle.
+  fold e d ov.
+  auto.
+}
 apply boundsmap_denote_i.
 repeat constructor;
-(eexists; split; [reflexivity | split; [reflexivity | split;  [  | ]]]).
+(eexists; split; [reflexivity | split; [reflexivity | split;  [  | ]]]); auto.
 -
-eapply IHl.
-apply H5.
-apply H6.
-apply H7.
-write_tsingle.
-fold e d ov.
-auto.
--
-apply Stdlib.Rabs_def2_le.
-eapply Rle_trans.
-apply Hs1.
-unfold error_rel.
-write_tsingle.
-rewrite Hif1.
-fold e d.
-rewrite Aeq.
-eapply Rle_trans.
-apply Rplus_le_compat.
-apply Rmult_le_compat_l; try nra.
-apply Rplus_le_compat_r.
-apply H.
-apply H.
-replace (A * (b + e / d) + b) with
-  (b * (A + 1) + A* e / d) by nra.
-set (h:=
-(ov - 2 * e - A * e / d * (1 + d)) / ((1 + (A + 1) * INR n) * (1 + d))) in *.
-eapply Rle_trans with (h * ( 1 + (A + 1) * INR n) + A * e/d).
-subst b.
-eapply Rplus_le_compat_r.
-rewrite Rmult_assoc.
-eapply Rmult_le_compat_l.
-subst h; auto.
-apply Stdlib.Rdiv_pos_compat; auto.
-nra.
-eapply Rle_trans with ((ov - 2 * e )/(1+d)).
-replace (h * (1 + (A + 1) * INR n)) with 
-  ((ov - 2 * e - A * e / d * (1 + d)) / (1 + d)).
-eapply Req_le.
-field; try repeat split; auto; nra.
-subst h.
-field.
-try repeat split; auto; nra.
-fold ov.
-apply Rdiv_le_left; try nra.
-field_simplify.
-rewrite Rplus_comm.
-apply Rplus_le_compat; try nra.
-subst e d ov.
-interval.
+apply trivbound_correct.
 -
 apply H2.
 simpl; auto.
 -
-apply Stdlib.Rabs_def2_le.
-eapply Rle_trans.
-apply H2.
-simpl; auto.
-eapply Rle_trans with ((ov - 2 * e - A * e / d * (1 + d)) / 1).
-apply le_div2; auto; try nra.
-eapply Rle_trans with ( 1 * 1); try nra.
-apply Rmult_le_compat; try nra.
-rewrite Rcomplements.Rdiv_1.
-fold ov.
-eapply Rle_trans with (ov + 0 + 0); try nra.
-eapply Rplus_le_compat; try nra.
-eapply Rplus_le_compat; try nra.
-subst e; interval.
-apply Private.RT2.IH.A.TaylorValuator.TM.TMI.Ropp_le_0.
-apply Rmult_le_pos; try nra.
-apply Rmult_le_pos; try nra.
-apply Rmult_le_pos; try nra.
-unfold e; nra.
-unfold d; nra.
+apply trivbound_correct.
 -
 repeat constructor.
 }

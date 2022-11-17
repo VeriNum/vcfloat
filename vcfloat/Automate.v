@@ -63,39 +63,45 @@ Definition valmap := Maps.PTree.t (sigT ftype).
 Definition ftype_of_val (v: sigT ftype) : type := projT1 v.
 Definition fval_of_val (v: sigT ftype): ftype (ftype_of_val v) := projT2 v.
 
-Definition bogus_type : type.
- refine {| fprecp := 2; femax := 3 |}.
- constructor. simpl. auto.
-Defined.
+Definition type_hibound (t: type) :=
+  bpow Zaux.radix2 (femax t) - bpow Zaux.radix2 (femax t - fprec t).
 
-Module SET_ASIDE.
+Definition trivbound_varinfo (t: type) (i: ident) : varinfo :=
+  Build_varinfo t i (- type_hibound t) (type_hibound t).
 
-(* This stuff might be useful later *)
-Definition bogus_val : ftype bogus_type := B754_zero _ _ false.
-
-Definition mk_env (bm: boundsmap) (vm: valmap) (ty: type) (i: ident) : ftype ty.
-destruct (Maps.PTree.get i bm) as [[t i' lo hi]|] eqn:?H.
-destruct (type_eq_dec ty t).
-subst.
-destruct (Maps.PTree.get i vm) as [v |].
-destruct (type_eq_dec (ftype_of_val v) t).
-subst.
-apply (fval_of_val v).
-apply (B754_zero _ _ true).
-apply (B754_zero _ _ true).
-apply (B754_zero _ _ true).
-apply (B754_zero _ _ true).
-Defined.
-
-Definition list_to_bound_env 
-  (bindings: list  (ident * varinfo)) 
-  (bindings2: list  (ident * sigT ftype)) :
-  @environ ident :=
- let bm := Maps.PTree_Properties.of_list bindings in
- let vm := Maps.PTree_Properties.of_list bindings2 in 
- mk_env bm vm.
-
-End SET_ASIDE.
+Lemma trivbound_correct: 
+ forall (t: type) (x: ftype t),
+ - type_hibound t <= FT2R x <= type_hibound t.
+Proof.
+intros.
+assert (0 < type_hibound t). {
+  unfold type_hibound.
+  rewrite !bpow_powerRZ.
+  pose proof (fprec_lt_femax t).
+  pose proof (fprec_gt_0 t).
+  red in H0.
+  rewrite <- (Z2Nat.id (femax t - fprec t)) by lia.
+  set (b := Z.to_nat _).
+  rewrite <- (Z2Nat.id (femax t)) by lia.
+  set (a := Z.to_nat _).
+  rewrite <- !pow_powerRZ.
+  simpl.
+  assert (b<a)%nat by lia.
+  assert (1<2) by lra.
+  pose proof (Rlt_pow 2 b a) H2 H1.
+  lra.
+}
+destruct x; simpl; try lra.
+pose proof (bounded_le_emax_minus_prec _ _ (fprec_gt_0 t) _ _ e0).
+fold (type_hibound t) in H0.
+simpl.
+pose proof (Float_prop.F2R_gt_0 Zaux.radix2 {| Defs.Fnum := Z.pos m; Defs.Fexp := e |})
+   ltac:(simpl; lia).
+destruct s; unfold SpecFloat.cond_Zopp.
+rewrite Float_prop.F2R_Zopp.
+lra.
+lra.
+Qed.
 
 Definition boundsmap_denote (bm: boundsmap) (vm: valmap) : Prop :=
    forall i, 
