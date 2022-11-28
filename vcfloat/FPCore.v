@@ -269,6 +269,13 @@ Class Nans: Type :=
       forall ty,
         binary_float (fprec ty) (femax ty) ->
         nan_payload (fprec ty) (femax ty)
+    ;
+    fma_nan:
+      forall ty,
+        binary_float (fprec ty) (femax ty) ->
+        binary_float (fprec ty) (femax ty) ->
+        binary_float (fprec ty) (femax ty) ->
+        nan_payload (fprec ty) (femax ty)
   }.
 
 Definition nan_pl_eqb {prec1 emax1 prec2 emax2} 

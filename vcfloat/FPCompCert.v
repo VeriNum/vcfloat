@@ -257,6 +257,83 @@ Definition opp_nan :=
      Floats.Float32.neg_nan
      Floats.Float.neg_nan.
 
+
+Module FMA_NAN. 
+(* some of these definitions adapted from [the open-source part of] CompCert  *)
+Import ZArith. Import List.
+
+(** Transform a Nan payload to a quiet Nan payload. *)
+
+Definition quiet_nan_payload (t: type) (p: positive) :=
+  Z.to_pos (Zbits.P_mod_two_p (Pos.lor p ((Zaux.iter_nat xO (Z.to_nat (fprec t - 2)) 1%positive))) (Z.to_nat (fprec t - 1))).
+
+Lemma quiet_nan_proof (t: type): forall p, Binary.nan_pl (fprec t) (quiet_nan_payload t p) = true.
+Proof. 
+intros.
+pose proof (fprec_gt_one t).
+ apply normalized_nan; auto; lia.
+Qed.
+
+Definition quiet_nan (t: type) (sp: bool * positive) : {x : ftype t | Binary.is_nan _ _ x = true} :=
+  let (s, p) := sp in
+  exist _ (Binary.B754_nan (fprec t) (femax t) s (quiet_nan_payload t p) (quiet_nan_proof t p)) (eq_refl true).
+
+Definition default_nan (t: type) := (fst Archi.default_nan_64, iter_nat (Z.to_nat (fprec t - 2)) _ xO xH).
+
+Inductive NAN_SCHEME := NAN_SCHEME_ARM | NAN_SCHEME_X86 | NAN_SCHEME_RISCV.
+
+Definition the_nan_scheme : NAN_SCHEME.
+try (unify Archi.choose_nan_64 Archi.default_nan_64; exact NAN_SCHEME_RISCV);
+try (unify Archi.choose_nan_64 (fun l => match l with nil => Archi.default_nan_64 | n::_ => n end);
+      exact NAN_SCHEME_X86);
+try (let p := constr:(Archi.choose_nan_64) in
+      let p := eval red in p in
+      match p with _ (fun p => negb (Pos.testbit p 51)) _ => idtac end;
+      exact NAN_SCHEME_ARM).
+Defined.
+
+Definition ARMchoose_nan (is_signaling: positive -> bool) 
+                      (default: bool * positive)
+                      (l0: list (bool * positive)) : bool * positive :=
+  let fix choose_snan (l1: list (bool * positive)) :=
+    match l1 with
+    | nil =>
+        match l0 with nil => default | n :: _ => n end
+    | ((s, p) as n) :: l1 =>
+        if is_signaling p then n else choose_snan l1
+    end
+  in choose_snan l0.
+
+Definition choose_nan (t: type) : list (bool * positive) -> bool * positive :=
+ match the_nan_scheme with
+ | NAN_SCHEME_RISCV => fun _ => default_nan t
+ | NAN_SCHEME_X86 => fun l => match l with nil => default_nan t | n :: _ => n end
+ | NAN_SCHEME_ARM => ARMchoose_nan (fun p => negb (Pos.testbit p (Z.to_N (fprec t - 2))))
+                                          (default_nan t)
+ end.
+
+Definition cons_pl {t: type} (x : ftype t) (l : list (bool * positive)) :=
+match x with
+| Binary.B754_nan _ _ s p _ => (s, p) :: l
+| _ => l
+end.
+
+Definition fma_nan_1 (t: type) (x y z: ftype t) : {x : ftype t | @Binary.is_nan (fprec t) (femax t) x = true} :=
+  let '(a, b, c) := Archi.fma_order x y z in
+  quiet_nan t (choose_nan t (cons_pl a (cons_pl b (cons_pl c nil)))).
+
+Definition fma_nan_pl (t: type) (x y z: ftype t) : {x : ftype t | Binary.is_nan _ _ x = true} :=
+  match x, y with
+  | Binary.B754_infinity _ _ _, Binary.B754_zero _ _ _ | Binary.B754_zero _ _ _, Binary.B754_infinity _ _ _ =>
+      if Archi.fma_invalid_mul_is_nan
+      then quiet_nan t (choose_nan t (default_nan t :: cons_pl z nil))
+      else fma_nan_1 t x y z
+  | _, _ =>
+      fma_nan_1 t x y z
+  end.
+
+End FMA_NAN.
+
 #[export] Instance nans: Nans :=
   {
     conv_nan := conv_nan;
@@ -265,7 +342,8 @@ Definition opp_nan :=
     div_nan := binop_nan;
     abs_nan := abs_nan;
     opp_nan := opp_nan;
-    sqrt_nan := (fun ty _ => any_nan ty)
+    sqrt_nan := (fun ty _ => any_nan ty);
+    fma_nan := FMA_NAN.fma_nan_pl
   }.
 
 Lemma val_inject_eq_rect_r v ty1 e:
