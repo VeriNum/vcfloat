@@ -11,8 +11,6 @@ Set Bullet Behavior "Strict Subproofs".
 Section WITHNANS.
 Context {NANS: Nans}. 
 
-Notation "-0" := 
-  (B754_zero (fprec Tsingle) (femax Tsingle) true) (at level 50, left associativity) : float32_scope.
 
 Definition sum {A: Type} (sum_op : A -> A -> A) (a b : A) : A := sum_op a b.
 
