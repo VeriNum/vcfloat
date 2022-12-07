@@ -3,13 +3,14 @@ From Flocq Require Import Binary.
 
 Import Coq.Lists.List ListNotations.
 
-From vcfloat Require Import VCFloat.
+Require Import vcfloat.VCFloat.
 Require Import Interval.Tactic.
 Set Bullet Behavior "Strict Subproofs". 
 
 
 Section WITHNANS.
 Context {NANS: Nans}. 
+
 
 Definition sum {A: Type} (sum_op : A -> A -> A) (a b : A) : A := sum_op a b.
 
@@ -19,7 +20,7 @@ Inductive sum_rel {A : Type} (default: A) (sum_op : A -> A -> A) : list A -> A -
     sum_rel default sum_op l s ->
     sum_rel default sum_op (a::l) (sum sum_op a s).
 
-Definition sum_rel_F := @sum_rel (ftype Tsingle) 0%F32 (BPLUS Tsingle).
+Definition sum_rel_F := @sum_rel (ftype Tsingle) (-0)%F32 (BPLUS Tsingle).
 Definition sum_rel_R := @sum_rel R 0%R Rplus.
 
 
@@ -114,20 +115,28 @@ apply Req_le.
 eapply sum_rel_R_Rabs_eq; apply H3.
 Qed.
 
+From vcfloat Require Import IEEE754_extra.
 
 Lemma plus_zero a:
-(a + 0)%F32 = a.
+is_finite _ _ a = true -> 
+(a + -0)%F32 = a.
 Proof.
-Admitted.
+destruct a; simpl; auto;
+intros; try discriminate; auto;
+destruct s;
+cbv; auto.
+Qed.
 
 Lemma sum_rel_F_single :
-forall (a : ftype Tsingle) (fs : ftype Tsingle), sum_rel_F [a] fs -> fs = a.
+forall (a : ftype Tsingle) (fs : ftype Tsingle)
+  (HFIN: is_finite _ _ a = true),
+  sum_rel_F [a] fs -> fs = a.
 Proof.
 intros.
 inversion H; auto.
 inversion H3. subst.
 unfold sum.
-apply plus_zero.
+apply plus_zero; auto.
 Qed.
 
 Lemma sum_rel_R_single :
@@ -163,97 +172,6 @@ Lemma real_lt_1 :
 forall a b c,
 a <= b -> b < c -> a < c.
 Proof. intros; apply Rle_lt_trans with b; auto. Qed.
-
-Lemma bnd_lt_overflow n :
-  (2 <= n )%nat ->
-  let e  := / IZR (2 ^ 150)    in 
-  let d  := / IZR (2 ^ 24) in
-  let sov := (powerRZ 2 (femax Tsingle) - 2 * e) / (1 + d) in
-  let A  := (INR n - 1) * (1 + d)^(n-2) in
-  let bnd := (sov - A * e) * (1 / ((A * d + 1) * INR n + 1)) * (INR n + 1) in 
-    (bnd / (INR n + 1) * ((A * d + 1) * INR n + 1) + A * e) * (1 + d) + e < 0x1p128%xR.
-Proof.
-intros. 
-assert (lem: forall a b c, 
-  0 < c -> a < b -> a * c < b * c) by (intros;nra).
-subst bnd.
-rewrite <- Rcomplements.Rlt_minus_r.
-set (ov:= powerRZ 2 (femax Tsingle)).
-subst sov. fold ov.
-replace (0x1p128%xR) with ov by (subst ov; simpl; nra).
-
-assert (
-((INR n - 1) * (1 + / IZR (2 ^ 24)) ^ (n - 2) *
- / IZR (2 ^ 24) + 1) * INR n + 1 <> 0).
-{
-apply tech_Rplus; try nra.
-apply Rmult_le_pos; try interval.
-apply Rplus_le_le_0_compat; try nra.
-apply Rmult_le_pos; try interval.
-apply Rmult_le_pos; try interval.
-apply Rle_0_minus.
-apply le_INR in H; interval.
-apply pow_le; interval.
-apply pos_INR.
-}
-
-match goal with |- context [?a / ?b * ?c] =>
-replace (a/b  *c) with ((a  *c) / b)
-end.
-assert (Hn2: INR 2 <= INR n); try apply le_INR; auto.
-
-assert (Hd: 1 <= (1 + d) ^ (n - 2)).
-assert (H1: 1 = (1 + d) ^ 0) by nra. 
-eapply Rle_trans; [ rewrite H1  | apply Rle_refl]; apply Rle_pow; 
-  subst d; simpl; try nra; try lia.
-apply Rcomplements.Rlt_div_r.
- try subst d; simpl; nra. 
-
-rewrite <- Rcomplements.Rlt_minus_r.
-
-apply Rcomplements.Rlt_div_r.
-apply Rlt_gt.
-replace (/ (INR n + 1)) with (1/ (INR n + 1)) by nra.
-apply Rdiv_lt_0_compat; try interval.
-field_simplify.
-apply Rdiv_lt_right.
-subst d; try interval.
-
-match goal with |- context[ ?a / ?g * ?g ] =>
-replace (a / g  * g) with a
-end.
-
-rewrite Rplus_comm.
-apply Rplus_lt_compat.
-apply Rplus_le_lt_compat; try nra.
-
-apply Ropp_lt_contravar. 
-replace (e * INR n) with (1 * e * INR n) by nra; 
-  apply lem; try lia; try interval.
-
-apply Ropp_lt_contravar. 
-try subst e; interval.
-
-
-field_simplify;
-try field; try subst d; simpl; nra.
-
-split; try field; try subst d; interval.
-
-subst A; split; interval.
-
-field.
-subst A; split; [ |split].
-apply tech_Rplus; try nra.
-apply Rmult_le_pos; [ | apply pos_INR].
-apply Rplus_le_le_0_compat; [ | lra].
-apply Rmult_le_pos; [ | interval].
-apply Rmult_le_pos.
-clear - H. destruct n; try lia. destruct n; try lia. rewrite !S_INR.
-pose proof (pos_INR n); lra.
-apply pow_le. subst d; simpl; lra. subst d; simpl; lra.
-pose proof (pos_INR n); lra.
-Qed.
 
 
 Lemma prove_rndoff' :
@@ -501,15 +419,14 @@ destruct Hl.
 (* case empty l *)
 +
 subst; simpl.
-rewrite (sum_rel_F_single a fs H).
+assert (HFIN: is_finite (fprec Tsingle) 128 a = true).
+{
+apply H2; simpl; auto.
+}
+rewrite (sum_rel_F_single a fs HFIN H).
 rewrite (sum_rel_R_single (FT2R a) rs H0).
-cbv [error_rel]; simpl.
-fold e d.
-split.
-*
-apply H2.
-simpl; auto.
-*
+cbv [error_rel]; simpl;
+split; auto.
 field_simplify_Rabs.
 rewrite Rabs_R0.
 field_simplify; nra.
