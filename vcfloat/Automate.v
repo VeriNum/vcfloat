@@ -5,10 +5,21 @@
 From vcfloat Require Import FPLang FPLangOpt RAux Rounding Reify Float_notations.
 Require Import Interval.Tactic.
 Import Binary.
-Import List ListNotations.
+Import Coq.Lists.List ListNotations.
 Set Bullet Behavior "Strict Subproofs".
 
 Open Scope R_scope.
+
+(* The tactic  compute_every has a fast implementation,
+  using Ltac2, and a slower implementation, just using Ltac.
+ Here is the fast one: *)
+Require vcfloat.compute_tactics_ltac2. 
+Ltac compute_every f := compute_tactics_ltac2.compute_every f.
+(* and here is the slower one:
+Ltac compute_every f := 
+   let j := fresh "j" in repeat (set (j := f _); compute  in j; subst j).
+*)
+
 
 Definition generic_nan (prec emax : Z) : 
       nan_pl prec 1 = true ->
@@ -762,9 +773,6 @@ destruct (rndval_with_cond2 _) as [[r s] p].
 auto.
 Qed.
 
-Ltac compute_every f :=
-   let j := fresh "j" in repeat (set (j := f _); compute  in j; subst j).
-
 Ltac prove_rndval :=
  (* if necessary, convert goal into a prove_rndval'   goal*)
  lazymatch goal with
@@ -775,8 +783,7 @@ Ltac prove_rndval :=
 (*time "1"*) (
  eapply fast_apply_rndval_with_cond_correct3; [reflexivity | intro ]);
 
-(*time "2a"*) (
- set (U := fshift_div _); compute in U; subst U);
+(*time "2a"*) (compute_every @fshift_div);
 
 (*time "2b"*) (
   cbv [rndval_with_cond2 rndval_with_cond'];

@@ -65,7 +65,7 @@ Global Unset Asymmetric Patterns.
 Require Export vcfloat.FPCore vcfloat.FPLang.
 Import Bool.
 
-Import List ListNotations.
+Import Coq.Lists.List ListNotations.
 
 Local Open Scope R_scope.
 

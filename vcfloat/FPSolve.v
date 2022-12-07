@@ -405,7 +405,7 @@ Ltac adjust_list_forall_eval_cond2 shift' j :=
     clear k
 .
 
-Require Import List.
+Require Import Coq.Lists.List.
 
 Ltac rnd_of_binop_with_cond_solve
      t

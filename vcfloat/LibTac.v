@@ -98,7 +98,7 @@ Proof.
 Defined.
 
 
-Require Import List.
+Require Import Coq.Lists.List.
 
 Fixpoint list_forall {T} (P: T -> Prop) (l: list T): Prop :=
   match l with
@@ -203,7 +203,7 @@ Definition sumbool_to_bool {A B} (u: {A} + {B}): bool :=
 Coercion sumbool_to_bool: sumbool >-> bool.
 
 Require Import ZArith Reals vcfloat.RAux.
-Import List.
+Import Coq.Lists.List.
 
 Lemma rememb {A} (a: A): {x | x = a}.
 Proof.

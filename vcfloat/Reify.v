@@ -13,7 +13,7 @@ Global Unset Asymmetric Patterns.
 
 Require Import vcfloat.FPCore vcfloat.FPLang.
 Require Import vcfloat.Float_notations.
-Import List.
+Import Coq.Lists.List.
 
 Definition ident := positive.
 

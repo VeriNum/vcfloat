@@ -565,7 +565,7 @@ Qed.
       discriminate.
     Qed.
 
-    Import List.
+    Import Coq.Lists.List.
   Fixpoint create_map {A} (l: list (ident * A)) (u: Maps.PTree.t A): Maps.PTree.t A :=
     match l with
       | nil => u

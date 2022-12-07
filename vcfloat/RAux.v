@@ -313,7 +313,7 @@ Qed.
 
 
 Require Import ZArith.
-Require Import List.
+Require Import Coq.Lists.List.
 
 Ltac R_to_pos p :=
   match p with

@@ -180,7 +180,7 @@ Proof.
   eapply Smallstep.star_step; eauto.
 Qed.
 
-Require Import List.
+Require Import Coq.Lists.List.
 
 Fixpoint alloc_variables_compute (ge: genv) (e: env) (m: Memory.Mem.mem) (l: list (AST.ident * Ctypes.type)) {struct l}: (env * Memory.Mem.mem) :=
   match l with
@@ -382,7 +382,7 @@ Proof.
   auto.
 Qed.
 
-Require Import List.
+Require Import Coq.Lists.List.
 
 Fixpoint eval_exprlist_exists ge lenv tenv m (l: list Clight.expr) (lt: Ctypes.typelist) (P: list val -> Prop) {struct l} :=
   match l with

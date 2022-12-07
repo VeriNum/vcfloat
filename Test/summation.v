@@ -1,7 +1,7 @@
 From Coq Require Import ZArith Reals Psatz.
 From Flocq Require Import Binary.
 
-Import List ListNotations.
+Import Coq.Lists.List ListNotations.
 
 From vcfloat Require Import VCFloat.
 Require Import Interval.Tactic.

@@ -1,0 +1,36 @@
+(* WARNING: This opam file has not been tested *)
+opam-version: "2.0"
+version: "dev"
+synopsis: "VCFloat: Floating Point Round-off Error Analysis"
+description: "VCFloat is a tool for Coq proofs about floating-point round-off error."
+authors: [
+  "Andrew W. Appel"
+  "Ariel E. Kellison"
+  "Tahina Ramananandro"
+  "Paul Mountcastle"
+  "Benoit Meister"
+  "Richard Lethin"
+]
+maintainer: "Andrew W. Appel"
+homepage: "http://"
+dev-repo: "git+https://github.com/VeriNum/vcfloat"
+bug-reports: "https://github.com/VeriNum/vcfloat/issues"
+license: "LGPL-3.0-or-later"
+
+build: [
+  [make "-j%{jobs}%" "vcfloat2"]
+]
+install: [
+  [make "install" "INSTALLDIR=%{lib}%/coq/user-contrib/vcfloat"]
+]
+run-test: [
+  [make "-j%{jobs}%" "tests"]
+]
+depends: [
+  "coq" {>= "8.14" & < "8.17~"}
+  "coq-compcert" {>= "3.10"}
+  "coq-flocq" {>= "4.1.0" & < "5.0"}
+]
+url {
+  src: "git+https://github.com/VeriNum/vcfloat.git#master"
+}

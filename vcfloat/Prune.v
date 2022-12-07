@@ -3,7 +3,7 @@ Import Raux.
 From Flocq Require Import IEEE754.Binary Zaux.
 Require Import Setoid.
 
-Import List ListNotations.
+Import Coq.Lists.List ListNotations.
 Import Tree. (* must import this _after_ List *)
 Import Interval Private Interval_helper I2 IT2.IH I2.T Xreal Eval.Reify.
 

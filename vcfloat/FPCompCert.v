@@ -260,7 +260,7 @@ Definition opp_nan :=
 
 Module FMA_NAN. 
 (* some of these definitions adapted from [the open-source part of] CompCert  *)
-Import ZArith. Import List.
+Import ZArith. Import Coq.Lists.List.
 
 (** Transform a Nan payload to a quiet Nan payload. *)
 

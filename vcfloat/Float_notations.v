@@ -556,7 +556,7 @@ Check 1e-20.
 Close Scope float32_scope.
 
 Open Scope float64_scope.
-Import List.
+Import Coq.Lists.List.
 
 Check 0.0.
 Check 0.
