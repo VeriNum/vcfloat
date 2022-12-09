@@ -283,6 +283,7 @@ Definition default_nan (t: type) := (fst Archi.default_nan_64, iter_nat (Z.to_na
 Inductive NAN_SCHEME := NAN_SCHEME_ARM | NAN_SCHEME_X86 | NAN_SCHEME_RISCV.
 
 Definition the_nan_scheme : NAN_SCHEME.
+Transparent Archi.choose_nan_64.
 try (unify Archi.choose_nan_64 Archi.default_nan_64; exact NAN_SCHEME_RISCV);
 try (unify Archi.choose_nan_64 (fun l => match l with nil => Archi.default_nan_64 | n::_ => n end);
       exact NAN_SCHEME_X86);
@@ -290,6 +291,7 @@ try (let p := constr:(Archi.choose_nan_64) in
       let p := eval red in p in
       match p with _ (fun p => negb (Pos.testbit p 51)) _ => idtac end;
       exact NAN_SCHEME_ARM).
+Opaque Archi.choose_nan_64.
 Defined.
 
 Definition ARMchoose_nan (is_signaling: positive -> bool) 
