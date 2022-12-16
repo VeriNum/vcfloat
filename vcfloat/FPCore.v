@@ -885,11 +885,16 @@ Ltac compute_float_operation E :=
      This tactic replaces E with its computed value, and in particular
      where the proof  of SpecFloat.bounded is simply (eq_refl true).  *)
            let z := eval hnf in E in
-           match z with B754_finite ?prec ?emax ?s ?m ?e ?H =>
+           lazymatch z with
+           | B754_finite ?prec ?emax ?s ?m ?e ?H =>
              let w := constr:(B754_finite prec emax s m e) in
              let w := eval compute in w in
              let w := constr:(w (eq_refl true)) in
              replace E with w by apply B754_finite_replace_proof
+           | B754_zero ?prec ?emax ?s => 
+                  let w := constr:(B754_zero prec emax s) in 
+                  let w := eval compute in w in
+                   change E with w
            end.
 
 Ltac compute_binary_floats :=

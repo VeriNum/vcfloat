@@ -25,7 +25,7 @@ endif
 install: vcfloat2
 ifndef INSTALLDIR
 # all the "realpath" complexity in the next line is to make it work on cygwin as well as regular unix
-	$(info Perhaps you mean INSTALLDIR=$(shell realpath `coqc -where` | tr -d [:space:])/user-contrib/vcfloat)
+	$(info Perhaps you mean: make install INSTALLDIR=$(shell realpath `coqc -where` | tr -d [:space:])/user-contrib/vcfloat)
 	$(error INSTALLDIR must be set, for make install)
 endif
 	install -d $(INSTALLDIR)

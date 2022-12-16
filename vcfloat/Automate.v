@@ -773,6 +773,22 @@ destruct (rndval_with_cond2 _) as [[r s] p].
 auto.
 Qed.
 
+Ltac compute_fshift_div := 
+    let j := fresh "j" in 
+   set (j := fcval _);
+cbv - [BPLUS BMULT BMINUS BDIV BOPP] in j;
+subst j;
+compute_binary_floats;
+ set (j := fshift _);
+cbv - [BPLUS BMULT BMINUS BDIV BOPP] in j;
+subst j;
+compute_binary_floats;
+set (j := fshift_div _);
+cbv - [BPLUS BMULT BMINUS BDIV BOPP] in j;
+subst j; 
+compute_binary_floats;
+fold Tsingle; fold Tdouble.
+
 Ltac prove_rndval :=
  (* if necessary, convert goal into a prove_rndval'   goal*)
  lazymatch goal with
@@ -783,7 +799,7 @@ Ltac prove_rndval :=
 (*time "1"*) (
  eapply fast_apply_rndval_with_cond_correct3; [reflexivity | intro ]);
 
-(*time "2a"*) (compute_every @fshift_div);
+(*time "2a"*) compute_fshift_div;  (*(compute_every @fshift_div);*)
 
 (*time "2b"*) (
   cbv [rndval_with_cond2 rndval_with_cond'];
