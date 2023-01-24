@@ -7,7 +7,6 @@ Definition BFMA {NAN: Nans} {t: type} : forall (x y z: ftype t), ftype t :=
     Binary.Bfma (fprec t) (femax t) (fprec_gt_0 t)
       (fprec_lt_femax t) (fma_nan t) BinarySingleNaN.mode_NE.
 
-
 (* see https://coq.zulipchat.com/#narrow/stream/237977-Coq-users/topic/RelationPairs.20rewriting.20really.20slow *)
 Global Instance proper_pair1: forall A B RA1 RA2 RB1 RB2 (RA : relation A) (RB : relation B),
     Proper (RA1 ==> RA2 ==> Basics.flip Basics.impl) RA
@@ -225,7 +224,7 @@ apply H; lia.
 Qed.
 
 Lemma BPLUS_BOPP_diag: 
-  forall {NAN: Nans} {t} (x: ftype t), finite x -> BPLUS t x (BOPP t x) = Zconst t 0.
+  forall {NAN: Nans} {t} (x: ftype t), finite x -> BPLUS x (BOPP x) = Zconst t 0.
 Proof.
 intros.
 destruct x,s; inv H; try reflexivity;
@@ -273,14 +272,14 @@ destruct x, s; try discriminate; simpl; auto.
 Qed.
 
 Lemma BPLUS_0_l: forall  {NAN: Nans} {t} x, finite x -> 
-      feq (BPLUS t (Zconst t 0) x) x.
+      feq (BPLUS (Zconst t 0) x) x.
 Proof.
   intros. destruct x; try contradiction;
  destruct s; simpl; auto.
 Qed.
 
 Lemma BPLUS_0_r: forall {NAN: Nans} {t} x, finite x -> 
-      feq (BPLUS t x (Zconst t 0)) x.
+      feq (BPLUS x (Zconst t 0)) x.
 Proof.
   intros. destruct x; try contradiction;
  destruct s; simpl; auto.
@@ -293,7 +292,7 @@ Qed.
 
 Lemma BMULT_congr:
  forall  {NAN: Nans}{t} (x x' y y': ftype t), feq x x' -> feq y y' -> 
-   feq (BMULT t x y) (BMULT t x' y').
+   feq (BMULT x y) (BMULT x' y').
 Proof.
 intros.
 destruct x,x'; inv H; try constructor;
@@ -304,7 +303,7 @@ Qed.
 
 Lemma BMINUS_congr:
  forall  {NAN: Nans}{t} (x x' y y': ftype t), feq x x' -> feq y y' -> 
-   feq (BMINUS t x y) (BMINUS t x' y').
+   feq (BMINUS x y) (BMINUS x' y').
 Proof.
 intros.
 destruct x,x'; inv H; try constructor;
@@ -378,7 +377,7 @@ Proof.
 Qed.
 
 Lemma FMA_one: forall {NAN: Nans}{t} (x y: ftype t),
-  feq (BFMA x y (Zconst t 0)) (BMULT t x y).
+  feq (BFMA x y (Zconst t 0)) (BMULT x y).
 Proof.
 unfold BFMA, BMULT, BINOP.
 intros.
@@ -468,7 +467,7 @@ rewrite <- H; auto. apply IHForall2; auto. rewrite H; auto.
 apply IHForall2; auto.
 Qed.
 
-Add Parametric Morphism {NAN: Nans}{t}: (BPLUS t)
+Add Parametric Morphism {NAN: Nans}{t}: (@BPLUS NAN t)
  with signature feq ==> feq ==> feq
  as BPLUS_mor.
 Proof.
@@ -481,7 +480,7 @@ repeat proof_irr;
 try constructor; auto.
 Qed.
 
-Add Parametric Morphism {NAN: Nans}{t}: (BMINUS t)
+Add Parametric Morphism {NAN: Nans}{t}: (@BMINUS NAN t)
  with signature feq ==> feq ==> feq
  as BMINUS_mor.
 Proof.
@@ -494,7 +493,7 @@ repeat proof_irr;
 try constructor; auto.
 Qed.
 
-Add Parametric Morphism {NAN: Nans}{t}: (BMULT t)
+Add Parametric Morphism {NAN: Nans}{t}: (@BMULT NAN t)
  with signature feq ==> feq ==> feq
  as BMULT_mor.
 Proof.
@@ -507,7 +506,7 @@ repeat proof_irr;
 try constructor; auto.
 Qed.
 
-Add Parametric Morphism {NAN: Nans}{t}: (BDIV t)
+Add Parametric Morphism {NAN: Nans}{t}: (@BDIV NAN t)
  with signature feq ==> strict_feq ==> feq
  as BDIV_mor.
 Proof.
@@ -521,7 +520,7 @@ try constructor;
 reflexivity.
 Qed.
 
-Add Parametric Morphism {t}: (BCMP t) 
+Add Parametric Morphism {t}: (@BCMP t) 
  with signature eq ==> eq ==> strict_feq ==> strict_feq ==> eq
  as BCMP_mor.
 Proof.

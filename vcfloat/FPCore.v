@@ -762,19 +762,25 @@ Definition BINOP (op: ltac:( let t := type of Bplus in exact t ) ) op_nan ty
 
 Definition BPLUS := BINOP Bplus plus_nan.
 Definition BMINUS := BINOP Bminus plus_nan. (* NOTE: must be same as the one used for plus *)
+
 Definition BMULT := BINOP Bmult mult_nan.
 Definition BDIV := BINOP Bdiv div_nan.
-Definition BABS ty := Babs _ (femax ty) (abs_nan ty).
-Definition BOPP ty := Bopp _ (femax ty) (opp_nan ty).
-
+Definition BABS {ty} := Babs _ (femax ty) (abs_nan ty).
+Definition BOPP {ty} := Bopp _ (femax ty) (opp_nan ty).
 
 Definition UNOP (op: ltac:( let t := type of Bsqrt in exact t ) ) op_nan ty 
     : ftype ty -> ftype ty
     := op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (op_nan ty) BinarySingleNaN.mode_NE.
 
 Definition BSQRT :=  UNOP Bsqrt sqrt_nan.
+Arguments BSQRT {ty}.
 
 End WITHNANS.
+
+Arguments BPLUS {NANS ty}.
+Arguments BMINUS {NANS ty}.
+Arguments BMULT {NANS ty}.
+Arguments BDIV {NANS ty}.
 
 Definition Norm {T} (x: T) := x.
 Definition Denorm {T} (x: T) := x.
@@ -807,32 +813,32 @@ Definition extend_comp (c: comparison) (b: bool) (d: option comparison) :=
  end
  end.
 
-Definition BCMP (ty: type) (c: comparison) (b: bool) (x y: ftype ty) :=
+Definition BCMP {ty: type} (c: comparison) (b: bool) (x y: ftype ty) :=
   extend_comp c b (Binary.Bcompare (fprec ty) (femax ty) x y).
 
-Notation "x + y" := (BPLUS Tsingle x y) (at level 50, left associativity) : float32_scope.
-Notation "x - y"  := (BMINUS Tsingle x y) (at level 50, left associativity) : float32_scope.
-Notation "x * y"  := (BMULT Tsingle x y) (at level 40, left associativity) : float32_scope.
-Notation "x / y"  := (BDIV Tsingle x y) (at level 40, left associativity) : float32_scope.
-Notation "- x" := (BOPP Tsingle x) (at level 35, right associativity) : float32_scope.
-Notation "x <= y" := (BCMP Tsingle Gt false x y) (at level 70, no associativity) : float32_scope. 
-Notation "x < y" := (BCMP Tsingle Gt true y x) (at level 70, no associativity) : float32_scope. 
-Notation "x >= y" := (BCMP Tsingle Lt false x y) (at level 70, no associativity) : float32_scope. 
-Notation "x > y" := (BCMP Tsingle Gt true x y) (at level 70, no associativity) : float32_scope. 
+Notation "x + y" := (@BPLUS _ Tsingle x y) (at level 50, left associativity) : float32_scope.
+Notation "x - y"  := (@BMINUS _ Tsingle x y) (at level 50, left associativity) : float32_scope.
+Notation "x * y"  := (@BMULT _ Tsingle x y) (at level 40, left associativity) : float32_scope.
+Notation "x / y"  := (@BDIV _ Tsingle x y) (at level 40, left associativity) : float32_scope.
+Notation "- x" := (@BOPP _ Tsingle x) (at level 35, right associativity) : float32_scope.
+Notation "x <= y" := (@BCMP Tsingle Gt false x y) (at level 70, no associativity) : float32_scope. 
+Notation "x < y" := (@BCMP Tsingle Gt true y x) (at level 70, no associativity) : float32_scope. 
+Notation "x >= y" := (@BCMP Tsingle Lt false x y) (at level 70, no associativity) : float32_scope. 
+Notation "x > y" := (@BCMP Tsingle Gt true x y) (at level 70, no associativity) : float32_scope. 
 Notation "x <= y <= z" := (x <= y /\ y <= z)%F32 (at level 70, y at next level) : float32_scope.
 Notation "x <= y < z" := (x <= y /\ y < z)%F32 (at level 70, y at next level) : float32_scope.
 Notation "x < y < z" := (x < y /\ y < z)%F32 (at level 70, y at next level) : float32_scope.
 Notation "x < y <= z" := (x < y /\ y <= z)%F32 (at level 70, y at next level) : float32_scope.
 
-Notation "x + y" := (BPLUS Tdouble x y) (at level 50, left associativity) : float64_scope.
-Notation "x - y"  := (BMINUS Tdouble x y) (at level 50, left associativity) : float64_scope.
-Notation "x * y"  := (BMULT Tdouble x y) (at level 40, left associativity) : float64_scope.
-Notation "x / y"  := (BDIV Tdouble x y) (at level 40, left associativity) : float64_scope.
-Notation "- x" := (BOPP Tdouble x) (at level 35, right associativity) : float64_scope.
-Notation "x <= y" := (BCMP Tdouble Gt false x y) (at level 70, no associativity) : float64_scope. 
-Notation "x < y" := (BCMP Tdouble Gt true y x) (at level 70, no associativity) : float64_scope. 
-Notation "x >= y" := (BCMP Tdouble Lt false x y) (at level 70, no associativity) : float64_scope. 
-Notation "x > y" := (BCMP Tdouble Gt true x y) (at level 70, no associativity) : float64_scope. 
+Notation "x + y" := (@BPLUS _ Tdouble x y) (at level 50, left associativity) : float64_scope.
+Notation "x - y"  := (@BMINUS _ Tdouble x y) (at level 50, left associativity) : float64_scope.
+Notation "x * y"  := (@BMULT _ Tdouble x y) (at level 40, left associativity) : float64_scope.
+Notation "x / y"  := (@BDIV _ Tdouble x y) (at level 40, left associativity) : float64_scope.
+Notation "- x" := (@BOPP _ Tdouble x) (at level 35, right associativity) : float64_scope.
+Notation "x <= y" := (@BCMP Tdouble Gt false x y) (at level 70, no associativity) : float64_scope. 
+Notation "x < y" := (@BCMP Tdouble Gt true y x) (at level 70, no associativity) : float64_scope. 
+Notation "x >= y" := (@BCMP Tdouble Lt false x y) (at level 70, no associativity) : float64_scope. 
+Notation "x > y" := (@BCMP Tdouble Gt true x y) (at level 70, no associativity) : float64_scope. 
 Notation "x <= y <= z" := (x <= y /\ y <= z)%F64 (at level 70, y at next level) : float64_scope.
 Notation "x <= y < z" := (x <= y /\ y < z)%F64 (at level 70, y at next level) : float64_scope.
 Notation "x < y < z" := (x < y /\ y < z)%F64 (at level 70, y at next level) : float64_scope.
@@ -954,20 +960,20 @@ end; simpl FF2B);
 Import Float_notations.
 
 Local Lemma test_compute_binary_floats {NANS: Nans}:
-  (BPLUS Tsingle 1.5 3.5 = BDIV Tsingle 10.0 2)%F32.
+  (@BPLUS _ Tsingle 1.5 3.5 = @BDIV _ Tsingle 10.0 2)%F32.
 Proof. compute_binary_floats. auto. Qed.
 
 Definition Zconst (t: type) : Z -> ftype t :=
   BofZ (fprec t) (femax t) (Pos2Z.is_pos (fprecp t)) (fprec_lt_femax t).
 
 Lemma BPLUS_commut {NANS: Nans}: forall t a b, 
-    plus_nan t a b = plus_nan t b a -> BPLUS t a b = BPLUS t b a.
+    plus_nan t a b = plus_nan t b a -> BPLUS a b = BPLUS b a.
 Proof.
 intros. apply Bplus_commut; auto.
 Qed.
 
 Lemma BMULT_commut {NANS: Nans}: forall t a b, 
-    mult_nan t a b = mult_nan t b a -> BMULT t a b = BMULT t b a.
+    mult_nan t a b = mult_nan t b a -> BMULT a b = BMULT b a.
 Proof.
 intros. apply Bmult_commut; auto.
 Qed.

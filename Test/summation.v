@@ -20,7 +20,7 @@ Inductive sum_rel {A : Type} (default: A) (sum_op : A -> A -> A) : list A -> A -
     sum_rel default sum_op l s ->
     sum_rel default sum_op (a::l) (sum sum_op a s).
 
-Definition sum_rel_F := @sum_rel (ftype Tsingle) (-0)%F32 (BPLUS Tsingle).
+Definition sum_rel_F := @sum_rel (ftype Tsingle) (-0)%F32 (@BPLUS _ Tsingle).
 Definition sum_rel_R := @sum_rel R 0%R Rplus.
 
 
@@ -166,7 +166,7 @@ Definition bmap : boundsmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list bmap_list) in exact z).
 
 Definition sum_expr {ty} (a b : ftype ty) := ltac :( let e' :=
-  HO_reify_float_expr constr:([_a; _b]) (BPLUS ty) in exact e').
+  HO_reify_float_expr constr:([_a; _b]) (@BPLUS _ ty) in exact e').
 
 Lemma real_lt_1 :
 forall a b c,
@@ -242,7 +242,7 @@ Qed.
 
 Lemma reflect_reify_sumF : 
   forall a b,
-  fval (env_ (vmap a b)) (@sum_expr Tsingle a b) = sum (BPLUS Tsingle)  a b .
+  fval (env_ (vmap a b)) (@sum_expr Tsingle a b) = sum (@BPLUS _ Tsingle)  a b .
 Proof. reflexivity. Qed.
 
 Lemma reflect_reify_sumR : 
@@ -257,7 +257,7 @@ Lemma prove_rndoff:
   let d := / IZR (2 ^ 24) in
       let ov := powerRZ 2 (femax Tsingle) in
   Rabs (FT2R a + FT2R b) <= (ov - 2 * e) / (1 + d) -> 
-      Rabs ( FT2R a + FT2R b - FT2R (BPLUS Tsingle a b)) <=
+      Rabs ( FT2R a + FT2R b - FT2R (BPLUS a b)) <=
      (Rabs ( FT2R a + FT2R b) * d + e).
 Proof.
 intros  ? ?   BMD  ? ? H1 H2.
@@ -276,10 +276,10 @@ auto.
 Qed.
 
 
-Lemma rewrite_Rabs_triang a b a' b': 
-Rabs((a + b) - FT2R ((BPLUS Tsingle) a' b')) <= 
+Lemma rewrite_Rabs_triang a b (a' b': ftype Tsingle): 
+Rabs((a + b) - FT2R (BPLUS a' b')) <= 
   Rabs((a + b) - (FT2R a' + FT2R b')) + 
-  Rabs((FT2R a' + FT2R b') - FT2R ((BPLUS Tsingle) a' b')).
+  Rabs((FT2R a' + FT2R b') - FT2R (BPLUS a' b')).
 Proof.
 eapply Rle_trans; [ | apply Rabs_triang].
 eapply Req_le.

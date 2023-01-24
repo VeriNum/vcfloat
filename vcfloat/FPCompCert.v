@@ -379,41 +379,41 @@ Qed.
 (** Why do we need this rewrite hint database?
    You might think that all of this could be accomplished with "change"
    instead of "rewrite".  But if you do that, then Qed takes forever. *)
-Lemma Float32_add_rewrite: Float32.add = BPLUS Tsingle.  
+Lemma Float32_add_rewrite: Float32.add = @BPLUS _ Tsingle.  
 Proof. reflexivity. Qed.
 #[export] Hint Rewrite Float32_add_rewrite : float_elim.
-Lemma Float32_sub_rewrite: Float32.sub = BMINUS Tsingle.  
+Lemma Float32_sub_rewrite: Float32.sub = @BMINUS _ Tsingle.  
 Proof. reflexivity. Qed.
 #[export] Hint Rewrite Float32_sub_rewrite : float_elim.
-Lemma Float32_mul_rewrite: Float32.mul = BMULT Tsingle.  
+Lemma Float32_mul_rewrite: Float32.mul = @BMULT _ Tsingle.  
 Proof. reflexivity. Qed.
 #[export] Hint Rewrite Float32_mul_rewrite : float_elim.
-Lemma Float32_div_rewrite: Float32.div = BDIV Tsingle.  
+Lemma Float32_div_rewrite: Float32.div = @BDIV _ Tsingle.  
 Proof. reflexivity. Qed.
 #[export] Hint Rewrite Float32_div_rewrite : float_elim.
-Lemma Float32_neg_rewrite: Float32.neg = BOPP Tsingle.  
+Lemma Float32_neg_rewrite: Float32.neg = @BOPP _ Tsingle.  
 Proof. reflexivity. Qed.
 #[export] Hint Rewrite Float32_neg_rewrite : float_elim.
-Lemma Float32_abs_rewrite: Float32.abs = BABS Tsingle.  
+Lemma Float32_abs_rewrite: Float32.abs = @BABS _ Tsingle.  
 Proof. reflexivity. Qed.
 #[export] Hint Rewrite Float32_abs_rewrite : float_elim.
 
-Lemma Float_add_rewrite: Float.add = BPLUS Tdouble.  
+Lemma Float_add_rewrite: Float.add = @BPLUS _ Tdouble.  
 Proof. reflexivity. Qed.
 #[export] Hint Rewrite Float_add_rewrite : float_elim.
-Lemma Float_sub_rewrite: Float.sub = BMINUS Tdouble.  
+Lemma Float_sub_rewrite: Float.sub = @BMINUS _ Tdouble.  
 Proof. reflexivity. Qed.
 #[export] Hint Rewrite Float_sub_rewrite : float_elim.
-Lemma Float_mul_rewrite: Float.mul = BMULT Tdouble.  
+Lemma Float_mul_rewrite: Float.mul = @BMULT _ Tdouble.  
 Proof. reflexivity. Qed.
 #[export] Hint Rewrite Float_mul_rewrite : float_elim.
-Lemma Float_div_rewrite: Float.div = BDIV Tdouble.  
+Lemma Float_div_rewrite: Float.div = @BDIV _ Tdouble.  
 Proof. reflexivity. Qed.
 #[export] Hint Rewrite Float_div_rewrite : float_elim.
-Lemma Float_neg_rewrite: Float.neg = BOPP Tdouble.  
+Lemma Float_neg_rewrite: Float.neg = @BOPP _ Tdouble.  
 Proof. reflexivity. Qed.
 #[export] Hint Rewrite Float_neg_rewrite : float_elim.
-Lemma Float_abs_rewrite: Float.abs = BABS Tdouble.  
+Lemma Float_abs_rewrite: Float.abs = @BABS _ Tdouble.  
 Proof. reflexivity. Qed.
 #[export] Hint Rewrite Float_abs_rewrite : float_elim.
 
