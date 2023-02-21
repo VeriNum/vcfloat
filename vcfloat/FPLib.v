@@ -429,7 +429,7 @@ intros.
 destruct x,y; inv H; constructor; auto.
 Qed.
 
-Lemma BMFA_finite_e {NAN: Nans} {t: type}:
+Lemma BFMA_finite_e {NAN: Nans} {t: type}:
  forall x y z : ftype t,
  finite (BFMA x y z) ->
  finite x /\ finite y /\ finite z.
