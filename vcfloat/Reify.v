@@ -43,35 +43,35 @@ Ltac reify_float_expr E :=
  | placeholder32 ?i => constr:(@Var ident Tsingle i)
  | placeholder ?ty ?i => constr:(@Var ident ty i)
  | Zconst ?t ?z => constr:(@Const ident t (Zconst t z))
- | BPLUS _ ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | BPLUS ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident (Rounded2 PLUS None) a' b')
- | Norm (BPLUS _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Norm (BPLUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident (Rounded2 PLUS (Some Normal)) a' b')
- | Denorm (BPLUS _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Denorm (BPLUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident (Rounded2 PLUS (Some Denormal)) a' b')
- | BMINUS _ ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | BMINUS ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident (Rounded2 MINUS None) a' b')
- | Norm (BMINUS _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Norm (BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident (Rounded2 MINUS (Some Normal)) a' b')
- | Denorm (BMINUS _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Denorm (BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident (Rounded2 MINUS (Some Denormal)) a' b')
- | BMULT _ ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | BMULT ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident (Rounded2 MULT None) a' b')
- | Norm (BMULT _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Norm (BMULT ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident (Rounded2 MULT (Some Normal)) a' b')
- | Denorm (BMULT _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Denorm (BMULT ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident (Rounded2 MULT (Some Denormal)) a' b')
- | BDIV _ ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | BDIV ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident (Rounded2 DIV None) a' b')
- | Norm (BDIV _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Norm (BDIV ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident (Rounded2 DIV (Some Normal)) a' b')
- | Denorm (BDIV _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Denorm (BDIV ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident (Rounded2 DIV (Some Denormal)) a' b')
- | BOPP _ ?a => let a' := reify_float_expr a in 
+ | BOPP ?a => let a' := reify_float_expr a in 
                                       constr:(@Unop ident (Exact1 Opp) a')
- | BABS _ ?a => let a' := reify_float_expr a in 
+ | BABS ?a => let a' := reify_float_expr a in 
                                       constr:(@Unop ident (Exact1 Abs) a')
- | BSQRT _ ?a => let a' := reify_float_expr a in 
+ | BSQRT ?a => let a' := reify_float_expr a in 
                                       constr:(@Unop ident (Rounded1 SQRT) a')
  | @cast _ Tsingle Tdouble ?f => let f':= reify_float_expr f in 
                                       constr:(@Unop ident (CastTo Tdouble None) f')
@@ -86,13 +86,12 @@ Ltac reify_float_expr E :=
  | b64_B754_finite _ _ _ _ => constr:(@Const ident Tdouble E)
  | b32_B754_finite _ _ _ _ => constr:(@Const ident Tsingle E)
  | b64_B754_finite _ _ _ _ => constr:(@Const ident Tdouble E)
- | Sterbenz (BMINUS _ ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Sterbenz (BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(@Binop ident SterbenzMinus a' b')
                                   
  | _ => let E' := eval red in E in reify_float_expr E'
  | _ => fail 100 "could not reify bot" E
  end.
-
 
 Ltac HO_reify_float_expr names E :=
          lazymatch names with

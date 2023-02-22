@@ -224,10 +224,10 @@ Definition fop_of_rounded_binop (r: rounded_binop):
     binary_float (fprec ty) (femax ty)
   :=
     match r with
-      | PLUS => BPLUS
-      | MINUS => BMINUS
-      | MULT => BMULT
-      | DIV => BDIV
+      | PLUS => @BPLUS _
+      | MINUS => @BMINUS _
+      | MULT => @BMULT _
+      | DIV => @BDIV _
     end.
 
 Definition fop_of_binop (r: binop):
@@ -238,8 +238,8 @@ Definition fop_of_binop (r: binop):
   :=
     match r with
       | Rounded2 r _ => fop_of_rounded_binop r
-      | SterbenzMinus => BMINUS
-      | PlusZero minus zero_left => if minus then BMINUS else BPLUS
+      | SterbenzMinus => @BMINUS _
+      | PlusZero minus zero_left => if minus then @BMINUS _ else @BPLUS _
     end.
 
 Definition fop_of_rounded_unop (r: rounded_unop):
@@ -251,21 +251,21 @@ Definition fop_of_rounded_unop (r: rounded_unop):
       | SQRT => Bsqrt
       | InvShift n b => 
         if b
-        then (fun ty x => BMULT ty x (B2 ty (- Z.pos n)))
-        else (fun ty => BMULT ty (B2 ty (- Z.pos n)))
+        then (fun ty x => @BMULT _ ty x (B2 ty (- Z.pos n)))
+        else (fun ty => @BMULT _ ty (B2 ty (- Z.pos n)))
     end.
 
 Definition fop_of_exact_unop (r: exact_unop)
   := 
     match r with
-      | Abs => BABS
-      | Opp => BOPP
+      | Abs => @BABS _
+      | Opp => @BOPP _
       | Shift n b =>
         if b
         then
-          (fun ty x => BMULT ty x (B2 ty (Z.of_N n)))
+          (fun ty x => @BMULT _ ty x (B2 ty (Z.of_N n)))
         else
-          (fun ty => BMULT ty (B2 ty (Z.of_N n)))
+          (fun ty => @BMULT _ ty (B2 ty (Z.of_N n)))
     end.
 
 Definition fop_of_unop (r: unop):

@@ -235,7 +235,7 @@ Proof.
 Qed.
 
 Definition B2 ty e := FF2B_gen (fprec ty) (femax ty) (F2 (fprecp ty) (femax ty) e).
-Definition B2_opp ty e := BOPP ty (B2 ty e).
+Definition B2_opp ty e := BOPP (B2 ty e).
 
 Lemma B2_finite ty e:
   (e + 1 <= femax ty)%Z ->

@@ -868,7 +868,7 @@ Import Binary.
 Lemma binary_float_equiv_BDIV ty (b1 b2 b3 b4: binary_float (fprec ty) (femax ty)):
 binary_float_equiv b1 b2 ->
 binary_float_equiv b3 b4 ->
-binary_float_equiv (BDIV ty b1 b3) (BDIV ty b2 b4).
+binary_float_equiv (BDIV b1 b3) (BDIV b2 b4).
 Proof.
 intros.
 destruct b1.
@@ -876,7 +876,7 @@ all : (destruct b3; destruct b4; try contradiction; try discriminate).
 all :
 match goal with 
   |- context [
-binary_float_equiv (BDIV ?ty ?a ?b)
+binary_float_equiv (BDIV ?a ?b)
  _] =>
 match a with 
 | B754_nan _ _ _ _ _ => destruct b2; try contradiction; try discriminate;
