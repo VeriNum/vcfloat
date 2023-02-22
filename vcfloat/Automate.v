@@ -206,8 +206,8 @@ Definition valmap_of_list (vl: list (ident * sigT ftype)) : valmap :=
 
 Definition shiftmap := Maps.PMap.t (type * rounding_knowledge').
 
-#[export] Instance shifts_MAP: Map positive (type * rounding_knowledge') shiftmap :=
-   compcert_map _ _ map_pos.
+#[export] Instance shifts_MAP: Map (type * rounding_knowledge') shiftmap :=
+   compcert_map  _.
 
 Definition env_ (tenv: valmap) ty (v: ident): ftype ty :=
   match Maps.PTree.get v tenv with Some (existT _ t x) =>
@@ -288,7 +288,7 @@ simpl in *. rewrite H0. auto.
 Qed.
 
 Definition eval_cond' (s : shiftmap) (c: cond) (env: environ) : Prop :=
-  @eval_cond2 ident _ shifts_MAP _ (compcert_map _ R map_pos) env s c.
+  @eval_cond2 ident _ shifts_MAP _ (compcert_map R) env s c.
 
 Definition rndval_with_cond2 (e: expr) : rexpr * shiftmap * list (environ -> Prop) :=
  let '((r,(si,s)),p) := rndval_with_cond' 1 empty_shiftmap e
@@ -362,7 +362,7 @@ Ltac invert_rndval_with_cond' :=
             compcert_map Maps.PMap.set Maps.PMap.init
             Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
               Maps.PTree.set0 Pos.of_succ_nat Pos.succ
-            index_of_tr map_pos fst snd] in s';
+             fst snd] in s';
 
      subst r'; subst s'; subst l'
   end;
@@ -457,7 +457,7 @@ Ltac process_eval_cond' :=  (* THIS IS NOW OBSOLETE AND UNUSED *)
  cbv beta iota zeta delta [eval_cond' eval_cond2]; set (aa := MSET.elements _); cbv in aa; subst aa;
  cbv [enum_forall enum_forall'];
  cbv [mget shifts_MAP compcert_map Maps.PMap.get Maps.PTree.get fst snd Maps.PTree.get'
-    index_of_tr map_pos  Pos.succ]);
+      Pos.succ]);
 
  (* time "process_eval_cond'_repeat1" *)
   repeat 
@@ -474,7 +474,7 @@ Ltac process_eval_cond' :=  (* THIS IS NOW OBSOLETE AND UNUSED *)
             compcert_map Maps.PMap.set Maps.PMap.init
             Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
               Maps.PTree.set0 Pos.of_succ_nat Pos.succ
-            index_of_tr map_pos fst snd reval
+             fst snd reval
      Prog.binary Prog.unary Prog.real_operations
    Tree.binary_real Tree.unary_real
   ];
@@ -732,7 +732,7 @@ Ltac solve_Forall_conds:=
             compcert_map Maps.PMap.set Maps.PMap.init
             Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
               Maps.PTree.set0 Pos.of_succ_nat Pos.succ
-            index_of_tr map_pos fst snd
+             fst snd
 
           rndval_with_cond' rnd_of_binop_with_cond
           rnd_of_unop_with_cond is_div
@@ -809,7 +809,7 @@ Ltac prove_rndval :=
             compcert_map Maps.PMap.set Maps.PMap.init
             Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
               Maps.PTree.set0 Pos.of_succ_nat Pos.succ
-            index_of_tr map_pos fst snd
+             fst snd
           rnd_of_cast_with_cond
           rndval_with_cond' rnd_of_binop_with_cond
           rnd_of_unop_with_cond is_div
@@ -832,12 +832,11 @@ Ltac prove_rndval :=
 (*time "4"*)
    ( cbv [enum_forall enum_forall'
          mget shifts_MAP compcert_map Maps.PMap.get Maps.PTree.get fst snd Maps.PTree.get'
-        index_of_tr map_pos 
             mset shifts_MAP empty_shiftmap mempty
             compcert_map Maps.PMap.set Maps.PMap.init
             Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
               Maps.PTree.set0 Pos.of_succ_nat Pos.succ
-            index_of_tr fst snd reval
+            fst snd reval
          Prog.binary Prog.unary Prog.real_operations
          Tree.binary_real Tree.unary_real ];
   repeat change (B2R (fprec ?t) _ ?x) with (@FT2R t x);

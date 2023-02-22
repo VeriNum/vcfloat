@@ -1,6 +1,7 @@
 From Coq Require Import ZArith Reals Psatz.
 From Flocq Require Import Binary.
 
+From vcfloat Require Import IEEE754_extra.
 Import Coq.Lists.List ListNotations.
 
 Require Import vcfloat.VCFloat.
@@ -114,8 +115,6 @@ apply Rabs_pos.
 apply Req_le.
 eapply sum_rel_R_Rabs_eq; apply H3.
 Qed.
-
-From vcfloat Require Import IEEE754_extra.
 
 Lemma plus_zero a:
 is_finite _ _ a = true -> 

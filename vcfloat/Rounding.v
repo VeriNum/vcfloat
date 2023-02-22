@@ -71,18 +71,23 @@ Local Open Scope R_scope.
 
 Module MSET := MSetAVL.Make(Pos).
 
-Class Map (T U M: Type): Type :=
+Class Map (U M: Type): Type :=
   {
     mget: M -> positive -> U;
     mset: M -> positive -> U -> M;
     mempty: U -> M;
-    mget_set: forall m_T_eq_dec: forall t1 t2: positive, {t1 = t2} + {t1 <> t2}, forall
+    mget_set: forall
                      m t t' u,
-                mget (mset m t u) t' = if m_T_eq_dec t' t then u else mget m t';
+                mget (mset m t u) t' = if Pos.eq_dec t' t then u else mget m t';
     mget_empty: forall t u, mget (mempty u) t = u
   }.
+(*
+(*Maps.PMap.t U*)
+Search Maps.PMap.t.
+Definition mempty {U} (default: U) := (Maps.PMap.empty U.
+*)
 
-Lemma finite_errors_ex {T M} {MAP: Map positive T M}  (t: T) n:
+Lemma finite_errors_ex {U M} {MAP: Map U M}  (t: U) n:
   forall errors,
   exists m,
     forall i,
@@ -101,7 +106,7 @@ Proof.
   destruct IHk.
   exists (mset x (Pos.pred n) (errors (Pos.pred n))).
   intros.
-  rewrite (mget_set Pos.eq_dec).
+  rewrite mget_set.
   rewrite H.
   destruct (Pos.eq_dec _ _). subst.
   destruct (Pos.ltb_spec (Pos.pred n) n); try lia. auto.
@@ -109,64 +114,25 @@ Proof.
   destruct (Pos.ltb_spec i (Pos.pred n)); auto; lia.
 Qed.  
 
-Section COMPCERTMAPS.
-
-Class MapIndex (T: Type): Type :=
-  {
-    index_of_tr: T -> positive;
-    index_of_tr_correct:
-      forall tr1 tr2,
-        (tr1 = tr2) <-> (index_of_tr tr1 = index_of_tr tr2)
-  }.
-
 Local Program Instance compcert_map:
-  forall T U, MapIndex T -> Map T U (Maps.PMap.t U) :=
+  forall U, Map U (Maps.PMap.t U) :=
   {
-    mget m t := Maps.PMap.get (index_of_tr t) m;
-    mset m t u := Maps.PMap.set (index_of_tr t) u m;
+    mget m t := Maps.PMap.get t m;
+    mset m t u := Maps.PMap.set t u m;
     mempty := @Maps.PMap.init _
   }.
 Solve Obligations with (intros; try apply Maps.PMap.gi). 
    (* Need this line for compatibility with CompCert 3.9 and before and/or Coq 8.13 and before *)
 Next Obligation.
     rewrite Maps.PMap.gsspec.
-    destruct (Coqlib.peq (index_of_tr t') (index_of_tr t)).
-    {
-      rewrite <- index_of_tr_correct in e.
-      destruct (m_T_eq_dec t' t); congruence.
-    }
-    rewrite <- index_of_tr_correct in n.
-    destruct (m_T_eq_dec t' t); congruence.
+    destruct (Coqlib.peq t' t); destruct (Pos.eq_dec t' t); congruence.
 Defined.
-
-End COMPCERTMAPS.
-
-Section I_OF_TR.
 
 Lemma some_eq {U} (u1 u2: U):
   (u1 = u2 <-> Some u1 = Some u2).
 Proof.
   intuition congruence.
 Qed.
-
-Local Program Instance index_of_option T:
-  MapIndex T ->
-  MapIndex (option T) :=
-  {
-    index_of_tr := fun o =>
-      match o with
-        | None => xH
-        | Some t => xI (index_of_tr t)
-      end
-  }.
-Next Obligation.
-  destruct tr1; destruct tr2; try intuition congruence.
-  generalize (index_of_tr_correct t t0).
-  rewrite <- some_eq.
-  intro K.
-  rewrite K.
-  intuition congruence.
-Defined.
 
 Fixpoint inj_pair_aux (a: positive) (b: positive) {struct a}: positive :=
   match a with
@@ -274,24 +240,6 @@ Proof.
   intuition congruence.
 Qed.
 
-Local Program Instance index_of_pair U V:
-  MapIndex U ->
-  MapIndex V ->
-  MapIndex (U * V) :=
-  {
-    index_of_tr := fun uv =>
-                     let '(u, v) := uv in
-                     inj_pair (index_of_tr u) (index_of_tr v)
-  }.
-Next Obligation.
-  rewrite <- inj_pair_correct.
-  repeat rewrite <- inject_pair_iff.
-  repeat rewrite <- index_of_tr_correct.
-  tauto.
-Defined.
-
-End I_OF_TR.
-
 Section WITHVAR.
 
 Context `{VAR: VarType}.
@@ -344,7 +292,7 @@ Qed.
 
 Section WITHMAP.
 
-Context {MSHIFT} {MAP: Map positive (type * rounding_knowledge') MSHIFT}.
+Context {MSHIFT} {MAP: Map (type * rounding_knowledge') MSHIFT}.
 
 Definition make_rounding
            (si: positive)
@@ -422,12 +370,12 @@ Proof.
   unfold make_rounding.
   destruct kn.
   inversion 1; subst; intros.
-  repeat rewrite (mget_set Pos.eq_dec).
+  repeat rewrite mget_set.
   destruct (Pos.eq_dec i (Pos.succ si)); auto;
   destruct (Pos.eq_dec i si); auto;
   try (exfalso; lia).
 all: try (    inversion 1; subst; intros;
-    rewrite (mget_set Pos.eq_dec);
+    rewrite mget_set;
     destruct (Pos.eq_dec i si); auto;
     exfalso; lia).
 Qed.
@@ -541,7 +489,7 @@ destruct kn as [ [ | ] | ]; unfold round_knowl_denote in H2.
   * inversion H; clear H; subst.
     simpl reval.
     intros until i.
-    rewrite (mget_set Pos.eq_dec).
+    rewrite mget_set.
     intros.
     unfold errors2.
     destruct (Pos.eq_dec i si); auto.
@@ -561,7 +509,7 @@ destruct kn as [ [ | ] | ]; unfold round_knowl_denote in H2.
    -- intros; unfold errors2; destruct (Pos.eq_dec i si); auto; lia.
   * inversion H; clear H; subst. simpl reval.
      intros until i.
-     rewrite (mget_set Pos.eq_dec).
+     rewrite mget_set.
      intros.
      unfold errors2.
      destruct (Pos.eq_dec i si); auto.
@@ -596,7 +544,7 @@ destruct kn as [ [ | ] | ]; unfold round_knowl_denote in H2.
    inversion H; clear H; subst.
     simpl reval.
   intros until i.
-  repeat rewrite (mget_set Pos.eq_dec).
+  repeat rewrite mget_set.
   intros.
   unfold errors2.
   destruct (Pos.eq_dec i (Pos.succ si)).
@@ -1070,7 +1018,7 @@ Proof.
   apply Pos.le_max_r.
 Qed.
 
-Context {MSHIFT'} {MAP': Map positive R MSHIFT'}.
+Context {MSHIFT'} {MAP': Map R MSHIFT'}.
 
 Export List.
 
@@ -1116,7 +1064,7 @@ Proof.
     eapply H.
     2: eapply H1; eauto.
     intros.
-    repeat rewrite (mget_set Pos.eq_dec).
+    repeat rewrite mget_set.
     destruct (Pos.eq_dec i a); auto.
     destruct H3; try congruence.
     auto.
@@ -1126,14 +1074,14 @@ Proof.
     apply H0; intros.
     apply H2.
     intros.
-    repeat rewrite (mget_set Pos.eq_dec).
+    repeat rewrite mget_set.
     destruct (Pos.eq_dec i a); auto.
     congruence.
   }
   eapply H.
   2: eapply H1 with (u := mget errors a); eauto.
   intros.
-  repeat rewrite (mget_set Pos.eq_dec).
+  repeat rewrite mget_set.
   destruct (Pos.eq_dec i a); subst; auto.
 Qed.
 
@@ -1948,7 +1896,7 @@ subst errors2.
 simpl.
 intros.
 subst s; simpl in H.
-rewrite (mget_set Pos.eq_dec) in H.
+rewrite mget_set in H.
 destruct (Pos.eq_dec i si1). inversion H; clear H; subst.
  +
   unfold error_bound.
@@ -2831,31 +2779,5 @@ Qed.
 End WITHMAP.
 
 End WITHVAR.
-
-Local Program Instance map_nat: MapIndex nat :=
-  {
-    index_of_tr := Pos.of_succ_nat
-  }.
-Next Obligation.
-  generalize SuccNat2Pos.inj_iff.
-  clear.
-  firstorder.
-Defined.
-
-Local Program Instance map_pos: MapIndex positive :=
-  {
-    index_of_tr := fun x => x
-  }.
-Next Obligation.
-  tauto.
-Defined.
-
-Local Existing Instances compcert_map.
-
-(*
-Definition sqrt_of_two : @expr positive := Unop (Rounded1 SQRT None) (Const Tsingle (B2 _ 0)).
-Eval simpl in rndval 1 (Maps.PMap.init 1) sqrt_of_two.
-(*Eval compute in rndval_with_cond sqrt_of_two.*)
-*)
 
 
