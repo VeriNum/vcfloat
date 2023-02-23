@@ -71,23 +71,21 @@ Local Open Scope R_scope.
 
 Module MSET := MSetAVL.Make(Pos).
 
-Class Map (U M: Type): Type :=
-  {
-    mget: M -> positive -> U;
-    mset: M -> positive -> U -> M;
-    mempty: U -> M;
-    mget_set: forall
-                     m t t' u,
-                mget (mset m t u) t' = if Pos.eq_dec t' t then u else mget m t';
-    mget_empty: forall t u, mget (mempty u) t = u
-  }.
-(*
-(*Maps.PMap.t U*)
-Search Maps.PMap.t.
-Definition mempty {U} (default: U) := (Maps.PMap.empty U.
-*)
+Definition mget {U} (m: Maps.PMap.t U) t := Maps.PMap.get t m.
+Definition mset {U} m t (u: U) := Maps.PMap.set t u m.
+Definition mempty {U} := @Maps.PMap.init U.
+Lemma mget_set {U}: forall m t t' (u: U),
+                mget (mset m t u) t' = if Pos.eq_dec t' t then u else mget m t'.
+Proof. intros.
+   unfold mget, mset.
+    rewrite Maps.PMap.gsspec.
+    destruct (Coqlib.peq t' t); destruct (Pos.eq_dec t' t); congruence.
+Qed.
 
-Lemma finite_errors_ex {U M} {MAP: Map U M}  (t: U) n:
+Lemma mget_empty {U}: forall t (u: U), mget (mempty u) t = u.
+Proof. intros. apply Maps.PMap.gi. Qed.
+
+Lemma finite_errors_ex {U}  (t: U) n:
   forall errors,
   exists m,
     forall i,
@@ -113,132 +111,6 @@ Proof.
   destruct (Pos.ltb_spec i n);
   destruct (Pos.ltb_spec i (Pos.pred n)); auto; lia.
 Qed.  
-
-Local Program Instance compcert_map:
-  forall U, Map U (Maps.PMap.t U) :=
-  {
-    mget m t := Maps.PMap.get t m;
-    mset m t u := Maps.PMap.set t u m;
-    mempty := @Maps.PMap.init _
-  }.
-Solve Obligations with (intros; try apply Maps.PMap.gi). 
-   (* Need this line for compatibility with CompCert 3.9 and before and/or Coq 8.13 and before *)
-Next Obligation.
-    rewrite Maps.PMap.gsspec.
-    destruct (Coqlib.peq t' t); destruct (Pos.eq_dec t' t); congruence.
-Defined.
-
-Lemma some_eq {U} (u1 u2: U):
-  (u1 = u2 <-> Some u1 = Some u2).
-Proof.
-  intuition congruence.
-Qed.
-
-Fixpoint inj_pair_aux (a: positive) (b: positive) {struct a}: positive :=
-  match a with
-    | xH => b
-    | xI a' => inj_pair_aux a' (xO (xI b))
-    | xO a' => inj_pair_aux a' (xO (xO b))
-  end.
-
-Fixpoint inj_pair_rev_r (b: positive): option positive :=
-  match b with
-    | xI b' => Some b'
-    | xO (xI b') => inj_pair_rev_r b'
-    | xO (xO b') => inj_pair_rev_r b'
-    | _ => None
-  end.
-
-Lemma inj_pair_aux_right_correct a1:
-  forall a2 b1 b2,
-    inj_pair_aux a1 b1 = inj_pair_aux a2 b2 ->
-    forall c1 c2,
-    inj_pair_rev_r b1 = Some c1 ->
-    inj_pair_rev_r b2 = Some c2 ->
-    c1 = c2.
-Proof.
-  induction a1; simpl; intros; eauto.
-  subst b1.
-  revert b2 c1 c2 H0 H1.
-  induction a2; simpl; intros; eauto.
-  congruence.
-Qed.
-
-Fixpoint inj_pair_rev_l (a b: positive) {struct b}: positive :=
-  match b with
-    | xO (xI b') => inj_pair_rev_l (xI a) b'
-    | xO (xO b') => inj_pair_rev_l (xO a) b'
-    | _ => a
-  end.
-
-Lemma inj_pair_aux_left_correct a1:
-  forall a2 b1 b2,
-    inj_pair_aux a1 b1 = inj_pair_aux a2 b2 ->
-    forall c,
-      inj_pair_rev_r b1 = Some c ->
-      inj_pair_rev_r b2 = Some c ->
-      inj_pair_rev_l a1 b1 = inj_pair_rev_l a2 b2
-.
-Proof.
-  induction a1; simpl; intros.
-  {
-    specialize (IHa1 _ _ _ H).
-    simpl in IHa1.
-    eauto.
-  }
-  {
-    specialize (IHa1 _ _ _ H).
-    simpl in IHa1.
-    eauto.
-  }
-  subst b1.
-  revert b2 c H0 H1.
-  induction a2; simpl; intros.
-  {
-    specialize (IHa2 _ _ H0).
-    simpl in IHa2.
-    eauto.
-  }
-  {
-    specialize (IHa2 _ _ H0).
-    simpl in IHa2.
-    eauto.
-  }
-  auto.
-Qed.
-
-Definition inj_pair a b := inj_pair_aux a (xI b).
-
-Lemma inj_pair_correct a1 a2 b1 b2:
-  (a1, b1) = (a2, b2) <-> inj_pair a1 b1 = inj_pair a2 b2.
-Proof.
-  split.
-  {
-    congruence.
-  }
-  intros.
-  specialize (inj_pair_aux_right_correct _ _ _ _ H _ _ (eq_refl _) (eq_refl _)).
-  intros; subst.
-  specialize (inj_pair_aux_left_correct _ _ _ _ H _ (eq_refl _) (eq_refl _)).
-  simpl.
-  congruence.
-Qed.
-
-Lemma inject_pair {A B} (a1 a2: A) (b1 b2: B):
-  a1 = a2 ->
-  b1 = b2 ->
-  (a1, b1) = (a2, b2)
-.
-Proof.
-  congruence.
-Qed.
-
-Lemma inject_pair_iff {A B} (a1 a2: A) (b1 b2: B):
-  (a1 = a2 /\ b1 = b2) <-> (a1, b1) = (a2, b2)
-.
-Proof.
-  intuition congruence.
-Qed.
 
 Section WITHVAR.
 
@@ -290,9 +162,7 @@ Proof.
   + eapply IHe2; eauto. intros. apply H. lia.
 Qed.
 
-Section WITHMAP.
-
-Context {MSHIFT} {MAP: Map (type * rounding_knowledge') MSHIFT}.
+Definition MSHIFT := Maps.PMap.t  (type * rounding_knowledge').
 
 Definition make_rounding
            (si: positive)
@@ -1018,11 +888,10 @@ Proof.
   apply Pos.le_max_r.
 Qed.
 
-Context {MSHIFT'} {MAP': Map R MSHIFT'}.
-
 Export List.
 
-Fixpoint enum_forall' t_ (Q: positive -> _ -> Prop) (l: list positive) (P: MSHIFT' -> Prop): Prop :=
+Fixpoint enum_forall' t_ (Q: positive -> _ -> Prop) (l: list positive) 
+   (P: Maps.PMap.t R -> Prop): Prop :=
   match l with
     | nil => P (mempty t_)
     | a :: q =>
@@ -2775,8 +2644,6 @@ lra.
 -
 exists errors2; split; auto.
 Qed.
-
-End WITHMAP.
 
 End WITHVAR.
 

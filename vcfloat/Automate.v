@@ -29,22 +29,6 @@ Definition generic_nan (prec emax : Z) :
 Definition generic_nan64 := 
   generic_nan (fprec Tdouble) (femax Tdouble) (eq_refl _).
 
-(*
-Ltac float_nearest mode r :=
- match r with
-  | Rmult (IZR ?a) (Rinv ?b) => let x := constr:(Rdiv (IZR a) (IZR b)) in float_nearest x
-  | Rdiv (IZR ?a) (IZR ?b) =>
-   let f := constr:( Bdiv_full  (fprec Tdouble) (femax Tdouble) (eq_refl _) (eq_refl _) 
-                                  (fun _ _ => exist _ generic_nan64 (eq_refl _))
-                            mode (Zconst _ a) (Zconst _ b)) in
-   let f := eval vm_compute in f in
-   match f with F754_finite ?s ?m ?e =>
-          let g := constr:(b64_B754_finite s m e (eq_refl true))
-     in g
-   end
- end.
-*)
-
 Import Zaux.
 
 Ltac compute_B2R :=
@@ -206,8 +190,10 @@ Definition valmap_of_list (vl: list (ident * sigT ftype)) : valmap :=
 
 Definition shiftmap := Maps.PMap.t (type * rounding_knowledge').
 
+(*
 #[export] Instance shifts_MAP: Map (type * rounding_knowledge') shiftmap :=
    compcert_map  _.
+*)
 
 Definition env_ (tenv: valmap) ty (v: ident): ftype ty :=
   match Maps.PTree.get v tenv with Some (existT _ t x) =>
@@ -288,7 +274,7 @@ simpl in *. rewrite H0. auto.
 Qed.
 
 Definition eval_cond' (s : shiftmap) (c: cond) (env: environ) : Prop :=
-  @eval_cond2 ident _ shifts_MAP _ (compcert_map R) env s c.
+  @eval_cond2 ident env s c.
 
 Definition rndval_with_cond2 (e: expr) : rexpr * shiftmap * list (environ -> Prop) :=
  let '((r,(si,s)),p) := rndval_with_cond' 1 empty_shiftmap e
@@ -358,8 +344,8 @@ Ltac invert_rndval_with_cond' :=
     let H1 := fresh "H" in 
      apply invert_quad; intros; subst;
 
-     cbv beta iota zeta delta [mset shifts_MAP empty_shiftmap mempty
-            compcert_map Maps.PMap.set Maps.PMap.init
+     cbv beta iota zeta delta [mset empty_shiftmap mempty
+            Maps.PMap.set Maps.PMap.init
             Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
               Maps.PTree.set0 Pos.of_succ_nat Pos.succ
              fst snd] in s';
@@ -455,9 +441,7 @@ Ltac process_eval_cond' :=  (* THIS IS NOW OBSOLETE AND UNUSED *)
 (* time "process_eval_cond'_elements_and_PTrees" *)
  (let aa := fresh "aa" in 
  cbv beta iota zeta delta [eval_cond' eval_cond2]; set (aa := MSET.elements _); cbv in aa; subst aa;
- cbv [enum_forall enum_forall'];
- cbv [mget shifts_MAP compcert_map Maps.PMap.get Maps.PTree.get fst snd Maps.PTree.get'
-      Pos.succ]);
+ cbv [enum_forall enum_forall' mget Maps.PMap.get Maps.PTree.get fst snd Maps.PTree.get' Pos.succ]);
 
  (* time "process_eval_cond'_repeat1" *)
   repeat 
@@ -470,8 +454,8 @@ Ltac process_eval_cond' :=  (* THIS IS NOW OBSOLETE AND UNUSED *)
       radix_val Pos.iter Pos.add Pos.succ Pos.mul]  in H);
 
    cbv beta iota zeta delta [
-            mset shifts_MAP empty_shiftmap mempty
-            compcert_map Maps.PMap.set Maps.PMap.init
+            mset empty_shiftmap mempty
+            Maps.PMap.set Maps.PMap.init
             Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
               Maps.PTree.set0 Pos.of_succ_nat Pos.succ
              fst snd reval
@@ -728,8 +712,8 @@ Ltac solve_Forall_conds:=
   try change (type_of_expr _) with Tsingle;
   try change (type_of_expr _) with Tdouble;
   cbv beta iota zeta delta [
-            mset shifts_MAP empty_shiftmap mempty
-            compcert_map Maps.PMap.set Maps.PMap.init
+            mset empty_shiftmap mempty
+            Maps.PMap.set Maps.PMap.init
             Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
               Maps.PTree.set0 Pos.of_succ_nat Pos.succ
              fst snd
@@ -805,8 +789,8 @@ Ltac prove_rndval :=
 (*time "2b"*) (
   cbv [rndval_with_cond2 rndval_with_cond'];
   compute_every (@type_of_expr ident); 
-  cbv [ mset shifts_MAP empty_shiftmap mempty
-            compcert_map Maps.PMap.set Maps.PMap.init
+  cbv [ mset empty_shiftmap mempty
+            Maps.PMap.set Maps.PMap.init
             Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
               Maps.PTree.set0 Pos.of_succ_nat Pos.succ
              fst snd
@@ -831,9 +815,9 @@ Ltac prove_rndval :=
 
 (*time "4"*)
    ( cbv [enum_forall enum_forall'
-         mget shifts_MAP compcert_map Maps.PMap.get Maps.PTree.get fst snd Maps.PTree.get'
-            mset shifts_MAP empty_shiftmap mempty
-            compcert_map Maps.PMap.set Maps.PMap.init
+         mget Maps.PMap.get Maps.PTree.get fst snd Maps.PTree.get'
+            mset empty_shiftmap mempty
+            Maps.PMap.set Maps.PMap.init
             Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
               Maps.PTree.set0 Pos.of_succ_nat Pos.succ
             fst snd reval
