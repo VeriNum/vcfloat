@@ -135,8 +135,6 @@ subst.
 exists v. auto. 
 Qed.
 
-
-
 Lemma boundsmap_denote_i:
   forall bm vm, 
  list_forall (boundsmap_denote_pred vm) (Maps.PTree.elements bm) ->
@@ -187,11 +185,6 @@ Definition valmap_of_list (vl: list (ident * sigT ftype)) : valmap :=
   fold_left (fun m iv => let '(i,v) := iv in Maps.PTree.set i v m) vl (Maps.PTree.empty _).
 
 Definition shiftmap := Maps.PMap.t (type * rounding_knowledge').
-
-(*
-#[export] Instance shifts_MAP: Map (type * rounding_knowledge') shiftmap :=
-   compcert_map  _.
-*)
 
 Definition env_ (tenv: valmap) ty (v: ident): ftype ty :=
   match Maps.PTree.get v tenv with Some (existT _ t x) =>
@@ -414,61 +407,6 @@ Ltac process_boundsmap_denote :=
   cbv iota;
   repeat change (eq_rect_r ftype ?v eq_refl) with v in *.
 
-(*  OLD OBSOLETE VERSION 
-Ltac process_boundsmap_denote := 
- lazymatch goal with
- | H: boundsmap_denote _ _ |- _ =>
-  apply boundsmap_denote_e in H;
-  simpl Maps.PTree.elements in H;
-  unfold list_forall in H;
-repeat lazymatch type of H with 
- | _ /\ _ => let B := fresh "BOUND" in destruct H as [B H];
-    apply boundsmap_denote_pred_e in B; destruct B as [_ B]; simpl in B
- | True => clear H
- | _ => let B := fresh "BOUND" in rename H into B;
-    apply boundsmap_denote_pred_e in B; destruct B as [_ B]; simpl in B
- end
-end.
-*)
-
-Ltac process_eval_cond' :=  (* THIS IS NOW OBSOLETE AND UNUSED *)
- lazymatch goal with 
- | |- eval_cond' _ _ _ => idtac
- | _ => fail 1 "inappropriate goal for process_eval_cond'"
- end;
-(* time "process_eval_cond'_elements_and_PTrees" *)
- (let aa := fresh "aa" in 
- cbv beta iota zeta delta [eval_cond' eval_cond2]; set (aa := MSET.elements _); cbv in aa; subst aa;
- cbv [enum_forall enum_forall' mget Maps.PMap.get Maps.PTree.get fst snd Maps.PTree.get' Pos.succ]);
-
- (* time "process_eval_cond'_repeat1" *)
-  repeat 
-   (let H := fresh in intros ?u H;
-   match type of H with _ _ (error_bound ?x _) => 
-     let y := constr:(x) in let y := eval hnf in y in change x with y in H
-   end;
-   cbv [error_bound bpow radix2 femax fprec fprecp Z.sub Z.add Z.opp 
-     Z.pos_sub Z.succ_double Pos.pred_double Z.pow_pos Z.mul 
-      radix_val Pos.iter Pos.add Pos.succ Pos.mul]  in H);
-
-   cbv beta iota zeta delta [
-            mset empty_shiftmap mempty
-            Maps.PMap.set Maps.PMap.init
-            Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
-              Maps.PTree.set0 Pos.of_succ_nat Pos.succ
-             fst snd reval
-     Prog.binary Prog.unary Prog.real_operations
-   Tree.binary_real Tree.unary_real
-  ];
-
- repeat 
-   match goal with |- context [env_ ?m ?t ?i ] =>
-     let j := fresh "j" in set (j := env_ m t i); hnf in j; subst j
-   end; 
- change (B2R (fprec ?t) _ ?x) with (@FT2R t x);
- simpl F2R; 
- intros.
-
 Definition prove_rndval' {NANS: Nans} bm vm e :=
  boundsmap_denote bm vm ->
   let
@@ -504,11 +442,6 @@ specialize (H H0).
 destruct (rndval_with_cond2 _) as [[? ?] ?].
 red; intros.
 Abort.
-
-(*  OLD OBSOLETE VERSION
-Ltac process_conds :=
- (apply Forall_cons; [process_eval_cond' | process_conds ]) || apply Forall_nil.
-*)
 
 Lemma Rmult_Rinv_IZR: forall a b, 
    Rmult (RinvImpl.Rinv (IZR a)) (RinvImpl.Rinv (IZR b)) = 
@@ -623,7 +556,6 @@ f_equal.
 rewrite <- eq_trans_sym_distr.
 f_equal.
 Qed.
-
 
 Lemma binary_float_equiv_loose_iff:
   forall t1 t2 (EQ: t1=t2) (b1: ftype t1) (b2: ftype t2),
@@ -1091,20 +1023,6 @@ rewrite Pos2Z.inj_pow.
 f_equal.
 apply positive_nat_Z.
 Qed.
-
-Ltac compute_powerRZ :=  (* obsolete? *)
-change (powerRZ ?b (Z.neg ?x)) with (powerRZ b (Z.opp (Z.pos x))) in *;
-rewrite <- power_RZ_inv in *
-  by (let H := fresh  in intro H; apply eq_IZR in H; discriminate H);
-rewrite powerRZ_compute in *;
-repeat match goal with
- | |- context [Pos.pow ?a ?b] =>
-  let x := constr:(Pos.pow a b) in let y := eval compute in x in
-  change x with y in *
- | H: context [Pos.pow ?a ?b] |- _ =>
-  let x := constr:(Pos.pow a b) in let y := eval compute in x in
-  change x with y in *
-end.
 
 Ltac compute_Zpow := 
 repeat match goal with
