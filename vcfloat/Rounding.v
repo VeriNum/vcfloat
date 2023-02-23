@@ -112,15 +112,12 @@ Proof.
   destruct (Pos.ltb_spec i (Pos.pred n)); auto; lia.
 Qed.  
 
-Section WITHVAR.
-
-Context `{VAR: VarType}.
-
+Section WITH_NAN.
 Context {NANS: Nans}.
 
 Inductive ratom: Type :=
 | RConst (_: Defs.float Zaux.radix2)
-| RVar (ty: type) (_: V)
+| RVar (ty: type) (_: FPLang.V)
 | RError (_: positive)
 .
 
@@ -131,7 +128,7 @@ Inductive rexpr: Type :=
 .
 
 
-Fixpoint reval (e: rexpr) (env: forall ty, V -> ftype ty) (eenv: positive -> R): R :=
+Fixpoint reval (e: rexpr) (env: forall ty, FPLang.V -> ftype ty) (eenv: positive -> R): R :=
   match e with
     | RAtom (RConst q) => F2R _ q
     | RAtom (RVar ty n) => B2R _ _ (env ty n)
@@ -974,8 +971,6 @@ Proof.
   eapply H; eauto.
 Qed.
 
-Section EVAL_COND2.
-
 Let P env e (b: bool) errors :=
   (if b then Rlt else Rle) 0 (reval e env errors).
 
@@ -1038,9 +1033,7 @@ Proof.
   rewrite SetoidList.InA_alt in H1.
   destruct H1.
   intuition congruence.
-Qed.
-
-End EVAL_COND2.
+Qed.  
 
 Definition is_div o :=
   match o with
@@ -1713,8 +1706,8 @@ Proof.
 Qed.
 
 Lemma rndval_with_cond_correct_uInvShift:
-forall (env : forall x : type, V -> binary_float (fprec x) (femax x))
- (Henv : forall (ty : type) (i : V),  is_finite (fprec ty) (femax ty) (env ty i) = true)
+forall (env : forall x : type, FPLang.V -> binary_float (fprec x) (femax x))
+ (Henv : forall (ty : type) (i : FPLang.V),  is_finite (fprec ty) (femax ty) (env ty i) = true)
 (pow : positive)
  (ltr : bool) (e : expr) (si : positive) (r1 : rexpr) (s1 : MSHIFT)
  (errors1 errors1_1 : positive-> R)
@@ -2584,10 +2577,10 @@ Qed.
 
 Definition empty_shiftmap := mempty (Tsingle, Unknown').
 
-Definition environ := forall ty : type, V -> ftype ty.
+Definition environ := forall ty : type, FPLang.V -> ftype ty.
 
 Definition env_all_finite (env: environ) :=
-  forall (ty : type) (i : V),
+  forall (ty : type) (i : FPLang.V),
         is_finite (fprec ty) (femax ty) (env ty i) = true.
 
 Definition eval_cond (s: MSHIFT) (c: cond) (env: environ) : Prop :=
@@ -2645,6 +2638,6 @@ lra.
 exists errors2; split; auto.
 Qed.
 
-End WITHVAR.
+End WITH_NAN.
 
 

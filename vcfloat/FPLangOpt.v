@@ -179,13 +179,11 @@ Proof.
   intuition congruence.
 Qed.
 
-Section WITHVARS.
-Context {V} `{VARS: VarType V}.
-
+Section WITHNAN.
 Context {NANS: Nans}.
 
 Definition fcval_nonrec (e: expr): option (ftype (type_of_expr e)) :=
-  match e as e' return option (ftype (type_of_expr (V := V) e')) with
+  match e as e' return option (ftype (type_of_expr e')) with
     | Const ty f => Some f
     | _ => None
   end.
@@ -1344,7 +1342,7 @@ Proof.
   - apply H. 
 Qed.
 
-Definition is_zero_expr (env: forall ty, V -> ftype ty) (e: FPLang.expr)
+Definition is_zero_expr (env: forall ty, FPLang.V -> ftype ty) (e: FPLang.expr)
  : bool :=  
 match (fval env e) with
 | Binary.B754_zero _ _ b1 => true
@@ -1353,7 +1351,7 @@ end.
 
 (* Erasure of rounding annotations *)
 
-Fixpoint erase (e: FPLang.expr (V := V)) {struct e}: FPLang.expr :=
+Fixpoint erase (e: FPLang.expr) {struct e}: FPLang.expr :=
   match e with
     | Binop (Rounded2 u k) e1 e2 => Binop (Rounded2 u None) (erase e1) (erase e2)
     | Binop SterbenzMinus e1 e2 => Binop (Rounded2 MINUS None) (erase e1) (erase e2)
@@ -1420,4 +1418,4 @@ Proof.
   apply erase_correct'.
 Qed.
 
-End WITHVARS.
+End WITHNAN.

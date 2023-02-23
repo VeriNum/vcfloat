@@ -659,15 +659,6 @@ Proof.
   reflexivity.
 Defined.
 
-(* Perhaps VarType shouldn't go in FPCore, since it has something
- to do with reification; but it's needed in FPCompCert, which doesn't
- want to import FPLang, so we make do this way. *)
-Class VarType (V: Type): Type := 
-  {
-    var_eqb: V -> V -> bool;
-    var_eqb_eq: forall v1 v2, var_eqb v1 v2 = true <-> v1 = v2
-  }.
-
 Section WITHNANS.
 Context {NANS: Nans}.
 

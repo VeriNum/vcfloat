@@ -59,11 +59,6 @@ Require compcert.common.AST compcert.common.Values.
 Require Import compcert.lib.Floats.
 Import Binary BinPos.
 
-Global Instance ident_vartype: VarType AST.ident :=
-  {
-    var_eqb_eq := Pos.eqb_eq
-  }.
-
 Inductive val_inject: Values.val -> forall ty, ftype ty -> Prop :=
 | val_inject_single (f: ftype Tsingle):
     val_inject (Values.Vsingle f) Tsingle f

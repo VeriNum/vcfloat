@@ -186,8 +186,6 @@ Definition boundsmap_of_list (vl: list varinfo) : boundsmap :=
 Definition valmap_of_list (vl: list (ident * sigT ftype)) : valmap :=
   fold_left (fun m iv => let '(i,v) := iv in Maps.PTree.set i v m) vl (Maps.PTree.empty _).
 
-#[export] Instance identVars: VarType ident := Build_VarType ident Pos.eqb Pos.eqb_eq.
-
 Definition shiftmap := Maps.PMap.t (type * rounding_knowledge').
 
 (*
@@ -248,7 +246,7 @@ Ltac unfold_fval :=
    repeat change (cast ?a _ ?x) with x.
 
 Definition rndval_with_cond_result1 {NANS: Nans} 
-          env e (r: @rexpr ident) (s: Maps.PMap.t (type * rounding_knowledge')) :=
+          env e (r: rexpr) (s: Maps.PMap.t (type * rounding_knowledge')) :=
     exists errors,
         (errors_bounded s errors)
         /\
@@ -274,7 +272,7 @@ simpl in *. rewrite H0. auto.
 Qed.
 
 Definition eval_cond' (s : shiftmap) (c: cond) (env: environ) : Prop :=
-  @eval_cond2 ident env s c.
+  eval_cond2 env s c.
 
 Definition rndval_with_cond2 (e: expr) : rexpr * shiftmap * list (environ -> Prop) :=
  let '((r,(si,s)),p) := rndval_with_cond' 1 empty_shiftmap e
@@ -315,7 +313,7 @@ auto.
 Qed.
 
 Lemma invert_quad:
-  forall (a a': @rexpr ident) (b b': nat) (c c': shiftmap) (d d': list (@cond ident)) (G: Prop),
+  forall (a a': rexpr) (b b': nat) (c c': shiftmap) (d d': list cond) (G: Prop),
   (a=a' -> b=b' -> c=c' -> d=d' -> G) ->
   (a,(b,c),d) = (a',(b',c'),d') -> G.
 Proof.
@@ -549,8 +547,8 @@ Ltac process_conds :=
       radix_val Pos.iter Pos.add Pos.succ Pos.mul]  in H;
       (eapply adjust_bound in H; [ | compute; reflexivity])).
 
-Lemma fshift_div_fshift_fcval_type {NANS: Nans} {V : Type}:
-      forall e : expr, @type_of_expr V (fshift_div (fshift (fcval e))) = @type_of_expr V e.
+Lemma fshift_div_fshift_fcval_type {NANS: Nans}:
+      forall e : expr, type_of_expr (fshift_div (fshift (fcval e))) = type_of_expr e.  
 Proof.
 intros.
 eapply eq_trans.
@@ -580,8 +578,8 @@ unfold eq_rect_r, eq_rect; simpl.
 auto.
 Qed.
 
-Lemma fshift_div_fshift_fcval_correct {NANS: Nans} {V: Type}:
-  forall (env : forall ty : type, V -> ftype ty) (e : expr),
+Lemma fshift_div_fshift_fcval_correct {NANS: Nans}:
+  forall (env : forall ty : type, FPLang.V -> ftype ty) (e : expr),
   binary_float_equiv (fval env (fshift_div (fshift (fcval e)))) 
                (eq_rect_r ftype (fval env e) (fshift_div_fshift_fcval_type e)).
 Proof.
@@ -604,16 +602,16 @@ simpl.
 apply binary_float_equiv_refl.
 Qed.
 
-Lemma fshift_fcval_type{NANS: Nans} {V : Type}:
-      forall e : expr, @type_of_expr V (fshift (fcval e)) = @type_of_expr V e.
+Lemma fshift_fcval_type{NANS: Nans}:
+      forall e : expr, type_of_expr (fshift (fcval e)) = type_of_expr e.
 Proof.
 intros.
 eapply eq_trans.
 apply fshift_type. apply fcval_type.
 Defined.
 
-Lemma fshift_fcval_correct {NANS: Nans} {V: Type}:
-  forall (env : forall ty : type, V -> ftype ty) (e : expr),
+Lemma fshift_fcval_correct {NANS: Nans}:
+  forall (env : forall ty : type, FPLang.V -> ftype ty) (e : expr),
   fval env (fshift (fcval e)) = eq_rect_r ftype (fval env e) (fshift_fcval_type e).
 Proof.
 intros.
@@ -788,7 +786,7 @@ Ltac prove_rndval :=
 
 (*time "2b"*) (
   cbv [rndval_with_cond2 rndval_with_cond'];
-  compute_every (@type_of_expr ident); 
+  compute_every type_of_expr; 
   cbv [ mset empty_shiftmap mempty
             Maps.PMap.set Maps.PMap.init
             Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
