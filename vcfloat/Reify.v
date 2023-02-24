@@ -35,7 +35,7 @@ Ltac find_type prec emax :=
  | 53%Z => match emax with 1024%Z => constr:(Tdouble) end
  | Z.pos ?precp => 
      let g := ground_pos precp in let g := ground_pos emax in 
-     constr:(TYPE precp emax (ZLT_intro prec emax (eq_refl _)) (BOOL_intro _ (eq_refl _)))
+     constr:(TYPE precp emax Logic.I Logic.I)
  end.
 
 Ltac reify_float_expr E :=

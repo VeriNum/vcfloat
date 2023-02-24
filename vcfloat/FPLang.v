@@ -212,13 +212,6 @@ Fixpoint expr_valid (e: expr): bool :=
     | _ => true
   end.
 
-Definition rounded_binop_precond (r: rounded_binop):
-  R -> R -> Prop :=
-  match r with
-    | DIV => fun _ y => y <> 0
-    | _ => fun _ _ => True
-  end.
-
 Definition fop_of_rounded_binop (r: rounded_binop): 
   forall ty,
     binary_float (fprec ty) (femax ty) ->
