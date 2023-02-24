@@ -69,242 +69,56 @@ Import Coq.Lists.List ListNotations.
 
 Local Open Scope R_scope.
 
-Module MSET := MSetAVL.Make(Nat).
+Module MSET := MSetAVL.Make(Pos).
 
-Class Map (T U M: Type): Type :=
-  {
-    mget: M -> T -> U;
-    mset: M -> T -> U -> M;
-    mempty: U -> M;
-    mget_set: forall m_T_eq_dec: forall t1 t2: T, {t1 = t2} + {t1 <> t2}, forall
-                     m t t' u,
-                mget (mset m t u) t' = if m_T_eq_dec t' t then u else mget m t';
-    mget_empty: forall t u, mget (mempty u) t = u
-  }.
+Definition mget {U} (m: Maps.PMap.t U) t := Maps.PMap.get t m.
+Definition mset {U} m t (u: U) := Maps.PMap.set t u m.
+Definition mempty {U} := @Maps.PMap.init U.
+Lemma mget_set {U}: forall m t t' (u: U),
+                mget (mset m t u) t' = if Pos.eq_dec t' t then u else mget m t'.
+Proof. intros.
+   unfold mget, mset.
+    rewrite Maps.PMap.gsspec.
+    destruct (Coqlib.peq t' t); destruct (Pos.eq_dec t' t); congruence.
+Qed.
 
-Lemma finite_errors_ex {T M} {MAP: Map nat T M}  (t: T) n:
+Lemma mget_empty {U}: forall t (u: U), mget (mempty u) t = u.
+Proof. intros. apply Maps.PMap.gi. Qed.
+
+Lemma finite_errors_ex {U}  (t: U) n:
   forall errors,
   exists m,
     forall i,
-      mget m i = if Nat.ltb i n then errors i else t.
+      mget m i = if Pos.ltb i n then errors i else t.
 Proof.
-  induction n; intros.
-  {
-    exists (mempty t).
+  remember (Nat.pred (Pos.to_nat n)) as k.
+ revert n Heqk.
+ induction k; intros.
+ - exists (mempty t).
     intros.
     rewrite mget_empty.
-    reflexivity.
-  }
-  specialize (IHn errors).
-  destruct IHn.
-  exists (mset x n (errors n)).
+    assert (n=1%positive) by lia. subst.
+    destruct (Pos.ltb_spec i 1); auto; lia.
+ -
+  specialize (IHk (Pos.pred n) ltac:(lia) errors).
+  destruct IHk.
+  exists (mset x (Pos.pred n) (errors (Pos.pred n))).
   intros.
-  rewrite (mget_set Nat.eq_dec).
-  destruct (Nat.eq_dec i n).
-  {
-    subst.
-    rewrite (fun n m => let (_, J) := Nat.ltb_lt n m in J); auto with arith.
-  }
+  rewrite mget_set.
   rewrite H.
-  replace (Nat.ltb i n) with (Nat.ltb i (S n)); auto.
-  rewrite Bool.eq_iff_eq_true.
-  repeat rewrite Nat.ltb_lt.
-  intuition lia.
+  destruct (Pos.eq_dec _ _). subst.
+  destruct (Pos.ltb_spec (Pos.pred n) n); try lia. auto.
+  destruct (Pos.ltb_spec i n);
+  destruct (Pos.ltb_spec i (Pos.pred n)); auto; lia.
 Qed.  
 
-Section COMPCERTMAPS.
-
-Class MapIndex (T: Type): Type :=
-  {
-    index_of_tr: T -> positive;
-    index_of_tr_correct:
-      forall tr1 tr2,
-        (tr1 = tr2) <-> (index_of_tr tr1 = index_of_tr tr2)
-  }.
-
-Local Program Instance compcert_map:
-  forall T U, MapIndex T -> Map T U (Maps.PMap.t U) :=
-  {
-    mget m t := Maps.PMap.get (index_of_tr t) m;
-    mset m t u := Maps.PMap.set (index_of_tr t) u m;
-    mempty := @Maps.PMap.init _
-  }.
-Solve Obligations with (intros; try apply Maps.PMap.gi). 
-   (* Need this line for compatibility with CompCert 3.9 and before and/or Coq 8.13 and before *)
-Next Obligation.
-    rewrite Maps.PMap.gsspec.
-    destruct (Coqlib.peq (index_of_tr t') (index_of_tr t)).
-    {
-      rewrite <- index_of_tr_correct in e.
-      destruct (m_T_eq_dec t' t); congruence.
-    }
-    rewrite <- index_of_tr_correct in n.
-    destruct (m_T_eq_dec t' t); congruence.
-Defined.
-
-End COMPCERTMAPS.
-
-Section I_OF_TR.
-
-Lemma some_eq {U} (u1 u2: U):
-  (u1 = u2 <-> Some u1 = Some u2).
-Proof.
-  intuition congruence.
-Qed.
-
-Local Program Instance index_of_option T:
-  MapIndex T ->
-  MapIndex (option T) :=
-  {
-    index_of_tr := fun o =>
-      match o with
-        | None => xH
-        | Some t => xI (index_of_tr t)
-      end
-  }.
-Next Obligation.
-  destruct tr1; destruct tr2; try intuition congruence.
-  generalize (index_of_tr_correct t t0).
-  rewrite <- some_eq.
-  intro K.
-  rewrite K.
-  intuition congruence.
-Defined.
-
-Fixpoint inj_pair_aux (a: positive) (b: positive) {struct a}: positive :=
-  match a with
-    | xH => b
-    | xI a' => inj_pair_aux a' (xO (xI b))
-    | xO a' => inj_pair_aux a' (xO (xO b))
-  end.
-
-Fixpoint inj_pair_rev_r (b: positive): option positive :=
-  match b with
-    | xI b' => Some b'
-    | xO (xI b') => inj_pair_rev_r b'
-    | xO (xO b') => inj_pair_rev_r b'
-    | _ => None
-  end.
-
-Lemma inj_pair_aux_right_correct a1:
-  forall a2 b1 b2,
-    inj_pair_aux a1 b1 = inj_pair_aux a2 b2 ->
-    forall c1 c2,
-    inj_pair_rev_r b1 = Some c1 ->
-    inj_pair_rev_r b2 = Some c2 ->
-    c1 = c2.
-Proof.
-  induction a1; simpl; intros; eauto.
-  subst b1.
-  revert b2 c1 c2 H0 H1.
-  induction a2; simpl; intros; eauto.
-  congruence.
-Qed.
-
-Fixpoint inj_pair_rev_l (a b: positive) {struct b}: positive :=
-  match b with
-    | xO (xI b') => inj_pair_rev_l (xI a) b'
-    | xO (xO b') => inj_pair_rev_l (xO a) b'
-    | _ => a
-  end.
-
-Lemma inj_pair_aux_left_correct a1:
-  forall a2 b1 b2,
-    inj_pair_aux a1 b1 = inj_pair_aux a2 b2 ->
-    forall c,
-      inj_pair_rev_r b1 = Some c ->
-      inj_pair_rev_r b2 = Some c ->
-      inj_pair_rev_l a1 b1 = inj_pair_rev_l a2 b2
-.
-Proof.
-  induction a1; simpl; intros.
-  {
-    specialize (IHa1 _ _ _ H).
-    simpl in IHa1.
-    eauto.
-  }
-  {
-    specialize (IHa1 _ _ _ H).
-    simpl in IHa1.
-    eauto.
-  }
-  subst b1.
-  revert b2 c H0 H1.
-  induction a2; simpl; intros.
-  {
-    specialize (IHa2 _ _ H0).
-    simpl in IHa2.
-    eauto.
-  }
-  {
-    specialize (IHa2 _ _ H0).
-    simpl in IHa2.
-    eauto.
-  }
-  auto.
-Qed.
-
-Definition inj_pair a b := inj_pair_aux a (xI b).
-
-Lemma inj_pair_correct a1 a2 b1 b2:
-  (a1, b1) = (a2, b2) <-> inj_pair a1 b1 = inj_pair a2 b2.
-Proof.
-  split.
-  {
-    congruence.
-  }
-  intros.
-  specialize (inj_pair_aux_right_correct _ _ _ _ H _ _ (eq_refl _) (eq_refl _)).
-  intros; subst.
-  specialize (inj_pair_aux_left_correct _ _ _ _ H _ (eq_refl _) (eq_refl _)).
-  simpl.
-  congruence.
-Qed.
-
-Lemma inject_pair {A B} (a1 a2: A) (b1 b2: B):
-  a1 = a2 ->
-  b1 = b2 ->
-  (a1, b1) = (a2, b2)
-.
-Proof.
-  congruence.
-Qed.
-
-Lemma inject_pair_iff {A B} (a1 a2: A) (b1 b2: B):
-  (a1 = a2 /\ b1 = b2) <-> (a1, b1) = (a2, b2)
-.
-Proof.
-  intuition congruence.
-Qed.
-
-Local Program Instance index_of_pair U V:
-  MapIndex U ->
-  MapIndex V ->
-  MapIndex (U * V) :=
-  {
-    index_of_tr := fun uv =>
-                     let '(u, v) := uv in
-                     inj_pair (index_of_tr u) (index_of_tr v)
-  }.
-Next Obligation.
-  rewrite <- inj_pair_correct.
-  repeat rewrite <- inject_pair_iff.
-  repeat rewrite <- index_of_tr_correct.
-  tauto.
-Defined.
-
-End I_OF_TR.
-
-Section WITHVAR.
-
-Context `{VAR: VarType}.
-
+Section WITH_NAN.
 Context {NANS: Nans}.
 
 Inductive ratom: Type :=
 | RConst (_: Defs.float Zaux.radix2)
-| RVar (ty: type) (_: V)
-| RError (_: nat)
+| RVar (ty: type) (_: FPLang.V)
+| RError (_: positive)
 .
 
 Inductive rexpr: Type :=
@@ -314,7 +128,7 @@ Inductive rexpr: Type :=
 .
 
 
-Fixpoint reval (e: rexpr) (env: forall ty, V -> ftype ty) (eenv: nat -> R): R :=
+Fixpoint reval (e: rexpr) (env: forall ty, FPLang.V -> ftype ty) (eenv: positive -> R): R :=
   match e with
     | RAtom (RConst q) => F2R _ q
     | RAtom (RVar ty n) => B2R _ _ (env ty n)
@@ -324,52 +138,40 @@ Fixpoint reval (e: rexpr) (env: forall ty, V -> ftype ty) (eenv: nat -> R): R :=
   end.
 
 
-Fixpoint max_error_var (e: rexpr): nat :=
+Fixpoint max_error_var (e: rexpr): positive :=
   match e with
-    | RAtom (RError n) =>
-      S n
+    | RAtom (RError n) =>Pos.succ n
     | RUnop _ e => max_error_var e
-    | RBinop _ e1 e2 => Nat.max (max_error_var e1) (max_error_var e2)
-    | _ => O
+    | RBinop _ e1 e2 => Pos.max (max_error_var e1) (max_error_var e2)
+    | _ => 1%positive
   end.
 
 Lemma reval_error_ext eenv1 env eenv2 e:
-  (forall i, (i < max_error_var e)%nat ->
+  (forall i, (i < max_error_var e)%positive ->
                  eenv1 i = eenv2 i) ->
   reval e env eenv1 = reval e env eenv2.
 Proof.
   induction e; simpl.
-  {
-    destruct r; auto.
-  }
-  {
-    intros.
-    f_equal.
-    auto.
-  }
-  intros.
-  f_equal.
-  {
-    eapply IHe1; eauto with arith.
-  }
-  eapply IHe2; eauto with arith.
+  - destruct r; auto. intros. apply H. lia.
+  - intros. f_equal. auto.
+  - intros. f_equal.
+  + eapply IHe1; eauto. intros. apply H. lia.
+  + eapply IHe2; eauto. intros. apply H. lia.
 Qed.
 
-Section WITHMAP.
-
-Context {MSHIFT} {MAP: Map nat (type * rounding_knowledge') MSHIFT}.
+Definition MSHIFT := Maps.PMap.t  (type * rounding_knowledge').
 
 Definition make_rounding
-           (si: nat)
+           (si: positive)
            (shift: MSHIFT)
            (kn:  rounding_knowledge') (ty: type) (x: rexpr):
-  (rexpr * (nat * MSHIFT))
+  (rexpr * (positive * MSHIFT))
   :=
     match kn with
       | Unknown' =>
         let d := si in
         let es1 := mset shift d (ty, Normal') in
-        let e := S d in
+        let e := Pos.succ d in
         let es2 := mset es1 e (ty, Denormal') in
         (
           RBinop Tree.Add
@@ -378,7 +180,7 @@ Definition make_rounding
                                  (RAtom (RError d)))
                  )
                  (RAtom (RError e))
-          , (S e, es2)
+          , (Pos.succ e, es2)
         )
 
       | Normal' =>
@@ -389,7 +191,7 @@ Definition make_rounding
                  (RBinop Tree.Add (RAtom (RConst fone))
                          (RAtom (RError d))
                  )
-          , (S d, es1)
+          , (Pos.succ d, es1)
         )
       | Denormal' => 
         let e := si in
@@ -397,7 +199,7 @@ Definition make_rounding
         (
           RBinop Tree.Add x
                  (RAtom (RError e))
-          , (S e, es1)
+          , (Pos.succ e, es1)
         )
       | Denormal2' => 
         let e := si in
@@ -405,7 +207,7 @@ Definition make_rounding
         (
           RBinop Tree.Add x
                  (RAtom (RError e))
-          , (S e, es1)
+          , (Pos.succ e, es1)
         )
     end.
 
@@ -415,12 +217,12 @@ Lemma make_rounding_shift_incr
       kn ty x
       y si' shift':
   make_rounding si shift kn ty x = (y, (si', shift')) ->
-  (si <= si')%nat
+  (si <= si')%positive
 .
 Proof.
   unfold make_rounding.
   destruct kn;
-  inversion 1; subst; auto with arith.
+  inversion 1; subst; auto; lia.
 Qed.
 
 Lemma make_rounding_shift_unchanged
@@ -429,19 +231,19 @@ Lemma make_rounding_shift_unchanged
       kn ty x
       y si' shift':
   make_rounding si shift kn ty x = (y, (si', shift')) ->
-  forall i, (i < si)%nat ->
+  forall i, (i < si)%positive ->
             mget shift' i = mget shift i.
 Proof.
   unfold make_rounding.
   destruct kn.
   inversion 1; subst; intros.
-  repeat rewrite (mget_set eq_nat_dec).
-  destruct (Nat.eq_dec i (S si)); auto;
-  destruct (Nat.eq_dec i si); auto;
-  exfalso; lia.
+  repeat rewrite mget_set.
+  destruct (Pos.eq_dec i (Pos.succ si)); auto;
+  destruct (Pos.eq_dec i si); auto;
+  try (exfalso; lia).
 all: try (    inversion 1; subst; intros;
-    rewrite (mget_set eq_nat_dec);
-    destruct (Nat.eq_dec i si); auto;
+    rewrite mget_set;
+    destruct (Pos.eq_dec i si); auto;
     exfalso; lia).
 Qed.
 
@@ -451,13 +253,13 @@ Lemma make_rounding_shift_le
       kn ty x
       y si' shift':
   make_rounding si shift kn ty x = (y, (si', shift')) ->
-    (max_error_var x <= si)%nat ->
-    (max_error_var y <= si')%nat.
+    (max_error_var x <= si)%positive ->
+    (max_error_var y <= si')%positive.
 Proof.
   unfold make_rounding.
   destruct kn;
   inversion 1; subst; simpl; intros;
-  repeat (apply Nat.max_lub; auto with arith).
+  repeat (apply Pos.max_lub; auto; lia).
 Qed.
 
 Definition error_bound ty k :=
@@ -506,7 +308,7 @@ Definition rounding_cond ty k x :=
 Lemma make_rounding_correct
       si shift kn ty x y si' shift':
   make_rounding si shift (round_knowl_denote kn) ty x = (y, (si', shift')) ->
-  (max_error_var x <= si)%nat ->
+  (max_error_var x <= si)%positive ->
   forall errors1,
     (forall i ty k,
        mget shift i = (ty, k) ->
@@ -516,7 +318,7 @@ Lemma make_rounding_correct
   forall choice,
   exists errors2,
     (forall i,
-       (i < si)%nat ->
+       (i < si)%positive ->
        errors2 i = errors1 i)
     /\
     reval y env errors2 =
@@ -539,82 +341,82 @@ destruct kn as [ [ | ] | ]; unfold round_knowl_denote in H2.
   replace (3 - femax ty - 1)%Z with (3 - femax ty - fprec ty + fprec ty - 1)%Z in H2 by ring.
   generalize (Relative.relative_error_N_FLT_ex _ _ _ (fprec_gt_0 _) choice _ H2).
   destruct 1 as (eps & Heps & Hround).
-  pose (errors2 i := if Nat.eq_dec i si  then eps else errors1 i).
+  pose (errors2 i := if Pos.eq_dec i si  then eps else errors1 i).
   exists errors2.
   split; [ | split].
-  * unfold errors2; intros; destruct (Nat.eq_dec i si); auto; lia.
+  * unfold errors2; intros; destruct (Pos.eq_dec i si); auto; lia.
   * inversion H; clear H; subst.
     simpl reval.
     rewrite Rmult_1_l.
     rewrite <- (reval_error_ext errors1).
    --
      unfold errors2.
-     destruct (Nat.eq_dec si si); congruence.
-   --  intros; unfold errors2; destruct (Nat.eq_dec i si); auto; exfalso; lia.
+     destruct (Pos.eq_dec si si); congruence.
+   --  intros; unfold errors2; destruct (Pos.eq_dec i si); auto; exfalso; lia.
   * inversion H; clear H; subst.
     simpl reval.
     intros until i.
-    rewrite (mget_set Nat.eq_dec).
+    rewrite mget_set.
     intros.
     unfold errors2.
-    destruct (Nat.eq_dec i si); auto.
+    destruct (Pos.eq_dec i si); auto.
     inversion H; subst.
     assumption.
  - (* Denormal *)
   replace (3 - femax ty)%Z with (3 - femax ty - fprec ty + fprec ty)%Z in H2 by ring.
   generalize (Fprop_absolute.absolute_error_N_FLT _ _ (fprec_gt_0 _) _ choice _ H2).
   destruct 1 as (eps & Heps & Hround).
-  pose (errors2 i := if Nat.eq_dec i si then eps else errors1 i).
+  pose (errors2 i := if Pos.eq_dec i si then eps else errors1 i).
   exists errors2.    
   split; [ | split].
-  * unfold errors2; intros; destruct (Nat.eq_dec i si); auto; lia.
+  * unfold errors2; intros; destruct (Pos.eq_dec i si); auto; lia.
   * inversion H; clear H; subst. simpl reval.
     rewrite <- (reval_error_ext errors1).
-   -- unfold errors2; destruct (Nat.eq_dec si si); congruence.
-   -- intros; unfold errors2; destruct (Nat.eq_dec i si); auto; lia.
+   -- unfold errors2; destruct (Pos.eq_dec si si); congruence.
+   -- intros; unfold errors2; destruct (Pos.eq_dec i si); auto; lia.
   * inversion H; clear H; subst. simpl reval.
      intros until i.
-     rewrite (mget_set Nat.eq_dec).
+     rewrite mget_set.
      intros.
      unfold errors2.
-     destruct (Nat.eq_dec i si); auto.
+     destruct (Pos.eq_dec i si); auto.
      inversion H; subst.
      auto.
 -  (* None *)
  generalize (Relative.error_N_FLT Zaux.radix2 (3 - femax ty - fprec ty) (fprec ty) (fprec_gt_0 _)  choice (reval x env errors1)).
  destruct 1 as (eps & eta & Heps & Heta & _ & Hround).
- pose (errors2 i := if Nat.eq_dec i (S (si)) then eta
-                          else if Nat.eq_dec i si then eps else  errors1 i).
+ pose (errors2 i := if Pos.eq_dec i (Pos.succ (si)) then eta
+                          else if Pos.eq_dec i si then eps else  errors1 i).
  exists errors2.
  split; [ | split].
  + 
    unfold errors2.
-   intros; destruct (Nat.eq_dec i (S si)); try lia; destruct (Nat.eq_dec i si); try lia; auto.
+   intros; destruct (Pos.eq_dec i (Pos.succ si)); try lia; destruct (Pos.eq_dec i si); try lia; auto.
  + inversion H; clear H; subst.
     simpl reval.
     rewrite Rmult_1_l.     
   rewrite <- (reval_error_ext errors1).
   *
     unfold errors2.
-    destruct (Nat.eq_dec si (S si)); try (exfalso; lia).
-    destruct (Nat.eq_dec si si); try congruence.
-    destruct (Nat.eq_dec (S si) (S si)); congruence.
+    destruct (Pos.eq_dec si (Pos.succ si)); try (exfalso; lia).
+    destruct (Pos.eq_dec si si); try congruence.
+    destruct (Pos.eq_dec (Pos.succ si) (Pos.succ si)); congruence.
   *
    intros.
    unfold errors2.
-   destruct (Nat.eq_dec i (S si)); try lia.
-   destruct (Nat.eq_dec i si); try lia.
+   destruct (Pos.eq_dec i (Pos.succ si)); try lia.
+   destruct (Pos.eq_dec i si); try lia.
    auto.
  +
    inversion H; clear H; subst.
     simpl reval.
   intros until i.
-  repeat rewrite (mget_set Nat.eq_dec).
+  repeat rewrite mget_set.
   intros.
   unfold errors2.
-  destruct (Nat.eq_dec i (S si)).
+  destruct (Pos.eq_dec i (Pos.succ si)).
   * inversion H; subst; assumption.
-  * destruct (Nat.eq_dec i si); auto.
+  * destruct (Pos.eq_dec i si); auto.
      inversion H; subst.
     assumption.
 Qed.
@@ -714,49 +516,35 @@ Fixpoint rndval
 
 Lemma rnd_of_binop_shift_incr si shift ty b r1 r2 r si' shift':
   rnd_of_binop si shift ty b r1 r2 = (r, (si', shift')) ->
-  (si <= si')%nat.
+  (si <= si')%positive.
 Proof.
   destruct b; simpl; intros.
-  {
-    eapply make_rounding_shift_incr; eauto.
-  }
-  {
-    inversion H; clear H; subst.
-    auto with arith.
-  }
-  {
-    inversion H; clear H; subst.
-    auto with arith.
-  }
+  -  eapply make_rounding_shift_incr; eauto.
+  -  inversion H; clear H; subst. lia.
+  - inversion H; clear H; subst. lia.
 Qed.
 
 Lemma rnd_of_binop_shift_le si shift ty b r1 r2 r si' shift':
   rnd_of_binop si shift ty b r1 r2 = (r, (si', shift')) ->
-    (max_error_var r1 <= si)%nat ->
-    (max_error_var r2 <= si)%nat ->
-    (max_error_var r <=  si')%nat.
+    (max_error_var r1 <= si)%positive ->
+    (max_error_var r2 <= si)%positive ->
+    (max_error_var r <=  si')%positive.
 Proof.
   destruct b; simpl; intros.
-  {
-    eapply make_rounding_shift_le; eauto.
+ - eapply make_rounding_shift_le; eauto.
     simpl.
-    apply Nat.max_lub; auto.
-  }
-  {
-    inversion H; clear H; subst.
+    apply Pos.max_lub; auto.
+ - inversion H; clear H; subst.
     simpl.
-    apply Nat.max_lub; auto.
-  }
-  {
-    inversion H; clear H; subst.
+    apply Pos.max_lub; auto.
+ - inversion H; clear H; subst.
     destruct zero_left; auto.
     destruct minus; auto.
-  }
 Qed.
 
 Lemma rnd_of_binop_shift_unchanged  si shift ty b r1 r2 r si' shift':
   rnd_of_binop si shift ty b r1 r2 = (r, (si', shift')) ->
-  forall i, (i < si)%nat ->
+  forall i, (i < si)%positive ->
             mget shift' i = mget shift i.
 Proof.
   destruct b; simpl; intros.
@@ -773,50 +561,39 @@ Qed.
 
 Lemma rnd_of_cast_shift_incr si shift ty ty0 knowl r1 y si' shift':
   rnd_of_cast si shift ty ty0 knowl r1 = (y, (si', shift')) ->
-  (si <= si')%nat.
+  (si <= si')%positive.
 Proof.
   unfold rnd_of_cast.
-  destruct (
-      type_leb ty ty0
-    ).
-  {
-    inversion_clear 1; auto with arith.
-  }
-  intros.
-  eapply make_rounding_shift_incr; eauto.
+  destruct (type_leb ty ty0).
+  - inversion_clear 1; auto. lia.
+  - intros. eapply make_rounding_shift_incr; eauto.
 Qed.
 
 Lemma rnd_of_cast_shift_le si shift ty ty0 knowl r1 y si' shift':
   rnd_of_cast si shift ty ty0 knowl r1 = (y, (si', shift')) ->
-  (max_error_var r1 <= si)%nat ->
-    (max_error_var y <= si')%nat.
+  (max_error_var r1 <= si)%positive ->
+    (max_error_var y <= si')%positive.
 Proof.
   unfold rnd_of_cast.
-  destruct (
-      type_leb ty ty0
-    ).
-  {
-    congruence.
-  }
-  intros; eapply make_rounding_shift_le; eauto.
+  destruct (type_leb ty ty0).
+  - congruence.
+  - intros; eapply make_rounding_shift_le; eauto.
 Qed.
 
 Lemma rnd_of_cast_shift_unchanged si shift ty ty0 knowl r1 y si' shift':
   rnd_of_cast si shift ty ty0 knowl r1 = (y, (si', shift')) ->
-  forall i, (i < si)%nat ->
+  forall i, (i < si)%positive ->
             mget shift' i = mget shift i.
 Proof.
   unfold rnd_of_cast.
   destruct (type_leb ty ty0).
-  {
-    congruence.
-  }
-  apply make_rounding_shift_unchanged.
+  - congruence.
+  - apply make_rounding_shift_unchanged.
 Qed.
     
 Lemma rnd_of_unop_shift_incr si shift ty u r1 y si' shift':
   rnd_of_unop si shift ty u r1 = (y, (si', shift')) ->
-  (si <= si')%nat.
+  (si <= si')%positive.
 Proof.
   destruct u; simpl.
 - (* Rounded1 *)
@@ -825,19 +602,19 @@ Proof.
      apply make_rounding_shift_incr.
  + destruct knowl as [ [ | ] | ].
   * (* Some Normal *)
-   inversion_clear 1; auto with arith.
+   inversion_clear 1; auto; lia.
   *  apply (make_rounding_shift_incr _ _ Denormal2').
   *  apply (make_rounding_shift_incr _ _ Denormal2').
 - (* Exact1 *)
-   inversion_clear 1; auto with arith.
+   inversion_clear 1; auto; lia.
 - (* CastTo *)
   apply rnd_of_cast_shift_incr.
 Qed.
 
 Lemma rnd_of_unop_shift_le si  shift ty u r1 y si' shift':
   rnd_of_unop si shift ty u r1 = (y, (si', shift')) ->
-  (max_error_var r1 <= si)%nat ->
-  (max_error_var y  <=  si')%nat.
+  (max_error_var r1 <= si)%positive ->
+  (max_error_var y  <=  si')%positive.
 Proof.
   destruct u; simpl; intros.
 - (* Rounded1 *)
@@ -845,19 +622,19 @@ Proof.
  + eapply make_rounding_shift_le; eauto.
  + destruct knowl as [ [ | ] | ].
   * (* Some Normal *)
-    inversion H; clear H; subst; simpl. auto.
-  * eapply (make_rounding_shift_le _ _ Denormal2'); eauto.
-  * eapply (make_rounding_shift_le _ _ Denormal2'); eauto.
+    inversion H; clear H; subst; simpl. lia.
+  * eapply (make_rounding_shift_le _ _ Denormal2'); eauto. simpl. lia.
+  * eapply (make_rounding_shift_le _ _ Denormal2'); eauto. simpl. lia.
 - (* Exact1 *)
     inversion H; clear H; subst; simpl.
-    destruct o; simpl; auto.
+    destruct o; simpl; auto. lia.
 - (* CastTo *)
   eapply rnd_of_cast_shift_le; eauto.
 Qed.
 
 Lemma rnd_of_unop_shift_unchanged si  shift ty u r1 y si' shift':
   rnd_of_unop si shift ty u r1 = (y, (si', shift')) ->
-  forall i, (i < si)%nat ->
+  forall i, (i < si)%positive ->
             mget shift' i = mget shift i.
 Proof.
   destruct u; simpl.
@@ -878,56 +655,47 @@ Qed.
 Lemma rndval_shift_incr x:
   forall si shift y si' shift',
     rndval si shift x = (y, (si', shift')) ->
-    (si <= si')%nat.
+    (si <= si')%positive.
 Proof.
   induction x; simpl.
 - (* Const *)
-    inversion_clear 1; intros; auto with arith.
+    inversion_clear 1; intros; auto; lia.
 - (* Var *)
-    inversion_clear 1; intros; auto with arith.
+    inversion_clear 1; intros; auto; lia.
 - (* Binop *)
     intros.
     destruct (rndval si shift x1) as (r1 & si1 & s1) eqn:EQ1.
     destruct (rndval si1 s1 x2) as (r2 & si2 & s2) eqn:EQ2.
-    eapply Nat.le_trans.
-    {
-      eapply IHx1; eauto.
-    }
-    eapply Nat.le_trans.
-    {
-      eapply IHx2; eauto.
-    }
-    eapply rnd_of_binop_shift_incr; eauto.
+    eapply Pos.le_trans; [ | eapply Pos.le_trans].
+    + eapply IHx1; eauto.
+    + eapply IHx2; eauto.
+    + eapply rnd_of_binop_shift_incr; eauto.
 - (* Unop *)
   intros.
   destruct (rndval si shift x) as (r1 & si1 & s1) eqn:EQ1.
-  eapply Nat.le_trans.
-  {
-    eapply IHx; eauto.
-  }
-  eapply rnd_of_unop_shift_incr; eauto.
+  eapply Pos.le_trans.
+  + eapply IHx; eauto.
+  + eapply rnd_of_unop_shift_incr; eauto.
 Qed.
 
 Lemma rndval_shift_le x:
   forall si shift y si' shift',
     rndval si shift x = (y, (si', shift')) ->
-    (max_error_var y <=  si')%nat.
+    (max_error_var y <=  si')%positive.
 Proof.
   induction x; simpl.
 - (* Const *)
-    inversion_clear 1; simpl; auto with arith.
+    inversion_clear 1; simpl; auto; lia.
 - (* Var *)
-    inversion_clear 1; simpl; auto with arith.
+    inversion_clear 1; simpl; auto; lia.
 - (* Binop *)
     intros.
     destruct (rndval si shift x1) as (r1 & si1 & s1) eqn:EQ1.
     destruct (rndval si1 s1 x2) as (r2 & si2 & s2) eqn:EQ2.
     eapply rnd_of_binop_shift_le; eauto.
-    eapply Nat.le_trans.
-    {
-      eapply IHx1; eauto.
-    }
-    eapply rndval_shift_incr; eauto.
+    eapply Pos.le_trans.
+    + eapply IHx1; eauto.
+    + eapply rndval_shift_incr; eauto.
 - (* Unop *)
   intros.
   destruct (rndval si shift x) as (r1 & si1 & s1) eqn:EQ1.
@@ -937,45 +705,37 @@ Qed.
 Lemma rndval_shift_unchanged x:
   forall si shift y si' shift',
     rndval si shift x = (y, (si', shift')) ->
-  forall i, (i < si)%nat ->
+  forall i, (i < si)%positive ->
             mget shift' i = mget shift i.
 Proof.
   induction x; simpl.
 - (* Const *)
-    inversion_clear 1; intros; auto with arith.
+    inversion_clear 1; intros; auto; lia.
 - (* Var *)
-    inversion_clear 1; intros; auto with arith.
+    inversion_clear 1; intros; auto; lia.
 - (* Binop *)
     intros.
     destruct (rndval si shift x1) as (r1 & si1 & s1) eqn:EQ1.
     destruct (rndval si1 s1 x2) as (r2 & si2 & s2) eqn:EQ2.
-    etransitivity.
-    {
+    etransitivity; [ | etransitivity].
+    +
       eapply rnd_of_binop_shift_unchanged; eauto.
-      eapply Nat.lt_le_trans; [ eassumption | ].
-      etransitivity.
-      {
-        eapply rndval_shift_incr; eauto.
-      }
-      eapply rndval_shift_incr; eauto.
-    }
-    etransitivity.
-    {
+      eapply Pos.lt_le_trans; [ eassumption | ].
+      etransitivity; eapply rndval_shift_incr; eauto.
+    +
       eapply IHx2; eauto.
-      eapply Nat.lt_le_trans; [ eassumption | ].
+      eapply Pos.lt_le_trans; [ eassumption | ].
       eapply rndval_shift_incr; eauto.
-    }
-    eapply IHx1; eauto.
+    + eapply IHx1; eauto.
 - (* Unop *)
   intros.
   destruct (rndval si shift x) as (r1 & si1 & s1) eqn:EQ1.
   etransitivity.
-  {
+  +
     eapply rnd_of_unop_shift_unchanged; eauto.
-    eapply Nat.lt_le_trans; [ eassumption | ].
+    eapply Pos.lt_le_trans; [ eassumption | ].
     eapply rndval_shift_incr; eauto.
-  }
-  eapply IHx; eauto.
+  + eapply IHx; eauto.
 Qed.
 
 (*  "(a, b) holds" iff 0 (if b then < else <=) a *)
@@ -1027,7 +787,7 @@ Lemma eval_cond1_preserved m1 m2 env c:
   ( forall e b,
       c = (e, b) ->
       forall i,
-        (i < max_error_var e)%nat ->
+        (i < max_error_var e)%positive ->
         mget m2 i = mget m1 i
   ) ->
   eval_cond1 env m1 c ->
@@ -1038,24 +798,24 @@ Proof.
   destruct c.
   intros.
   rewrite <- (reval_error_ext (fun i =>
-                              if Nat.ltb i (max_error_var r)
+                              if Pos.ltb i (max_error_var r)
                               then errors i
                               else 0)).
   {
     apply H0.
     intros.
-    destruct (Nat.ltb i (max_error_var r)) eqn:LTB.
+    destruct (Pos.ltb i (max_error_var r)) eqn:LTB.
     {
       apply H1.
       erewrite H; eauto.
-      apply Nat.ltb_lt.
+      apply Pos.ltb_lt.
       assumption.
     }
     rewrite Rabs_R0.
     apply error_bound_nonneg.
   }
   intros.
-  rewrite <- Nat.ltb_lt in H2.
+  rewrite <- Pos.ltb_lt in H2.
   rewrite H2.
   reflexivity.
 Qed.
@@ -1104,32 +864,31 @@ Qed.
 
 Lemma revars_max_error_var e:
   forall i, MSET.In i (revars e) -> 
-            (i < max_error_var e)%nat.
+            (i < max_error_var e)%positive.
 Proof.
   induction e; simpl; auto; intro.
   {
     destruct r; generalize (@MSET.empty_spec i); try contradiction.
     intros _.
     rewrite MSET.singleton_spec.
-    intro; subst; auto with arith.
+    intro; subst; auto; lia.
   }
   rewrite MSET.union_spec.
   destruct 1.
   {
-    eapply Nat.lt_le_trans.
+    eapply Pos.lt_le_trans.
     { eapply IHe1; eauto. }
-    apply Nat.le_max_l.
+    apply Pos.le_max_l.
   }
-  eapply Nat.lt_le_trans.
+  eapply Pos.lt_le_trans.
   { eapply IHe2; eauto. }
-  apply Nat.le_max_r.
+  apply Pos.le_max_r.
 Qed.
-
-Context {MSHIFT'} {MAP': Map nat R MSHIFT'}.
 
 Export List.
 
-Fixpoint enum_forall' t_ (Q: nat -> _ -> Prop) (l: list nat) (P: MSHIFT' -> Prop): Prop :=
+Fixpoint enum_forall' t_ (Q: positive -> _ -> Prop) (l: list positive) 
+   (P: Maps.PMap.t R -> Prop): Prop :=
   match l with
     | nil => P (mempty t_)
     | a :: q =>
@@ -1142,7 +901,7 @@ Fixpoint enum_forall' t_ (Q: nat -> _ -> Prop) (l: list nat) (P: MSHIFT' -> Prop
 Lemma enum_forall_correct'  t_ (Q: _ -> _ -> Prop) (Ht_: forall i, Q i t_) l:
   forall (P: _ -> Prop),
     (forall errors1 errors2,
-       (forall i, In i l -> mget errors2 i = mget errors1 i) ->
+       (forall i: positive, In i l -> mget errors2 i = mget errors1 i) ->
        P errors1 -> P errors2) ->
     (forall errors,
        (forall i, Q i (mget errors i)) ->
@@ -1171,8 +930,8 @@ Proof.
     eapply H.
     2: eapply H1; eauto.
     intros.
-    repeat rewrite (mget_set Nat.eq_dec).
-    destruct (Nat.eq_dec i a); auto.
+    repeat rewrite mget_set.
+    destruct (Pos.eq_dec i a); auto.
     destruct H3; try congruence.
     auto.
   }
@@ -1181,15 +940,15 @@ Proof.
     apply H0; intros.
     apply H2.
     intros.
-    repeat rewrite (mget_set Nat.eq_dec).
-    destruct (Nat.eq_dec i a); auto.
+    repeat rewrite mget_set.
+    destruct (Pos.eq_dec i a); auto.
     congruence.
   }
   eapply H.
   2: eapply H1 with (u := mget errors a); eauto.
   intros.
-  repeat rewrite (mget_set Nat.eq_dec).
-  destruct (Nat.eq_dec i a); auto.
+  repeat rewrite mget_set.
+  destruct (Pos.eq_dec i a); subst; auto.
 Qed.
 
 Definition enum_forall t_ Q l P :=
@@ -1211,8 +970,6 @@ Proof.
   intros.
   eapply H; eauto.
 Qed.
-
-Section EVAL_COND2.
 
 Let P env e (b: bool) errors :=
   (if b then Rlt else Rle) 0 (reval e env errors).
@@ -1244,13 +1001,13 @@ Proof.
         intros.
         destruct (mget m i) eqn:?.
         rewrite H1.
-        destruct (Nat.ltb i (max_error_var r)); auto.
+        destruct (Pos.ltb i (max_error_var r)); auto.
         rewrite Rabs_R0.
         apply error_bound_nonneg.
       }
       intros.
       rewrite H1.
-      rewrite <- Nat.ltb_lt in H2.
+      rewrite <- Pos.ltb_lt in H2.
       rewrite H2.
       reflexivity.
     }
@@ -1276,9 +1033,7 @@ Proof.
   rewrite SetoidList.InA_alt in H1.
   destruct H1.
   intuition congruence.
-Qed.
-
-End EVAL_COND2.
+Qed.  
 
 Definition is_div o :=
   match o with
@@ -1298,7 +1053,7 @@ Definition rounding_cond_ast ty k x: list cond :=
 
 Lemma rounding_cond_ast_shift ty k x e b:
   In (e, b) (rounding_cond_ast ty k x) ->
-  (max_error_var e <= max_error_var x)%nat.
+  (max_error_var e <= max_error_var x)%positive.
 Proof.
   Opaque Zminus.
   destruct k; simpl; try tauto;
@@ -1307,9 +1062,7 @@ Proof.
     clear K;
     subst;
     inversion H; clear H; subst;
-    simpl;
-    try rewrite Nat.max_0_r;
-    auto with arith.
+    simpl; lia.
   Transparent Zminus.
 Qed.
 
@@ -1348,7 +1101,7 @@ Definition rnd_of_binop_with_cond
            (shift: MSHIFT)
            (ty: type)
            (o: binop) (r1 r2: rexpr):
-  ((rexpr * (nat * MSHIFT)) * list cond)
+  ((rexpr * (positive * MSHIFT)) * list cond)
   :=
     match o with
       | SterbenzMinus =>
@@ -1382,28 +1135,27 @@ Definition rnd_of_binop_with_cond
 
 Lemma rounding_cond_ast_shift_cond ty k r e b:
   In (e, b) (rounding_cond_ast ty k r) ->
-     (max_error_var e = max_error_var r)%nat.
+     (max_error_var e = max_error_var r)%positive.
 Proof.
   unfold rounding_cond_ast.
   destruct k; try contradiction.
 -
     destruct 1; try contradiction.
     Opaque Zminus. inversion H; clear H; subst. Transparent Zminus.
-    simpl.
-    apply Nat.max_0_r.
+    simpl. lia.
 -
   destruct 1; try contradiction.
   Opaque Zminus. inversion H; clear H; subst. Transparent Zminus.
-  reflexivity.
+  simpl. lia.
 Qed.
 
 Lemma rnd_of_binop_with_cond_shift_cond si shift ty o r1 r2 r' si' shift' cond:
   rnd_of_binop_with_cond si shift ty o r1 r2 = ((r', (si', shift')), cond) ->
-  (max_error_var r1 <= si)%nat ->
-  (max_error_var r2 <= si)%nat ->
+  (max_error_var r1 <= si)%positive ->
+  (max_error_var r2 <= si)%positive ->
   forall e b,
     In (e, b) cond ->
-    (max_error_var e <= si')%nat.
+    (max_error_var e <= si')%positive.
 Proof.
   destruct o; simpl.
   {
@@ -1427,16 +1179,15 @@ Proof.
     destruct H1.
     {
       inversion H1; clear H1; subst.
-      simpl.
+      simpl. rewrite Pos.max_r by lia.
       eapply make_rounding_shift_le; eauto.
-      simpl.
-      apply Nat.max_lub; auto.
+      simpl. lia.
     }
     apply rounding_cond_ast_shift_cond in H1.
     rewrite H1.
     simpl.
     apply make_rounding_shift_incr in EQ.
-    apply Nat.max_lub; lia.
+    lia.
   }
   {
     intro K.
@@ -1445,15 +1196,11 @@ Proof.
     destruct 3.
     {
       inversion H1; clear H1; subst.
-      simpl.
-      rewrite Nat.max_0_r.
-      apply Nat.max_lub; lia.
+      simpl. lia.
     }
     destruct H1; try contradiction.
     inversion H1; clear H1; subst.
-    simpl.
-    rewrite Nat.max_0_r.
-    apply Nat.max_lub; lia.
+    simpl. lia.
   }
   {
     intro K.
@@ -1484,10 +1231,10 @@ Definition rnd_of_cast_with_cond
 Lemma rnd_of_cast_with_cond_shift_cond
       si shift tyfrom tyto k r r' si' shift' cond:
   rnd_of_cast_with_cond si shift tyfrom tyto k r = ((r', (si', shift')), cond) ->
-  (max_error_var r <= si)%nat ->
+  (max_error_var r <= si)%positive ->
   forall e b,
     In (e, b) cond ->
-    (max_error_var e <= si')%nat.
+    (max_error_var e <= si')%positive.
 Proof.
   unfold rnd_of_cast_with_cond.
   destruct (type_leb tyfrom tyto).
@@ -1503,7 +1250,7 @@ Proof.
   destruct 2.
   {
     inversion H0; clear H0; subst.
-    simpl.
+    simpl. rewrite Pos.max_r by lia.
     eapply make_rounding_shift_le; eauto.
   }
   apply rounding_cond_ast_shift_cond in H0.
@@ -1545,10 +1292,10 @@ Definition rnd_of_unop_with_cond
 
 Lemma rnd_of_unop_with_cond_shift_cond si shift ty o r1 r' si' shift' cond:
   rnd_of_unop_with_cond si shift ty o r1 = ((r', (si', shift')), cond) ->
-  (max_error_var r1 <= si)%nat ->
+  (max_error_var r1 <= si)%positive ->
   forall e b,
     In (e, b) cond ->
-    (max_error_var e <= si')%nat.
+    (max_error_var e <= si')%positive.
 Proof.
   destruct o; cbn -[Zminus].
 - (* Rounded1 *)
@@ -1579,9 +1326,7 @@ Proof.
     intros.
     destruct H0; try contradiction.
     inversion H0; clear H0; subst.
-    simpl.
-    rewrite Nat.max_0_r.
-    assumption.
+    simpl. lia.
   * intros. inversion H; clear H; subst. inversion H1.
   * intros. inversion H; clear H; subst. inversion H1.
 - (* Exact1 *)
@@ -1592,8 +1337,7 @@ Proof.
    + (* Shift *)
       destruct H0; try contradiction.
       inversion H0; clear H0; subst.
-      simpl.
-      assumption.
+      simpl. lia.
 - (* CastTo *)
   apply rnd_of_cast_with_cond_shift_cond.
 Qed.
@@ -1673,13 +1417,13 @@ Proof.
     simpl in IHe1.
     subst.
     destruct (rndval si shift e1).
-    destruct p.
+    destruct p as [n ?].
     specialize (IHe2 n m).
     destruct (rndval_with_cond' n m e2).
     simpl in IHe2.
     subst.
     destruct (rndval n m e2).
-    destruct p.
+    destruct p as [n0 ?].
     specialize (rnd_of_binop_with_cond_left n0 m0 (type_lub (type_of_expr e1) (type_of_expr e2)) b r r0).
     destruct (rnd_of_binop_with_cond n0 m0 (type_lub (type_of_expr e1) (type_of_expr e2)) b r r0);
       simpl; auto.
@@ -1688,7 +1432,7 @@ Proof.
   specialize (IHe si shift).
   destruct (rndval_with_cond' si shift e); simpl in *; subst.
   destruct (rndval si shift e).
-  destruct p.
+  destruct p as [n ?].
   specialize (rnd_of_unop_with_cond_left n m (type_of_expr e) u r).
   destruct (
       rnd_of_unop_with_cond n m (type_of_expr e) u r
@@ -1700,7 +1444,7 @@ Lemma rndval_with_cond_shift_cond e:
   rndval_with_cond' si shift e = ((r', (si', shift')), cond) ->
   forall e' b',
     In (e', b') cond ->
-    (max_error_var e' <= si')%nat.
+    (max_error_var e' <= si')%positive.
 Proof.
   induction e; simpl; intros.
   {
@@ -1893,7 +1637,7 @@ Proof.
 Qed.
 
 Theorem fop_of_rounded_unop_correct shift errors
-        (Herr: forall (i : nat) (ty' : type) (k : rounding_knowledge'),
+        (Herr: forall (i : positive) (ty' : type) (k : rounding_knowledge'),
                  mget shift i = (ty', k) ->
                  Rabs (errors i) <= error_bound ty' k)
         ty e1
@@ -1962,30 +1706,30 @@ Proof.
 Qed.
 
 Lemma rndval_with_cond_correct_uInvShift:
-forall (env : forall x : type, V -> binary_float (fprec x) (femax x))
- (Henv : forall (ty : type) (i : V),  is_finite (fprec ty) (femax ty) (env ty i) = true)
+forall (env : forall x : type, FPLang.V -> binary_float (fprec x) (femax x))
+ (Henv : forall (ty : type) (i : FPLang.V),  is_finite (fprec ty) (femax ty) (env ty i) = true)
 (pow : positive)
- (ltr : bool) (e : expr) (si : nat) (r1 : rexpr) (s1 : MSHIFT)
- (errors1 errors1_1 : nat -> R)
- (E1 : forall i : nat, (i < si)%nat -> errors1_1 i = errors1 i)
- (EB1 : forall (i : nat) (ty' : type) (k : rounding_knowledge'),
+ (ltr : bool) (e : expr) (si : positive) (r1 : rexpr) (s1 : MSHIFT)
+ (errors1 errors1_1 : positive-> R)
+ (E1 : forall i : positive, (i < si)%positive -> errors1_1 i = errors1 i)
+ (EB1 : forall (i : positive) (ty' : type) (k : rounding_knowledge'),
       mget s1 i = (ty', k) -> Rabs (errors1_1 i) <= error_bound ty' k)
  (F1 : is_finite (fprec (type_of_expr e)) (femax (type_of_expr e)) (fval env e) = true)
  (V1 : reval r1 env errors1_1 =
          B2R (fprec (type_of_expr e)) (femax (type_of_expr e)) (fval env e))
  (H0 : expr_valid e = true)
- (shift : MSHIFT) (r : rexpr) (si2 : nat) (s : MSHIFT) (si1 : nat) (p1 : list cond) 
+ (shift : MSHIFT) (r : rexpr) (si2 : positive) (s : MSHIFT) (si1 : positive) (p1 : list cond) 
  (EQ1 : rndval_with_cond' si shift e = (r1, (si1, s1), p1))
  (p_ : list (rexpr * bool))
   (EQ : rnd_of_unop_with_cond si1 s1 (type_of_expr e) (Rounded1 (InvShift pow ltr) None) r1 =
      (r, (si2, s), p_))
  (H1 : forall i : cond, In i (p_ ++ p1) -> eval_cond1 env s i) 
- (H2 : forall (i : nat) (ty : type) (k : rounding_knowledge'),
+ (H2 : forall (i : positive) (ty : type) (k : rounding_knowledge'),
      mget shift i = (ty, k) -> Rabs (errors1 i) <= error_bound ty k)
  (K_ : rnd_of_unop si1 s1 (type_of_expr e) (Rounded1 (InvShift pow ltr) None) r1 = (r, (si2, s))),
-exists errors2 : nat -> R,
-  (forall i : nat, (i < si)%nat -> errors2 i = errors1 i) /\
-  (forall (i : nat) (ty' : type) (k : rounding_knowledge'),
+exists errors2 : positive -> R,
+  (forall i : positive, (i < si)%positive -> errors2 i = errors1 i) /\
+  (forall (i : positive) (ty' : type) (k : rounding_knowledge'),
    mget s i = (ty', k) -> Rabs (errors2 i) <= error_bound ty' k) /\
   is_finite (fprec (type_of_expr e)) (femax (type_of_expr e))
     (fop_of_unop (Rounded1 (InvShift pow ltr) None) (type_of_expr e) (fval env e)) = true /\
@@ -2002,20 +1746,20 @@ pose (eps :=
   B2R (fprec (type_of_expr e)) (femax (type_of_expr e))
     (fop_of_unop (Rounded1 (InvShift pow ltr) None) (type_of_expr e) (fval env e)) -
   F2R radix2 (B2F (B2 (type_of_expr e) (Z.neg pow))) * reval r1 env errors1_1).
-pose (errors2 i := if Nat.eq_dec i si1  then eps else errors1_1 i).
+pose (errors2 i := if Pos.eq_dec i si1  then eps else errors1_1 i).
 exists errors2.
 split; [ | split; [ | split]].
 -
 intros. unfold errors2.
-destruct (Nat.eq_dec i si1); auto.
+destruct (Pos.eq_dec i si1); auto.
 pose proof (rndval_shift_incr _ _ _ _ _ _ K1). lia.
 -
 subst errors2.
 simpl.
 intros.
 subst s; simpl in H.
-rewrite (mget_set Nat.eq_dec) in H.
-destruct (Nat.eq_dec i si1). inversion H; clear H; subst.
+rewrite mget_set in H.
+destruct (Pos.eq_dec i si1). inversion H; clear H; subst.
  +
   unfold error_bound.
   subst eps.
@@ -2024,12 +1768,11 @@ destruct (Nat.eq_dec i si1). inversion H; clear H; subst.
  apply InvShift_accuracy; auto.
  +
   clear eps.
-  destruct (le_lt_dec si i).
- *
-  apply EB1; auto.
- *  rewrite E1 by auto. apply H2.
+  destruct (Pos.lt_total i si).
+ *rewrite E1 by auto. apply H2.
    rewrite <- H.
    symmetry; eapply rndval_shift_unchanged; eauto.
+ * apply EB1; auto.
 - apply InvShift_finite; auto.
 -
  subst op. unfold reval; fold reval.
@@ -2037,7 +1780,7 @@ destruct (Nat.eq_dec i si1). inversion H; clear H; subst.
 2:{
    apply reval_error_ext; intros.
    unfold errors2.
- destruct (Nat.eq_dec i si1); auto.
+ destruct (Pos.eq_dec i si1); auto.
   subst i.
   pose proof (rndval_shift_le _ _ _ _ _ _ K1). lia.
 }
@@ -2045,7 +1788,7 @@ destruct (Nat.eq_dec i si1). inversion H; clear H; subst.
   subst eps.
   rewrite V1.
   simpl.
-  destruct (Nat.eq_dec si1 si1) as [ _ |]; [ | congruence].
+  destruct (Pos.eq_dec si1 si1) as [ _ |]; [ | congruence].
   set (a := F2R _ _).
   set (b := B2R _ _ _).
   set (c := B2R _ _ _).
@@ -2063,7 +1806,7 @@ Theorem rndval_with_cond_correct' env (Henv: forall ty i, is_finite _ _ (env ty 
          Rabs (errors1 i) <= error_bound ty k) ->
       exists errors2,
         (forall i,
-           (i < si)%nat ->
+           (i < si)%positive ->
            errors2 i = errors1 i)
         /\
         (forall i ty' k,
@@ -2127,13 +1870,13 @@ Proof.
         etransitivity.
         {
           eapply rnd_of_binop_shift_unchanged; eauto.
-          eapply Nat.lt_le_trans; [ eassumption | ].
+          eapply Pos.lt_le_trans; [ eassumption | ].
           etransitivity.
           eapply rndval_with_cond_shift_cond; [ | eassumption ] ; eauto.
           eapply rndval_shift_incr; eauto.
         }
         eapply rndval_shift_unchanged; eauto.
-        eapply Nat.lt_le_trans; [ eassumption | ].
+        eapply Pos.lt_le_trans; [ eassumption | ].
         eapply rndval_with_cond_shift_cond; eauto.
       }
       apply H1. apply in_or_app. right. apply in_or_app. auto.
@@ -2150,7 +1893,7 @@ Proof.
         subst.
         symmetry.
         eapply rnd_of_binop_shift_unchanged; eauto.
-        eapply Nat.lt_le_trans; [ eassumption | ].
+        eapply Pos.lt_le_trans; [ eassumption | ].
         eapply rndval_with_cond_shift_cond; [ | eassumption ] ; eauto.
       }
       apply H1. apply in_or_app. right. apply in_or_app. auto.
@@ -2175,7 +1918,7 @@ Proof.
     symmetry in V2.
 
     rewrite <- (reval_error_ext errors1_2) in V1
-     by (intros; apply E2; eapply Nat.lt_le_trans; [ eassumption | eapply rndval_shift_le; eauto]).
+     by (intros; apply E2; eapply Pos.lt_le_trans; [ eassumption | eapply rndval_shift_le; eauto]).
     destruct b.
    + (* rounded binary operator *)
         simpl.
@@ -2191,12 +1934,12 @@ Proof.
         generalize (make_rounding_correct _ _ _ _ _ _ _ _ ROUND).
         intro K.
         simpl max_error_var in K.
-        assert (L: (Nat.max (max_error_var r1) (max_error_var r2) <= si2_)%nat).
+        assert (L: (Pos.max (max_error_var r1) (max_error_var r2) <= si2_)%positive).
         {
           intros.
-          apply Nat.max_lub.
+          apply Pos.max_lub.
           {
-            eapply Nat.le_trans; [ eapply rndval_shift_le; eauto | ].
+            eapply Pos.le_trans; [ eapply rndval_shift_le; eauto | ].
             eapply rndval_shift_incr; eauto.
           }
           eapply rndval_shift_le; eauto.
@@ -2217,9 +1960,9 @@ Proof.
             simpl in H3.
             
             eapply make_rounding_shift_unchanged; eauto.
-            eapply Nat.lt_le_trans; eauto.
+            eapply Pos.lt_le_trans; eauto.
             etransitivity; try eassumption.
-            apply Nat.max_lub; eauto using rndval_shift_le.
+            apply Pos.max_lub; eauto using rndval_shift_le.
             etransitivity; [ eapply rndval_shift_le; eauto | ].
             eapply rndval_shift_incr; eauto.
           }
@@ -2232,7 +1975,7 @@ Proof.
           apply reval_error_ext.
           intros.
           apply E.
-          eapply Nat.lt_le_trans; [ eassumption | ].
+          eapply Pos.lt_le_trans; [ eassumption | ].
           etransitivity; [ eapply rndval_shift_le; eauto | ].
           eapply rndval_shift_incr; eauto.
         }
@@ -2241,7 +1984,7 @@ Proof.
           apply reval_error_ext.
           intros.
           apply E.
-          eapply Nat.lt_le_trans; [ eassumption | ].
+          eapply Pos.lt_le_trans; [ eassumption | ].
           eapply rndval_shift_le; eauto.
         }
         rewrite <- W1, <- W2 in *.
@@ -2294,14 +2037,14 @@ Proof.
         etransitivity.
         {
           eapply E.
-          eapply Nat.lt_le_trans; [ eassumption | ].
+          eapply Pos.lt_le_trans; [ eassumption | ].
           etransitivity; [ eapply rndval_shift_incr; eauto | ].
           eapply rndval_shift_incr; eauto.
         }
         etransitivity.
         {
           eapply E2.
-          eapply Nat.lt_le_trans; [ eassumption | ].
+          eapply Pos.lt_le_trans; [ eassumption | ].
           eapply rndval_shift_incr; eauto.
         }
         eauto.
@@ -2345,7 +2088,7 @@ Proof.
             etransitivity.
             {
               eapply E2.
-              eapply Nat.lt_le_trans; [ eassumption | ].
+              eapply Pos.lt_le_trans; [ eassumption | ].
               eapply rndval_shift_incr; eauto.
             }
             auto.
@@ -2389,7 +2132,7 @@ Proof.
           etransitivity.
           {
             eapply E2.
-            eapply Nat.lt_le_trans; [ eassumption | ].
+            eapply Pos.lt_le_trans; [ eassumption | ].
             eapply rndval_shift_incr; eauto.
           }
           eauto.
@@ -2515,7 +2258,7 @@ Proof.
       intros; subst.
       symmetry.
       eapply rnd_of_unop_shift_unchanged; eauto.
-      eapply Nat.lt_le_trans; eauto.
+      eapply Pos.lt_le_trans; eauto.
       eapply rndval_with_cond_shift_cond; eauto.
     }
     apply H1. apply in_or_app. auto.
@@ -2539,7 +2282,7 @@ Proof.
 
     assert (K := make_rounding_correct _ _ _ _ _ _ _ _ ROUND).
     simpl max_error_var in K.
-    assert (L:  (max_error_var r1 <= si1)%nat).
+    assert (L:  (max_error_var r1 <= si1)%positive).
     {
       intros.
       eapply rndval_shift_le; eauto.
@@ -2556,7 +2299,7 @@ Proof.
         apply rounding_cond_ast_shift in H3.
         simpl in H3.
         eapply rnd_of_unop_shift_unchanged; eauto.
-        eapply Nat.lt_le_trans; eauto.
+        eapply Pos.lt_le_trans; eauto.
         etransitivity; try eassumption.
       }
       eapply H1.
@@ -2574,7 +2317,7 @@ Proof.
       apply reval_error_ext.
       intros.
       apply E.
-      eapply Nat.lt_le_trans; [ eassumption | ].
+      eapply Pos.lt_le_trans; [ eassumption | ].
       eapply rndval_shift_le; eauto.
     }
     rewrite <- W1 in V1.
@@ -2612,7 +2355,7 @@ Proof.
     etransitivity.
     {
       eapply E.
-      eapply Nat.lt_le_trans; [eassumption | ].
+      eapply Pos.lt_le_trans; [eassumption | ].
       eapply rndval_shift_incr; eauto.
     }
     eauto.
@@ -2778,7 +2521,7 @@ Proof.
   inversion EQ; clear EQ; subst.
   generalize (make_rounding_correct _ _ _ _ _ _ _ _ ROUND).
   intro K.
-  assert (L: (max_error_var r1 <= si1)%nat).
+  assert (L: (max_error_var r1 <= si1)%positive).
   {
     eapply rndval_shift_le; eauto.
   }
@@ -2796,7 +2539,7 @@ Proof.
       apply rounding_cond_ast_shift in H3.
       simpl in H3.
       eapply make_rounding_shift_unchanged; eauto.
-      eapply Nat.lt_le_trans; eauto.
+      eapply Pos.lt_le_trans; eauto.
       etransitivity; try eassumption.
     }
     eapply H1.
@@ -2821,7 +2564,7 @@ Proof.
     etransitivity.
     {
       eapply E.
-      eapply Nat.lt_le_trans; eauto.
+      eapply Pos.lt_le_trans; eauto.
       eapply rndval_shift_incr; eauto.
     }
     auto.
@@ -2834,21 +2577,21 @@ Qed.
 
 Definition empty_shiftmap := mempty (Tsingle, Unknown').
 
-Definition environ := forall ty : type, V -> ftype ty.
+Definition environ := forall ty : type, FPLang.V -> ftype ty.
 
 Definition env_all_finite (env: environ) :=
-  forall (ty : type) (i : V),
+  forall (ty : type) (i : FPLang.V),
         is_finite (fprec ty) (femax ty) (env ty i) = true.
 
 Definition eval_cond (s: MSHIFT) (c: cond) (env: environ) : Prop :=
   eval_cond1 env s c.
 
 Definition rndval_with_cond (e: expr) : rexpr * MSHIFT * list (environ -> Prop) :=
- let '((r,(si,s)),p) := rndval_with_cond' 0 empty_shiftmap e
+ let '((r,(si,s)),p) := rndval_with_cond' 1%positive empty_shiftmap e
   in (r, s, map (eval_cond s) p).
 
 Definition errors_bounded
-    (shift: MSHIFT) (errors: nat -> R) := 
+    (shift: MSHIFT) (errors: positive -> R) := 
    forall i ty k,
          mget shift i = (ty, k) ->
          (Rabs (errors i) <= error_bound ty k)%R.
@@ -2870,7 +2613,7 @@ Theorem rndval_with_cond_correct
 Proof.
 intros.
 unfold rndval_with_cond in H0.
-destruct (rndval_with_cond' 0 empty_shiftmap e) as [[r' [si s']] p'] eqn:?H.
+destruct (rndval_with_cond' _ empty_shiftmap e) as [[r' [si s']] p'] eqn:?H.
 inversion H0; clear H0; subst r' s' p.
 assert (forall i : cond, In i p' -> eval_cond1 env s i). {
   intros.
@@ -2879,7 +2622,7 @@ assert (forall i : cond, In i p' -> eval_cond1 env s i). {
   rewrite in_map_iff.
   exists i; auto.
 }
-destruct (rndval_with_cond_correct' env Henv e H 0 empty_shiftmap r _ _ _ H2 H0
+destruct (rndval_with_cond_correct' env Henv e H 1 empty_shiftmap r _ _ _ H2 H0
  (fun _ => 0%R))
   as [errors2 [? [? [? ?]]]].
 -
@@ -2895,31 +2638,6 @@ lra.
 exists errors2; split; auto.
 Qed.
 
-End WITHMAP.
-
-End WITHVAR.
-
-Section TEST.
-
-Local Program Instance map_nat: MapIndex nat :=
-  {
-    index_of_tr := Pos.of_succ_nat
-  }.
-Next Obligation.
-  generalize SuccNat2Pos.inj_iff.
-  clear.
-  firstorder.
-Defined.
-
-Local Existing Instances compcert_map.
-
-(* OK
-Definition sqrt_of_two : @expr ident := Unop (Rounded1 SQRT None) (Const Tsingle (B2 _ 0)).
-Eval simpl in rndval 0 (Maps.PMap.init 0) sqrt_of_two.
-Eval simpl in rndval_with_cond 0 (Maps.PMap.init 0) sqrt_of_two.
-*)
-
-
-End TEST.
+End WITH_NAN.
 
 

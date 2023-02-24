@@ -77,52 +77,25 @@ From vcfloat Require Import IEEE754_extra. (* lib.Floats. *)
 Global Unset Asymmetric Patterns. (* because "Require compcert..." sets it *)
 Require Export vcfloat.Float_notations.
 
-Definition BOOL (a: bool): Prop := if a then True else False.
+Local Definition ZLT a b: Prop := Bool.Is_true (Z.ltb a b).
 
-Lemma BOOL_proof_eq a (h1 h2: BOOL a):
-  h1 = h2.
-Proof.
-  destruct a; try contradiction.
-  unfold BOOL in h1, h2.
-  destruct h1. destruct h2. reflexivity.
-Defined. (* required for the semantics of cast *)
-
-Lemma BOOL_intro a:
-  a = true ->
-  BOOL a.
-Proof.
-  unfold BOOL.
-  intros.
-  rewrite H.
-  exact I.
-Qed.
-
-Lemma BOOL_elim a:
-  BOOL a -> a = true.
-Proof.
-  unfold BOOL.
-  destruct a; auto.
-Qed.
-
-Definition ZLT a b: Prop := BOOL (Z.ltb a b).
-
-Lemma ZLT_intro a b:
+Local Lemma ZLT_intro a b:
   (a < b)%Z ->
   ZLT a b.
 Proof.
   intros.
-  apply BOOL_intro.
+  apply Bool.Is_true_eq_left.
   apply Z.ltb_lt.
   assumption.
 Qed.
 
-Lemma ZLT_elim a b:
+Local Lemma ZLT_elim a b:
   ZLT a b ->
   (a < b)%Z.
 Proof.
   intros.
-  apply Z.ltb_lt.
-  apply BOOL_elim.
+  apply Z.ltb_lt. 
+  apply Bool.Is_true_eq_true.
   assumption.
 Qed.
 
@@ -132,14 +105,22 @@ Record type: Type := TYPE
     femax: Z;
     fprec := Z.pos fprecp;
     fprec_lt_femax_bool: ZLT fprec femax;
-    fprecp_not_one_bool: BOOL (negb (Pos.eqb fprecp xH))
+    fprecp_not_one_bool: Bool.Is_true (negb (Pos.eqb fprecp xH))
   }.
+
+Lemma Is_true_eq a (h1 h2: Bool.Is_true a):
+  h1 = h2.
+Proof.
+  destruct a; try contradiction.
+  unfold Bool.Is_true in h1, h2.
+  destruct h1. destruct h2. reflexivity.
+Defined. 
 
 Lemma type_ext t1 t2:
   fprecp t1 = fprecp t2 -> femax t1 = femax t2 -> t1 = t2.
 Proof.
   destruct t1. destruct t2. simpl. intros. subst.
-  f_equal; apply BOOL_proof_eq.
+  f_equal; apply Is_true_eq.
 Defined. (* required for the semantics of cast *)
 
 Lemma type_ext' t1 t2:
@@ -211,7 +192,7 @@ Lemma fprecp_not_one ty:
 Proof.
   apply Pos.eqb_neq.
   apply negb_true_iff.
-  apply BOOL_elim.
+  apply Bool.Is_true_eq_true.
   apply fprecp_not_one_bool.
 Qed.
 
@@ -520,7 +501,7 @@ Lemma type_lub_lt a1 a2 b1 b2:
   ZLT (Z.pos (Pos.max a1 a2)) (Z.max b1 b2).
 Proof.
   intros.  
-  unfold ZLT, BOOL.
+  unfold ZLT, Bool.Is_true.
   (* this is necessary for transparent proof reduction *)
   destruct (Z.ltb (Z.pos (Pos.max a1 a2)) (Z.max b1 b2)) eqn:LT.
   {
@@ -537,9 +518,9 @@ Proof.
 Defined.
 
 Lemma  type_lub_neq_one a1 a2:
-  BOOL (negb (Pos.eqb a1 xH)) ->
-  BOOL (negb (Pos.eqb a2 xH)) ->
-  BOOL (negb (Pos.eqb (Pos.max a1 a2) xH))
+  Bool.Is_true (negb (Pos.eqb a1 xH)) ->
+  Bool.Is_true (negb (Pos.eqb a2 xH)) ->
+  Bool.Is_true (negb (Pos.eqb (Pos.max a1 a2) xH))
 .
 Proof.
   intros.
@@ -658,15 +639,6 @@ Proof.
   exists (Binary.B754_nan (fprec ty) (femax ty) false 1 H).
   reflexivity.
 Defined.
-
-(* Perhaps VarType shouldn't go in FPCore, since it has something
- to do with reification; but it's needed in FPCompCert, which doesn't
- want to import FPLang, so we make do this way. *)
-Class VarType (V: Type): Type := 
-  {
-    var_eqb: V -> V -> bool;
-    var_eqb_eq: forall v1 v2, var_eqb v1 v2 = true <-> v1 = v2
-  }.
 
 Section WITHNANS.
 Context {NANS: Nans}.

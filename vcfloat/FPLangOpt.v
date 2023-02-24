@@ -112,80 +112,11 @@ Proof.
   intuition congruence.
 Qed.
 
-Definition rounded_unop_eqb u1 u2 :=
-  match u1, u2 with
-    | SQRT, SQRT => true
-    | InvShift p1 b1, InvShift p2 b2 => Pos.eqb p1 p2 && Bool.eqb b1 b2
-    | _, _ => false
-  end.
-
-Lemma rounded_unop_eqb_eq u1 u2:
-  (rounded_unop_eqb u1 u2 = true <-> u1 = u2).
-Proof.
-  destruct u1; destruct u2; simpl; try intuition congruence.
-  rewrite Bool.andb_true_iff;
-  (try rewrite Pos.eqb_eq);
-  (try rewrite N.eqb_eq);
-  rewrite Bool.eqb_true_iff;
-  intuition congruence.
-Qed.
-
-
-Definition exact_unop_eqb u1 u2 :=
-  match u1, u2 with
-    | Abs, Abs => true
-    | Opp, Opp => true
-    | Shift p1 b1, Shift p2 b2  => N.eqb p1 p2 && Bool.eqb b1 b2
-    | _, _ => false
-  end.
-
-Lemma exact_unop_eqb_eq u1 u2:
-  (exact_unop_eqb u1 u2 = true <-> u1 = u2).
-Proof.
-  destruct u1; destruct u2; simpl; (try intuition congruence);
-  rewrite Bool.andb_true_iff;
-  (try rewrite Pos.eqb_eq);
-  (try rewrite N.eqb_eq);
-  rewrite Bool.eqb_true_iff;
-  intuition congruence.
-Qed.
-
-Definition unop_eqb u1 u2 :=
-  match u1, u2 with
-    | Rounded1 op1 k1, Rounded1 op2 k2 =>
-      rounded_unop_eqb op1 op2 && option_eqb rounding_knowledge_eqb k1 k2
-    | Exact1 o1, Exact1 o2 => exact_unop_eqb o1 o2
-    | CastTo ty1 k1, CastTo ty2 k2 =>
-      type_eqb ty1 ty2 && option_eqb rounding_knowledge_eqb k1 k2
-    | _, _ => false
-  end.
-
-Lemma unop_eqb_eq u1 u2:
-  (unop_eqb u1 u2 = true <-> u1 = u2).
-Proof.
-  destruct u1; destruct u2; simpl; (try intuition congruence).
--
-    rewrite andb_true_iff.
-    rewrite rounded_unop_eqb_eq.
-    rewrite (option_eqb_eq rounding_knowledge_eqb_eq).
-    intuition congruence.
--
-    rewrite exact_unop_eqb_eq.
-    intuition congruence.
--
-  rewrite andb_true_iff.
-  rewrite type_eqb_eq.
-  rewrite (option_eqb_eq rounding_knowledge_eqb_eq).
-  intuition congruence.
-Qed.
-
-Section WITHVARS.
-Context {V} `{VARS: VarType V}.
-
+Section WITHNAN.
 Context {NANS: Nans}.
 
 Definition fcval_nonrec (e: expr): option (ftype (type_of_expr e)) :=
-  match e as e' return option (ftype (type_of_expr (V := V) e')) with
+  match e as e' return option (ftype (type_of_expr e')) with
     | Const ty f => Some f
     | _ => None
   end.
@@ -1248,11 +1179,6 @@ Qed.
 
 Ltac binary_float_equiv_tac :=
       repeat (first [ rewrite binary_float_equiv_loose_tighten in *
-(*
-                          | match goal with |- binary_float_equiv_loose ?x _ =>
-                                      fail 100 "bingo" x
-                            end
-*)
                           | apply Bmult_div_inverse_equiv
                           | apply Bmult_div_inverse_equiv2
                           | apply cast_preserves_bf_equiv;
@@ -1344,7 +1270,7 @@ Proof.
   - apply H. 
 Qed.
 
-Definition is_zero_expr (env: forall ty, V -> ftype ty) (e: FPLang.expr)
+Definition is_zero_expr (env: forall ty, FPLang.V -> ftype ty) (e: FPLang.expr)
  : bool :=  
 match (fval env e) with
 | Binary.B754_zero _ _ b1 => true
@@ -1353,7 +1279,7 @@ end.
 
 (* Erasure of rounding annotations *)
 
-Fixpoint erase (e: FPLang.expr (V := V)) {struct e}: FPLang.expr :=
+Fixpoint erase (e: FPLang.expr) {struct e}: FPLang.expr :=
   match e with
     | Binop (Rounded2 u k) e1 e2 => Binop (Rounded2 u None) (erase e1) (erase e2)
     | Binop SterbenzMinus e1 e2 => Binop (Rounded2 MINUS None) (erase e1) (erase e2)
@@ -1420,4 +1346,4 @@ Proof.
   apply erase_correct'.
 Qed.
 
-End WITHVARS.
+End WITHNAN.

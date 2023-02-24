@@ -69,6 +69,11 @@ Global Existing Instance fprec_gt_0. (* to override the Opaque one in Interval p
 
 Local Open Scope R_scope.
 
+Local Definition V := positive.
+Definition     var_eqb: V -> V -> bool := Pos.eqb.
+Lemma var_eqb_eq: forall v1 v2, var_eqb v1 v2 = true <-> v1 = v2.
+Proof.  apply Pos.eqb_eq. Qed.
+
 Inductive rounded_binop: Type :=
 | PLUS
 | MINUS
@@ -117,10 +122,6 @@ Definition round_knowl_denote (r: option rounding_knowledge) :=
  | Some Normal => Normal'
  | Some Denormal => Denormal'
  end.
-
-Section WITHVAR.
-
-Context `{VAR: VarType}.
 
 Inductive expr: Type :=
 | Const (ty: type) (f: ftype ty)
@@ -177,6 +178,7 @@ Fixpoint rval (env: forall ty, V -> ftype ty) (e: expr) {struct e}: R :=
     | Unop b e => Rop_of_unop b (rval env e)
   end.
 
+Section WITHNAN.
 Context {NANS: Nans}.
 
 Definition type_of_unop (u: unop): type -> type :=
@@ -208,13 +210,6 @@ Fixpoint expr_valid (e: expr): bool :=
     | Binop _ e1 e2 => andb (expr_valid e1) (expr_valid e2)
     | Unop u e => unop_valid (type_of_expr e) u && expr_valid e
     | _ => true
-  end.
-
-Definition rounded_binop_precond (r: rounded_binop):
-  R -> R -> Prop :=
-  match r with
-    | DIV => fun _ y => y <> 0
-    | _ => fun _ _ => True
   end.
 
 Definition fop_of_rounded_binop (r: rounded_binop): 
@@ -459,4 +454,4 @@ destruct ltr; destruct  (Z_lt_le_dec ((Z.neg pow) + 1) (3 - femax ty));
    apply  InvShift_finite_aux; auto.
 Qed.
 
-End WITHVAR.
+End WITHNAN.
