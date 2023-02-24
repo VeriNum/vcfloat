@@ -412,6 +412,18 @@ Lemma Float_abs_rewrite: Float.abs = @BABS _ Tdouble.
 Proof. reflexivity. Qed.
 #[export] Hint Rewrite Float_abs_rewrite : float_elim.
 
+Lemma float_of_single_eq: Float.of_single = @cast _ Tdouble Tsingle.
+Proof. reflexivity. Qed.
+
+Lemma float32_to_double_eq: Float32.to_double = @cast _ Tdouble Tsingle.
+Proof. reflexivity. Qed.
+Lemma float32_of_float_eq: Float32.of_double = @cast _ Tsingle Tdouble.
+Proof. reflexivity. Qed.
+Lemma float_to_single_eq: Float.to_single = @cast _ Tsingle Tdouble.
+Proof. reflexivity. Qed.
+#[export] Hint Rewrite float_of_single_eq float32_to_double_eq
+          float32_of_float_eq float_to_single_eq : float_elim.
+
 Import Float_notations.
 
 Lemma B754_finite_ext:
