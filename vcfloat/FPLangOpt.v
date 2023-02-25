@@ -164,19 +164,6 @@ Fixpoint fcval {ty} (e: expr ty) {struct e}: expr ty :=
     | _ => e
   end.
 
-(*
-Lemma fcval_type e:
-  type_of_expr (fcval e) = type_of_expr e.
-Proof.
-  induction e; simpl; auto.
-  {
-    destruct (fcval_nonrec (fcval e1)) eqn:EQ1; simpl; try congruence.
-    destruct (fcval_nonrec (fcval e2)) eqn:EQ2; simpl; congruence.
-  }
-  destruct (fcval_nonrec (fcval e)) eqn:EQ; simpl; congruence.
-Defined. (* required because of eq_rect_r *)
-*)
-
 Lemma fcval_correct_bool env ty (e: expr ty):
   binary_float_eqb (fval env (fcval e)) (fval env e) = true.
 Proof.
@@ -242,40 +229,12 @@ Proof.
     congruence.  
 Qed.  
 
-Lemma binary_float_eqb_eq_strong ty1 ty2 (e1: ftype ty1) (e2: ftype ty2):
-  binary_float_eqb e1 e2 = true ->
-  forall EQ: ty1 = ty2,
-    binary_float_eqb e1 (eq_rect_r _ e2 EQ) = true.
-Proof.
-  intros.
-  subst.
-  assumption.
-Qed.
-
 Lemma fcval_correct env ty (e: expr ty):
   fval env (fcval e) = (fval env e).
 Proof.
   apply binary_float_eqb_eq.
   apply fcval_correct_bool.
 Qed.
-
-(*
-Lemma is_finite_eq_rect_r ty1 ty2 (f: ftype ty2)
-      (EQ: ty1 = ty2):
-  Binary.is_finite _ _ (eq_rect_r _ f EQ) = Binary.is_finite _ _ f.
-Proof.
-  subst.
-  reflexivity.
-Qed.
-
-Lemma B2R_eq_rect_r ty1 ty2 (f: ftype ty2)
-      (EQ: ty1 = ty2):
-  Binary.B2R _ _ (eq_rect_r _ f EQ) = Binary.B2R _ _ f.
-Proof.
-  subst.
-  reflexivity.
-Qed.
-*)
 
 Import Qreals.
 Open Scope R_scope.
@@ -983,89 +942,8 @@ Ltac unfold_fval := cbv [fop_of_unop fop_of_exact_unop fop_of_rounded_unop
                       fop_of_binop fop_of_rounded_binop 
                       BDIV BMULT BINOP BPLUS BMINUS].
 
-Definition binary_float_equiv_loose {prec1 emax1 prec2 emax2} 
-(b1: binary_float prec1 emax1) (b2: binary_float prec2 emax2): Prop :=
-  match b1, b2 with
-    | B754_zero _ _ b1, B754_zero _ _ b2 => b1 = b2
-    | B754_infinity _ _ b1, B754_infinity _ _ b2 =>  b1 = b2
-    | B754_nan _ _ _ _ _, B754_nan _ _ _ _ _ => True
-    | B754_finite _ _ b1 m1 e1 _, B754_finite _ _ b2 m2 e2 _ =>
-      b1 = b2 /\  m1 = m2 /\ e1 = e2
-    | _, _ => False
-  end.
-
-Lemma binary_float_equiv_loose_rect:
-  forall t1 t2 (EQ: t1=t2) (b1: ftype t1) (b2: ftype t2),
-  binary_float_equiv_loose b1 b2 <-> binary_float_equiv b1 (eq_rect_r ftype b2 EQ).
-Proof.
-intros.
-subst t2.
-apply iff_refl. 
-Qed.
-
-Lemma binary_float_equiv_loose_i:
-  forall t (b1 b2: ftype t),
-  binary_float_equiv b1 b2 -> binary_float_equiv_loose b1 b2.
-Proof.
-intros. auto.
-Qed.
-
-Lemma binary_float_equiv_loose_tighten:
-  forall prec emax,
-  @binary_float_equiv_loose prec emax prec emax = 
-     @binary_float_equiv prec emax.
-Proof.
-intros. auto.
-Qed.
-
-Definition binary_float_equiv_loose_refl:
- forall prec emax b, @binary_float_equiv_loose prec emax prec emax b b.
-Proof.
-intros. destruct b; simpl; auto.
-Qed.
-
-Lemma binary_float_equiv_loose_eq prec emax (b1 b2: binary_float prec emax):
-   binary_float_equiv_loose b1 b2 -> is_nan _ _ b1 =  false -> b1 = b2.
-Proof.
-intros. 
-destruct b1, b2; try contradiction; try discriminate; simpl in H; subst; auto.
-destruct H as [? [? ?]]; subst; auto.
-f_equal; auto.
-apply Classical_Prop.proof_irrelevance.
-Qed.
-
-Lemma binary_float_equiv_loose_nan:
-  forall prec1 emax1 prec2 emax2 f1 f2,
-  Binary.is_nan prec1 emax1 f1= true  ->
-   Binary.is_nan prec2 emax2 f2 = true ->
-    binary_float_equiv_loose f1 f2.
-Proof.
-intros.
-destruct f1; inv H.
-destruct f2; inv H0.
-apply I.
-Qed.
-
-Lemma binary_float_equiv_loose_nan1:
-  forall b prec1 emax1 prec2 emax2 f1 f2,
-  Binary.is_nan prec1 emax1 f1= b  ->
-    binary_float_equiv_loose f1 f2 ->
-   Binary.is_nan prec2 emax2 f2 = b.
-Proof.
-intros.
-destruct b.
-destruct f1; inv H.
-destruct f2; inv H0.
-reflexivity.
-destruct f1; inv H;
-destruct f2; inv H0;
-reflexivity.
-Qed.
-
-
 Ltac binary_float_equiv_tac :=
-      repeat (first [ rewrite binary_float_equiv_loose_tighten in *
-                          | apply Bmult_div_inverse_equiv
+      repeat (first [ apply Bmult_div_inverse_equiv
                           | apply Bmult_div_inverse_equiv2
                           | apply cast_preserves_bf_equiv;
                                (assumption || apply binary_float_equiv_sym; assumption)
@@ -1075,10 +953,8 @@ Ltac binary_float_equiv_tac :=
 
 Ltac binary_float_equiv_tac2 env e1 e2 :=
          simpl;
-         rewrite ?binary_float_equiv_loose_tighten in *;
          repeat match goal with
                     | H: binary_float_equiv _ _ |- _ => revert H 
-                    | H: binary_float_equiv_loose _ _ |- _ => revert H
                     end;
          generalize (fval env (fshift_div  e1));
          generalize (fval env (fshift_div  e2));
@@ -1090,8 +966,7 @@ Lemma fshift_div_correct' env ty (e: expr ty) :
 Proof.
 induction e; cbn [fshift_div]; auto with vcfloat; unfold fval; fold (@fval _ env ty);
 try (set (x1 := fval env e1) in *; clearbody x1);
-try (set (x2 := fval env e2) in *; clearbody x2);
-try apply binary_float_equiv_loose_refl.
+try (set (x2 := fval env e2) in *; clearbody x2).
 - (* binop case *)
  apply (ifb_cases_lem binop_eqb_eq); intros ?OP; subst;
                [ | binary_float_equiv_tac2 env e1 e2].
@@ -1110,8 +985,8 @@ try apply binary_float_equiv_loose_refl.
      simpl in f, E1, IHe1; inv E1.
      intros.
      destruct (Binary.is_nan _ _ f) eqn:?NAN.
-    * pose proof (binary_float_equiv_loose_nan1 true _ _ _ _ _ _ NAN IHe1).
-       apply binary_float_equiv_loose_nan; repeat binary_float_eqb_cases;
+    * pose proof (binary_float_equiv_nan1 true _ _ _ _ NAN IHe1).
+       apply binary_float_equiv_nan; repeat binary_float_eqb_cases;
        unfold fval; unfold_fval; auto with vcfloat.
     * apply binary_float_equiv_eq in IHe1; [ subst | assumption].
        apply binary_float_equiv_eq in IHe2; [ subst | reflexivity ].
@@ -1125,7 +1000,7 @@ try apply binary_float_equiv_loose_refl.
     generalize (fval env (fshift_div e1));
     intros;
     (destruct (Binary.is_nan _ _ f) eqn:?NAN;
-       [pose proof (binary_float_equiv_loose_nan1 true _ _ _ _ _ _ NAN IHe1);
+       [pose proof (binary_float_equiv_nan1 true _ _ _ _ NAN IHe1);
         unfold fval; fold (@fval _ env ty); unfold_fval;
         apply binary_float_equiv_nan; auto with vcfloat
       | apply binary_float_equiv_eq in IHe1; [ subst | assumption ];

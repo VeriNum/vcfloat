@@ -455,26 +455,6 @@ Ltac process_conds :=
       radix_val Pos.iter Pos.add Pos.succ Pos.mul]  in H;
       (eapply adjust_bound in H; [ | compute; reflexivity])).
 
-Lemma binary_float_equiv_loose_sym prec1 emax1 prec2 emax2
-       (b1: binary_float prec1 emax1) (b2: binary_float prec2 emax2):
-     binary_float_equiv_loose b1 b2 -> binary_float_equiv_loose b2 b1.
-Proof.
-intros.
-destruct b1; destruct b2; simpl; auto. 
-destruct H as (A & B & C); subst; auto. Qed.
-
-
-Lemma binary_float_equiv_eq_rect_r: (* delete me *)
-  forall t t1 t2 (v1: ftype t1) (v2: ftype t2) EQ1 EQ2,
-  binary_float_equiv_loose v1 v2 ->
-  @binary_float_equiv (fprec t) (femax t) (eq_rect_r ftype v1 EQ1) (eq_rect_r ftype v2 EQ2) .
-Proof.
-intros.
-subst.
-unfold eq_rect_r, eq_rect; simpl.
-auto.
-Qed.
-
 Lemma fshift_div_fshift_fcval_correct {NANS: Nans}:
   forall (env : forall ty : type, FPLang.V -> ftype ty) ty (e : expr ty),
   binary_float_equiv (fval env (fshift_div (fshift (fcval e)))) 
@@ -498,15 +478,6 @@ rewrite fcval_correct.
 f_equal.
 Qed.
 
-Lemma binary_float_equiv_loose_iff:
-  forall t1 t2 (EQ: t1=t2) (b1: ftype t1) (b2: ftype t2),
-  binary_float_equiv_loose b1 b2 <-> binary_float_equiv b1 (eq_rect_r ftype b2 EQ).
-Proof.
-intros.
-subst t2.
-apply iff_refl.
-Qed.
-
 Lemma rndval_with_cond_result1_fvals_eq {NANS: Nans}:
   forall env ty (e1 e2: expr ty) r s,
   binary_float_equiv (fval env e1) (fval env e2) -> 
@@ -514,7 +485,6 @@ Lemma rndval_with_cond_result1_fvals_eq {NANS: Nans}:
   rndval_with_cond_result1 env e2 r s.
 Proof.
 intros.
-(* rewrite <- binary_float_equiv_loose_iff in H. *)
 destruct H0 as [errors [? [? ?]]].
 exists errors. split; auto.
 assert (FIN: is_finite (fprec ty) (femax ty) (fval env e2) =
