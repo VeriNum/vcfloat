@@ -214,13 +214,9 @@ Qed.
 
 Ltac unfold_fval :=
   cbv beta iota zeta delta [
-      fop_of_binop fop_of_rounded_binop cast_lub_l cast_lub_r
+      fop_of_binop fop_of_rounded_binop
       fop_of_unop fop_of_rounded_unop fop_of_exact_unop
       option_pair_of_options];
-   try change (type_lub _ _) with Tsingle;
-   try change (type_lub _ _) with Tdouble;
-   repeat change (type_lub ?x ?y) with x;
-   repeat change (type_lub ?x ?y) with y;
    repeat match goal with
   | |- context [binop_eqb ?a ?b] =>
     let u := constr:(binop_eqb a b) in
@@ -239,7 +235,7 @@ Ltac unfold_fval :=
    repeat change (cast ?a _ ?x) with x.
 
 Definition rndval_with_cond_result1 {NANS: Nans} 
-          env e (r: rexpr) (s: Maps.PMap.t (type * rounding_knowledge')) :=
+          env {ty} (e: expr ty) (r: rexpr) (s: Maps.PMap.t (type * rounding_knowledge')) :=
     exists errors,
         (errors_bounded s errors)
         /\
@@ -267,13 +263,13 @@ Qed.
 Definition eval_cond' (s : shiftmap) (c: cond) (env: environ) : Prop :=
   eval_cond2 env s c.
 
-Definition rndval_with_cond2 (e: expr) : rexpr * shiftmap * list (environ -> Prop) :=
+Definition rndval_with_cond2 {ty} (e: expr ty) : rexpr * shiftmap * list (environ -> Prop) :=
  let '((r,(si,s)),p) := rndval_with_cond' 1 empty_shiftmap e
   in (r, s, map (eval_cond' s) p).
 
 Lemma rndval_with_cond_correct2 {NANS: Nans}:
  forall 
-  (e: expr) (VALID: expr_valid e = true)
+  ty (e: expr ty) (VALID: expr_valid e = true)
   (bm: boundsmap) (vm: valmap),
   boundsmap_denote bm vm ->
   let '(r,s,p) := rndval_with_cond2 e in 
@@ -321,11 +317,7 @@ Ltac invert_rndval_with_cond' :=
    cbv beta iota zeta delta [rndval_with_cond' rnd_of_binop_with_cond
           rnd_of_unop_with_cond is_div
           Rbinop_of_rounded_binop Runop_of_exact_unop Runop_of_rounded_unop
-          type_of_expr make_rounding round_knowl_denote];
-   try change (type_lub _ _) with Tsingle;
-   try change (type_lub _ _) with Tdouble;
-   repeat change (type_lub ?x ?y) with x;
-   repeat change (type_lub ?x ?y) with y;
+          make_rounding round_knowl_denote];
    repeat change (binop_eqb _ _) with true;
    repeat change (binop_eqb _ _) with false;
  cbv beta iota zeta delta [rounding_cond_ast no_overflow app];
@@ -371,22 +363,6 @@ Ltac process_one_bound B :=
        try match type of B' with ?x = ?y => constr_eq x y; clear B' end
    end.
 
-(* old version: 
-   apply boundsmap_denote_pred_e in B; 
-   match type of B with match Maps.PTree.get ?i ?vmap with _ => _ end =>
-      let z := constr:(i) in let z := eval compute in z in change i with z in *;
-     let t := fresh "t" in 
-     first [let v := fresh "v" i in
-             destruct (Maps.PTree.get z vmap) as [ [t v] | ]
-           | let v := fresh "v" in 
-              destruct (Maps.PTree.get z vmap) as [ [t v] | ]
-           ];
-      [ | solve [contradiction B]];
-      destruct B as [? B];
-      subst t
-    end.
-*)
-
 Ltac process_boundsmap_denote := 
  lazymatch goal with
  | H: boundsmap_denote _ _ |- _ =>
@@ -407,29 +383,28 @@ Ltac process_boundsmap_denote :=
   cbv iota;
   repeat change (eq_rect_r ftype ?v eq_refl) with v in *.
 
-Definition prove_rndval' {NANS: Nans} bm vm e :=
+Definition prove_rndval' {NANS: Nans} bm vm {ty} (e: expr ty) :=
  boundsmap_denote bm vm ->
   let
    '(r, s, _) := rndval_with_cond2 (fshift_div (fshift (fcval e))) in
     rndval_with_cond_result1 (env_ vm) e r s.
 
-Definition prove_rndval {NANS: Nans} bm vm e :=
+Definition prove_rndval {NANS: Nans} bm vm {ty} (e: expr ty) :=
   {rs | fst (rndval_with_cond2 (fshift_div (fshift (fcval e)))) = rs /\  
          (boundsmap_denote bm vm ->
           let '(r,s) := rs in rndval_with_cond_result1 (env_ vm) e r s)}.
 
 Lemma prove_rndval'_e {NANS: Nans}:
-  forall bm vm e, prove_rndval' bm vm e -> prove_rndval bm vm e.
+  forall bm vm {ty} (e: expr ty), prove_rndval' bm vm e -> prove_rndval bm vm e.
 Proof.
 unfold prove_rndval', prove_rndval; intros.
 destruct (rndval_with_cond2 _) as [[r s] p]; simpl in *.
 exists (r,s); auto.
 Qed.
 
-Lemma prove_rndval'_i1 {NANS: Nans} bm vm e :
+Lemma prove_rndval'_i1 {NANS: Nans} bm vm ty (e: expr ty) :
  (boundsmap_denote bm vm ->
-  is_finite (fprec (type_of_expr (fshift_div (fcval e))))
-       (femax (type_of_expr (fshift_div (fcval e))))
+  is_finite (fprec ty) (femax ty)
        (fval (env_ vm) (fshift_div (fcval e))) = true ->
   let
    '(r, s, _) := rndval_with_cond2 (fshift_div (fcval e)) in
@@ -480,17 +455,6 @@ Ltac process_conds :=
       radix_val Pos.iter Pos.add Pos.succ Pos.mul]  in H;
       (eapply adjust_bound in H; [ | compute; reflexivity])).
 
-Lemma fshift_div_fshift_fcval_type {NANS: Nans}:
-      forall e : expr, type_of_expr (fshift_div (fshift (fcval e))) = type_of_expr e.  
-Proof.
-intros.
-eapply eq_trans.
-apply fshift_type_div.
-eapply eq_trans.
-apply fshift_type.
-apply fcval_type.
-Defined.
-
 Lemma binary_float_equiv_loose_sym prec1 emax1 prec2 emax2
        (b1: binary_float prec1 emax1) (b2: binary_float prec2 emax2):
      binary_float_equiv_loose b1 b2 -> binary_float_equiv_loose b2 b1.
@@ -500,7 +464,7 @@ destruct b1; destruct b2; simpl; auto.
 destruct H as (A & B & C); subst; auto. Qed.
 
 
-Lemma binary_float_equiv_eq_rect_r:
+Lemma binary_float_equiv_eq_rect_r: (* delete me *)
   forall t t1 t2 (v1: ftype t1) (v2: ftype t2) EQ1 EQ2,
   binary_float_equiv_loose v1 v2 ->
   @binary_float_equiv (fprec t) (femax t) (eq_rect_r ftype v1 EQ1) (eq_rect_r ftype v2 EQ2) .
@@ -512,48 +476,25 @@ auto.
 Qed.
 
 Lemma fshift_div_fshift_fcval_correct {NANS: Nans}:
-  forall (env : forall ty : type, FPLang.V -> ftype ty) (e : expr),
+  forall (env : forall ty : type, FPLang.V -> ftype ty) ty (e : expr ty),
   binary_float_equiv (fval env (fshift_div (fshift (fcval e)))) 
-               (eq_rect_r ftype (fval env e) (fshift_div_fshift_fcval_type e)).
+                (fval env e).
 Proof.
 intros.
 eapply binary_float_equiv_trans.
 apply fshift_div_correct'.
-apply binary_float_equiv_eq_rect_r.
 rewrite fshift_correct.
 rewrite fcval_correct.
-apply binary_float_equiv_loose_sym.
-apply  (binary_float_equiv_loose_rect _ _ 
-       (eq_sym (eq_trans (fshift_type _) (fcval_type _))) (fval env e)).
-unfold eq_rect_r.
-rewrite !rew_compose.
-rewrite !eq_trans_sym_distr, !eq_sym_involutive.
-rewrite (eq_trans_assoc  (eq_sym (fshift_type (fcval e)))).
-rewrite eq_trans_sym_inv_l, eq_trans_refl_l.
-rewrite eq_trans_sym_inv_l.
-simpl.
 apply binary_float_equiv_refl.
 Qed.
 
-Lemma fshift_fcval_type{NANS: Nans}:
-      forall e : expr, type_of_expr (fshift (fcval e)) = type_of_expr e.
-Proof.
-intros.
-eapply eq_trans.
-apply fshift_type. apply fcval_type.
-Defined.
-
 Lemma fshift_fcval_correct {NANS: Nans}:
-  forall (env : forall ty : type, FPLang.V -> ftype ty) (e : expr),
-  fval env (fshift (fcval e)) = eq_rect_r ftype (fval env e) (fshift_fcval_type e).
+  forall (env : forall ty : type, FPLang.V -> ftype ty) ty (e : expr ty),
+  fval env (fshift (fcval e)) = fval env e.
 Proof.
 intros.
 rewrite fshift_correct.
 rewrite fcval_correct.
-unfold eq_rect_r.
-rewrite <- eq_trans_rew_distr.
-f_equal.
-rewrite <- eq_trans_sym_distr.
 f_equal.
 Qed.
 
@@ -567,16 +508,16 @@ apply iff_refl.
 Qed.
 
 Lemma rndval_with_cond_result1_fvals_eq {NANS: Nans}:
-  forall env e1 e2 EQ r s,
-  binary_float_equiv (fval env e1) (eq_rect_r ftype (fval env e2) EQ) -> 
+  forall env ty (e1 e2: expr ty) r s,
+  binary_float_equiv (fval env e1) (fval env e2) -> 
   rndval_with_cond_result1 env e1 r s ->
   rndval_with_cond_result1 env e2 r s.
 Proof.
 intros.
-rewrite <- binary_float_equiv_loose_iff in H.
+(* rewrite <- binary_float_equiv_loose_iff in H. *)
 destruct H0 as [errors [? [? ?]]].
 exists errors. split; auto.
-assert (FIN: is_finite (fprec (type_of_expr e2)) (femax (type_of_expr e2)) (fval env e2) =
+assert (FIN: is_finite (fprec ty) (femax ty) (fval env e2) =
 true). {
   rewrite <- H1; clear H1.
   clear - H.
@@ -584,7 +525,7 @@ true). {
 }
 split; auto.
 rewrite H2.
-clear - H1 FIN H EQ.
+clear - H1 FIN H.
 destruct (fval env e1), (fval env e2); try discriminate; clear H1 FIN;
 simpl in H; decompose [and] H; subst;
  try contradiction;
@@ -592,20 +533,20 @@ simpl; auto.
 Qed.
 
 Lemma rndval_with_cond_correct2_opt {NANS: Nans}:
-      forall (e0 e1 e: expr) (EQ1: e1 = e) EQt,
+      forall ty (e0 e1 e: expr ty) (EQ1: e1 = e),
        expr_valid e = true ->
        forall (bm : boundsmap) (vm : valmap),
        boundsmap_denote bm vm ->
-       @binary_float_equiv (fprec (type_of_expr e1)) (femax (type_of_expr e1))
+       @binary_float_equiv (fprec ty) (femax ty)
             (fval (env_ vm) e1)
-            (eq_rect_r ftype (fval (env_ vm) e0) EQt) ->
+            (fval (env_ vm) e0) ->
        let  '(r, s, p) := rndval_with_cond2 e in
         Forall (fun c : (forall ty : type, positive -> ftype ty) -> Prop => c (env_ vm)) p ->
         rndval_with_cond_result1 (env_ vm) e0 r s.
 Proof.
 intros.
 subst e1.
-pose proof (rndval_with_cond_correct2 e H _ _ H0).
+pose proof (rndval_with_cond_correct2 ty e H _ _ H0).
 destruct (rndval_with_cond2 e) as [[? ?] ?].
 intro.
 specialize (H2 H3).
@@ -616,22 +557,20 @@ assumption.
 Qed.
 
 Lemma fast_apply_rndval_with_cond_correct2  {NANS: Nans}:
-forall e0 e1 e (EQ: e1 = e)
-   (EQt: type_of_expr e1 = type_of_expr e0),
+forall ty (e0 e1 e: expr ty) (EQ: e1 = e),
   expr_valid e = true ->
   forall (bm : boundsmap) (vm : valmap),
   boundsmap_denote bm vm ->
-  binary_float_equiv (fval (env_ vm) e1)
-      (eq_rect_r ftype (fval (env_ vm) e0) EQt) ->
+  binary_float_equiv (fval (env_ vm) e1) (fval (env_ vm) e0) ->
   Forall (fun c : (forall ty, positive -> ftype ty) -> Prop => c (env_ vm)) 
         (snd (rndval_with_cond2 e)) ->
   let '(r, s, _) := rndval_with_cond2 e in
     rndval_with_cond_result1 (env_ vm) e0 r s.
 Proof.
 intros.
-pose proof (rndval_with_cond_correct2_opt e0 e1 e EQ).
+pose proof (rndval_with_cond_correct2_opt ty e0 e1 e).
 destruct (rndval_with_cond2 e) as [[r s] p].
-apply (H3 EQt H bm vm); auto.
+apply (H3 EQ H bm vm); auto.
 Qed.
 
 Ltac solve_Forall_conds:= 
@@ -639,8 +578,6 @@ Ltac solve_Forall_conds:=
  | |- Forall _ _ => 
 
   (* the goal is a Forall of all the conds. Clean them up a bit. *)
-  try change (type_of_expr _) with Tsingle;
-  try change (type_of_expr _) with Tdouble;
   cbv beta iota zeta delta [
             mset empty_shiftmap mempty
             Maps.PMap.set Maps.PMap.init
@@ -651,7 +588,7 @@ Ltac solve_Forall_conds:=
           rndval_with_cond' rnd_of_binop_with_cond
           rnd_of_unop_with_cond is_div
           Rbinop_of_rounded_binop Runop_of_exact_unop Runop_of_rounded_unop
-          type_of_expr make_rounding round_knowl_denote
+          make_rounding round_knowl_denote
          rounding_cond_ast no_overflow app];
  
   (* now process the boundsmap above the line, and the conds below the line *)
@@ -671,7 +608,7 @@ constructor; auto.
 Qed.
 
 Lemma fast_apply_rndval_with_cond_correct3 {NANS: Nans}:
-forall (e0: expr)  (bm : boundsmap) (vm : valmap),
+forall ty (e0: expr ty)  (bm : boundsmap) (vm : valmap),
    let e := fshift_div (fshift (fcval e0)) in  
   expr_valid e = true ->
   (boundsmap_denote bm vm ->
@@ -680,9 +617,9 @@ forall (e0: expr)  (bm : boundsmap) (vm : valmap),
      prove_rndval' bm vm e0.
 Proof.
 intros. intro.
-pose proof (rndval_with_cond_correct2_opt e0 e e (eq_refl _)
-  (fshift_div_fshift_fcval_type _) H _ _ H1
-  (fshift_div_fshift_fcval_correct _ _)).
+pose proof rndval_with_cond_correct2_opt ty e0 e e (eq_refl _)
+   H _ _ H1
+  (fshift_div_fshift_fcval_correct _ _ _).
 subst e.
 destruct (rndval_with_cond2 _) as [[r s] p].
 auto.
@@ -718,7 +655,6 @@ Ltac prove_rndval :=
 
 (*time "2b"*) (
   cbv [rndval_with_cond2 rndval_with_cond'];
-  compute_every type_of_expr; 
   cbv [ mset empty_shiftmap mempty
             Maps.PMap.set Maps.PMap.init
             Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
@@ -728,7 +664,7 @@ Ltac prove_rndval :=
           rndval_with_cond' rnd_of_binop_with_cond
           rnd_of_unop_with_cond is_div
           Rbinop_of_rounded_binop Runop_of_exact_unop Runop_of_rounded_unop
-          type_of_expr make_rounding round_knowl_denote
+          make_rounding round_knowl_denote
          rounding_cond_ast no_overflow app];
    compute_every type_leb; 
    cbv beta iota zeta;
@@ -780,11 +716,11 @@ simpl.
 rewrite H0; auto.
 Qed.
 
-Definition rndval_without_cond (e: expr) : rexpr * shiftmap :=
+Definition rndval_without_cond {ty} (e: expr ty) : rexpr * shiftmap :=
  let '(r,s,p) := rndval_with_cond2 e in (r,s).
 
 Lemma rndval_with_cond_result1_e {NANS: Nans}:
-  forall vm e r s, 
+  forall vm ty (e: expr ty) r s, 
    rndval_with_cond_result1 (env_ vm) e r s ->
   let '(_, m) := s in 
    exists errors: positive -> R,
@@ -792,9 +728,9 @@ Lemma rndval_with_cond_result1_e {NANS: Nans}:
                    Rle (Rabs (errors i)) (error_bound ty k))
       (Maps.PTree.elements m) /\
   (let fv := fval (env_ vm) e in
-   is_finite (fprec (type_of_expr e)) (femax (type_of_expr e)) fv = true /\
+   is_finite (fprec ty) (femax ty) fv = true /\
    reval r (env_ vm) errors =
-   B2R (fprec (type_of_expr e)) (femax (type_of_expr e)) fv).
+   B2R (fprec ty) (femax ty) fv).
 Proof.
 intros.
 destruct s as [[t k] m].
@@ -803,7 +739,7 @@ apply (errors_bounded_e _ t k); auto.
 Qed.
 
 Definition rndval_result  {NANS: Nans}
-   (bm : boundsmap) (vm : valmap) (e : expr) r s 
+   (bm : boundsmap) (vm : valmap) {ty} (e : expr ty) r s 
   (H:  rndval_without_cond (fshift (fcval e)) = (r,s)) :=
    boundsmap_denote bm vm ->
   let '(_, m) := s in 
@@ -812,9 +748,9 @@ Definition rndval_result  {NANS: Nans}
                    Rle (Rabs (errors i)) (error_bound ty k))
       (Maps.PTree.elements m) /\
   (let fv := fval (env_ vm) e in
-   is_finite (fprec (type_of_expr e)) (femax (type_of_expr e)) fv = true /\
+   is_finite (fprec ty) (femax ty) fv = true /\
    reval r (env_ vm) errors =
-   B2R (fprec (type_of_expr e)) (femax (type_of_expr e)) fv).
+   B2R (fprec ty) (femax ty) fv).
 
 Fixpoint evenlog' (p: positive)  : Z * Z :=
  match p with 
@@ -908,12 +844,12 @@ rewrite bpow_opp.
 reflexivity.
 Qed.
 
-Definition roundoff_error_bound {NANS: Nans} (vm: valmap) (e: expr) (err: R):=
+Definition roundoff_error_bound {NANS: Nans} (vm: valmap) {ty} (e: expr ty) (err: R):=
   is_finite (fprec _) (femax _) (fval (env_ vm) e) = true /\ 
- Rle (Rabs (@FT2R (type_of_expr e) (fval (env_ vm) e) - rval (env_ vm) e)) err.
+ Rle (Rabs (@FT2R ty (fval (env_ vm) e) - rval (env_ vm) e)) err.
 
 Definition prove_roundoff_bound {NANS: Nans}
-    (bm: boundsmap) (vm: valmap) (e: expr) 
+    (bm: boundsmap) (vm: valmap) {ty} (e: expr ty) 
    (err: R): Prop := 
    boundsmap_denote bm vm ->
    roundoff_error_bound vm e err.
@@ -941,15 +877,9 @@ let e := fresh "e" in
   let e1 := eval hnf in ee in change ee with e1 in e;
   cbv beta iota zeta delta [
       fval
-      fop_of_binop fop_of_rounded_binop cast_lub_l cast_lub_r
+      fop_of_binop fop_of_rounded_binop 
       fop_of_unop fop_of_rounded_unop fop_of_exact_unop
       option_pair_of_options] in e;
-   try change (type_of_expr _) with Tsingle in e;
-   try change (type_of_expr _) with Tdouble in e;
-   try change (type_lub _ _) with Tsingle in e;
-   try change (type_lub _ _) with Tdouble in e;
-   repeat change (type_lub ?x ?y) with x in e;
-   repeat change (type_lub ?x ?y) with y in e;
    repeat change (cast  _ _ ?x) with x in e;
    repeat 
     match goal with
@@ -980,8 +910,6 @@ match type of H2 with
 end;
 rewrite ?Rmult_1_l in H2;
 *)
-try change (type_of_expr _) with Tsingle in *;
-try change (type_of_expr _) with Tdouble in *;
 fold (@FT2R Tsingle) in *;
 fold (@FT2R Tdouble) in *;
 repeat (let E := fresh "E" in  
@@ -1040,8 +968,6 @@ Ltac unfold_rval :=
  end;
  cbv beta iota delta [rval Rop_of_binop Rop_of_unop
             Rop_of_rounded_binop Rop_of_exact_unop Rop_of_rounded_unop];
- try change (type_of_expr _) with Tsingle; 
- try change (type_of_expr _) with Tdouble;
  fold (@FT2R Tsingle) in *; fold (@FT2R Tdouble);
  (* Perform all env lookups *)
  repeat 
@@ -1069,10 +995,9 @@ Ltac unfold_rval :=
   change x with y
  end.
 
-
-Lemma prove_rndval_is_finite {NANS} : forall bm vm e,
+Lemma prove_rndval_is_finite {NANS} : forall bm vm ty (e: expr ty),
  boundsmap_denote bm vm ->
- @prove_rndval NANS bm vm e -> is_finite _ _ (fval (env_ vm) e) = true.
+ @prove_rndval NANS bm vm ty e -> is_finite _ _ (fval (env_ vm) e) = true.
 Proof.
 intros.
 destruct X as [[??]  [? ?]].
@@ -1107,8 +1032,6 @@ end;
  destruct H2 as [FIN H2]; split; [assumption  | ]; clear FIN;
  clearbody e;
  simpl in e;
- repeat change (type_lub ?x ?y) with x in e;
- repeat change (type_lub ?x ?y) with y in e;
  change (B2R _ _ e) with (FT2R e) in H2;
  match goal with H2 : _ = @FT2R ?t1 e |- context [@FT2R ?t2 e] =>
   change t2 with t1
@@ -1272,7 +1195,7 @@ congruence.
 Qed.
 
 Lemma prove_roundoff_bound_relax {NANS: Nans}:
-  forall bm1 bm2 vm e R,
+  forall bm1 bm2 vm ty (e: expr ty) R,
     boundsmap_contains bm1 bm2 ->
  prove_roundoff_bound bm1 vm e R ->
  prove_roundoff_bound bm2 vm e R.
@@ -1284,11 +1207,11 @@ apply boundsmap_denote_relax; auto.
 Qed.
 
 
-Definition val_bound {NANS: Nans} (vm: valmap) (e: expr) (b: R):=
- Rle (Rabs (@FT2R (type_of_expr e) (fval (env_ vm) e))) b.
+Definition val_bound {NANS: Nans} (vm: valmap) {ty} (e: expr ty) (b: R):=
+ Rle (Rabs (@FT2R ty (fval (env_ vm) e))) b.
 
 Definition prove_val_bound {NANS: Nans}
-    (bm: boundsmap) (vm: valmap) (e: expr) 
+    (bm: boundsmap) (vm: valmap) {ty} (e: expr ty) 
    (b: R): Prop := 
    boundsmap_denote bm vm ->
    val_bound vm e b.
@@ -1309,8 +1232,6 @@ Ltac prove_val_bound2 :=
      change (fval _ _) with e; clearbody e
  end;
  (* cleanups *)
- try change (type_of_expr _) with Tsingle; 
- try change (type_of_expr _) with Tdouble;
  fold (@FT2R Tsingle) in *; fold (@FT2R Tdouble);
  (* incorporate the equation above the line *)
 match goal with H: _ = @FT2R _ _ |- _ => rewrite <- H; clear H end;
@@ -1373,8 +1294,8 @@ lazymatch goal with
      try solve [compute; lra])
 end.
 
-Definition find_and_prove_roundoff_bound {NANS} (bmap: boundsmap) (e: expr) :=
-  {bound: R | forall vmap, @prove_roundoff_bound NANS bmap vmap e bound}.
+Definition find_and_prove_roundoff_bound {NANS} (bmap: boundsmap) {ty} (e: expr ty) :=
+  {bound: R | forall vmap, @prove_roundoff_bound NANS bmap vmap ty e bound}.
 
 
 Ltac mult_le_compat_tac :=

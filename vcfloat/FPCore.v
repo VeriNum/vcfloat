@@ -495,43 +495,6 @@ Proof.
   destruct f; reflexivity.
 Qed.
 
-Lemma type_lub_lt a1 a2 b1 b2:
-  (ZLT (Z.pos a1) b1) ->
-  (ZLT (Z.pos a2) b2) ->
-  ZLT (Z.pos (Pos.max a1 a2)) (Z.max b1 b2).
-Proof.
-  intros.  
-  unfold ZLT, Bool.Is_true.
-  (* this is necessary for transparent proof reduction *)
-  destruct (Z.ltb (Z.pos (Pos.max a1 a2)) (Z.max b1 b2)) eqn:LT.
-  {
-    exact I.
-  }
-  cut (Z.ltb (Z.pos (Pos.max a1 a2)) (Z.max b1 b2) = true); [ congruence | ].
-  apply Z.ltb_lt.
-  apply ZLT_elim in H.
-  apply ZLT_elim in H0. 
-  rewrite Pos2Z.inj_max.
-  rewrite Z.max_lt_iff.
-  repeat rewrite Z.max_lub_lt_iff.
-  lia.
-Defined.
-
-Lemma  type_lub_neq_one a1 a2:
-  Bool.Is_true (negb (Pos.eqb a1 xH)) ->
-  Bool.Is_true (negb (Pos.eqb a2 xH)) ->
-  Bool.Is_true (negb (Pos.eqb (Pos.max a1 a2) xH))
-.
-Proof.
-  intros.
-  (* this is necessary for transparent proof reduction *)
-  destruct (negb (Pos.eqb (Pos.max a1 a2) 1)) eqn:EQB.
-  {
-    exact I.
-  }
-  generalize (Pos.max_spec_le a1 a2); intuition congruence.
-Defined.
-
 Definition type_le t1 t2 : Prop := (fprec t1 <= fprec t2)%Z /\ (femax t1 <= femax t2)%Z.
 
 Definition type_leb t1 t2 : bool :=
@@ -550,69 +513,6 @@ Qed.
 Lemma type_le_refl t: type_le t t.
 Proof.
   unfold type_le; auto with zarith.
-Qed.
-
-Definition type_lub' t1 t2 := TYPE _ _ (type_lub_lt _ _ _ _ (fprec_lt_femax_bool t1) (fprec_lt_femax_bool t2)) (type_lub_neq_one _ _ (fprecp_not_one_bool t1) (fprecp_not_one_bool t2)).
-
-Definition type_lub t1 t2 :=
-  (* we need this version so that it can compute more efficiently in the
-   common cases, otherwise proofs blow up. *)
- if type_leb t1 t2 then t2 else if type_leb t2 t1 then t1 else type_lub' t1 t2.
-
-Lemma type_lub'_eq:
- forall t1 t2, type_lub' t1 t2 = type_lub t1 t2.
-Proof.
-intros.
-unfold type_lub.
-pose proof (type_leb_le t1 t2).
-destruct (type_leb t1 t2).
-destruct (proj1 H (eq_refl _)).
-unfold fprec in *.
-apply type_ext'.
-unfold fprec, type_lub'; simpl; lia.
-simpl; lia. 
-clear H.
-pose proof (type_leb_le t2 t1).
-destruct (type_leb t2 t1).
-destruct (proj1 H (eq_refl _)).
-unfold fprec in *.
-apply type_ext'.
-unfold fprec, type_lub'; simpl; lia.
-simpl; lia.
-auto.
-Qed. 
-
-
-Lemma type_lub_left t1 t2: type_le t1 (type_lub t1 t2).
-Proof.
-  rewrite <- type_lub'_eq.
-  unfold type_lub'.
-  unfold type_le.
-  simpl.
-  unfold fprec.
-  simpl.
-  split.
-  {
-    rewrite Pos2Z.inj_max.
-    apply Z.le_max_l.
-  }
-  apply Z.le_max_l.
-Qed.
-
-Lemma type_lub_right t1 t2: type_le t2 (type_lub t1 t2).
-Proof.
-  rewrite <- type_lub'_eq.
-  unfold type_lub'.
-  unfold type_le.
-  simpl.
-  unfold fprec.
-  simpl.
-  split.
-  {
-    rewrite Pos2Z.inj_max.
-    apply Z.le_max_r.
-  }
-  apply Z.le_max_r.
 Qed.
 
 Lemma fprec_gt_one ty:
@@ -649,9 +549,6 @@ Definition cast (tto: type) {tfrom: type} (f: ftype tfrom): ftype tto :=
     | _ => Bconv (fprec tfrom) (femax tfrom) (fprec tto) (femax tto)
                         (fprec_gt_0 _) (fprec_lt_femax _) (conv_nan _ _) BinarySingleNaN.mode_NE f
   end.
-
-Definition cast_lub_l t1 t2 := @cast (type_lub t1 t2) t1.
-Definition cast_lub_r t1 t2 := @cast (type_lub t1 t2) t2.
 
 Lemma cast_finite tfrom tto:
   type_le tfrom tto ->
@@ -703,29 +600,6 @@ Proof.
   }
   rewrite K.
   reflexivity.
-Qed.
-
-Lemma type_lub_comm a b:
-  type_lub a b = type_lub b a.
-Proof.
-  rewrite <- !type_lub'_eq.
-  apply type_ext; simpl; eauto using Pos.max_comm, Z.max_comm.
-Qed.
-
-Lemma type_lub_r a b:
-  type_le a b ->
-  type_lub a b = b.
-Proof.
-  rewrite <- !type_lub'_eq.
-  inversion 1.
-  apply type_ext; simpl; eauto using Pos.max_r, Z.max_r.
-Qed.
-
-Lemma type_lub_id a:
-  type_lub a a = a.
-Proof.
-  rewrite <- !type_lub'_eq.
-  apply type_ext; simpl; eauto using Pos.max_id, Z.max_id.
 Qed.
 
 Definition BINOP (op: ltac:( let t := type of Bplus in exact t ) ) op_nan ty 

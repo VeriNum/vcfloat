@@ -74,9 +74,9 @@ Ltac reify_float_expr E :=
  | BSQRT ?a => let a' := reify_float_expr a in 
                                       constr:(Unop (Rounded1 SQRT) a')
  | @cast _ Tsingle Tdouble ?f => let f':= reify_float_expr f in 
-                                      constr:(Unop (CastTo Tdouble None) f')
+                                      constr:(Cast Tdouble Tsingle None f')
  | @cast _ Tdouble Tsingle ?f => let f':= reify_float_expr f in 
-                                      constr:(Unop (CastTo Tsingle None) f')
+                                      constr:(Cast Tsingle Tdouble None f')
  | @cast _ Tsingle Tsingle ?f => let f':= reify_float_expr f in 
                                       constr:(f')
  | @cast _ Tdouble Tdouble ?f => let f':= reify_float_expr f in 
@@ -111,13 +111,9 @@ Ltac unfold_reflect :=
    match goal with |- ?M _ =>
    let X := fresh "X" in set (X := M);
    cbv beta iota delta [
-    fval fop_of_binop fop_of_rounded_binop type_of_expr cast_lub_l cast_lub_r
+    fval fop_of_binop fop_of_rounded_binop
     fop_of_unop fop_of_rounded_unop fop_of_exact_unop
    ];
-   change (type_lub _ _) with Tsingle;
-   change (type_lub _ _) with Tdouble;
-   change (type_lub ?x ?y) with x;
-   change (type_lub ?x ?y) with y;
    repeat change (cast ?a _ ?x) with x;
    subst X; cbv beta
   end

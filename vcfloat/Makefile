@@ -32,7 +32,7 @@ endif
 	install -m 0644 $(INSTALLFILES) $(INSTALLDIR)
 
 depend: 
-	$(COQDEP) $(COQFLAGS) *.v cverif/*.v ../Test/*.v > .depend
+	$(COQDEP) $(COQFLAGS) *.v ../Test/*.v > .depend
 
 all_clean:
 	rm *.vo *.vok *.vos *.glob

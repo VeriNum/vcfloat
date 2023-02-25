@@ -103,10 +103,9 @@ Inductive exact_unop: Type :=
 | Shift (pow: N) (ltr: bool) (* multiply by power of two never introduces rounding *)
 .
 
-Inductive unop: Type :=
+Inductive unop : Type :=
 | Rounded1 (op: rounded_unop) (knowl:  option rounding_knowledge)
 | Exact1 (o: exact_unop)
-| CastTo (ty: type) (knowl: option rounding_knowledge)
 .
 
 Inductive rounding_knowledge': Type :=
@@ -123,12 +122,15 @@ Definition round_knowl_denote (r: option rounding_knowledge) :=
  | Some Denormal => Denormal'
  end.
 
-Inductive expr: Type :=
-| Const (ty: type) (f: ftype ty)
-| Var (ty: type) (i: V)
-| Binop (b: binop) (e1 e2: expr)
-| Unop (u: unop) (e1: expr)
+Inductive expr (ty: type): Type :=
+| Const (f: ftype ty)
+| Var (i: V)
+| Binop (b: binop) (e1 e2: expr ty)
+| Unop (u: unop) (e1: expr ty)
+| Cast (fromty: type) (knowl: option rounding_knowledge) (e1: expr fromty)
 .
+Arguments Binop [ty] b e1 e2.
+Arguments Unop [ty] u e1.
 
 Definition Rop_of_rounded_binop (r: rounded_binop): R -> R -> R :=
   match r with
@@ -167,33 +169,19 @@ Definition Rop_of_unop (r: unop): R -> R :=
   match r with
     | Rounded1 op _ => Rop_of_rounded_unop op
     | Exact1 op => Rop_of_exact_unop op
-    | CastTo _ _ => id
   end.
 
-Fixpoint rval (env: forall ty, V -> ftype ty) (e: expr) {struct e}: R :=
+Fixpoint rval (env: forall ty, V -> ftype ty) {ty: type} (e: expr ty) {struct e}: R :=
   match e with
-    | Const ty f => B2R (fprec ty) (femax ty) f
-    | Var ty i => B2R (fprec ty) (femax ty) (env ty i)
+    | Const _ f => B2R (fprec ty) (femax ty) f
+    | Var _ i => B2R (fprec ty) (femax ty) (env ty i)
     | Binop b e1 e2 =>  Rop_of_binop b (rval env e1) (rval env e2)
     | Unop b e => Rop_of_unop b (rval env e)
+    | Cast _ _ _ e => rval env e
   end.
 
 Section WITHNAN.
 Context {NANS: Nans}.
-
-Definition type_of_unop (u: unop): type -> type :=
-  match u with
-    | CastTo ty _ => fun _ => ty
-    | _ => Datatypes.id
-  end.
-
-Fixpoint type_of_expr (e: expr) {struct e}: type :=
-  match e with
-    | Const ty _ => ty
-    | Var ty _ => ty
-    | Binop b e1 e2 => type_lub (type_of_expr e1) (type_of_expr e2)
-    | Unop b e => type_of_unop b (type_of_expr e)
-  end.
 
 Definition unop_valid ty (u: unop): bool :=
   match u with
@@ -204,11 +192,12 @@ Definition unop_valid ty (u: unop): bool :=
     | _ => true
   end.
 
-Fixpoint expr_valid (e: expr): bool :=
+Fixpoint expr_valid {ty} (e: expr ty): bool :=
   match e with
     | Const _ f => is_finite _ _ f
     | Binop _ e1 e2 => andb (expr_valid e1) (expr_valid e2)
-    | Unop u e => unop_valid (type_of_expr e) u && expr_valid e
+    | Unop u e => unop_valid ty u && expr_valid e
+    | Cast _ _ _ e => expr_valid e
     | _ => true
   end.
 
@@ -263,34 +252,19 @@ Definition fop_of_exact_unop (r: exact_unop)
           (fun ty => @BMULT _ ty (B2 ty (Z.of_N n)))
     end.
 
-Definition fop_of_unop (r: unop):
-  forall ty,
-    binary_float (fprec ty) (femax ty) ->
-    let ty' := type_of_unop r ty in
-    binary_float (fprec ty') (femax ty')
-  :=
-    match r as r' return 
-  forall ty,
-    binary_float (fprec ty) (femax ty) ->
-    let ty' := type_of_unop r' ty in
-    binary_float (fprec ty') (femax ty')
-    with
-      | Rounded1 o _ => fop_of_rounded_unop o
-      | Exact1 o => fop_of_exact_unop o
-      | CastTo tto _ => @cast _ tto
-    end.
+Definition fop_of_unop (r: unop) :=
+ match r with
+ | Rounded1 u o => fop_of_rounded_unop u
+ | Exact1 u => fop_of_exact_unop u
+ end.
 
-Fixpoint fval (env: forall ty, V -> ftype ty) (e: expr) {struct e}:
-  ftype (type_of_expr e) :=
-
-           match e as e' return
-                 ftype (type_of_expr e') with
-             | Const ty f => f
-             | Var ty i => env ty i
-             | Binop b e1 e2 =>
-               fop_of_binop b _ (cast_lub_l _ _ (fval env e1)) (cast_lub_r _ _ (fval env e2))
-             | Unop b e =>
-               fop_of_unop b _ (fval env e)
+Fixpoint fval (env: forall ty, V -> ftype ty) {ty} (e: expr ty) {struct e}: ftype ty :=
+           match e with
+             | Const _ f => f
+             | Var _ i => env ty i
+             | Binop b e1 e2 => fop_of_binop b _ (fval env e1) (fval env e2)
+             | Unop u e1 => fop_of_unop u _ (fval env e1)
+             | Cast _ tfrom o e1 => @cast _ ty tfrom (fval env e1)
            end.
 
 Lemma is_nan_cast:

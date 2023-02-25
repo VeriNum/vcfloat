@@ -494,24 +494,27 @@ Definition rnd_of_unop
         make_rounding si shift (round_knowl_denote k) ty
                       (Runop_of_rounded_unop ty o r)
       | Exact1 o => (Runop_of_exact_unop ty o r, (si, shift))
-      | CastTo ty' k => rnd_of_cast si shift ty ty' (round_knowl_denote k) r
+(*      | CastTo ty' k => rnd_of_cast si shift ty ty' (round_knowl_denote k) r *)
     end.
 
 Fixpoint rndval 
          si
          (shift: MSHIFT)
-         (e: expr) {struct e}
+         (ty: type) (e: expr ty) {struct e}
  :=
   match e with
-    | Const ty f => (RAtom (RConst (B2F f)), (si, shift))
-    | Var ty i => (RAtom (RVar ty i), (si, shift))
+    | Const _ f => (RAtom (RConst (B2F f)), (si, shift))
+    | Var _ i => (RAtom (RVar ty i), (si, shift))
     | Binop b e1 e2 =>
-      let '(r1, (si1, s1)) := rndval si shift e1 in
-      let '(r2, (si2, s2)) := rndval si1 s1 e2 in
-      rnd_of_binop si2 s2 (type_of_expr e) b r1 r2
+      let '(r1, (si1, s1)) := rndval si shift _ e1 in
+      let '(r2, (si2, s2)) := rndval si1 s1 _ e2 in
+      rnd_of_binop si2 s2 ty b r1 r2
     | Unop b e1 =>
-      let '(r1, (si1, s1)) := rndval si shift e1 in
-      rnd_of_unop si1 s1 (type_of_expr e1) b r1
+      let '(r1, (si1, s1)) := rndval si shift _ e1 in
+      rnd_of_unop si1 s1 ty b r1
+    | Cast _ fromty k e1 => 
+      let '(r1, (si1, s1)) := rndval si shift fromty e1 in
+      rnd_of_cast si1 s1 fromty ty (round_knowl_denote k) r1
   end.
 
 Lemma rnd_of_binop_shift_incr si shift ty b r1 r2 r si' shift':
@@ -607,8 +610,10 @@ Proof.
   *  apply (make_rounding_shift_incr _ _ Denormal2').
 - (* Exact1 *)
    inversion_clear 1; auto; lia.
+(*
 - (* CastTo *)
   apply rnd_of_cast_shift_incr.
+*)
 Qed.
 
 Lemma rnd_of_unop_shift_le si  shift ty u r1 y si' shift':
@@ -628,8 +633,6 @@ Proof.
 - (* Exact1 *)
     inversion H; clear H; subst; simpl.
     destruct o; simpl; auto. lia.
-- (* CastTo *)
-  eapply rnd_of_cast_shift_le; eauto.
 Qed.
 
 Lemma rnd_of_unop_shift_unchanged si  shift ty u r1 y si' shift':
@@ -648,13 +651,11 @@ Proof.
   * apply (make_rounding_shift_unchanged _ _ Denormal2').
 - (* Exact1 *)
     inversion_clear 1; auto with arith.
-- (* CastTo *)
-  apply rnd_of_cast_shift_unchanged.
 Qed.
 
-Lemma rndval_shift_incr x:
+Lemma rndval_shift_incr ty x:
   forall si shift y si' shift',
-    rndval si shift x = (y, (si', shift')) ->
+    rndval si shift ty x = (y, (si', shift')) ->
     (si <= si')%positive.
 Proof.
   induction x; simpl.
@@ -664,23 +665,29 @@ Proof.
     inversion_clear 1; intros; auto; lia.
 - (* Binop *)
     intros.
-    destruct (rndval si shift x1) as (r1 & si1 & s1) eqn:EQ1.
-    destruct (rndval si1 s1 x2) as (r2 & si2 & s2) eqn:EQ2.
+    destruct (rndval si shift _ x1) as (r1 & si1 & s1) eqn:EQ1.
+    destruct (rndval si1 s1 _ x2) as (r2 & si2 & s2) eqn:EQ2.
     eapply Pos.le_trans; [ | eapply Pos.le_trans].
     + eapply IHx1; eauto.
     + eapply IHx2; eauto.
     + eapply rnd_of_binop_shift_incr; eauto.
 - (* Unop *)
   intros.
-  destruct (rndval si shift x) as (r1 & si1 & s1) eqn:EQ1.
+  destruct (rndval si shift _ x) as (r1 & si1 & s1) eqn:EQ1.
   eapply Pos.le_trans.
   + eapply IHx; eauto.
   + eapply rnd_of_unop_shift_incr; eauto.
+- (* Cast *)
+  intros.
+  destruct (rndval si shift _ x) as (r1 & si1 & s1) eqn:EQ1.
+  eapply Pos.le_trans.
+  + eapply IHx; eauto.
+  + eapply rnd_of_cast_shift_incr; eauto.
 Qed.
 
-Lemma rndval_shift_le x:
+Lemma rndval_shift_le ty (x: expr ty):
   forall si shift y si' shift',
-    rndval si shift x = (y, (si', shift')) ->
+    rndval si shift _ x = (y, (si', shift')) ->
     (max_error_var y <=  si')%positive.
 Proof.
   induction x; simpl.
@@ -690,21 +697,25 @@ Proof.
     inversion_clear 1; simpl; auto; lia.
 - (* Binop *)
     intros.
-    destruct (rndval si shift x1) as (r1 & si1 & s1) eqn:EQ1.
-    destruct (rndval si1 s1 x2) as (r2 & si2 & s2) eqn:EQ2.
+    destruct (rndval si shift _ x1) as (r1 & si1 & s1) eqn:EQ1.
+    destruct (rndval si1 s1 _ x2) as (r2 & si2 & s2) eqn:EQ2.
     eapply rnd_of_binop_shift_le; eauto.
     eapply Pos.le_trans.
     + eapply IHx1; eauto.
     + eapply rndval_shift_incr; eauto.
 - (* Unop *)
   intros.
-  destruct (rndval si shift x) as (r1 & si1 & s1) eqn:EQ1.
+  destruct (rndval si shift _ x) as (r1 & si1 & s1) eqn:EQ1.
   eapply rnd_of_unop_shift_le; eauto.
+- (* Cast *)
+  intros.
+  destruct (rndval si shift _ x) as (r1 & si1 & s1) eqn:EQ1.
+  eapply rnd_of_cast_shift_le; eauto.
 Qed.
 
-Lemma rndval_shift_unchanged x:
+Lemma rndval_shift_unchanged ty (x: expr ty):
   forall si shift y si' shift',
-    rndval si shift x = (y, (si', shift')) ->
+    rndval si shift _ x = (y, (si', shift')) ->
   forall i, (i < si)%positive ->
             mget shift' i = mget shift i.
 Proof.
@@ -715,8 +726,8 @@ Proof.
     inversion_clear 1; intros; auto; lia.
 - (* Binop *)
     intros.
-    destruct (rndval si shift x1) as (r1 & si1 & s1) eqn:EQ1.
-    destruct (rndval si1 s1 x2) as (r2 & si2 & s2) eqn:EQ2.
+    destruct (rndval si shift _ x1) as (r1 & si1 & s1) eqn:EQ1.
+    destruct (rndval si1 s1 _ x2) as (r2 & si2 & s2) eqn:EQ2.
     etransitivity; [ | etransitivity].
     +
       eapply rnd_of_binop_shift_unchanged; eauto.
@@ -729,10 +740,19 @@ Proof.
     + eapply IHx1; eauto.
 - (* Unop *)
   intros.
-  destruct (rndval si shift x) as (r1 & si1 & s1) eqn:EQ1.
+  destruct (rndval si shift _ x) as (r1 & si1 & s1) eqn:EQ1.
   etransitivity.
   +
     eapply rnd_of_unop_shift_unchanged; eauto.
+    eapply Pos.lt_le_trans; [ eassumption | ].
+    eapply rndval_shift_incr; eauto.
+  + eapply IHx; eauto.
+- (* Cast *)
+  intros.
+  destruct (rndval si shift _ x) as (r1 & si1 & s1) eqn:EQ1.
+  etransitivity.
+  +
+    eapply rnd_of_cast_shift_unchanged; eauto.
     eapply Pos.lt_le_trans; [ eassumption | ].
     eapply rndval_shift_incr; eauto.
   + eapply IHx; eauto.
@@ -1287,7 +1307,6 @@ Definition rnd_of_unop_with_cond
            | Shift _ _ => no_overflow ty ru :: nil
            | _ => nil
          end)
-      | CastTo ty' k => rnd_of_cast_with_cond si shift ty ty' (round_knowl_denote k) r1
     end.
 
 Lemma rnd_of_unop_with_cond_shift_cond si shift ty o r1 r' si' shift' cond:
@@ -1338,27 +1357,28 @@ Proof.
       destruct H0; try contradiction.
       inversion H0; clear H0; subst.
       simpl. lia.
-- (* CastTo *)
-  apply rnd_of_cast_with_cond_shift_cond.
 Qed.
 
 Fixpoint rndval_with_cond'
          si
          (shift: MSHIFT)
-         (e: expr) {struct e}
+         {ty} (e: expr ty) {struct e}
   :=
   match e with
-    | Const ty f => ((RAtom (RConst (B2F f)), (si, shift)), nil)
-    | Var ty i => ((RAtom (RVar ty i), (si, shift)), nil)
+    | Const _ f => ((RAtom (RConst (B2F f)), (si, shift)), nil)
+    | Var _ i => ((RAtom (RVar ty i), (si, shift)), nil)
     | Binop b e1 e2 =>
       let '((r1, (si1, s1)), p1) := rndval_with_cond' si shift e1 in
       let '((r2, (si2, s2)), p2) := rndval_with_cond' si1 s1 e2 in
-      let ty := type_of_expr e in
       let '(rs, p) := rnd_of_binop_with_cond si2 s2 ty b r1 r2 in
       (rs, p ++ (p1 ++ p2))
     | Unop b e1 =>
       let '((r1, (si1, s1)), p1) := rndval_with_cond' si shift e1 in
-      let '(rs, p) := rnd_of_unop_with_cond si1 s1 (type_of_expr e1) b r1 in
+      let '(rs, p) := rnd_of_unop_with_cond si1 s1 ty b r1 in
+      (rs, p ++ p1)
+    | Cast _ fromty k e1 => 
+      let '((r1, (si1, s1)), p1) := rndval_with_cond' si shift e1 in
+      let '(rs, p) := rnd_of_cast_with_cond si1 s1 fromty ty (round_knowl_denote k) r1 in
       (rs, p ++ p1)
   end. 
 
@@ -1401,13 +1421,11 @@ Proof.
       ); simpl; auto.
  + (* InvShift *)
     destruct knowl as [ [ | ] | ]; simpl; auto.
-- (* CastTo *)
-  apply rnd_of_cast_with_cond_left.
 Qed.
 
-Lemma rndval_with_cond_left e:
+Lemma rndval_with_cond_left ty (e: expr ty):
   forall si shift,
-    fst (rndval_with_cond' si shift e) = rndval si shift e.
+    fst (rndval_with_cond' si shift e) = rndval si shift _ e.
 Proof.
   induction e; simpl; auto.
 - (* Binop *)
@@ -1416,30 +1434,41 @@ Proof.
     destruct (rndval_with_cond' si shift e1).
     simpl in IHe1.
     subst.
-    destruct (rndval si shift e1).
+    destruct (rndval si shift _ e1).
     destruct p as [n ?].
     specialize (IHe2 n m).
     destruct (rndval_with_cond' n m e2).
     simpl in IHe2.
     subst.
-    destruct (rndval n m e2).
+    destruct (rndval n m _ e2).
     destruct p as [n0 ?].
-    specialize (rnd_of_binop_with_cond_left n0 m0 (type_lub (type_of_expr e1) (type_of_expr e2)) b r r0).
-    destruct (rnd_of_binop_with_cond n0 m0 (type_lub (type_of_expr e1) (type_of_expr e2)) b r r0);
+    specialize (rnd_of_binop_with_cond_left n0 m0 ty b r r0).
+    destruct (rnd_of_binop_with_cond n0 m0 ty b r r0);
       simpl; auto.
 - (* Unop *)
    intros.
   specialize (IHe si shift).
   destruct (rndval_with_cond' si shift e); simpl in *; subst.
-  destruct (rndval si shift e).
+  destruct (rndval si shift _ e).
   destruct p as [n ?].
-  specialize (rnd_of_unop_with_cond_left n m (type_of_expr e) u r).
+  specialize (rnd_of_unop_with_cond_left n m ty u r).
   destruct (
-      rnd_of_unop_with_cond n m (type_of_expr e) u r
-    ); simpl; auto. 
+      rnd_of_unop_with_cond n m ty u r
+    ); simpl; auto.
+- (* Cast *) 
+  intros.
+  specialize (IHe si shift).
+  destruct (rndval_with_cond' si shift e); simpl in *; subst.
+  destruct (rndval si shift _ e).
+  destruct p as [n ?].
+  specialize (rnd_of_cast_with_cond_left n m fromty ty
+                 (round_knowl_denote knowl) r).
+  destruct (
+      rnd_of_cast_with_cond n m _ _ _ _
+    ); simpl; auto.
 Qed.
 
-Lemma rndval_with_cond_shift_cond e:
+Lemma rndval_with_cond_shift_cond ty (e: expr ty):
   forall si shift r' si' shift' cond,
   rndval_with_cond' si shift e = ((r', (si', shift')), cond) ->
   forall e' b',
@@ -1447,30 +1476,28 @@ Lemma rndval_with_cond_shift_cond e:
     (max_error_var e' <= si')%positive.
 Proof.
   induction e; simpl; intros.
-  {
+  -
     inversion H; clear H; subst; contradiction.
-  }
-  {
+  -
     inversion H; clear H; subst; contradiction.
-  }
-  {
+  -
     destruct (rndval_with_cond' si shift e1) as [[r1 [si1 s1]] p1] eqn:EQ1.
     destruct (rndval_with_cond' si1 s1 e2) as [[r2 [si2 s2]] p2] eqn:EQ2.
-    destruct (rnd_of_binop_with_cond si2 s2 (type_lub (type_of_expr e1) (type_of_expr e2)) b r1 r2)
+    destruct (rnd_of_binop_with_cond si2 s2 _ b r1 r2)
              as [rs' p']
              eqn:EQ.
     inversion H; clear H; subst.
-    generalize (rndval_with_cond_left e1 si shift).
+    generalize (rndval_with_cond_left _ e1 si shift).
     rewrite EQ1.
     simpl.
     intros.
     symmetry in H.   
-    generalize (rndval_with_cond_left e2 si1 s1).
+    generalize (rndval_with_cond_left _ e2 si1 s1).
     rewrite EQ2.
     simpl.
     intros.
     symmetry in H1.
-    generalize (rnd_of_binop_with_cond_left si2 s2 (type_lub (type_of_expr e1) (type_of_expr e2)) b r1 r2).
+    generalize (rnd_of_binop_with_cond_left si2 s2 ty b r1 r2).
     rewrite EQ.
     intros.
     symmetry in H2.
@@ -1501,16 +1528,16 @@ Proof.
     }
     eapply IHe2 in H0; [ | eassumption ].
     lia.
-  }
+  - (* Unop *)
   destruct (rndval_with_cond' si shift e) as [[r1 [si1 s1]] p1] eqn:EQ1.
-  destruct (rnd_of_unop_with_cond si1 s1 (type_of_expr e) u r1) eqn:EQ.
+  destruct (rnd_of_unop_with_cond si1 s1 ty u r1) eqn:EQ.
   inversion H; clear H; subst.
-  generalize (rndval_with_cond_left e si shift).
+  generalize (rndval_with_cond_left _ e si shift).
   rewrite EQ1.
   simpl.
   intros.
   symmetry in H.   
-  generalize (rnd_of_unop_with_cond_left si1 s1 (type_of_expr e) u r1).
+  generalize (rnd_of_unop_with_cond_left si1 s1 ty u r1).
   rewrite EQ.
   intros.
   symmetry in H1.
@@ -1525,11 +1552,40 @@ Proof.
   apply rnd_of_unop_shift_le in H3; try lia.
   apply in_app_or in H0.
   destruct H0.
-  {
+  +
     eapply rnd_of_unop_with_cond_shift_cond; eauto.
-  }
-  eapply IHe in H0; [ | eassumption ] .
-  lia.
+  +
+   eapply IHe in H0; [ | eassumption ] .
+   lia.
+ -
+  destruct (rndval_with_cond' si shift e) as [[r1 [si1 s1]] p1] eqn:EQ1.
+  destruct (rnd_of_cast_with_cond si1 s1 fromty ty (round_knowl_denote knowl)  r1) eqn:EQ.
+  inversion H; clear H; subst.
+  generalize (rndval_with_cond_left _ e si shift).
+  rewrite EQ1.
+  simpl.
+  intros.
+  symmetry in H.   
+  generalize (rnd_of_cast_with_cond_left si1 s1 fromty ty (round_knowl_denote knowl) r1).
+  rewrite EQ.
+  intros.
+  symmetry in H1.
+  simpl in H1.
+  generalize H.
+  intro.
+  apply rndval_shift_incr in H.
+  apply rndval_shift_le in H2.
+  generalize H1.
+  intro.
+  apply rnd_of_cast_shift_incr in H1.
+  apply rnd_of_cast_shift_le in H3; try lia.
+  apply in_app_or in H0.
+  destruct H0.
+  +
+    eapply rnd_of_cast_with_cond_shift_cond; eauto.
+  +
+   eapply IHe in H0; [ | eassumption ] .
+   lia.
 Qed.
 
 Lemma sterbenz_no_overflow A x y:
@@ -1709,50 +1765,50 @@ Lemma rndval_with_cond_correct_uInvShift:
 forall (env : forall x : type, FPLang.V -> binary_float (fprec x) (femax x))
  (Henv : forall (ty : type) (i : FPLang.V),  is_finite (fprec ty) (femax ty) (env ty i) = true)
 (pow : positive)
- (ltr : bool) (e : expr) (si : positive) (r1 : rexpr) (s1 : MSHIFT)
+ (ltr : bool) ty (e : expr ty) (si : positive) (r1 : rexpr) (s1 : MSHIFT)
  (errors1 errors1_1 : positive-> R)
  (E1 : forall i : positive, (i < si)%positive -> errors1_1 i = errors1 i)
  (EB1 : forall (i : positive) (ty' : type) (k : rounding_knowledge'),
       mget s1 i = (ty', k) -> Rabs (errors1_1 i) <= error_bound ty' k)
- (F1 : is_finite (fprec (type_of_expr e)) (femax (type_of_expr e)) (fval env e) = true)
+ (F1 : is_finite (fprec ty) (femax ty) (fval env e) = true)
  (V1 : reval r1 env errors1_1 =
-         B2R (fprec (type_of_expr e)) (femax (type_of_expr e)) (fval env e))
+         B2R (fprec ty) (femax ty) (fval env e))
  (H0 : expr_valid e = true)
  (shift : MSHIFT) (r : rexpr) (si2 : positive) (s : MSHIFT) (si1 : positive) (p1 : list cond) 
  (EQ1 : rndval_with_cond' si shift e = (r1, (si1, s1), p1))
  (p_ : list (rexpr * bool))
-  (EQ : rnd_of_unop_with_cond si1 s1 (type_of_expr e) (Rounded1 (InvShift pow ltr) None) r1 =
+  (EQ : rnd_of_unop_with_cond si1 s1 ty (Rounded1 (InvShift pow ltr) None) r1 =
      (r, (si2, s), p_))
  (H1 : forall i : cond, In i (p_ ++ p1) -> eval_cond1 env s i) 
  (H2 : forall (i : positive) (ty : type) (k : rounding_knowledge'),
      mget shift i = (ty, k) -> Rabs (errors1 i) <= error_bound ty k)
- (K_ : rnd_of_unop si1 s1 (type_of_expr e) (Rounded1 (InvShift pow ltr) None) r1 = (r, (si2, s))),
+ (K_ : rnd_of_unop si1 s1 ty (Rounded1 (InvShift pow ltr) None) r1 = (r, (si2, s))),
 exists errors2 : positive -> R,
   (forall i : positive, (i < si)%positive -> errors2 i = errors1 i) /\
   (forall (i : positive) (ty' : type) (k : rounding_knowledge'),
    mget s i = (ty', k) -> Rabs (errors2 i) <= error_bound ty' k) /\
-  is_finite (fprec (type_of_expr e)) (femax (type_of_expr e))
-    (fop_of_unop (Rounded1 (InvShift pow ltr) None) (type_of_expr e) (fval env e)) = true /\
+  is_finite (fprec ty) (femax ty)
+    (fop_of_unop (Rounded1 (InvShift pow ltr) None) ty (fval env e)) = true /\
   reval r env errors2 =
-  B2R (fprec (type_of_expr e)) (femax (type_of_expr e))
-    (fop_of_unop (Rounded1 (InvShift pow ltr) None) (type_of_expr e) (fval env e)).
+  B2R (fprec ty) (femax ty)
+    (fop_of_unop (Rounded1 (InvShift pow ltr) None) ty (fval env e)).
 Proof.
 intros.
-assert (K1 := rndval_with_cond_left e si shift); rewrite EQ1 in K1; simpl in K1; symmetry in K1.
+assert (K1 := rndval_with_cond_left _ e si shift); rewrite EQ1 in K1; simpl in K1; symmetry in K1.
 inversion EQ; clear EQ; subst.
 set (op := RBinop Tree.Mul _) in *.
-set (s := mset s1 si1 (type_of_expr e, Denormal')) in *.
+set (s := mset s1 si1 (ty, Denormal')) in *.
 pose (eps :=
-  B2R (fprec (type_of_expr e)) (femax (type_of_expr e))
-    (fop_of_unop (Rounded1 (InvShift pow ltr) None) (type_of_expr e) (fval env e)) -
-  F2R radix2 (B2F (B2 (type_of_expr e) (Z.neg pow))) * reval r1 env errors1_1).
+  B2R (fprec ty) (femax ty)
+    (fop_of_unop (Rounded1 (InvShift pow ltr) None) ty (fval env e)) -
+  F2R radix2 (B2F (B2 ty (Z.neg pow))) * reval r1 env errors1_1).
 pose (errors2 i := if Pos.eq_dec i si1  then eps else errors1_1 i).
 exists errors2.
 split; [ | split; [ | split]].
 -
 intros. unfold errors2.
 destruct (Pos.eq_dec i si1); auto.
-pose proof (rndval_shift_incr _ _ _ _ _ _ K1). lia.
+pose proof (rndval_shift_incr _ _ _ _ _ _ _ K1). lia.
 -
 subst errors2.
 simpl.
@@ -1782,7 +1838,7 @@ destruct (Pos.eq_dec i si1). inversion H; clear H; subst.
    unfold errors2.
  destruct (Pos.eq_dec i si1); auto.
   subst i.
-  pose proof (rndval_shift_le _ _ _ _ _ _ K1). lia.
+  pose proof (rndval_shift_le _ _ _ _ _ _ _ K1). lia.
 }
   subst errors2.
   subst eps.
@@ -1795,7 +1851,7 @@ destruct (Pos.eq_dec i si1). inversion H; clear H; subst.
   ring.
 Qed.
 
-Theorem rndval_with_cond_correct' env (Henv: forall ty i, is_finite _ _ (env ty i) = true) e:
+Theorem rndval_with_cond_correct' env (Henv: forall ty i, is_finite _ _ (env ty i) = true) ty (e: expr ty) :
   expr_valid e = true ->
   forall si shift r si2 s p,
     rndval_with_cond' si shift e = ((r, (si2, s)), p) ->
@@ -1839,21 +1895,21 @@ Proof.
     simpl in *.
     destruct (rndval_with_cond' si shift e1) as [[r1 [si1 s1]] p1] eqn:EQ1.
     destruct (rndval_with_cond' si1 s1 e2) as [[r2 [si2_ s2]] p2] eqn:EQ2.
-    destruct (rnd_of_binop_with_cond si2_ s2 (type_lub (type_of_expr e1) (type_of_expr e2)) b r1 r2) as [rs p_] eqn:EQ.
+    destruct (rnd_of_binop_with_cond si2_ s2 ty b r1 r2) as [rs p_] eqn:EQ.
     inversion H0; clear H0; subst.
     rewrite andb_true_iff in H.
     destruct H.
 
-    assert (K1 := rndval_with_cond_left e1 si shift).
+    assert (K1 := rndval_with_cond_left _ e1 si shift).
     rewrite EQ1 in K1.
     symmetry in K1.
     simpl in K1.
-    generalize (rndval_with_cond_left e2 si1 s1).
+    generalize (rndval_with_cond_left _ e2 si1 s1).
     rewrite EQ2.
     intro K2.
     symmetry in K2.
     simpl in K2.
-    generalize (rnd_of_binop_with_cond_left si2_ s2 (type_lub (type_of_expr e1) (type_of_expr e2)) b r1 r2).
+    generalize (rnd_of_binop_with_cond_left si2_ s2 ty b r1 r2).
     intro K_.
     rewrite EQ in K_.
     simpl in K_.
@@ -1901,22 +1957,6 @@ Proof.
     specialize (IHe2 H0 _ _ _ _ _ _ EQ2 N _ EB1).
     clear N.
     destruct IHe2 as (errors1_2 & E2 & EB2 & F2 & V2).
-
-    generalize (cast_finite _ _ (type_lub_left _ (type_of_expr e2)) _ F1).
-    generalize (cast_eq _ _ (type_lub_left _ (type_of_expr e2)) _ F1).
-    clear F1.
-    rewrite <- V1.
-    clear V1.
-    intros V1 F1.
-    generalize (cast_finite _ _ (type_lub_right (type_of_expr e1) _) _ F2).
-    generalize (cast_eq _ _ (type_lub_right (type_of_expr e1) _) _ F2).
-    clear F2.
-    rewrite <- V2.
-    clear V2.
-    intros V2 F2.
-    symmetry in V1.
-    symmetry in V2.
-
     rewrite <- (reval_error_ext errors1_2) in V1
      by (intros; apply E2; eapply Pos.lt_le_trans; [ eassumption | eapply rndval_shift_le; eauto]).
     destruct b.
@@ -1924,8 +1964,7 @@ Proof.
         simpl.
         simpl in EQ.
         destruct (
-            make_rounding si2_ s2 (round_knowl_denote knowl)
-                          (type_lub (type_of_expr e1) (type_of_expr e2))
+            make_rounding si2_ s2 (round_knowl_denote knowl) ty
                           (RBinop (Rbinop_of_rounded_binop op) r1 r2)
           ) eqn:ROUND.
         inversion EQ; clear EQ; subst.
@@ -1946,7 +1985,7 @@ Proof.
         }
         specialize (K L _ EB2).
         clear L.
-        assert (L: rounding_cond (type_lub (type_of_expr e1) (type_of_expr e2)) (round_knowl_denote knowl)
+        assert (L: rounding_cond ty (round_knowl_denote knowl)
                             (reval (RBinop (Rbinop_of_rounded_binop op) r1 r2) env errors1_2)).
         {
           eapply rounding_cond_ast_correct; [ eassumption | ].
@@ -2011,7 +2050,7 @@ Proof.
           auto.
         }
        assert (L': eval_cond1 env s
-            (no_overflow (type_lub (type_of_expr e1) (type_of_expr e2)) r)).
+            (no_overflow ty r)).
         {
           apply H1.
           apply in_or_app.
@@ -2064,11 +2103,7 @@ Proof.
 
         generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
         intro K.
-        change ( Z.pos
-                   (fprecp (type_lub (type_of_expr e1) (type_of_expr e2))))
-        with (
-          fprec (type_lub (type_of_expr e1) (type_of_expr e2))
-        ) in K.
+        change ( Z.pos (fprecp ty)) with (fprec ty) in K.
         rewrite <- V1 in K.
         rewrite <- V2 in K.
         rewrite Generic_fmt.round_generic in K; try typeclasses eauto.
@@ -2076,7 +2111,7 @@ Proof.
           destruct (Rlt_dec
                       (Rabs (reval r1 env errors1_2 - reval r2 env errors1_2))
                       (Raux.bpow Zaux.radix2
-                                       (femax (type_lub (type_of_expr e1) (type_of_expr e2))))
+                                       (femax ty))
                    ).
           {
             apply Raux.Rlt_bool_true in r.
@@ -2095,13 +2130,9 @@ Proof.
           }
           exfalso.
           pose proof 
-          (abs_B2R_lt_emax _ _
-            (@cast _ (type_lub (type_of_expr e1) (type_of_expr e2)) 
-                  (type_of_expr e1) (fval env e1))).
+          (abs_B2R_lt_emax _ _ (fval env e1)).
           pose proof 
-          (abs_B2R_lt_emax _ _
-            (@cast _ (type_lub (type_of_expr e1) (type_of_expr e2)) 
-                  (type_of_expr e2) (fval env e2))).
+          (abs_B2R_lt_emax _ _ (fval env e2)).
           rewrite <- V1 in H3.
           rewrite <- V2 in H4.
           apply Raux.Rabs_lt_inv in H3.
@@ -2146,9 +2177,7 @@ Proof.
          destruct zero_left.
          {
           rewrite V1 in ZERO.
-          pose proof (abs_B2R_lt_emax _ _
-          (@cast _ (type_lub (type_of_expr e1) (type_of_expr e2)) 
-            (type_of_expr e2) (fval env e2))).
+          pose proof (abs_B2R_lt_emax _ _ (fval env e2)).
           destruct minus.
           {
             generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
@@ -2164,8 +2193,6 @@ Proof.
               simpl reval.
               destruct 1 as (BV & BF & _).
               simpl femax in BV, BF |- * .
-              unfold cast_lub_l.
-              unfold cast_lub_r.
               rewrite BV.
               intuition.
             }
@@ -2182,17 +2209,13 @@ Proof.
             simpl reval.
             destruct 1 as (BV & BF & _).
             simpl femax in BV, BF |- * .
-            unfold cast_lub_l.
-            unfold cast_lub_r.
             rewrite BV.
             intuition.
           }
           apply generic_format_B2R.          
         }
         rewrite V2 in ZERO.
-        pose proof (abs_B2R_lt_emax _ _
-        (@cast _ (type_lub (type_of_expr e1) (type_of_expr e2)) 
-          (type_of_expr e1) (fval env e1))).
+        pose proof (abs_B2R_lt_emax _ _ (fval env e1)).
         destruct minus.
         {
           generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
@@ -2206,8 +2229,6 @@ Proof.
             simpl reval.
             destruct 1 as (BV & BF & _).
             simpl femax in BV, BF |- * .
-            unfold cast_lub_l.
-            unfold cast_lub_r.
             rewrite BV.
             intuition.
           }
@@ -2224,8 +2245,6 @@ Proof.
           simpl reval.
           destruct 1 as (BV & BF & _).
           simpl femax in BV, BF |- * .
-          unfold cast_lub_l.
-          unfold cast_lub_r.
           rewrite BV.
           intuition.
         }
@@ -2234,17 +2253,17 @@ Proof.
 - (* unop *)
   simpl in *.
   destruct (rndval_with_cond' si shift e) as [[r1 [si1 s1]] p1] eqn:EQ1.
-  destruct (rnd_of_unop_with_cond si1 s1 (type_of_expr e) u r1) as [rs p_] eqn:EQ.
+  destruct (rnd_of_unop_with_cond si1 s1 ty u r1) as [rs p_] eqn:EQ.
   inversion H0; clear H0; subst.
   rewrite andb_true_iff in H.
   destruct H.
 
-  generalize (rndval_with_cond_left e si shift).
+  generalize (rndval_with_cond_left _ e si shift).
   rewrite EQ1.
   intro K1.
   symmetry in K1.
   simpl in K1.
-  generalize (rnd_of_unop_with_cond_left si1 s1 (type_of_expr e) u r1).
+  generalize (rnd_of_unop_with_cond_left si1 s1 ty u r1).
   rewrite EQ.
   simpl.
   intro K_.
@@ -2276,7 +2295,7 @@ Proof.
     unfold Datatypes.id in *.
     destruct (
         make_rounding si1 s1 (round_knowl_denote knowl)
-                      (type_of_expr e) (RUnop Tree.Sqrt r1)
+                      ty (RUnop Tree.Sqrt r1)
       ) eqn:ROUND.
     inversion EQ; clear EQ; subst.
 
@@ -2287,7 +2306,7 @@ Proof.
       intros.
       eapply rndval_shift_le; eauto.
     }
-    assert (L': rounding_cond (type_of_expr e) (round_knowl_denote knowl)
+    assert (L': rounding_cond ty (round_knowl_denote knowl)
       (reval (RUnop Tree.Sqrt r1)env errors1_1)).
     {
       eapply rounding_cond_ast_correct; [ eassumption | ].
@@ -2377,12 +2396,12 @@ Proof.
     rewrite <- B2F_F2R_B2R.
     rewrite Z.leb_le in H.
     apply center_Z_correct in H.
-    assert (B2_FIN := B2_finite (type_of_expr e) (Z.neg pow) (proj2 H)).
-    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 (type_of_expr e) (Z.neg pow)) (fval env e)).
-    generalize (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 (type_of_expr e) (Z.neg pow)) (fval env e)).
+    assert (B2_FIN := B2_finite ty (Z.neg pow) (proj2 H)).
+    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) (fval env e)).
+    generalize (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) (fval env e)).
     rewrite Rmult_comm.
-    change (SpecFloat.fexp (fprec (type_of_expr e)) (femax (type_of_expr e)))
-     with  (FLT_exp (3 - femax (type_of_expr e) - fprec (type_of_expr e)) (fprec (type_of_expr e))).
+    change (SpecFloat.fexp (fprec ty) (femax ty))
+     with  (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
     rewrite (B2_correct _ (Z.neg pow) H).
     replace (Z.neg pow) with (- Z.pos pow)%Z in * |- * by reflexivity.   
     rewrite Raux.bpow_opp.
@@ -2455,20 +2474,20 @@ Proof.
       rewrite <- B2F_F2R_B2R.
       rewrite Z.leb_le in H.
       apply center_Z_correct in H.
-      generalize (B2_finite (type_of_expr e) (Z.of_N pow) (proj2 H)).
+      generalize (B2_finite ty (Z.of_N pow) (proj2 H)).
       intro B2_FIN.
       generalize
-          (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 (type_of_expr e) (Z.of_N pow)) (fval env e)).
+          (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.of_N pow)) (fval env e)).
       generalize
-         (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 (type_of_expr e) (Z.of_N pow)) (fval env e)).
+         (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.of_N pow)) (fval env e)).
       rewrite Rmult_comm.
       replace (Z.of_N (pow + 1)) with (Z.of_N pow + 1)%Z in H by (rewrite N2Z.inj_add; simpl; ring).
       specialize (H1 _ (or_introl _ (refl_equal _)) _ EB1).
       simpl in H1.
       rewrite F2R_eq, <- B2F_F2R_B2R, V1 in H1.
       rewrite (B2_correct _ _ H) in H1|-*.
-    change (SpecFloat.fexp (fprec (type_of_expr e)) (femax (type_of_expr e)))
-     with  (FLT_exp (3 - femax (type_of_expr e) - fprec (type_of_expr e)) (fprec (type_of_expr e))).
+    change (SpecFloat.fexp (fprec ty) (femax ty))
+     with  (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
       rewrite FLT_format_mult_beta_n; try typeclasses eauto.
       rewrite F1.
       rewrite B2_FIN.
@@ -2489,12 +2508,46 @@ Proof.
       rewrite Rmult_comm.
       lra.
 
- + (* cast *)
+ - (* cast *)
+
+  simpl in *.
+  destruct (rndval_with_cond' si shift e) as [[r1 [si1 s1]] p1] eqn:EQ1.
+  destruct (rnd_of_cast_with_cond si1 s1  fromty ty (round_knowl_denote knowl) r1) as [rs p_] eqn:EQ.
+  inversion H0; clear H0; subst.
+
+  generalize (rndval_with_cond_left _ e si shift).
+  rewrite EQ1.
+  intro K1.
+  symmetry in K1.
+  simpl in K1.
+  generalize (rnd_of_cast_with_cond_left si1 s1 fromty ty (round_knowl_denote knowl) r1).
+  rewrite EQ.
+  simpl.
+  intro K_.
+  symmetry in K_.
+
+  assert (N: forall i : cond, In i p1 -> eval_cond1 env s1 i).
+  {
+    intros.
+    apply (eval_cond1_preserved s).
+    {
+      intros; subst.
+      symmetry.
+      eapply rnd_of_cast_shift_unchanged; eauto.
+      eapply Pos.lt_le_trans; eauto.
+      eapply rndval_with_cond_shift_cond; eauto.
+    }
+    apply H1. apply in_or_app. auto.
+  }
+  specialize (IHe H _ _ _ _ _ _ EQ1 N _ H2).
+  clear N.
+  destruct IHe as (errors1_1 & E1 & EB1 & F1 & V1).
+
   simpl.
   simpl in *.
   unfold cast.
   unfold rnd_of_cast_with_cond in EQ.
-  destruct (type_eq_dec (type_of_expr e) ty).
+  destruct (type_eq_dec fromty ty).
   {
     subst ty.
     simpl.
@@ -2505,13 +2558,14 @@ Proof.
     }
     apply type_le_refl.
   }
-  destruct (type_leb (type_of_expr e) ty) eqn:LEB.
+  destruct (type_leb fromty ty) eqn:LEB.
   {
     inversion EQ; clear EQ; subst.
     rewrite type_leb_le in LEB.
     inversion LEB.
     generalize ((fun J1 =>
-                  Bconv_widen_exact _ _ _ _ J1 (fprec_gt_0 _) (fprec_lt_femax _) (Z.le_ge _ _ H3) (Z.le_ge _ _ H4) (conv_nan _ _) BinarySingleNaN.mode_NE _ F1) ltac:( typeclasses eauto ) ).
+                  Bconv_widen_exact _ _ _ _ J1 (fprec_gt_0 _) (fprec_lt_femax _) 
+                        (Z.le_ge _ _ H0) (Z.le_ge _ _ H3) (conv_nan _ _) BinarySingleNaN.mode_NE _ F1) ltac:( typeclasses eauto ) ).
     destruct 1 as (K & L & _).
     symmetry in K.
     rewrite <- V1 in K.
@@ -2536,8 +2590,8 @@ Proof.
     {
       intros; subst.
       symmetry.
-      apply rounding_cond_ast_shift in H3.
-      simpl in H3.
+      apply rounding_cond_ast_shift in H0.
+      simpl in H0.
       eapply make_rounding_shift_unchanged; eauto.
       eapply Pos.lt_le_trans; eauto.
       etransitivity; try eassumption.
@@ -2586,7 +2640,7 @@ Definition env_all_finite (env: environ) :=
 Definition eval_cond (s: MSHIFT) (c: cond) (env: environ) : Prop :=
   eval_cond1 env s c.
 
-Definition rndval_with_cond (e: expr) : rexpr * MSHIFT * list (environ -> Prop) :=
+Definition rndval_with_cond {ty} (e: expr ty) : rexpr * MSHIFT * list (environ -> Prop) :=
  let '((r,(si,s)),p) := rndval_with_cond' 1%positive empty_shiftmap e
   in (r, s, map (eval_cond s) p).
 
@@ -2597,7 +2651,7 @@ Definition errors_bounded
          (Rabs (errors i) <= error_bound ty k)%R.
 
 Theorem rndval_with_cond_correct 
-    env (Henv: env_all_finite env) (e: expr):
+    env (Henv: env_all_finite env) {ty} (e: expr ty):
   expr_valid e = true ->
   forall r s p,
     rndval_with_cond e = (r, s, p) ->
@@ -2622,7 +2676,7 @@ assert (forall i : cond, In i p' -> eval_cond1 env s i). {
   rewrite in_map_iff.
   exists i; auto.
 }
-destruct (rndval_with_cond_correct' env Henv e H 1 empty_shiftmap r _ _ _ H2 H0
+destruct (rndval_with_cond_correct' env Henv ty e H 1 empty_shiftmap r _ _ _ H2 H0
  (fun _ => 0%R))
   as [errors2 [? [? [? ?]]]].
 -
