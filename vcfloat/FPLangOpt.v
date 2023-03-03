@@ -161,8 +161,23 @@ Fixpoint fcval {ty} (e: expr ty) {struct e}: expr ty :=
         | Some v => Const _ (fop_of_unop b _ v)
         | _ => Unop b e'
       end
+    | Func _ ff el =>
+       let fix fcval_klist {tys: list type} (l': klist expr tys) {struct l'}: klist expr tys :=
+          match  l' in (klist _ l) return (klist expr l)
+          with
+          | Knil => Knil
+          | Kcons h tl => Kcons (fcval h) (fcval_klist tl)
+          end 
+          in Func _ ff (fcval_klist el)
     | _ => e
   end.
+
+Fixpoint fcval_klist  {tys: list type} (l': klist expr tys) {struct l'}: klist expr tys :=
+          match  l' in (klist _ l) return (klist expr l)
+          with
+          | Knil => Knil
+          | Kcons h tl => Kcons (fcval h) (fcval_klist tl)
+          end.
 
 Lemma fcval_correct_bool env ty (e: expr ty):
   binary_float_eqb (fval env (fcval e)) (fval env e) = true.
@@ -227,7 +242,19 @@ Proof.
     simpl.
     repeat rewrite binary_float_eqb_eq.
     congruence.  
-Qed.  
+- 
+ match goal with |- binary_float_eqb _ (?G _ _ _) = _ =>  change G with (@fval_klist _ env ty) end.
+
+  set (func := ff_func _). clearbody func.
+  set (tys := ff_args f4) in *. clearbody tys.
+  fold (@fcval_klist tys args).
+ rewrite binary_float_eqb_eq.
+  induction args. simpl. reflexivity.
+ simpl.
+  apply Kforall_inv in IH. destruct IH.
+  apply binary_float_eqb_eq in H. rewrite H.
+  specialize (IHargs H0). apply IHargs.
+Qed.
 
 Lemma fcval_correct env ty (e: expr ty):
   fval env (fcval e) = (fval env e).
@@ -397,6 +424,14 @@ Fixpoint fshift {ty} (e: expr ty) {struct e}: expr ty :=
       then fshift_mult e'1 e'2
       else Binop b e'1 e'2
     | Unop b e => Unop b (fshift e)
+    | Func _ ff el =>
+       let fix fshift_klist {tys: list type} (l': klist expr tys) {struct l'}: klist expr tys :=
+          match  l' in (klist _ l) return (klist expr l)
+          with
+          | Knil => Knil
+          | Kcons h tl => Kcons (fshift h) (fshift_klist tl)
+          end 
+          in Func _ ff (fshift_klist el)
     | _ => e
   end.
 
@@ -562,6 +597,15 @@ Proof.
   subst.
   apply binary_float_eqb_eq.
   reflexivity.
+-
+  set (func := ff_func _). clearbody func.
+  set (tys := ff_args f4) in *. clearbody tys.
+ rewrite binary_float_eqb_eq.
+  induction args. simpl. reflexivity.
+ simpl.
+  apply Kforall_inv in IH. destruct IH.
+  apply binary_float_eqb_eq in H. rewrite H.
+  specialize (IHargs H0). apply IHargs.
 Qed.
 
 Lemma fshift_correct env ty (e: expr ty):
@@ -602,8 +646,23 @@ Fixpoint fshift_div {ty} (e: expr ty) {struct e}: expr ty :=
       else
         Binop b e'1 e'2
     | Unop b e => Unop b (fshift_div e)
+    | Func _ ff el =>
+       let fix fshift_div_klist {tys: list type} (l': klist expr tys) {struct l'}: klist expr tys :=
+          match  l' in (klist _ l) return (klist expr l)
+          with
+          | Knil => Knil
+          | Kcons h tl => Kcons (fshift_div h) (fshift_div_klist tl)
+          end 
+          in Func _ ff (fshift_div_klist el)
     | _ => e
   end.
+
+Fixpoint fshift_div_klist {tys: list type} (l': klist expr tys) {struct l'}: klist expr tys :=
+          match  l' in (klist _ l) return (klist expr l)
+          with
+          | Knil => Knil
+          | Kcons h tl => Kcons (fshift_div h) (fshift_div_klist tl)
+          end.
 
 Local Lemma binary_float_equiv_refl : forall prec emax x, 
    @binary_float_equiv prec emax x x.
@@ -1012,7 +1071,22 @@ revert IHe.
 generalize (fval env (fshift_div e)).
 intros.
 apply binary_float_equiv_UOP; apply IHe.
-Qed.
+-
+  set (func := ff_func _). clearbody func.
+  set (tys := ff_args f4) in *. clearbody tys.
+  fold @fshift_div_klist.
+ match goal with |- binary_float_equiv (?G _ _ _) _ =>  change G with (@fval_klist _ env ty) end.
+  induction args. simpl. apply binary_float_equiv_refl.
+ simpl.
+  apply Kforall_inv in IH. destruct IH.
+  specialize (IHargs H0).
+  simpl in func.
+  specialize (IHargs (func (fval env k))).
+  eapply binary_float_equiv_trans; [ | apply IHargs].
+  admit.  (* This looks OK but will take some work.  Perhaps use the Morphism congruence
+                 system for binary_float_equiv; or (maybe) base this whole thing on binary_float_eqb
+               instead of binary_float_equiv? *)
+Admitted.
 
 Lemma fshift_div_correct env ty (e: expr ty):
   Binary.is_nan _ _ (fval env (fshift_div e)) = false -> 
@@ -1041,8 +1115,23 @@ Fixpoint erase {ty} (e: expr ty) {struct e}: expr ty :=
     | Unop (Rounded1 u k) e => Unop (Rounded1 u None) (erase e)
     | Cast _ u _ e => Cast _ u None (erase e)
     | Unop u e => Unop u (erase e)
+    | Func _ ff args => 
+       let fix erase_klist {tys: list type} (l': klist expr tys) {struct l'}: klist expr tys :=
+          match  l' in (klist _ l) return (klist expr l)
+          with
+          | Knil => Knil
+          | Kcons h tl => Kcons (erase h) (erase_klist tl)
+          end 
+       in Func _ ff (erase_klist args)
     | _ => e
   end.
+
+Fixpoint erase_klist  {tys: list type} (l': klist expr tys) {struct l'}: klist expr tys :=
+          match  l' in (klist _ l) return (klist expr l)
+          with
+          | Knil => Knil
+          | Kcons h tl => Kcons (erase h) (erase_klist tl)
+          end.
 
 Lemma erase_correct' env ty (e: expr ty):
  binary_float_eqb (fval env (erase e)) (fval env e) = true.
@@ -1081,6 +1170,20 @@ Proof.
   apply binary_float_eqb_eq in IHe; subst;
   apply binary_float_eqb_eq;
   reflexivity.
+-
+  set (func := ff_func _). clearbody func.
+  set (tys := ff_args f4) in *. clearbody tys.
+  fold @erase_klist.
+ match goal with |- binary_float_eqb (?G _ _ _) _ = true =>  change G with (@fval_klist _ env ty) end.
+  induction args. simpl. apply binary_float_eqb_eq. reflexivity.
+ simpl.
+  apply Kforall_inv in IH. destruct IH.
+  specialize (IHargs H0).
+  specialize (IHargs (func (fval env k))).
+  apply binary_float_eqb_eq in IHargs.  
+  apply binary_float_eqb_eq.
+  rewrite <- IHargs. f_equal.
+  apply binary_float_eqb_eq in H. rewrite H. auto.
 Qed.
 
 Lemma erase_correct env ty (e: expr ty):
