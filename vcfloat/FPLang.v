@@ -63,14 +63,9 @@ Set Bullet Behavior "Strict Subproofs".
 Global Unset Asymmetric Patterns.
 
 Require Export vcfloat.FPCore.
+Require Import vcfloat.klist.
 Import Bool.
 Import Coq.Lists.List ListNotations.
-
-Fixpoint function_type (args: list Type) (rhs: Type) : Type :=
-  match args with
-  | nil => rhs
-  | a::r =>  a -> function_type r rhs
- end.
 
 Definition RR (_: type) : Type := R.
 Definition ftype'  (t: type) : Type := ftype t.
@@ -104,15 +99,6 @@ Record floatfunc_package ty:=
   ff_precond: function_type (map RR ff_args) Prop;
   ff_realfunc: function_type (map RR ff_args) R;
   ff_ff: floatfunc ff_args ty ff_precond ff_realfunc}.
-(*
-Record floatfunc (args: list FPCore.type) (result: FPCore.type) 
-     (precond: function_type (map RR args) Prop)
-     (realfunc: function_type (map RR args) R)
-     (rel abs: R) :=
- {ff_func: function_type (map ftype' args) (ftype' result);
-  ff_acc: acc_prop args result rel abs precond realfunc ff_func
- }.
-*)
 
 Arguments ff_func [args result precond realfunc].
 Arguments ff_acc [args result precond realfunc].
@@ -180,63 +166,8 @@ Definition round_knowl_denote (r: option rounding_knowledge) :=
  | Some Denormal => Denormal'
  end.
 
-Inductive klist (k : type -> Type) : list type -> Type :=
-| Knil : klist k []
-| Kcons {ty tys} : k ty -> klist k tys -> klist k (ty :: tys).
-
-Arguments Knil {k}.
-Arguments Kcons {k ty tys}.
-
-Lemma klist_nil {k: type -> Type} (al: klist k nil): al = Knil.
-Proof.
-exact
-  match al with
-  | Knil => eq_refl
-  | Kcons _ _ => idProp
-  end.
-Qed.
-
-Lemma klist_cons {k: type -> Type} {t: type} {tr: list type} (al: klist k (t::tr)) :
-   exists h: k t, exists r: klist k tr, al = Kcons h r.
-Proof.
-refine 
- match al with Knil => idProp | Kcons _ _ => _ end.
-eexists. eexists. reflexivity.
-Qed.
-
-Definition klist_cons1 {k: type -> Type} {t: type} {tr: list type} (al: klist k (t::tr)) : k t :=
-  match al with
-  | Knil => idProp
-  | Kcons h _ => h
-  end.
-
-Definition klist_cons2 {k: type -> Type} {t: type} {tr: list type} (al: klist k (t::tr)) : klist k tr := 
-  match al with
-  | Knil =>idProp
-  | Kcons _ tr => tr
-  end.
-
-Inductive Kforall {k: type -> Type} (P: forall ty, k ty -> Prop): forall {tys: list type} (es: klist k tys), Prop :=
- | Kforall_nil: Kforall P Knil
- | Kforall_cons: forall {t tr} (h: k t) (r: klist k tr),  P _ h -> Kforall P r -> Kforall P (Kcons h r).
-
-Lemma Kforall_inv: forall (k: type -> Type) (P: forall ty, k ty -> Prop)
-                 {ty: type} {tys: list type} (e: k ty) (es: klist k tys),
-  Kforall P (Kcons e es) -> P _ e /\ Kforall P es.
-Proof.
-intros.
-inversion H.
-subst.
-apply ProofIrrelevance.ProofIrrelevanceTheory.EqdepTheory.inj_pair2 in H2, H4.
-subst; auto.
-Qed.
-
-Inductive Kforall2 {k: type -> Type} (P: forall ty, k ty -> k ty -> Prop): forall {tys: list type} (al bl: klist k tys), Prop :=
- | Kforall2_nil: Kforall2 P Knil Knil
- | Kforall2_cons: forall {t tr} (ah bh: k t) (ar br: klist k tr),  
-                     P _ ah bh -> Kforall2 P ar br -> Kforall2 P (Kcons ah ar) (Kcons bh br).
-
 Unset Elimination Schemes.
+
 (* See https://coq.zulipchat.com/#narrow/stream/237977-Coq-users/topic/Coq.20can't.20recognize.20a.20strictly.20positive.20occurrence
    for a discussion of Func1,Func2, etc. *)   
 Inductive expr (ty: type): Type :=
@@ -326,100 +257,6 @@ Definition Rop_of_unop (r: unop): R -> R :=
     | Rounded1 op _ => Rop_of_rounded_unop op
     | Exact1 op => Rop_of_exact_unop op
   end.
-
-(*
-Fixpoint mapk {A} (f: forall ty: type, expr ty -> A) (tys: list type) (es: klist expr tys) : list A :=
- match tys, es with
- | t :: ts, Kcons e er =>f _ e :: mapk f ts er
- | _, _ => nil
- end.
-*)
-
-Definition foo A (f: forall ty: type, expr ty -> A) 
-  (t: type) (ts: list type)
-    (mapk: klist expr ts -> list A) (X: klist expr (t::ts)): list A.
-remember (t::ts) as tys.
-destruct X eqn:?H.
-discriminate.
-inversion Heqtys; clear Heqtys; subst.
-apply (cons (f t e)).
-apply mapk.
-apply k.
-Defined.
-
-Definition mapk_aux A (f: forall ty: type, expr ty -> A) 
-  (t: type) (ts: list type)
-    (mapk: klist expr ts -> list A):  klist expr (t::ts) -> list A :=
-fun X: klist expr (t::ts) =>
-match
-  X as k0 in (klist _ l)
-  return (l = t :: ts -> list A)
-with
-| Knil =>
-    fun (H : [] = t :: ts)  =>
-    False_rect (list A) (eq_ind [] (fun e => match e with [] => True | _ :: _ => False end)
-                                   I (t :: ts) H)
-| @Kcons _ ty tys e k2 =>
-    fun H2 : ty :: tys = t :: ts =>
-                   (eq_rect_r (fun ty1 : type => expr ty1 -> list A)
-                      (fun e' : expr t =>
-                       eq_rect_r (fun tys2 : list type => klist expr tys2 -> list A)
-                         (fun k3 : klist expr ts => f t e' :: mapk k3)  (f_equal (@tl type) H2) k2) 
-                               (f_equal  (hd ty) H2) e)
-end eq_refl .
-
-
-Require Import Recdef.
-
-Function mapk_aux1 A (f: forall (ty: type), expr ty -> A) (tys: list type) {measure length tys}:
-     (klist expr tys)  -> list A :=
-match tys with 
-| nil => fun _ => nil
-| t::ts => mapk_aux A f t ts (@mapk_aux1 A f ts)
-end.
-Proof.
-intros.
-simpl. apply Nat.lt_succ_diag_r.
-Defined.
-
-Definition mapk {A} f {tys} l := mapk_aux1 A f tys l.
-
-Definition applyk_aux (typemapper : type -> Type)
-         (arg1: type) (args : list type) (res : type)
-         (applyk : function_type (map typemapper args) (typemapper res) ->
-              (forall ty : type, expr ty -> typemapper ty) ->
-             klist expr args -> typemapper res)
-         (f: function_type (map typemapper (arg1:: args)) (typemapper res))
-         (valmapper: forall ty : type, expr ty -> typemapper ty)
-         (es: klist expr (arg1::args)):
-         typemapper res.
-remember (arg1::args) as args0.
-destruct es  as [ | arg1' args' e1 er] eqn:?H.
-discriminate.
-inversion Heqargs0; clear Heqargs0; subst.
-apply (applyk (f (valmapper _ e1)) valmapper er).
-Defined.
-
-Fixpoint applyk
-    (typemapper: type -> Type)
-    (args: list type)
-    (res: type)
-    {struct args}
-    : function_type (map typemapper args) (typemapper res) ->
-     (forall ty: type, expr ty -> typemapper ty) ->
-       klist expr args -> typemapper res :=
-match
-     args as l
-     return
-       (function_type (map typemapper l) (typemapper res) ->
-         (forall ty: type, expr ty -> typemapper ty) ->
-        klist expr l -> typemapper res)
-   with
-   | [] =>fun f _ _ => f
-   | arg1 :: args0 =>
-    applyk_aux typemapper arg1 args0 res
-          (applyk typemapper args0 res)
-   end.
 
 Fixpoint expr_height {ty} (e: expr ty) {struct e} : nat := 
  match e with

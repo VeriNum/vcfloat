@@ -56,6 +56,7 @@ From vcfloat Require Export RAux.
 From Flocq Require Import Binary Bits Core.
 From vcfloat Require Import IEEE754_extra. (* lib.Floats. *)
 Require compcert.lib.Maps.  
+Require Import JMeq.
 Require Coq.MSets.MSetAVL.
 Require vcfloat.Fprop_absolute.
 Require Import vcfloat.Float_lemmas.
@@ -63,6 +64,7 @@ Set Bullet Behavior "Strict Subproofs".
 Global Unset Asymmetric Patterns.
 
 Require Export vcfloat.FPCore vcfloat.FPLang.
+Require Import vcfloat.klist.
 Import Bool.
 
 Import Coq.Lists.List ListNotations.
@@ -224,9 +226,31 @@ Proof.
     rename ff_args into tys.
     rename ff_realfunc into f.
     clear - args H IH.
-    revert f H IH; 
+    revert f H IH.
     induction args; simpl; intros; auto.
     apply Kforall_inv in IH. destruct IH.
+    rewrite <- H0.
+    apply IHargs; auto.
+    intros. apply H; lia.
+    intros. apply H; lia.
+Qed.
+
+Lemma reval_error_klist_ext:
+  forall (eenv1 eenv2  : positive -> R)
+    (env : forall ty : type, FPLang.V -> ftype ty)
+    (tys : list type)
+   (args : klist (fun _ : type => rexpr) tys)
+  (f : function_type (map RR tys) R),
+(forall i : positive,
+ (i < max_error_var_klist tys args)%positive -> eenv1 i = eenv2 i) ->
+Kforall
+  (fun (_ : type) (e : rexpr) =>
+   (forall i : positive, (i < max_error_var e)%positive -> eenv1 i = eenv2 i) ->
+   reval e env eenv1 = reval e env eenv2) args ->
+  reval_klist env eenv1 args f = reval_klist env eenv2 args f.
+Proof.
+    induction args; simpl; intros; auto.
+    apply Kforall_inv in H0. destruct H0.
     rewrite <- H0.
     apply IHargs; auto.
     intros. apply H; lia.
@@ -2257,15 +2281,7 @@ destruct (Pos.eq_dec i si1). inversion H; clear H; subst.
   ring.
 Qed.
 
-Theorem rndval_with_cond_correct' env (Henv: forall ty i, is_finite _ _ (env ty i) = true) ty (e: expr ty) :
-  expr_valid e = true ->
-  forall si shift r si2 s p,
-    rndval_with_cond' si shift e = ((r, (si2, s)), p) ->
-    (forall i, In i p -> eval_cond1 env s i) ->
-    forall errors1,
-      (forall i ty k,
-         mget shift i = (ty, k) ->
-         Rabs (errors1 i) <= error_bound ty k) ->
+Definition rwcc errors1 si s env ty (e: expr ty) r := 
       exists errors2,
         (forall i,
            (i < si)%positive ->
@@ -2278,11 +2294,198 @@ Theorem rndval_with_cond_correct' env (Henv: forall ty i, is_finite _ _ (env ty 
         let fv := fval env e in
         is_finite _ _ fv = true
         /\
-        reval r env errors2 = B2R _ _ fv
-.
+        reval r env errors2 = B2R _ _ fv.
+
+Lemma rndval_with_cond_correct_func:
+ forall (env : forall x : type, FPLang.V -> binary_float (fprec x) (femax x))
+  (Henv : forall (ty : type) (i : FPLang.V), is_finite (fprec ty) (femax ty) (env ty i) = true)
+ (ty : type) 
+ (f4 : floatfunc_package ty)
+ (args : klist expr (ff_args f4))
+ (si si' si2 : positive)
+ (shift s' s : MSHIFT)
+ (r : rexpr)
+ (errors1 : positive -> R)
+ (H2 : forall (i : positive) (ty : type) (k : rounding_knowledge'),
+     mget shift i = (ty, k) -> Rabs (errors1 i) <= error_bound ty k)
+ (rn : klist (fun _ : type => rexpr) (ff_args f4))
+ (ROF : rnd_of_func si' s' ty f4 rn = (r, (si2, s))) 
+ (p1 : list (rexpr * bool))
+ (H1 : forall i : rexpr * bool, In i p1 -> eval_cond1 env s i)
+ (RWC1 : rndval_with_cond'_klist args si shift = (rn, (si', s'), p1))
+ (H0 : expr_klist_valid args = true),
+(forall (i : positive) (ty' : type) (k : rounding_knowledge'),
+ mget s i = (ty', k) -> Rabs (errors1 i) <= error_bound ty' k) /\
+is_finite (fprec ty) (femax ty) (fval env (Func ty f4 args)) = true /\
+reval r env errors1 = B2R (fprec ty) (femax ty) (fval env (Func ty f4 args)).
+Proof.
+intros.
+destruct f4 as [tys precond realfunc floatf].
+unfold rnd_of_func in  ROF.
+simpl in args, rn, ROF.
+simpl ff_args in *.
+inversion ROF; clear ROF; subst.
+simpl fval.
+simpl reval.
+change (?a tys args) with (@fval_klist _ env ty tys args).
+change (_ tys rn) with (@reval_klist env errors1 tys rn).
+pose proof rndval_with_cond_klist_left tys args si shift.
+rewrite RWC1 in H; simpl in H.
+symmetry in H.
+pose proof (rndval_klist_shift_unchanged _ _ _ _ _ _ _ H).
+pose proof (rndval_klist_shift_incr _ _ _ _ _ _ _ H).
+pose proof (rndval_klist_shift_le _ _ _ _ _ _ _ H).
+pose proof rndval_with_cond_klist_shift_cond _ _ _ _ _ _ _ _ RWC1.
+split; [| split].
+-
+intros.
+rewrite mget_set in H7.
+destruct (Pos.eq_dec i (Pos.succ si')).
+inversion H7; clear H7; subst.
+admit.  (* This is just where we need to connect things up *)
+rewrite mget_set in H7.
+destruct (Pos.eq_dec i si').
+inversion H7; clear H7; subst.
+admit.  (* This is just where we need to connect things up *)
+admit.  (* Not sure what to do here *)
+-
+
+admit.  (*  need to connect things up *)
+-
+pose proof reval_error_klist_ext.
+pose proof (ff_acc floatf).
+admit.
+Admitted.
+
+Lemma rndval_with_cond_correct'_aux: forall
+ (env : forall x : type, FPLang.V -> binary_float (fprec x) (femax x))
+ (Henv : forall (ty : type) (i : FPLang.V), is_finite (fprec ty) (femax ty) (env ty i) = true)
+ (ty : type)
+ (f4 : floatfunc_package ty)
+ (args : klist expr (ff_args f4))
+ (si si1 si2: positive) (shift s1 s: MSHIFT)  (r : rexpr)
+ (p1 p2: list (rexpr * bool))
+ (si' : positive) (s' : MSHIFT)
+ (H1 : forall i : rexpr * bool, In i (p1++p2) -> eval_cond1 env s i) 
+ (errors1 : positive -> R) 
+ (H2 : forall (i : positive) (ty : type) (k : rounding_knowledge'),
+     mget shift i = (ty, k) -> Rabs (errors1 i) <= error_bound ty k),
+forall (tys1 tys2 : list type)
+  (args1 : klist expr tys1) (args2 : klist expr tys2),
+expr_klist_valid args2 = true ->
+expr_klist_valid args1 = true ->
+ff_args f4 = tys1 ++ tys2 ->
+JMeq args (kapp args1 args2) ->
+forall
+(rn1: klist (fun _ => rexpr) tys1)
+(rn' : klist (fun _ : type => rexpr) tys2)
+(rn : klist (fun _ : type => rexpr) (ff_args f4))
+(EQrn:   JMeq rn (kapp rn1 rn'))
+(ROF: rnd_of_func si' s' ty f4 rn = (r, (si2, s)))
+(RWC1: rndval_with_cond'_klist args1 si shift = (rn1, (si1, s1), p1))
+(RWC2:  rndval_with_cond'_klist args2 si1 s1 = (rn', (si', s'), p2)),
+Kforall
+  (fun (ty0 : type) (e : expr ty0) =>
+   expr_valid e = true ->
+   forall (si0 : positive) (shift0 : MSHIFT) (r0 : rexpr) (si3 : positive) 
+     (s0 : MSHIFT) (p0 : list (rexpr * bool)),
+   rndval_with_cond' si0 shift0 e = (r0, (si3, s0), p0) ->
+   (forall i : rexpr * bool, In i p0 -> eval_cond1 env s0 i) ->
+   forall errors2 : positive -> R,
+   (forall (i : positive) (ty1 : type) (k : rounding_knowledge'),
+    mget shift0 i = (ty1, k) -> Rabs (errors2 i) <= error_bound ty1 k) ->
+   rwcc errors2 si0 s0 env ty0 e r0) args2 ->
+   rwcc errors1 si s env ty (Func ty f4 args) r.
+Proof.
+intros.
+revert args1 rn1 si1 s1 p1 p2 EQrn H1 H0 H4 RWC1 RWC2.
+revert tys1 H3.
+induction args2.
+-
+intros.
+rewrite app_nil_r in H3. subst tys1.
+rewrite kapp_nil_r in H4.
+apply JMeq_eq in H4. subst args1.
+clear H5.
+inversion RWC2; clear RWC2; subst.
+rewrite app_nil_r in H1.
+clear H.
+rewrite kapp_nil_r in EQrn.
+apply JMeq_eq in EQrn. subst rn1.
+red.
+exists errors1.
+split; auto.
+eapply rndval_with_cond_correct_func; eassumption.
+-
+intros.
+apply Kforall_inv in H5.
+destruct H5.
+simpl in H.
+rewrite andb_true_iff in H. destruct H.
+specialize (H5 H).
+specialize (IHargs2 H7); clear H7.
+destruct (klist_cons rn') as [rn'1 [rn'r ?]].
+subst rn'.
+specialize (IHargs2 rn'r H6). clear H6.
+specialize (IHargs2 (tys1++[ty0])).
+assert (ff_args f4 = (tys1 ++ [ty0]) ++ tys) by (rewrite app_ass; auto).
+specialize (IHargs2 H6); clear H6.
+specialize (IHargs2 (kapp args1 (Kcons k Knil))  (kapp rn1 (Kcons rn'1 Knil))).
+simpl in RWC2.
+destruct (rndval_with_cond' si1 s1 k) as [[r4 [si4 s4]] p4] eqn:?H.
+destruct (rndval_with_cond'_klist args2 si4 s4) as [[r5 [si5 s5]] p5] eqn:?H.
+inversion RWC2; clear RWC2; subst si5 s5 r4 p2.
+apply ProofIrrelevance.ProofIrrelevanceTheory.EqdepTheory.inj_pair2 in H10.
+subst r5.
+specialize (IHargs2 si4 s4 (p1++p4) p5).
+apply IHargs2; clear IHargs2.
++
+rewrite EQrn.
+eapply JMeq_trans; [ | apply kapp_assoc].
+simpl. reflexivity.
++
+rewrite app_ass.
+assumption.
++
+clear - H H0.
+induction args1.
+simpl. rewrite H; auto.
+simpl in H0. rewrite andb_true_iff in H0. destruct H0. simpl. rewrite IHargs1; auto.
+rewrite andb_true_r. auto.
++
+eapply JMeq_trans; [ | apply kapp_assoc]; auto.
++
+clear - RWC1 H6.
+revert si shift rn1 si1 s1 p1 rn'1 si4 s4 p4 RWC1 H6; induction args1; simpl; intros.
+inversion RWC1; clear RWC1; subst.
+rewrite H6. simpl. rewrite app_nil_r; reflexivity.
+destruct (rndval_with_cond' si shift k0) as [[r1 [si0 s0]] p0]; simpl in *.
+destruct (rndval_with_cond'_klist args1 si0 s0) as [[r2 [si2 s2]] p2] eqn:?H; simpl in *.
+inversion RWC1; clear RWC1; subst.
+destruct (rndval_with_cond'_klist (kapp args1 (Kcons k Knil)) si0 s0) as [[r0 [si2 s2]] p1] eqn:?H.
+simpl.
+rewrite app_ass.
+rewrite (IHargs1 _ _ _ _ _ _ _ _ _ _ H H6) in H0; clear IHargs1.
+inversion  H0; clear H0; subst.
+reflexivity.
++
+assumption.
+Qed.
+
+Theorem rndval_with_cond_correct' env (Henv: forall ty i, is_finite _ _ (env ty i) = true) ty (e: expr ty) :
+  expr_valid e = true ->
+  forall si shift r si2 s p,
+    rndval_with_cond' si shift e = ((r, (si2, s)), p) ->
+    (forall i, In i p -> eval_cond1 env s i) ->
+    forall errors1,
+      (forall i ty k,
+         mget shift i = (ty, k) ->
+         Rabs (errors1 i) <= error_bound ty k) ->
+    rwcc errors1 si s env ty e r.
 Proof.
   induction e; intros.
 -  (* const *)
+    unfold rwcc.
     simpl in *.
     inversion H0; clear H0; subst.
     simpl.
@@ -2294,6 +2497,7 @@ Proof.
     rewrite F2R_eq.
     apply B2F_F2R_B2R.
 - (* var *)
+    unfold rwcc.
     simpl in *.
     inversion H0; clear H0; subst.
     eauto.
@@ -2555,6 +2759,7 @@ Proof.
         * lra.
 
     + (* plus zero *)
+        unfold rwcc.
         simpl.
         simpl in EQ.
         inversion EQ; clear EQ; subst.
@@ -2915,7 +3120,7 @@ Proof.
       lra.
 
  - (* cast *)
-
+  unfold rwcc.
   simpl in *.
   destruct (rndval_with_cond' si shift e) as [[r1 [si1 s1]] p1] eqn:EQ1.
   destruct (rnd_of_cast_with_cond si1 s1  fromty ty (round_knowl_denote knowl) r1) as [rs p_] eqn:EQ.
@@ -3038,12 +3243,27 @@ Proof.
  change (expr_klist_valid args = true) in H.
  simpl in H0.
  fold (@rndval_with_cond'_klist) in H0.
- unfold rnd_of_func in H0.
- 
- simpl in H.
- simpl fval. fold (@fval_klist _ (ff_args f4)).
- admit.
-Admitted.
+ destruct ( rndval_with_cond'_klist args si shift) as [[rn [si' s']] pn] eqn:?H.
+ assert (rnd_of_func si' s' ty f4 rn = (r,(si2,s))) by (clear - H0; congruence).
+ assert (pn = p) by (clear - H0; congruence). clear H0. subst pn.
+ pose (tys1 := @nil type).
+ set (tys2 := ff_args f4) in IH.
+ pose (args1 := Knil : klist expr tys1).
+ pose (args2 := args: klist expr tys2).
+ change args with args2 in H3, IH, H.
+ assert (expr_klist_valid args1 = true) by reflexivity.
+ assert (ff_args f4 = tys1 ++ tys2) by reflexivity.
+ assert (@JMeq (klist expr (ff_args f4)) args 
+                     (klist expr (tys1++tys2))  (@kapp _ tys1 tys2 _ args1 args2)) by reflexivity.
+ pose (rn' := rn : klist (fun _ => rexpr) tys2).
+ assert (JMeq rn rn') by reflexivity.
+ change rn with rn' in H3.
+ change (@ff_args ty f4) with tys2 in H3,H.
+ eapply rndval_with_cond_correct'_aux; try apply H5; try apply H6; try eassumption.
+ instantiate (1:=nil). simpl; auto.
+ instantiate (1:=Knil); simpl; auto.
+ reflexivity.
+Qed.
 
 Definition empty_shiftmap := mempty (Tsingle, Unknown').
 

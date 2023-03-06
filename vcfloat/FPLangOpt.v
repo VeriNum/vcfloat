@@ -54,6 +54,7 @@ the real-number semantics of floating-point computations.
 
 Require Export vcfloat.Float_lemmas.
 Require Export vcfloat.FPLang.
+Require Import vcfloat.klist.
 Import RAux.
 Import vcfloat.IEEE754_extra.
 (*Import compcert.lib.Floats. *)
