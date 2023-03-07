@@ -257,7 +257,24 @@ Proof.
     intros. apply H; lia.
 Qed.
 
-Definition MSHIFT := Maps.PMap.t  (type * rounding_knowledge').
+Definition MSHIFT := Maps.PMap.t  R.
+
+Definition error_bound ty k :=
+  / 2 * Raux.bpow Zaux.radix2
+  match k with
+    | Unknown' => 0
+    | Normal' => (- fprec ty + 1)
+    | Denormal' =>  (3 - femax ty - fprec ty)
+    | Denormal2' =>   (3 - femax ty - fprec ty)
+  end.
+
+Lemma error_bound_nonneg ty k:
+  0 <= error_bound ty k.
+Proof.
+    unfold error_bound.
+    apply Rmult_le_pos; try lra.
+    apply Raux.bpow_ge_0.
+Qed.
 
 Definition make_rounding
            (si: positive)
@@ -268,9 +285,9 @@ Definition make_rounding
     match kn with
       | Unknown' =>
         let d := si in
-        let es1 := mset shift d (ty, Normal') in
+        let es1 := mset shift d (error_bound ty Normal') in
         let e := Pos.succ d in
-        let es2 := mset es1 e (ty, Denormal') in
+        let es2 := mset es1 e (error_bound ty Denormal') in
         (
           RBinop Tree.Add
                  (RBinop Tree.Mul x
@@ -283,7 +300,7 @@ Definition make_rounding
 
       | Normal' =>
         let d := si in
-        let es1 := mset shift d (ty, Normal') in
+        let es1 := mset shift d (error_bound ty Normal') in
         (
           RBinop Tree.Mul x
                  (RBinop Tree.Add (RAtom (RConst fone))
@@ -293,7 +310,7 @@ Definition make_rounding
         )
       | Denormal' => 
         let e := si in
-        let es1 := mset shift e (ty, Denormal') in
+        let es1 := mset shift e (error_bound ty Denormal') in
         (
           RBinop Tree.Add x
                  (RAtom (RError e))
@@ -301,7 +318,7 @@ Definition make_rounding
         )
       | Denormal2' => 
         let e := si in
-        let es1 := mset shift e (ty, Denormal2') in
+        let es1 := mset shift e (error_bound ty Denormal2') in
         (
           RBinop Tree.Add x
                  (RAtom (RError e))
@@ -360,39 +377,6 @@ Proof.
   repeat (apply Pos.max_lub; auto; lia).
 Qed.
 
-Definition error_bound ty k :=
-  / 2 * Raux.bpow Zaux.radix2
-  match k with
-    | Unknown' => 0
-    | Normal' => (- fprec ty + 1)
-    | Denormal' =>  (3 - femax ty - fprec ty)
-    | Denormal2' =>   (3 - femax ty - fprec ty)
-  end.
-
-Lemma error_bound_nonneg ty k:
-  0 <= error_bound ty k.
-Proof.
-    unfold error_bound.
-    apply Rmult_le_pos; try lra.
-    apply Raux.bpow_ge_0.
-Qed.
-
-Definition error_bound' ty k :=
-  match k with
-    | Unknown' => /2
-    | Normal' => / 2 * Raux.bpow Zaux.radix2 (- fprec ty + 1)
-    | Denormal' => / 2 * Raux.bpow Zaux.radix2 (3 - femax ty - fprec ty) 
-    | Denormal2' => /2 * Raux.bpow Zaux.radix2 (3 - femax ty - fprec ty) 
-  end.
-
-Lemma error_bound'_correct ty k:
-  error_bound' ty k = error_bound ty k.
-Proof.
-  destruct k; try reflexivity;
-  unfold error_bound', error_bound.
-  simpl. lra.
-Qed.
-
 Definition rounding_cond ty k x :=
   match k with
     | Unknown' => True
@@ -408,9 +392,9 @@ Lemma make_rounding_correct
   make_rounding si shift (round_knowl_denote kn) ty x = (y, (si', shift')) ->
   (max_error_var x <= si)%positive ->
   forall errors1,
-    (forall i ty k,
-       mget shift i = (ty, k) ->
-       Rabs (errors1 i) <= error_bound ty k) ->
+    (forall i bound,
+       mget shift i = bound ->
+       Rabs (errors1 i) <= Rabs bound) ->
   forall env,
     rounding_cond ty (round_knowl_denote kn) (reval x env errors1) ->
   forall choice,
@@ -426,9 +410,9 @@ Lemma make_rounding_correct
       (Generic_fmt.Znearest choice)
       (reval x env errors1)
     /\
-    (forall i ty' k,
-       mget shift' i = (ty', k) ->
-       Rabs (errors2 i) <= error_bound ty' k)
+    (forall i bound,
+       mget shift' i = bound ->
+       Rabs (errors2 i) <= Rabs bound)
 .  
 
 Proof. 
@@ -458,7 +442,8 @@ destruct kn as [ [ | ] | ]; unfold round_knowl_denote in H2.
     intros.
     unfold errors2.
     destruct (Pos.eq_dec i si); auto.
-    inversion H; subst.
+    inversion H; subst. 
+   rewrite (Rabs_pos_eq _ (error_bound_nonneg _ _)).
     assumption.
  - (* Denormal *)
   replace (3 - femax ty)%Z with (3 - femax ty - fprec ty + fprec ty)%Z in H2 by ring.
@@ -477,8 +462,8 @@ destruct kn as [ [ | ] | ]; unfold round_knowl_denote in H2.
      rewrite mget_set.
      intros.
      unfold errors2.
-     destruct (Pos.eq_dec i si); auto.
-     inversion H; subst.
+     destruct (Pos.eq_dec i si); auto. subst.
+     rewrite (Rabs_pos_eq _ (error_bound_nonneg _ _)).
      auto.
 -  (* None *)
  generalize (Relative.error_N_FLT Zaux.radix2 (3 - femax ty - fprec ty) (fprec ty) (fprec_gt_0 _)  choice (reval x env errors1)).
@@ -513,9 +498,12 @@ destruct kn as [ [ | ] | ]; unfold round_knowl_denote in H2.
   intros.
   unfold errors2.
   destruct (Pos.eq_dec i (Pos.succ si)).
-  * inversion H; subst; assumption.
+  * subst. 
+     rewrite (Rabs_pos_eq _ (error_bound_nonneg _ _)). 
+     assumption.
   * destruct (Pos.eq_dec i si); auto.
-     inversion H; subst.
+     subst.
+     rewrite (Rabs_pos_eq _ (error_bound_nonneg _ _)). 
     assumption.
 Qed.
 
@@ -1030,9 +1018,9 @@ Definition False_cond : cond  :=
 Definition eval_cond1 env m (c: cond) :=
   let '(e, b) := c in
   forall errors,
-    (forall i ty' k,
-       mget m i = (ty', k) ->
-       Rabs (errors i) <= error_bound ty' k) ->
+    (forall i bound,
+       mget m i = bound ->
+       Rabs (errors i) <= Rabs bound) ->
     (if b then Rlt else Rle) 0 (reval e env errors)
 .
 
@@ -1040,29 +1028,12 @@ Lemma evalcond1_False: forall env m, eval_cond1 env m False_cond -> False.
 Proof.
 intros.
 hnf in H.
-specialize (H (fun _ => 0)).
-match type of H with ?A -> _ => assert A end;
-  [ |  apply H in H0; simpl in H0; lra].
-intros. unfold error_bound. destruct k.
-- 
-simpl.
+simpl in H.
+assert (0 < 0 * 1); [ | lra].
+apply (H (fun _ => 0)).
+intros.
 rewrite Rabs_R0.
-lra.
--
-pose proof (bpow_gt_0 radix2 (Z.pos_sub 1 (fprecp ty'))).
-set (j := bpow _ _) in *. clearbody j.
-rewrite Rabs_pos_eq by lra.
-lra.
--
-pose proof (bpow_gt_0 radix2 (3 - femax ty' - fprec ty')).
-set (j := bpow _ _) in *. clearbody j.
-rewrite Rabs_pos_eq by lra.
-lra.
--
-rewrite Rabs_R0.
-apply Rmult_le_pos.
-lra.
-apply Rlt_le. apply bpow_gt_0.
+apply Rabs_pos.
 Qed.
 
 Lemma eval_cond1_preserved m1 m2 env c:
@@ -1093,8 +1064,7 @@ Proof.
       apply Pos.ltb_lt.
       assumption.
     }
-    rewrite Rabs_R0.
-    apply error_bound_nonneg.
+    rewrite Rabs_R0. apply Rabs_pos.
   }
   intros.
   rewrite <- Pos.ltb_lt in H2.
@@ -1296,9 +1266,7 @@ Let P env e (b: bool) errors :=
   (if b then Rlt else Rle) 0 (reval e env errors).
 
 Let Q m i err := 
-  let '(ty', k) := mget m i in
-  Rabs err <= error_bound ty' k
-.
+  Rabs err <= Rabs (mget m i).
 
 Definition eval_cond2 env m (c: cond) :=
   let '(e, b) := c in
@@ -1319,12 +1287,9 @@ Proof.
       rewrite <- (reval_error_ext (mget x)).
       {
         eapply H; eauto.
-        intros.
-        destruct (mget m i) eqn:?.
-        rewrite H1.
+        intros. rewrite H1.
         destruct (Pos.ltb i (max_error_var r)); auto.
-        rewrite Rabs_R0.
-        apply error_bound_nonneg.
+        rewrite Rabs_R0. apply Rabs_pos. 
       }
       intros.
       rewrite H1.
@@ -1341,9 +1306,7 @@ Proof.
   {
     unfold Q.
     intros.
-    destruct (mget m i).
-    rewrite Rabs_R0.
-    apply error_bound_nonneg.
+    rewrite Rabs_R0. apply Rabs_pos. 
   }
   unfold P.
   intros.
@@ -1388,9 +1351,9 @@ Proof.
 Qed.
 
 Lemma rounding_cond_ast_correct m env ty knowl r errors:
-  (forall i ty k,
-     mget m i = (ty, k) ->
-     Rabs (errors i) <= error_bound ty k) ->
+  (forall i bound,
+     mget m i = bound ->
+     Rabs (errors i) <= Rabs bound) ->
   (forall i, In i (rounding_cond_ast ty knowl r) -> eval_cond1 env m i) ->
   rounding_cond ty knowl (reval r env errors)
 .
@@ -2030,9 +1993,9 @@ Proof.
 Qed.
 
 Theorem fop_of_rounded_binop_correct op shift errors
-        (Herr: forall i (ty' : type) (k : rounding_knowledge'),
-                 mget shift i = (ty', k) ->
-                 Rabs (errors i) <= error_bound ty' k)
+        (Herr: forall i bound,
+                 mget shift i = bound ->
+                 Rabs (errors i) <= Rabs bound)
         ty e1
         (F1: is_finite _ _ e1 = true)
         env r1
@@ -2123,9 +2086,9 @@ Proof.
 Qed.
 
 Theorem fop_of_rounded_unop_correct shift errors
-        (Herr: forall (i : positive) (ty' : type) (k : rounding_knowledge'),
-                 mget shift i = (ty', k) ->
-                 Rabs (errors i) <= error_bound ty' k)
+        (Herr: forall (i : positive) bound,
+                 mget shift i = bound ->
+                 Rabs (errors i) <= Rabs bound)
         ty e1
         (F1: is_finite _ _ e1 = true)
         env r1
@@ -2198,8 +2161,8 @@ forall (env : forall x : type, FPLang.V -> binary_float (fprec x) (femax x))
  (ltr : bool) ty (e : expr ty) (si : positive) (r1 : rexpr) (s1 : MSHIFT)
  (errors1 errors1_1 : positive-> R)
  (E1 : forall i : positive, (i < si)%positive -> errors1_1 i = errors1 i)
- (EB1 : forall (i : positive) (ty' : type) (k : rounding_knowledge'),
-      mget s1 i = (ty', k) -> Rabs (errors1_1 i) <= error_bound ty' k)
+ (EB1 : forall (i : positive) bound,
+      mget s1 i = bound -> Rabs (errors1_1 i) <= Rabs bound)
  (F1 : is_finite (fprec ty) (femax ty) (fval env e) = true)
  (V1 : reval r1 env errors1_1 =
          B2R (fprec ty) (femax ty) (fval env e))
@@ -2210,13 +2173,13 @@ forall (env : forall x : type, FPLang.V -> binary_float (fprec x) (femax x))
   (EQ : rnd_of_unop_with_cond si1 s1 ty (Rounded1 (InvShift pow ltr) None) r1 =
      (r, (si2, s), p_))
  (H1 : forall i : cond, In i (p_ ++ p1) -> eval_cond1 env s i) 
- (H2 : forall (i : positive) (ty : type) (k : rounding_knowledge'),
-     mget shift i = (ty, k) -> Rabs (errors1 i) <= error_bound ty k)
+ (H2 : forall (i : positive) bound,
+     mget shift i = bound -> Rabs (errors1 i) <= Rabs bound)
  (K_ : rnd_of_unop si1 s1 ty (Rounded1 (InvShift pow ltr) None) r1 = (r, (si2, s))),
 exists errors2 : positive -> R,
   (forall i : positive, (i < si)%positive -> errors2 i = errors1 i) /\
-  (forall (i : positive) (ty' : type) (k : rounding_knowledge'),
-   mget s i = (ty', k) -> Rabs (errors2 i) <= error_bound ty' k) /\
+  (forall (i : positive) bound,
+   mget s i = bound -> Rabs (errors2 i) <= Rabs bound) /\
   is_finite (fprec ty) (femax ty)
     (fop_of_unop (Rounded1 (InvShift pow ltr) None) ty (fval env e)) = true /\
   reval r env errors2 =
@@ -2227,7 +2190,7 @@ intros.
 assert (K1 := rndval_with_cond_left _ e si shift); rewrite EQ1 in K1; simpl in K1; symmetry in K1.
 inversion EQ; clear EQ; subst.
 set (op := RBinop Tree.Mul _) in *.
-set (s := mset s1 si1 (ty, Denormal')) in *.
+set (s := mset s1 si1 (error_bound ty Denormal')) in *.
 pose (eps :=
   B2R (fprec ty) (femax ty)
     (fop_of_unop (Rounded1 (InvShift pow ltr) None) ty (fval env e)) -
@@ -2247,6 +2210,7 @@ subst s; simpl in H.
 rewrite mget_set in H.
 destruct (Pos.eq_dec i si1). inversion H; clear H; subst.
  +
+  rewrite (Rabs_pos_eq _ (error_bound_nonneg _ _)).
   unfold error_bound.
   subst eps.
   rewrite V1.
@@ -2257,6 +2221,7 @@ destruct (Pos.eq_dec i si1). inversion H; clear H; subst.
   destruct (Pos.lt_total i si).
  *rewrite E1 by auto. apply H2.
    rewrite <- H.
+
    symmetry; eapply rndval_shift_unchanged; eauto.
  * apply EB1; auto.
 - apply InvShift_finite; auto.
@@ -2281,15 +2246,15 @@ destruct (Pos.eq_dec i si1). inversion H; clear H; subst.
   ring.
 Qed.
 
-Definition rwcc errors1 si s env ty (e: expr ty) r := 
+Definition rwcc errors1 si (s: MSHIFT) env ty (e: expr ty) r := 
       exists errors2,
         (forall i,
            (i < si)%positive ->
            errors2 i = errors1 i)
         /\
-        (forall i ty' k,
-           mget s i = (ty', k) ->
-           Rabs (errors2 i) <= error_bound ty' k)
+        (forall i bound,
+           mget s i = bound ->
+           Rabs (errors2 i) <= Rabs bound)
         /\
         let fv := fval env e in
         is_finite _ _ fv = true
@@ -2306,16 +2271,16 @@ Lemma rndval_with_cond_correct_func:
  (shift s' s : MSHIFT)
  (r : rexpr)
  (errors1 : positive -> R)
- (H2 : forall (i : positive) (ty : type) (k : rounding_knowledge'),
-     mget shift i = (ty, k) -> Rabs (errors1 i) <= error_bound ty k)
+ (H2 : forall (i : positive) bound,
+     mget shift i = bound -> Rabs (errors1 i) <= Rabs bound)
  (rn : klist (fun _ : type => rexpr) (ff_args f4))
  (ROF : rnd_of_func si' s' ty f4 rn = (r, (si2, s))) 
  (p1 : list (rexpr * bool))
  (H1 : forall i : rexpr * bool, In i p1 -> eval_cond1 env s i)
  (RWC1 : rndval_with_cond'_klist args si shift = (rn, (si', s'), p1))
  (H0 : expr_klist_valid args = true),
-(forall (i : positive) (ty' : type) (k : rounding_knowledge'),
- mget s i = (ty', k) -> Rabs (errors1 i) <= error_bound ty' k) /\
+(forall (i : positive) bound,
+ mget s i = bound -> Rabs (errors1 i) <= Rabs bound) /\
 is_finite (fprec ty) (femax ty) (fval env (Func ty f4 args)) = true /\
 reval r env errors1 = B2R (fprec ty) (femax ty) (fval env (Func ty f4 args)).
 Proof.
@@ -2368,8 +2333,8 @@ Lemma rndval_with_cond_correct'_aux: forall
  (si' : positive) (s' : MSHIFT)
  (H1 : forall i : rexpr * bool, In i (p1++p2) -> eval_cond1 env s i) 
  (errors1 : positive -> R) 
- (H2 : forall (i : positive) (ty : type) (k : rounding_knowledge'),
-     mget shift i = (ty, k) -> Rabs (errors1 i) <= error_bound ty k),
+ (H2 : forall (i : positive) bound,
+     mget shift i = bound -> Rabs (errors1 i) <= Rabs bound),
 forall (tys1 tys2 : list type)
   (args1 : klist expr tys1) (args2 : klist expr tys2),
 expr_klist_valid args2 = true ->
@@ -2392,8 +2357,8 @@ Kforall
    rndval_with_cond' si0 shift0 e = (r0, (si3, s0), p0) ->
    (forall i : rexpr * bool, In i p0 -> eval_cond1 env s0 i) ->
    forall errors2 : positive -> R,
-   (forall (i : positive) (ty1 : type) (k : rounding_knowledge'),
-    mget shift0 i = (ty1, k) -> Rabs (errors2 i) <= error_bound ty1 k) ->
+   (forall (i : positive) bound,
+    mget shift0 i = bound -> Rabs (errors2 i) <= Rabs bound) ->
    rwcc errors2 si0 s0 env ty0 e r0) args2 ->
    rwcc errors1 si s env ty (Func ty f4 args) r.
 Proof.
@@ -2478,9 +2443,9 @@ Theorem rndval_with_cond_correct' env (Henv: forall ty i, is_finite _ _ (env ty 
     rndval_with_cond' si shift e = ((r, (si2, s)), p) ->
     (forall i, In i p -> eval_cond1 env s i) ->
     forall errors1,
-      (forall i ty k,
-         mget shift i = (ty, k) ->
-         Rabs (errors1 i) <= error_bound ty k) ->
+      (forall i bound,
+         mget shift i = bound ->
+         Rabs (errors1 i) <= Rabs bound) ->
     rwcc errors1 si s env ty e r.
 Proof.
   induction e; intros.
@@ -3265,7 +3230,7 @@ Proof.
  reflexivity.
 Qed.
 
-Definition empty_shiftmap := mempty (Tsingle, Unknown').
+Definition empty_shiftmap := mempty 0.
 
 Definition environ := forall ty : type, FPLang.V -> ftype ty.
 
@@ -3282,9 +3247,9 @@ Definition rndval_with_cond {ty} (e: expr ty) : rexpr * MSHIFT * list (environ -
 
 Definition errors_bounded
     (shift: MSHIFT) (errors: positive -> R) := 
-   forall i ty k,
-         mget shift i = (ty, k) ->
-         (Rabs (errors i) <= error_bound ty k)%R.
+   forall i bound,
+         mget shift i = bound ->
+         (Rabs (errors i) <= Rabs bound)%R.
 
 Theorem rndval_with_cond_correct 
     env (Henv: env_all_finite env) {ty} (e: expr ty):

@@ -60,7 +60,7 @@ Computations
 
 *)
 
-Require Import Arith ZArith Omega Reals Psatz Morphisms.
+Require Import Arith ZArith Reals Psatz Morphisms.
 Open Scope R_scope.
 
 Class Sum (Sf: (nat -> R) -> nat -> R): Prop :=
@@ -121,10 +121,10 @@ Proof.
     apply Sf_ext.
     intros.
     f_equal.
-    omega.
+    lia.
   }
   f_equal.
-  omega.
+  lia.
 Qed.
 
 Lemma Sf_scal x f n:
@@ -297,7 +297,7 @@ f_equal.
 rewrite <- Rmult_assoc.
 f_equal.
 symmetry.
-replace (S (S n)) with (n + 2)%nat at 1 4 by omega.
+replace (S (S n)) with (n + 2)%nat at 1 4 by lia.
 repeat rewrite pow_add.
 rewrite <- (tech_pow_Rmult (/ M) n).
 repeat rewrite <- Rinv_pow by assumption.

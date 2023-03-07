@@ -184,7 +184,7 @@ Definition boundsmap_of_list (vl: list varinfo) : boundsmap :=
 Definition valmap_of_list (vl: list (ident * sigT ftype)) : valmap :=
   fold_left (fun m iv => let '(i,v) := iv in Maps.PTree.set i v m) vl (Maps.PTree.empty _).
 
-Definition shiftmap := Maps.PMap.t (type * rounding_knowledge').
+Definition shiftmap := Maps.PMap.t R.
 
 Definition env_ (tenv: valmap) ty (v: ident): ftype ty :=
   match Maps.PTree.get v tenv with Some (existT _ t x) =>
@@ -235,7 +235,7 @@ Ltac unfold_fval :=
    repeat change (cast ?a _ ?x) with x.
 
 Definition rndval_with_cond_result1 {NANS: Nans} 
-          env {ty} (e: expr ty) (r: rexpr) (s: Maps.PMap.t (type * rounding_knowledge')) :=
+          env {ty} (e: expr ty) (r: rexpr) (s: Maps.PMap.t R) :=
     exists errors,
         (errors_bounded s errors)
         /\
@@ -447,7 +447,8 @@ Ltac process_conds :=
   try simple apply Logic.I;
   repeat 
    (let H := fresh in intros ?u H;
-   match type of H with _ _ (error_bound ?x _) => 
+   match type of H with _ _ (Rabs (error_bound ?x _)) => 
+     rewrite (Rabs_pos_eq _ (error_bound_nonneg _ _)) in H;
      let y := constr:(x) in let y := eval hnf in y in change x with y in H
    end;
    cbv [error_bound bpow radix2 femax fprec fprecp Z.sub Z.add Z.opp 
@@ -668,16 +669,16 @@ Ltac prove_rndval :=
 (*time "6"*)  process_conds.
 
 Lemma errors_bounded_e:
-  forall errors t0 k0 m, errors_bounded (t0, k0, m) errors ->
-   Forall (fun it => let '(i,(ty,k)) := it in 
-                   Rle (Rabs (errors i)) (error_bound ty k))
+  forall errors bound0 m, errors_bounded (bound0, m) errors ->
+   Forall (fun it => let '(i,bound) := it in 
+                   Rle (Rabs (errors i)) (Rabs bound))
       (Maps.PTree.elements m).
 Proof.
 intros.
 red in H.
 apply Forall_forall.
 intros.
-destruct x as [i [ty k]].
+destruct x as [i bound].
 apply Maps.PTree.elements_complete in H0.
 apply H.
 unfold mget; simpl.
@@ -694,8 +695,8 @@ Lemma rndval_with_cond_result1_e {NANS: Nans}:
    rndval_with_cond_result1 (env_ vm) e r s ->
   let '(_, m) := s in 
    exists errors: positive -> R,
-     Forall (fun it => let '(i,(ty,k)) := it in 
-                   Rle (Rabs (errors i)) (error_bound ty k))
+     Forall (fun it => let '(i,bound) := it in 
+                   Rle (Rabs (errors i)) (Rabs bound))
       (Maps.PTree.elements m) /\
   (let fv := fval (env_ vm) e in
    is_finite (fprec ty) (femax ty) fv = true /\
@@ -703,9 +704,9 @@ Lemma rndval_with_cond_result1_e {NANS: Nans}:
    B2R (fprec ty) (femax ty) fv).
 Proof.
 intros.
-destruct s as [[t k] m].
+destruct s as [bound m].
 destruct H as [errors [? [? ?]]]; exists errors; split; auto.
-apply (errors_bounded_e _ t k); auto.
+apply (errors_bounded_e _ bound); auto.
 Qed.
 
 Definition rndval_result  {NANS: Nans}
@@ -714,8 +715,8 @@ Definition rndval_result  {NANS: Nans}
    boundsmap_denote bm vm ->
   let '(_, m) := s in 
    exists errors: positive -> R,
-     Forall (fun it => let '(i,(ty,k)) := it in 
-                   Rle (Rabs (errors i)) (error_bound ty k))
+     Forall (fun it => let '(i,bound) := it in 
+                   Rle (Rabs (errors i)) (Rabs bound))
       (Maps.PTree.elements m) /\
   (let fv := fval (env_ vm) e in
    is_finite (fprec ty) (femax ty) fv = true /\
@@ -991,7 +992,7 @@ let H2 := fresh "H2" in let H3 := fresh "H3" in let FIN := fresh "FIN" in
  intros [[r s] [H2 H3]] BMD;
 specialize (H3 BMD);
 red;
-compute in H2; inversion H2; clear H2; subst;
+cbv - [error_bound] in H2; inversion H2; clear H2; subst;
 fold Tsingle in H3; fold Tdouble in H3;
 apply rndval_with_cond_result1_e in H3;
 destruct H3 as [errors [H0 H2]];
@@ -1025,6 +1026,7 @@ end;
             assert (E := Forall_inv H0); 
             cbv delta [Maps.PTree.prev Maps.PTree.prev_append] in E;
             simpl in E;
+           rewrite ?(Rabs_pos_eq _ (error_bound_nonneg _ _)) in E;
           match type of E with
            |  Rle (Rabs ?a) (error_bound _ Normal') => 
                 let d := fresh "d" in set (d := a) in *; clearbody d
