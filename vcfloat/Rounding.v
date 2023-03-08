@@ -585,10 +585,19 @@ Definition rnd_of_unop
 Definition rnd_of_func (si: positive) (shift: MSHIFT) (ty: type) 
                       ff (r: klist (fun _ => rexpr) (ff_args ff)) :
           rexpr * (positive * MSHIFT) :=
-  (* This is not quite right.  It should use, 
-  let rel := ff_rel (ff_ff ff) in
-  let abs := ff_abs (ff_ff ff) in ... *)
-  make_rounding si shift Unknown' ty (RFunc ty ff r).
+        let d := si in
+        let es1 := mset shift d (ff_rel (ff_ff ff)) in
+        let e := Pos.succ d in
+        let es2 := mset es1 e (ff_abs (ff_ff ff)) in
+        (
+          RBinop Tree.Add
+                 (RBinop Tree.Mul (RFunc ty ff r)
+                         (RBinop Tree.Add (RAtom (RConst fone))
+                                 (RAtom (RError d)))
+                 )
+                 (RAtom (RError e))
+          , (Pos.succ e, es2)
+        ).
 
 Fixpoint rndval 
          (si: positive)
@@ -961,6 +970,8 @@ Proof.
    destruct p as [si2 s2]. inversion H. clear y H3 H. subst.
    clear - IH H0 H1. rename ff_args into tys.
    revert k si shift si2 s2 H1 i H0.
+   set (rel := ff_rel ff_ff). clearbody rel.
+   set (abs := ff_abs ff_ff). clearbody abs. clear - IH.
    induction args; simpl; intros.
  + inversion H1; clear H1; subst.
      rewrite mget_set.

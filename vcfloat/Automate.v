@@ -380,6 +380,12 @@ Ltac process_boundsmap_denote :=
     end
   end;
   repeat change (type_eq_dec ?t _ ) with (@left (t=t) (t<>t) (eq_refl t)) in *;
+(*  repeat match goal with |- context [type_eq_dec ?a ?b] =>
+     let r := constr:(type_eq_dec a b) in
+     let s := eval hnf in r in
+     match s with right _ => change r with s end
+   end;
+*)
   cbv iota;
   repeat change (eq_rect_r ftype ?v eq_refl) with v in *.
 
@@ -447,14 +453,14 @@ Ltac process_conds :=
   try simple apply Logic.I;
   repeat 
    (let H := fresh in intros ?u H;
-   match type of H with _ _ (Rabs (error_bound ?x _)) => 
+   try (match type of H with _ _ (Rabs (error_bound ?x _)) => 
      rewrite (Rabs_pos_eq _ (error_bound_nonneg _ _)) in H;
      let y := constr:(x) in let y := eval hnf in y in change x with y in H
    end;
    cbv [error_bound bpow radix2 femax fprec fprecp Z.sub Z.add Z.opp 
      Z.pos_sub Z.succ_double Pos.pred_double Z.mul 
       radix_val Pos.iter Pos.add Pos.succ Pos.mul]  in H;
-      (eapply adjust_bound in H; [ | compute; reflexivity])).
+      (eapply adjust_bound in H; [ | compute; reflexivity]))).
 
 Lemma fshift_div_fshift_fcval_correct {NANS: Nans}:
   forall (env : forall ty : type, FPLang.V -> ftype ty) ty (e : expr ty),
@@ -596,7 +602,7 @@ destruct (rndval_with_cond2 _) as [[r s] p].
 auto.
 Qed.
 
-Ltac compute_fshift_div := 
+Ltac compute_fshift_div1 := 
     let j := fresh "j" in 
    set (j := fcval _);
 cbv - [BPLUS BMULT BMINUS BDIV BOPP] in j;
@@ -611,6 +617,65 @@ cbv - [BPLUS BMULT BMINUS BDIV BOPP] in j;
 subst j; 
 compute_binary_floats;
 fold Tsingle; fold Tdouble.
+
+Ltac cbv_fcval := 
+cbv [fcval fcval_nonrec option_pair_of_options 
+       fop_of_binop fop_of_unop 
+  fop_of_rounded_binop fop_of_rounded_unop fop_of_exact_unop
+  fshift fshift_mult binop_eqb andb rounded_binop_eqb
+  option_eqb rounding_knowledge_eqb eqb 
+  fshift_div
+(* new stuff *)
+  rndval_with_cond2 rndval_with_cond'
+  mset empty_shiftmap mempty
+            Maps.PMap.set Maps.PMap.init
+            Maps.PTree.empty Maps.PTree.set Maps.PTree.set' 
+              Maps.PTree.set0 Pos.of_succ_nat Pos.succ
+             fst snd
+          rnd_of_cast_with_cond
+          rndval_with_cond' rnd_of_binop_with_cond
+          rnd_of_unop_with_cond is_div
+          Rbinop_of_rounded_binop Runop_of_exact_unop Runop_of_rounded_unop
+          make_rounding round_knowl_denote
+         rounding_cond_ast no_overflow app
+         rnd_of_func_with_cond rnd_of_func
+].
+
+Ltac compute_fshift_div2 :=
+
+ match goal with |- context [fcval ?F] => 
+   let g := eval hnf in F in change F with g end;
+  let j := fresh "j" in let HIDE := fresh "HIDE" in 
+  set (j := fshift_div _);
+  pattern j;
+  match goal with |- ?H _ => set (HIDE:=H) end;
+  subst j;
+  cbv_fcval;
+  unfold fshift; cbv_fcval;
+  repeat 
+   ( compute_every @ff_args;
+    compute_every @Bsign;
+     compute_every @IEEE754_extra.Bexact_inverse;
+     compute_every @to_power_2_pos;
+     compute_every @to_inv_power_2;
+     compute_every N.of_nat;
+     compute_every @binary_float_eqb;
+     cbv_fcval);
+  unfold fshift_div;
+ cbv_fcval;
+  repeat 
+   ( match goal with |- context [@IEEE754_extra.Bexact_inverse] => idtac end;
+    compute_every @ff_args;
+    compute_every @Bsign;
+     compute_every @IEEE754_extra.Bexact_inverse;
+     compute_every @to_power_2_pos;
+     compute_every @to_inv_power_2;
+     compute_every N.of_nat;
+     compute_every @binary_float_eqb;
+     cbv_fcval);
+  subst HIDE; cbv beta.
+
+Ltac compute_fshift_div := compute_fshift_div2.
 
 Ltac prove_rndval :=
  (* if necessary, convert goal into a prove_rndval'   goal*)
@@ -636,7 +701,9 @@ Ltac prove_rndval :=
           rnd_of_unop_with_cond is_div
           Rbinop_of_rounded_binop Runop_of_exact_unop Runop_of_rounded_unop
           make_rounding round_knowl_denote
-         rounding_cond_ast no_overflow app];
+         rounding_cond_ast no_overflow app
+         rnd_of_func_with_cond rnd_of_func ];
+   simpl ff_rel; simpl ff_abs;
    compute_every type_leb; 
    cbv beta iota zeta;
    apply Forall_nested_and;
@@ -648,7 +715,8 @@ Ltac prove_rndval :=
   (let U := fresh "U" in try set (U := Maps.PTree.Nodes _ );
    cbv [eval_cond' eval_cond2 reval];
    compute_every MSET.elements; 
-   try subst U);
+   try subst U;
+   let j := fresh "j" in repeat (set (j := ff_realfunc _); simpl in j; subst j));
 
 (*time "4"*)
    ( cbv [enum_forall enum_forall'
@@ -977,6 +1045,15 @@ destruct H as [? [? [? ?]]].
 apply H1.
 Qed.
 
+Ltac cbv_reval := 
+ cbv [
+       reval Prog.binary Prog.unary Prog.real_operations
+      Tree.binary_real Tree.unary_real
+      rval Rop_of_binop Rop_of_unop
+            Rop_of_rounded_binop Rop_of_exact_unop 
+             Rop_of_rounded_unop
+      rval_klist].
+
 Ltac prove_roundoff_bound2 := 
 
 match goal with 
@@ -992,7 +1069,10 @@ let H2 := fresh "H2" in let H3 := fresh "H3" in let FIN := fresh "FIN" in
  intros [[r s] [H2 H3]] BMD;
 specialize (H3 BMD);
 red;
-cbv - [error_bound] in H2; inversion H2; clear H2; subst;
+match goal with |- ?G => let GG := fresh "GG" in set (GG := G); 
+  revert H2; compute_fshift_div; cbv_fcval; intro H2; subst GG
+ end;
+inversion H2; clear H2; subst;
 fold Tsingle in H3; fold Tdouble in H3;
 apply rndval_with_cond_result1_e in H3;
 destruct H3 as [errors [H0 H2]];
@@ -1012,14 +1092,11 @@ end;
  match goal with |- context [rval ?env ?x] =>
    let a := constr:(rval env x) in let b := eval hnf in a in change a with b
  end;
- cbv beta iota delta [
-       reval Prog.binary Prog.unary Prog.real_operations
-      Tree.binary_real Tree.unary_real
-      env_ 
-      rval Rop_of_binop Rop_of_unop
-            Rop_of_rounded_binop Rop_of_exact_unop Rop_of_rounded_unop];
+ cbv_reval;
+ simpl ff_args;
+  let j := fresh "j" in repeat (set (j := ff_realfunc _); simpl in j; subst j);
  repeat change (B2R (fprec ?t) _) with (@FT2R t);
-
+ unfold  env_;
  process_boundsmap_denote;
 
  repeat (let E := fresh "E" in 
@@ -1034,8 +1111,10 @@ end;
                 let d := fresh "e" in set (d := a) in *; clearbody d
            |  Rle (Rabs ?a) (error_bound _ Denormal2') => 
                    let d := fresh "e" in set (d := a) in *; clearbody d
+           | Rle (Rabs ?a) _ =>
+                   let d := fresh "e" in set (d := a) in *; clearbody d
            end;
-            (eapply adjust_bound in E; [ | compute; reflexivity]);
+            try (eapply adjust_bound in E; [ | compute; reflexivity]);
            apply Forall_inv_tail in H0);
  try match type of H0 with Forall _ (Maps.PTree.elements Maps.PTree.Empty) => clear H0 end;
  try match type of H0 with Forall _ nil => clear H0 end;
@@ -1057,7 +1136,7 @@ end;
   simpl in j; subst j
  end;
  rewrite <- ?(F2R_eq radix2);
-
+ repeat match goal with |- context [F2R _ ?x] => unfold x end;
  (* clean up all   F2R radix2 {| Defs.Fnum := _; Defs.Fexp := _ |}   *)
  rewrite ?cleanup_Fnum;
  repeat match goal with |- context [cleanup_Fnum' ?f ?e] =>

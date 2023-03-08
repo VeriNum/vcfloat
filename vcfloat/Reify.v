@@ -2,7 +2,7 @@
 
 From vcfloat Require Export RAux.
 From Flocq Require Import Binary Bits Core.
-From vcfloat Require Import IEEE754_extra (*lib.Floats*) .
+From vcfloat Require Import IEEE754_extra klist.
 Require compcert.lib.Maps.  
 Require Coq.MSets.MSetAVL.
 Require vcfloat.Fprop_absolute.
@@ -20,6 +20,17 @@ Definition ident := positive.
 Definition placeholder32: ident -> ftype Tsingle. intro. apply 0%F32. Qed.
 
 Definition placeholder ty: ident -> ftype ty. intro. apply (B754_zero _ _ false). Qed.
+
+Definition func {ty} (f: floatfunc_package ty) := ff_func (ff_ff f).
+Ltac apply_func ff := 
+ let f := constr:(func ff) in
+ match type of f with ?t =>
+   let t' := eval hnf in t in
+   let t' := eval cbv [function_type map ftype'] in t' in 
+  let f' := constr:(f : t') in
+  exact f'
+  end.
+ 
 
 Ltac ground_pos p := 
  match p with
@@ -88,7 +99,15 @@ Ltac reify_float_expr E :=
  | b64_B754_finite _ _ _ _ => constr:(Const Tdouble E)
  | Sterbenz (BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(Binop SterbenzMinus a' b')
-                                  
+ | @func ?ty ?ff ?a1 => let a1' := reify_float_expr a1 in 
+                                            constr:(Func ty ff (Kcons a1' Knil))
+ | @func ?ty ?ff ?a1 ?a2 => let a1' := reify_float_expr a1 in 
+                                            let a2' := reify_float_expr a2 in 
+                                            constr:(Func ty ff (Kcons a1' (Kcons a2' Knil)))
+ | @func ?ty ?ff ?a1 ?a2 ?a3 => let a1' := reify_float_expr a1 in 
+                                            let a2' := reify_float_expr a2 in 
+                                            let a3' := reify_float_expr a3 in 
+                                            constr:(Func ty ff (Kcons a1' (Kcons a2' (Kcons a3' Knil))))
  | _ => let E' := eval red in E in reify_float_expr E'
  | _ => fail 100 "could not reify bot" E
  end.
@@ -118,4 +137,3 @@ Ltac unfold_reflect :=
    subst X; cbv beta
   end
  end.
-
