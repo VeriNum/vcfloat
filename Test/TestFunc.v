@@ -115,8 +115,7 @@ Definition bmap : boundsmap :=
    has a roundoff error less than 1.0e-5 *)
 Lemma prove_roundoff_bound_x:
   forall vmap,
-  prove_roundoff_bound bmap vmap F' 
-    (/ 4068166).
+  prove_roundoff_bound bmap vmap F'  2.3e-15.
 Proof.
 intros.
 prove_roundoff_bound.
@@ -126,13 +125,7 @@ prove_rndval.
 - 
 prove_roundoff_bound2.
  match goal with |- Rabs ?a <= _ => field_simplify a end. (* improves the bound *)
-
- (* Right now, just "interval" would solve the goal.
-  but to see how we guess the bound to use, try this instead: *)
-  match goal with |- Rabs ?a <= _ => interval_intro (Rabs a) end.
- eapply Rle_trans; [apply H | clear].
- eapply roundoff_bound_hack; [lia|lia|lia|compute; reflexivity|].
- lia.
+ interval.
 Qed.
 
 Derive x_acc 
