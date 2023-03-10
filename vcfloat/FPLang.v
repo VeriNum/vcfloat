@@ -416,9 +416,9 @@ Fixpoint fval (env: forall ty, V -> ftype ty) {ty} (e: expr ty) {struct e}: ftyp
           in fval_klist en (ff_func (ff_ff ff))
       end.
 
-Definition fval_klist (env: forall ty, V -> ftype ty) {ty: type} :=
-  fix fval_klist {l1: list type} (l': klist expr l1) (f: function_type (map ftype' l1) (ftype' ty)) {struct l'}: ftype' ty :=
-          match  l' in (klist _ l) return (function_type (map ftype' l) (ftype' ty) -> ftype' ty)
+Definition fval_klist (env: forall ty, V -> ftype ty) {T: Type} :=
+  fix fval_klist {l1: list type} (l': klist expr l1) (f: function_type (map ftype' l1) T) {struct l'}: T :=
+          match  l' in (klist _ l) return (function_type (map ftype' l) T -> T)
           with
           | Knil => fun f0 => f0
           | Kcons h tl => fun f0 => fval_klist tl (f0 (fval env h))
