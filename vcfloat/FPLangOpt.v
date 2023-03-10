@@ -244,7 +244,7 @@ Proof.
     repeat rewrite binary_float_eqb_eq.
     congruence.  
 - 
- match goal with |- binary_float_eqb _ (?G _ _ _) = _ =>  change G with (@fval_klist _ env ty) end.
+ match goal with |- binary_float_eqb _ (?G _ _ _) = _ =>  change G with (@fval_klist _ env (ftype ty)) end.
 
   set (func := ff_func _). clearbody func.
   set (tys := ff_args f4) in *. clearbody tys.
@@ -1076,7 +1076,7 @@ apply binary_float_equiv_UOP; apply IHe.
   set (func := ff_func _). clearbody func.
   set (tys := ff_args f4) in *. clearbody tys.
   fold @fshift_div_klist.
- match goal with |- binary_float_equiv (?G _ _ _) _ =>  change G with (@fval_klist _ env ty) end.
+ match goal with |- binary_float_equiv (?G _ _ _) _ =>  change G with (@fval_klist _ env (ftype ty)) end.
   induction args. simpl. apply binary_float_equiv_refl.
  simpl.
   apply Kforall_inv in IH. destruct IH.
@@ -1175,7 +1175,7 @@ Proof.
   set (func := ff_func _). clearbody func.
   set (tys := ff_args f4) in *. clearbody tys.
   fold @erase_klist.
- match goal with |- binary_float_eqb (?G _ _ _) _ = true =>  change G with (@fval_klist _ env ty) end.
+ match goal with |- binary_float_eqb (?G _ _ _) _ = true =>  change G with (@fval_klist _ env (ftype ty)) end.
   induction args. simpl. apply binary_float_eqb_eq. reflexivity.
  simpl.
   apply Kforall_inv in IH. destruct IH.

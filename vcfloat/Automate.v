@@ -748,11 +748,8 @@ apply Forall_forall.
 intros.
 destruct x as [i bound].
 apply Maps.PTree.elements_complete in H0.
-apply H.
-unfold mget; simpl.
-unfold Maps.PMap.get.
-simpl.
-rewrite H0; auto.
+specialize (H i).
+unfold mget, Maps.PMap.get in H. simpl in H. rewrite H0 in H. auto.
 Qed.
 
 Definition rndval_without_cond {ty} (e: expr ty) : rexpr * shiftmap :=
