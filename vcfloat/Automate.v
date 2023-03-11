@@ -184,7 +184,7 @@ Definition boundsmap_of_list (vl: list varinfo) : boundsmap :=
 Definition valmap_of_list (vl: list (ident * sigT ftype)) : valmap :=
   fold_left (fun m iv => let '(i,v) := iv in Maps.PTree.set i v m) vl (Maps.PTree.empty _).
 
-Definition shiftmap := Maps.PMap.t R.
+Definition shiftmap := MSHIFT.
 
 Definition env_ (tenv: valmap) ty (v: ident): ftype ty :=
   match Maps.PTree.get v tenv with Some (existT _ t x) =>
@@ -235,7 +235,7 @@ Ltac unfold_fval :=
    repeat change (cast ?a _ ?x) with x.
 
 Definition rndval_with_cond_result1 {NANS: Nans} 
-          env {ty} (e: expr ty) (r: rexpr) (s: Maps.PMap.t R) :=
+          env {ty} (e: expr ty) (r: rexpr) (s: MSHIFT) :=
     exists errors,
         (errors_bounded s errors)
         /\
@@ -638,7 +638,7 @@ cbv [fcval fcval_nonrec option_pair_of_options
           Rbinop_of_rounded_binop Runop_of_exact_unop Runop_of_rounded_unop
           make_rounding round_knowl_denote
          rounding_cond_ast no_overflow app
-         rnd_of_func_with_cond rnd_of_func
+         rnd_of_func_with_cond rnd_of_func rnd_of_func' abs_error rel_error
 ].
 
 Ltac compute_fshift_div2 :=
@@ -702,7 +702,7 @@ Ltac prove_rndval :=
           Rbinop_of_rounded_binop Runop_of_exact_unop Runop_of_rounded_unop
           make_rounding round_knowl_denote
          rounding_cond_ast no_overflow app
-         rnd_of_func_with_cond rnd_of_func ];
+         rnd_of_func_with_cond rnd_of_func rnd_of_func'  abs_error rel_error];
    simpl ff_rel; simpl ff_abs;
    compute_every type_leb; 
    cbv beta iota zeta;
@@ -739,7 +739,7 @@ Ltac prove_rndval :=
 Lemma errors_bounded_e:
   forall errors bound0 m, errors_bounded (bound0, m) errors ->
    Forall (fun it => let '(i,bound) := it in 
-                   Rle (Rabs (errors i)) (Rabs bound))
+                   Rle (Rabs (errors i)) (error_bound bound))
       (Maps.PTree.elements m).
 Proof.
 intros.
@@ -761,7 +761,7 @@ Lemma rndval_with_cond_result1_e {NANS: Nans}:
   let '(_, m) := s in 
    exists errors: positive -> R,
      Forall (fun it => let '(i,bound) := it in 
-                   Rle (Rabs (errors i)) (Rabs bound))
+                   Rle (Rabs (errors i)) (error_bound bound))
       (Maps.PTree.elements m) /\
   (let fv := fval (env_ vm) e in
    is_finite (fprec ty) (femax ty) fv = true /\
@@ -781,7 +781,7 @@ Definition rndval_result  {NANS: Nans}
   let '(_, m) := s in 
    exists errors: positive -> R,
      Forall (fun it => let '(i,bound) := it in 
-                   Rle (Rabs (errors i)) (Rabs bound))
+                   Rle (Rabs (errors i)) (error_bound bound))
       (Maps.PTree.elements m) /\
   (let fv := fval (env_ vm) e in
    is_finite (fprec ty) (femax ty) fv = true /\

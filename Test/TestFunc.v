@@ -25,20 +25,19 @@ Definition default_rel (t: type) : R :=
 Definition default_abs (t: type) : R :=
   / 2 * Raux.bpow Zaux.radix2 (3 - femax t - fprec t).
 
-Parameter c_function: forall (args: list type) (res: type) (rel: R) (f: function_type (map RR args) R),
+Parameter c_function: forall (args: list type) (res: type) (rel: N) (f: function_type (map RR args) R),
    {ff: function_type (map ftype' args) (ftype res) 
-   | acc_prop args res rel (default_abs res)
-                   (always_true args) f ff}.
+   | acc_prop args res rel 1 (always_true args) f ff}.
 
 Ltac floatfunc' args res rel f :=
- let abs := constr:(default_abs res) in
+ let abs := constr:(1%N) in
  let cf := constr:(c_function args res rel f) in
  let ff1 := constr:(Build_floatfunc args res _ f (proj1_sig cf) rel abs (proj2_sig cf)) in
  exact (Build_floatfunc_package _ _  _ _ ff1).
 
-Definition cosff := ltac:(floatfunc' [Tdouble] Tdouble (3*default_rel Tdouble)%R Rtrigo_def.cos).
+Definition cosff := ltac:(floatfunc' [Tdouble] Tdouble 3%N Rtrigo_def.cos).
 Definition cos := ltac:(apply_func cosff).
-Definition sinff := ltac:(floatfunc' [Tdouble] Tdouble (5*default_rel Tdouble)%R Rtrigo_def.sin).
+Definition sinff := ltac:(floatfunc' [Tdouble] Tdouble 5%N Rtrigo_def.sin).
 Definition sin := ltac:(apply_func sinff).
 
 Lemma test_reify1: False.

@@ -70,16 +70,25 @@ Import Coq.Lists.List ListNotations.
 Definition RR (_: type) : Type := R.
 Definition ftype'  (t: type) : Type := ftype t.
 
+Definition default_rel (t: type) : R :=
+  / 2 * Raux.bpow Zaux.radix2 (- fprec t + 1).
+
+Definition default_abs (t: type) : R :=
+  / 2 * Raux.bpow Zaux.radix2 (3 - femax t - fprec t).
+
 Fixpoint acc_prop  (args: list type) (result: type)
-             (rel abs : R)
+             (rel abs : N)
              (precond: function_type (map RR args) Prop)
              (rf: function_type (map RR args) R)
              (f: function_type (map ftype' args) (ftype' result)) {struct args} : Prop.
 destruct args as [ | a r].
+Search (N -> R).
+Search (N -> Z).
 exact (precond ->
                    Binary.is_finite _ _ f = true /\ 
                    exists delta epsilon,
-                  (Rabs delta <= rel /\ Rabs epsilon <= abs /\
+                  (Rabs delta <= IZR (Z.of_N rel) * default_rel result 
+                      /\ Rabs epsilon <= IZR (Z.of_N abs) * default_abs result /\
                    FT2R f = rf * (1+delta) + epsilon)%R).
 exact (forall z: ftype a, Binary.is_finite (fprec a) (femax a) z = true ->
             acc_prop r result rel abs (precond (FT2R z)) (rf (FT2R z)) (f z)).
@@ -89,8 +98,8 @@ Record floatfunc (args: list type) (result: type)
      (precond: function_type (map RR args) Prop)
      (realfunc: function_type (map RR args) R) := 
  {ff_func: function_type (map ftype' args) (ftype' result);
-  ff_rel: R;
-  ff_abs: R;
+  ff_rel: N;
+  ff_abs: N;
   ff_acc: acc_prop args result ff_rel ff_abs precond realfunc ff_func
  }.
 
