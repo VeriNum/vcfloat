@@ -703,6 +703,10 @@ Ltac prove_rndval :=
           make_rounding round_knowl_denote
          rounding_cond_ast no_overflow app
          rnd_of_func_with_cond rnd_of_func rnd_of_func'  abs_error rel_error];
+
+    repeat match goal with |- context [bounds_to_conds ?bnds ?es] =>
+       let h := fresh "h" in set (h := bounds_to_conds bnds es); compute in h; subst h
+      end;
    simpl ff_rel; simpl ff_abs;
    compute_every type_leb; 
    cbv beta iota zeta;

@@ -62,10 +62,21 @@ apply ProofIrrelevance.ProofIrrelevanceTheory.EqdepTheory.inj_pair2 in H2, H4.
 subst; auto.
 Qed.
 
-Inductive Kforall2 {k: type -> Type} (P: forall ty, k ty -> k ty -> Prop): forall {tys: list type} (al bl: klist k tys), Prop :=
+Inductive Kforall2 {k1 k2: type -> Type} (P: forall ty, k1 ty -> k2 ty -> Prop): forall {tys: list type} (al: klist k1 tys) (bl: klist k2 tys), Prop :=
  | Kforall2_nil: Kforall2 P Knil Knil
- | Kforall2_cons: forall {t tr} (ah bh: k t) (ar br: klist k tr),  
+ | Kforall2_cons: forall {t tr} (ah: k1 t) (bh: k2 t) (ar: klist k1 tr) (br: klist k2 tr),  
                      P _ ah bh -> Kforall2 P ar br -> Kforall2 P (Kcons ah ar) (Kcons bh br).
+
+Lemma Kforall2_inv: forall (k1 k2: type -> Type) (P: forall ty, k1 ty -> k2 ty -> Prop)
+                 {ty: type} {tys: list type} (a: k1 ty) (b: k2 ty) (al: klist k1 tys) (bl: klist k2 tys),
+  Kforall2 P (Kcons a al) (Kcons b bl) -> P _ a b /\ Kforall2 P al bl.
+Proof.
+intros.
+inversion H.
+subst.
+apply ProofIrrelevance.ProofIrrelevanceTheory.EqdepTheory.inj_pair2 in H2, H4, H5, H6.
+subst; auto.
+Qed.
 
 Fixpoint kapp {tys1 tys2 : list type} {k: type -> Type} (a: klist k tys1) (b: klist k tys2) : klist k (tys1++tys2) :=
  match a in (klist _ l) return (klist k (l ++ tys2)) with

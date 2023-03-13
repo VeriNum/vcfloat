@@ -1681,12 +1681,39 @@ Proof.
       simpl. lia.
 Qed.
 
+Definition interp_all_bounds (env:  forall x, FPLang.V -> binary_float (fprec x) (femax x))
+    {tys: list type} (bl: klist bounds tys) (args: klist expr tys) :=
+ Kforall2 (fun ty (bd: bounds ty) (e: expr ty) => interp_bounds bd (fval env e) = true) bl args.
+
+Definition vacuous_lo_bound {ty} (bnd: bounds ty) :=
+ match bnd with ((B754_infinity _ _ true, false), _) => true | _ => false end.
+Definition vacuous_hi_bound {ty} (bnd: bounds ty) :=
+ match bnd with (_,(B754_infinity _ _ false, false)) => true | _ => false end.
+
+Definition bounds_to_cond {ty} (bnd: bounds ty) (r: rexpr) : list cond := 
+ let '((lo,blo),(hi,bhi)) := bnd in
+  (if vacuous_lo_bound bnd then [] 
+   else if is_finite _ _ lo then [(RBinop Tree.Sub r (RAtom (RConst (B2F lo))), blo)]
+   else [False_cond])
+   ++ 
+  (if vacuous_hi_bound bnd then [] 
+   else if is_finite _ _ hi then [(RBinop Tree.Sub (RAtom (RConst (B2F hi))) r, bhi)]
+   else [False_cond]).
+
+Fixpoint bounds_to_conds {tys} (bnds: klist bounds tys) (args: klist (fun _ => rexpr) tys) : list cond.
+inversion bnds as [ | ty tys' b1 bnds'].
+exact nil.
+subst tys.
+inversion args as [ | ty1 tys1' e1 args'].
+subst.
+exact (bounds_to_cond b1 e1 ++ bounds_to_conds _ bnds' args').
+Defined.
+
 Definition rnd_of_func_with_cond
     (si: positive) (shift: MSHIFT) {ty: type} (ff:  floatfunc_package ty) 
      (args: klist (fun _ => rexpr) (ff_args ff)) :
-     rexpr * (positive * MSHIFT) * list (rexpr * bool) :=
- (* THIS IS A PLACEHOLDER: eventually we want function-specific preconditions here *)
-  (rnd_of_func si shift ty ff args, nil).
+     rexpr * (positive * MSHIFT) * list cond :=
+  (rnd_of_func si shift ty ff args, bounds_to_conds (ff_precond ff) args).
 
 Fixpoint rndval_with_cond'
          (si: positive)
@@ -1729,7 +1756,7 @@ Fixpoint rndval_with_cond'
 Fixpoint rndval_with_cond'_klist {tys: list type} (l': klist expr tys) 
                       (si: positive) (shift: MSHIFT) {struct l'}: 
                    klist (fun _ => rexpr) tys * (positive*MSHIFT) * list (rexpr * bool) :=
-          match l' (* in (klist _ l)  return (function_type (map RR l) R -> R) *)
+          match l'
           with
           | Knil => (Knil, (si, shift), nil)
           | Kcons h tl => let  '((r1, (si1, s1)), p1) := rndval_with_cond' si shift h in
@@ -1994,6 +2021,47 @@ Proof.
  unfold rnd_of_func in H3.
  apply rnd_of_func'_shift_incr in H3.
  assert (max_error_var e' <= si2)%positive; [ | lia]. clear si' H3.
+ apply in_app_iff in H0.
+ destruct H0 as [H0 | H0]; rename c2 into cond0.
+ + 
+    destruct f4 as [tys pre rf f]; simpl in *.
+    clear - IH H1 H0.
+     revert IH si shift cond0 r2 si2 s2 H1 e' b' H0; induction args; simpl; intros.
+     * inversion H1; clear H1; subst. rewrite (klist_nil pre) in H0. inversion H0.
+     * destruct (klist_cons pre) as [bd [pre' ?]]. subst pre.
+        destruct (klist_cons r2) as [e1 [r2' ?]]. subst r2.
+        simpl in H0. unfold eq_rect_r, eq_rect, eq_sym in H0.
+        destruct (rndval_with_cond' si shift k) as [[r1 [si1 s1]] p1] eqn:?H.
+        destruct (rndval_with_cond'_klist args si1 s1) as [[r3 [si3 s3]] p3] eqn:?H.
+        inversion H1; clear H1; subst.
+       apply ProofIrrelevance.ProofIrrelevanceTheory.EqdepTheory.inj_pair2 in H5. subst r3.
+       destruct bd as [[lo blo] [hi bhi]].
+       apply Kforall_inv in IH. destruct IH as [H8 IH].
+       specialize (H8 _ _ _ _ _ _ H).
+       specialize (IHargs pre'  IH _ _ _ _ _ _ H2).
+       assert (H4 := rndval_with_cond_klist_left _ args si1 s1); rewrite H2 in H4; simpl in H4; symmetry in H4.
+       pose proof (rndval_klist_shift_incr _ _ _ _ _ _ _ H4).
+       assert (H5 := rndval_with_cond_left _ k si shift); rewrite H in H5; simpl in H5; symmetry in H5.
+       pose proof (rndval_shift_le _ _ _ _ _ _ _ H5).
+       clear H4 H5.
+       unfold bounds_to_cond in H0.
+       rewrite !in_app_iff in H0.
+       destruct H0 as [[H0|H0]|H0].
+       -- 
+         destruct (vacuous_lo_bound (lo, blo, (hi, bhi))) eqn:?H; [contradiction | ].
+         destruct (is_finite (fprec ty) (femax ty) lo) eqn:?H.
+         destruct H0; [ | contradiction]. inversion H0; clear H0; subst.
+         simpl. rewrite Pos.max_l by lia. lia.
+         hnf in H0. destruct H0; [ | contradiction]. inversion H0; clear H0; subst. simpl. lia.
+       -- 
+         destruct (vacuous_hi_bound (lo, blo, (hi, bhi))) eqn:?H; [contradiction | ].
+         destruct (is_finite (fprec ty) (femax ty) hi) eqn:?H.
+         destruct H0; [ | contradiction]. inversion H0; clear H0; subst.
+         simpl. rewrite Pos.max_r by lia. lia.
+         hnf in H0. destruct H0; [ | contradiction]. inversion H0; clear H0; subst. simpl. lia.
+       --
+         apply IHargs in H0; auto.
+ +
  set (tys := ff_args f4) in *. clearbody tys. clear f4.
  clear P Q.
  clear - IH H1 H0.
@@ -2387,10 +2455,9 @@ Lemma rndval_with_cond_correct'_aux':
   s' si'
   (ROF: rnd_of_func'' si2 s2 ty rel abs = (si',s'))
   (EC : forall i,  In i p2 -> eval_cond1 env s' i)
-(*     eval_cond1 env (mset (mset s2 si2 rel) (Pos.succ si2) abs) i)*)
-   (pre: function_type (map RR tys) Prop)
+   (pre: klist bounds tys)
    rf (f : function_type (map ftype' tys) (ftype' ty))
-  (PRE: fvalr_klist env args pre)
+  (PRE: interp_all_bounds env pre args)
   (ACC: acc_prop tys ty rel abs pre rf f)
   errors1 (EB: errors_bounded s1 errors1),
 exists errors2 : positive -> R,
@@ -2406,7 +2473,7 @@ rewrite (klist_nil r2) in *. clear r2.
 clear IH.
 simpl in RWC2. inversion RWC2; clear RWC2; subst si2 s2 p2.
 simpl in ACC.
-destruct (ACC PRE) as [? [delta [epsilon [? [? ?]]]]]; clear ACC PRE.
+destruct ACC as [? [delta [epsilon [? [? ?]]]]].
 pose (errors2 i := 
      match rel, abs with
      | N0, N0 => errors1 i
@@ -2489,12 +2556,15 @@ assert (forall i : rexpr * bool, In i p1 -> eval_cond1 env s1 i). {
    repeat (destruct (Pos.eq_dec _ _)); auto; try lia.
 }
 specialize (H0 H1 _ EB). clear H1.
-simpl in PRE,ACC.
+destruct (klist_cons pre) as [bnds1 [pre' ?]]. subst pre.
+apply Kforall2_inv in PRE. destruct PRE as [PRE1 PRE].
+simpl in ACC.
+unfold eq_rect_r, eq_rect, eq_sym in ACC.
 simpl in rf. simpl in f.
-specialize (IHargs  _  (rf (FT2R (fval env e1)))
+specialize (IHargs pre'  (rf (FT2R (fval env e1)))
                                     (f (fval env e1)) PRE).
 destruct H0 as [errors1' [? [? [? ?]]]].
-specialize (ACC _ H2).
+specialize (ACC (fval env e1) PRE1).
 specialize (IHargs ACC _ H1).
 destruct IHargs as [errors2 [? [? [? ?]]]].
 simpl.
@@ -3294,13 +3364,113 @@ Proof.
  assert (rnd_of_func'' si2 s2 ty (ff_rel (ff_ff f4)) (ff_abs (ff_ff f4)) = (si',s'))
   by (erewrite <- project_rnd_of_func'; erewrite H5; reflexivity).
 
-assert (fvalr_klist env args (ff_precond f4)) by admit.
-
+assert (interp_all_bounds env (ff_precond f4) args). {
+  assert (H11 := rnd_of_func'_shift_incr _ _ _ _ _ _ _ _ _ H5).
+  assert (H12 := rnd_of_func'_shift_unchanged _ _ _ _ _ _ _ _ _ H5).
+  assert (H13 := rnd_of_func'_shift_le _ _ _ _ _ _ _ _ _ H5).
+(*  assert (H6 := rndval_with_cond_klist_left _ args si shift); rewrite H3 in H6; symmetry in H6; simpl in H6.*)
+  clear - H1 H3 IH H H2 H11 H12 H13.
+  destruct f4 as [tys pre ? ?]. simpl in *. clear - H1 H3 IH H H2 H11 H12 H13.
+  revert si shift errors1 r2 si2 s2 p2 IH H H1 H2 H3 H11 H12 H13; induction args; simpl; intros.
+  rewrite (klist_nil pre); constructor.
+  rename H2 into H2'.
+  destruct (rndval_with_cond' si shift k) as [[r1 [si1 s1]] p1] eqn:?H.
+  destruct (rndval_with_cond'_klist args si1 s1) as [[r2' [si2' s2']] p2'] eqn:?H.
+   inversion H3; clear H3; subst.
+  rewrite andb_true_iff in H; destruct H as [H' H].
+  apply Kforall_inv in IH. destruct IH as [H9 IH].
+  destruct (klist_cons pre) as [bd1 [pre' ?]]. subst.
+  specialize (H9 H' _ _ _ _ _ _ H0). clear H'.
+  assert (H6 := rndval_with_cond_klist_left _ args si1 s1). 
+  rewrite H2 in H6; symmetry in H6; simpl in H6.
+  assert (H6a := rndval_klist_shift_le _ _ _ _ _ _ _ H6).
+  assert (H6b := rndval_klist_shift_unchanged _ _ _ _ _ _ _ H6).
+  assert (H6c := rndval_klist_shift_incr _ _ _ _ _ _ _ H6).
+  assert (forall i : rexpr * bool, In i p1 -> eval_cond1 env s1 i). {
+    intros. eapply eval_cond1_preserved; [ | apply H1].
+         intros. subst.
+         apply  (rndval_with_cond_shift_cond _ _ _ _ _ _ _ _ H0) in H3.
+         intros ? ?. rewrite <- H6b. symmetry; apply H12. lia. lia.
+         rewrite !in_app_iff; auto.
+    }
+    specialize (H9 H3 _ H2'); clear H3.
+    destruct H9 as [errors2 [? [? [? ?]]]].
+    specialize (IHargs pre' si1 s1 errors2 r2' si2 s2 p2' IH H); clear IH H.
+    fold (max_error_var_klist tys r2') in *.
+    simpl in H1. unfold eq_rect_r, eq_rect, eq_sym in H1.
+    constructor.
+  - clear IHargs.
+     assert (forall i, In i (bounds_to_cond bd1 r1) -> eval_cond1 env s' i)
+       by (intros; apply H1; rewrite !in_app_iff ; auto).
+       assert (H8 := rndval_with_cond_left _ k si shift). 
+        rewrite H0 in H8; symmetry in H8; simpl in H8.
+      assert (H8a := rndval_shift_le _ _ _ _ _ _ _ H8).
+     clear - H7 H H6 H4 H6c H11 H12 H6b H8a H5.
+     assert (same_upto si1 (mget s1) (mget s'))
+             by (intros ? ?; rewrite <- H6b by lia; apply H12; lia).
+     clear - H7 H0 H H4 H6 H8a H5.
+     assert (exists errors3, errors_bounded s' errors3 /\ same_upto si1 errors2 errors3). {
+       exists (fun i => if Pos.ltb i si1 then errors2 i else error_bound (mget s' i)).
+       split; intro; intros.  
+       destruct (Pos.ltb_spec i si1). rewrite H0 by lia. apply H4.
+       rewrite (Rabs_pos_eq _ (error_bound_nonneg _)). lra.
+       destruct (Pos.ltb_spec i si1); auto. lia.
+     }
+     destruct H1 as [errors3 [? ?]]. clear H4.
+     replace (reval r1 env errors2) with (reval r1 env errors3) in H7
+      by (apply reval_error_ext; intros; rewrite H2; auto; lia).
+     clear errors2 H2.
+     destruct bd1 as [[lo blo][hi bhi]]. simpl.
+     unfold bounds_to_cond in H.
+     rewrite andb_true_iff; split.
+   + destruct (vacuous_lo_bound (lo, blo, (hi, bhi))) eqn:?H; [ | destruct (is_finite _ _ lo) eqn:?H].
+     *
+       destruct lo; try discriminate; destruct s; try discriminate; destruct blo; try discriminate;
+       destruct (fval env k); try discriminate; try reflexivity; destruct s; try reflexivity.
+     *   assert (eval_cond1 env s' (RBinop Tree.Sub r1 (RAtom (RConst (B2F lo))), blo))
+                by (apply H; simpl; auto). clear H.
+          apply H4 in H1. simpl in H1.  rewrite H7 in H1.
+          rewrite F2R_B2F in H1 by auto.
+          destruct blo;
+          unfold BCMP, extend_comp;
+           rewrite Bcompare_correct; try auto.
+           rewrite Rcompare_Lt; auto.  lra.
+           destruct (Rcompare _ _) eqn:?H; auto.
+           apply Rcompare_Gt_inv in H. lra.
+      * assert (eval_cond1 env s' False_cond) 
+                by (apply H; simpl; auto). clear H.
+          apply H4 in H1. simpl in H1. lra.
+   + destruct (vacuous_hi_bound (lo, blo, (hi, bhi))) eqn:?H; [ | destruct (is_finite _ _ hi) eqn:?H].
+     *
+       destruct hi; try discriminate; destruct s; try discriminate; destruct bhi; try discriminate;
+       destruct (fval env k); try discriminate; try reflexivity; destruct s; try reflexivity.
+     *   assert (eval_cond1 env s' (RBinop Tree.Sub (RAtom (RConst (B2F hi))) r1, bhi)) 
+               by (apply H; rewrite in_app_iff; right; simpl; auto).
+          apply H4 in H1. simpl in H1.  rewrite H7 in H1.
+          rewrite F2R_B2F in H1 by auto.
+          destruct bhi;
+          unfold BCMP, extend_comp;
+           rewrite Bcompare_correct; try auto.
+           rewrite Rcompare_Lt; auto.  lra.
+           destruct (Rcompare _ _) eqn:?H; auto.
+           apply Rcompare_Gt_inv in H8. lra.
+      * assert (eval_cond1 env s' False_cond) 
+               by (apply H; rewrite in_app_iff; right; simpl; auto).
+          apply H4 in H1. simpl in H1. lra.
+  - apply IHargs; clear IHargs; try assumption.
+      intros; apply H1. rewrite !in_app_iff in H; rewrite !in_app_iff.
+      clear - H. destruct H; auto.
+      intros. apply H13.
+      apply Pos.max_lub; try lia.
+       assert (H8 := rndval_with_cond_left _ k si shift). 
+        rewrite H0 in H8; symmetry in H8; simpl in H8.
+      assert (H8a := rndval_shift_le _ _ _ _ _ _ _ H8). lia.
+}
 eapply rndval_with_cond_correct'_aux' in H0; try eassumption.
 destruct H0 as [errors2 ?].
 exists errors2. rewrite (rnd_of_func'_e _ _ _ _ _ _ _ _ _ H5); auto.
-all: fail.
-Admitted.
+intros; apply H1. apply in_app_iff; auto.
+Qed.
 
 Definition empty_shiftmap := mempty (Tdouble, Unknown').
 
