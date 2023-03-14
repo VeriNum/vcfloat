@@ -703,7 +703,8 @@ Ltac prove_rndval :=
           Rbinop_of_rounded_binop Runop_of_exact_unop Runop_of_rounded_unop
           make_rounding round_knowl_denote
          rounding_cond_ast no_overflow app
-         rnd_of_func_with_cond rnd_of_func rnd_of_func'  abs_error rel_error];
+         rnd_of_func_with_cond rnd_of_func rnd_of_func'  abs_error rel_error
+         func_no_overflow type_hibound'];
 
     repeat match goal with |- context [bounds_to_conds ?bnds ?es] =>
        let h := fresh "h" in set (h := bounds_to_conds bnds es); compute in h; subst h

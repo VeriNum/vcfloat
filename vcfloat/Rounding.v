@@ -1709,11 +1709,21 @@ subst.
 exact (bounds_to_cond b1 e1 ++ bounds_to_conds _ bnds' args').
 Defined.
 
+Definition type_hibound' (t: type) :=
+(*   Float radix2 (Z.pow 2 (femax t) - Z.pow 2 (femax t - fprec t)) 1. *)
+  Float radix2 (Z.pow 2 (fprec t) - 1) (femax t - fprec t).
+
+Definition func_no_overflow {ty: type}
+     (ff:  floatfunc_package ty) 
+     (args: klist (fun _ => rexpr) (ff_args ff)) : cond :=
+  no_overflow ty  (RFunc ty ff args).
+
 Definition rnd_of_func_with_cond
     (si: positive) (shift: MSHIFT) {ty: type} (ff:  floatfunc_package ty) 
      (args: klist (fun _ => rexpr) (ff_args ff)) :
      rexpr * (positive * MSHIFT) * list cond :=
-  (rnd_of_func si shift ty ff args, bounds_to_conds (ff_precond ff) args).
+  (rnd_of_func si shift ty ff args, 
+     func_no_overflow ff args :: bounds_to_conds (ff_precond ff) args).
 
 Fixpoint rndval_with_cond'
          (si: positive)
@@ -2021,6 +2031,13 @@ Proof.
  unfold rnd_of_func in H3.
  apply rnd_of_func'_shift_incr in H3.
  assert (max_error_var e' <= si2)%positive; [ | lia]. clear si' H3.
+ destruct H0 as [H0|H0]. {
+    inversion H0; clear H0; subst.
+    simpl. rewrite Pos.max_r by lia.
+    fold (max_error_var_klist (ff_args f4) r2).
+    assert (H4 := rndval_with_cond_klist_left _ args si shift); rewrite H1 in H4; simpl in H4; symmetry in H4.
+    apply (rndval_klist_shift_le _ _ _ _ _ _ _ H4).
+ }
  apply in_app_iff in H0.
  destruct H0 as [H0 | H0]; rename c2 into cond0.
  + 
@@ -2432,6 +2449,14 @@ intros.
 destruct rel,abs; inversion H; clear H; subst; simpl; repeat f_equal; try reflexivity; lra.
 Qed.
 
+Definition rfval_klist (env: forall ty, FPLang.V -> ftype ty) :=
+  fix fval_klist {l1: list type} (l': klist expr l1) (f: function_type (map RR l1) R) {struct l'}: R :=
+          match  l' in (klist _ l) return (function_type (map RR l) R -> R)
+          with
+          | Knil => fun f0 => f0
+          | Kcons h tl => fun f0 => fval_klist tl (f0 (FT2R (fval env h)))
+          end f.
+
 Lemma rndval_with_cond_correct'_aux':
  forall (env : forall x, FPLang.V -> binary_float (fprec x) (femax x))
   (Henv : forall ty i, is_finite (fprec ty) (femax ty) (env ty i) = true)
@@ -2457,6 +2482,8 @@ Lemma rndval_with_cond_correct'_aux':
   (EC : forall i,  In i p2 -> eval_cond1 env s' i)
    (pre: klist bounds tys)
    rf (f : function_type (map ftype' tys) (ftype' ty))
+(*  (RFIN: rounded_finite ty (@rfval_klist env tys args rf))*)
+ (FIN: is_finite _ _ (fval_klist env args f) = true)
   (PRE: interp_all_bounds env pre args)
   (ACC: acc_prop tys ty rel abs pre rf f)
   errors1 (EB: errors_bounded s1 errors1),
@@ -2473,7 +2500,9 @@ rewrite (klist_nil r2) in *. clear r2.
 clear IH.
 simpl in RWC2. inversion RWC2; clear RWC2; subst si2 s2 p2.
 simpl in ACC.
-destruct ACC as [? [delta [epsilon [? [? ?]]]]].
+specialize (ACC FIN).
+pose proof I.
+destruct ACC as [delta [epsilon [? [? ?]]]].
 pose (errors2 i := 
      match rel, abs with
      | N0, N0 => errors1 i
@@ -2483,7 +2512,7 @@ pose (errors2 i :=
                              else if Pos.eq_dec i si1 then delta/(IZR (Z.of_N rel)) else errors1 i
       end).
 exists errors2.
-split; [ | split; [ | split]].
+split; [ | split; [ | split]]; auto.
 +
 clear. subst errors2.
 intros ? ?.
@@ -2503,8 +2532,6 @@ repeat destruct (Pos.eq_dec _ _); subst; try lia; try lra;
 rewrite ?Rabs_div_eq by (try apply Qreals.IZR_nz; apply IZR_le; clear; lia);
 rewrite ?(Rabs_pos_eq _ (error_bound_nonneg _ _));
  (apply Rdiv_le_left;[apply IZR_lt; clear; lia | ]; rewrite Rmult_comm; assumption).
-+
-auto.
 +
 unfold apply_errors.
 simpl.
@@ -2562,7 +2589,7 @@ simpl in ACC.
 unfold eq_rect_r, eq_rect, eq_sym in ACC.
 simpl in rf. simpl in f.
 specialize (IHargs pre'  (rf (FT2R (fval env e1)))
-                                    (f (fval env e1)) PRE).
+                                    (f (fval env e1)) FIN PRE).
 destruct H0 as [errors1' [? [? [? ?]]]].
 specialize (ACC (fval env e1) PRE1).
 specialize (IHargs ACC _ H1).
@@ -3370,6 +3397,9 @@ assert (interp_all_bounds env (ff_precond f4) args). {
   assert (H13 := rnd_of_func'_shift_le _ _ _ _ _ _ _ _ _ H5).
 (*  assert (H6 := rndval_with_cond_klist_left _ args si shift); rewrite H3 in H6; symmetry in H6; simpl in H6.*)
   clear - H1 H3 IH H H2 H11 H12 H13.
+  assert (forall i : rexpr * bool,
+     In i (bounds_to_conds (ff_precond f4) r2 ++ p2) -> eval_cond1 env s' i)
+              by (intros; apply H1; right; auto). clear H1; rename H0 into H1.
   destruct f4 as [tys pre ? ?]. simpl in *. clear - H1 H3 IH H H2 H11 H12 H13.
   revert si shift errors1 r2 si2 s2 p2 IH H H1 H2 H3 H11 H12 H13; induction args; simpl; intros.
   rewrite (klist_nil pre); constructor.
@@ -3467,10 +3497,24 @@ assert (interp_all_bounds env (ff_precond f4) args). {
       assert (H8a := rndval_shift_le _ _ _ _ _ _ _ H8). lia.
 }
 eapply rndval_with_cond_correct'_aux' in H0; try eassumption.
++
 destruct H0 as [errors2 ?].
 exists errors2. rewrite (rnd_of_func'_e _ _ _ _ _ _ _ _ _ H5); auto.
-intros; apply H1. apply in_app_iff; auto.
-Qed.
++
+intros; apply H1.
+right; apply in_app_iff; auto.
++
+specialize (H1 (func_no_overflow f4 r2) ltac:(left; auto)).
+red in H1.
+unfold func_no_overflow, no_overflow in H1.
+change (forall errors, errors_bounded s' errors -> 
+  0 < Prog.binary Prog.real_operations Tree.Sub
+                (F2R radix2 {| Fnum := 1; Fexp := femax ty |}) 
+                  (Rabs (reval_klist env errors r2 (ff_realfunc f4)))) in H1.
+unfold Prog.binary, Prog.real_operations, Tree.binary_real in H1.
+admit.  (* This might be provable from H1 etc. *)
+all: fail.
+Admitted.
 
 Definition empty_shiftmap := mempty (Tdouble, Unknown').
 

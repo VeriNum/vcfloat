@@ -839,13 +839,21 @@ Definition interp_bounds {t} (bnds: bounds t) (x: ftype t) : bool :=
  (if blo then BCMP Lt true lo x  else BCMP Gt false lo x) &&
  (if bhi then BCMP Lt true x hi  else BCMP Gt false x hi).
 
+(*
+Definition rounded_finite (t: type) (x: R) : Prop :=
+  (Rabs (Generic_fmt.round Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))
+                         (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) x) 
+    < Raux.bpow Zaux.radix2 (femax t))%R.
+*)
+
 Fixpoint acc_prop  (args: list type) (result: type)
              (rel abs : N)
              (precond: klist bounds args)
              (rf: function_type (map RR args) R)
              (f: function_type (map ftype' args) (ftype' result)) {struct args} : Prop.
 destruct args as [ | a r].
-exact (        Binary.is_finite _ _ f = true /\ 
+exact (        (*rounded_finite result rf ->*)
+                   Binary.is_finite _ _ f = true -> 
                    exists delta epsilon,
                   (Rabs delta <= IZR (Z.of_N rel) * default_rel result 
                       /\ Rabs epsilon <= IZR (Z.of_N abs) * default_abs result /\
