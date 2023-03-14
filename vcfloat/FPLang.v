@@ -67,62 +67,6 @@ Require Import vcfloat.klist.
 Import Bool.
 Import Coq.Lists.List ListNotations.
 
-Definition RR (_: type) : Type := R.
-Definition ftype'  (t: type) : Type := ftype t.
-
-Definition default_rel (t: type) : R :=
-  / 2 * Raux.bpow Zaux.radix2 (- fprec t + 1).
-
-Definition default_abs (t: type) : R :=
-  / 2 * Raux.bpow Zaux.radix2 (3 - femax t - fprec t).
-
-
-Definition bounds (t: type) : Type :=  (ftype t * bool) * (ftype t * bool).
-Definition interp_bounds {t} (bnds: bounds t) (x: ftype t) : bool :=
- let '((lo,blo),(hi,bhi)) := bnds in
- (if blo then BCMP Lt true lo x  else BCMP Gt false lo x) &&
- (if bhi then BCMP Lt true x hi  else BCMP Gt false x hi).
-
-Fixpoint acc_prop  (args: list type) (result: type)
-             (rel abs : N)
-             (precond: klist bounds args)
-             (rf: function_type (map RR args) R)
-             (f: function_type (map ftype' args) (ftype' result)) {struct args} : Prop.
-destruct args as [ | a r].
-exact (        Binary.is_finite _ _ f = true /\ 
-                   exists delta epsilon,
-                  (Rabs delta <= IZR (Z.of_N rel) * default_rel result 
-                      /\ Rabs epsilon <= IZR (Z.of_N abs) * default_abs result /\
-                   FT2R f = rf * (1+delta) + epsilon)%R).
-inversion precond as [| ? ? bnds pre]; clear precond; subst.
-exact (forall z: ftype a, interp_bounds bnds z = true -> 
-             acc_prop r result rel abs pre (rf (FT2R z)) (f z)).
-Defined.
-
-Record floatfunc (args: list type) (result: type) 
-     (precond: klist bounds args)
-     (realfunc: function_type (map RR args) R) := 
- {ff_func: function_type (map ftype' args) (ftype' result);
-  ff_rel: N;
-  ff_abs: N;
-  ff_acc: acc_prop args result ff_rel ff_abs precond realfunc ff_func
- }.
-
-Record floatfunc_package ty:=
- {ff_args: list type;
-  ff_precond: klist bounds ff_args;
-  ff_realfunc: function_type (map RR ff_args) R;
-  ff_ff: floatfunc ff_args ty ff_precond ff_realfunc}.
-
-Arguments ff_func [args result precond realfunc].
-Arguments ff_acc [args result precond realfunc].
-Arguments ff_rel [args result precond realfunc].
-Arguments ff_abs [args result precond realfunc].
-Arguments ff_args [ty].
-Arguments ff_precond [ty].
-Arguments ff_realfunc [ty].
-Arguments ff_ff [ty].
-
 Global Existing Instance fprec_gt_0. (* to override the Opaque one in Interval package *)
 
 Local Open Scope R_scope.

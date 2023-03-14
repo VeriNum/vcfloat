@@ -15,11 +15,20 @@ Open Scope R_scope.
  Here is the fast one: *)
 Require vcfloat.compute_tactics_ltac2. 
 Ltac compute_every f := compute_tactics_ltac2.compute_every f.
-(* and here is the slower one:
-Ltac compute_every f := 
+(* But compute_every blows up on certain terms,  so these slightly
+   slower ones can still be useful: *)
+Ltac compute_every1 f := 
    let j := fresh "j" in repeat (set (j := f _); compute  in j; subst j).
-*)
-
+Ltac compute_every2 f := 
+   let j := fresh "j" in repeat (set (j := f _ _); compute  in j; subst j).
+Ltac compute_every3 f := 
+   let j := fresh "j" in repeat (set (j := f _ _ _); compute  in j; subst j).
+Ltac compute_every4 f := 
+   let j := fresh "j" in repeat (set (j := f _ _ _ _); compute  in j; subst j).
+Ltac compute_every5 f := 
+   let j := fresh "j" in repeat (set (j := f _ _ _ _ _); compute  in j; subst j).
+Ltac compute_every6 f := 
+   let j := fresh "j" in repeat (set (j := f _ _ _ _ _ _); compute  in j; subst j).
 
 Definition generic_nan (prec emax : Z) : 
       nan_pl prec 1 = true ->
@@ -622,10 +631,9 @@ Ltac cbv_fcval :=
 cbv [fcval fcval_nonrec option_pair_of_options 
        fop_of_binop fop_of_unop 
   fop_of_rounded_binop fop_of_rounded_unop fop_of_exact_unop
-  fshift fshift_mult binop_eqb andb rounded_binop_eqb
+  fshift_mult binop_eqb andb rounded_binop_eqb
   option_eqb rounding_knowledge_eqb eqb 
-  fshift_div
-(* new stuff *)
+  (* new stuff *)
   rndval_with_cond2 rndval_with_cond'
   mset empty_shiftmap mempty
             Maps.PMap.set Maps.PMap.init
@@ -639,7 +647,20 @@ cbv [fcval fcval_nonrec option_pair_of_options
           make_rounding round_knowl_denote
          rounding_cond_ast no_overflow app
          rnd_of_func_with_cond rnd_of_func rnd_of_func' abs_error rel_error
+  Bsign N.of_nat b64_B754_finite b32_B754_finite
 ].
+
+Ltac compute_fshift_div_special_reduce :=
+ cbv_fcval;
+ repeat (
+     compute_every @ff_args;
+     compute_every @IEEE754_extra.Bexact_inverse;
+     compute_every3 @to_power_2;
+     compute_every3 @to_power_2_pos;
+     compute_every3 @to_inv_power_2;
+     compute_binary_floats;
+     compute_every6 @binary_float_eqb;
+     cbv_fcval).
 
 Ltac compute_fshift_div2 :=
 
@@ -650,29 +671,9 @@ Ltac compute_fshift_div2 :=
   pattern j;
   match goal with |- ?H _ => set (HIDE:=H) end;
   subst j;
-  cbv_fcval;
-  unfold fshift; cbv_fcval;
-  repeat 
-   ( compute_every @ff_args;
-    compute_every @Bsign;
-     compute_every @IEEE754_extra.Bexact_inverse;
-     compute_every @to_power_2_pos;
-     compute_every @to_inv_power_2;
-     compute_every N.of_nat;
-     compute_every @binary_float_eqb;
-     cbv_fcval);
-  unfold fshift_div;
- cbv_fcval;
-  repeat 
-   ( match goal with |- context [@IEEE754_extra.Bexact_inverse] => idtac end;
-    compute_every @ff_args;
-    compute_every @Bsign;
-     compute_every @IEEE754_extra.Bexact_inverse;
-     compute_every @to_power_2_pos;
-     compute_every @to_inv_power_2;
-     compute_every N.of_nat;
-     compute_every @binary_float_eqb;
-     cbv_fcval);
+  compute_fshift_div_special_reduce;
+  cbv delta [fshift]; compute_fshift_div_special_reduce;
+  cbv delta [fshift_div]; compute_fshift_div_special_reduce;
   subst HIDE; cbv beta.
 
 Ltac compute_fshift_div := compute_fshift_div2.
