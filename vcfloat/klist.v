@@ -137,6 +137,29 @@ End KLIST.
 Arguments Knil {type k}.
 Arguments Kcons {type k ty tys}.
 
+Fixpoint mapk {type: Type} {k1 k2: type -> Type} (f: forall ty: type, k1 ty -> k2 ty) 
+  {tys: list type} (al: klist k1 tys) : klist k2 tys := 
+    match al in (klist _ l) return (l = tys -> klist k2 tys) with
+    | Knil =>
+        fun H : [] = tys =>
+          eq_rect [] (fun l : list type => klist k2 l) Knil tys H
+    | @Kcons _ _ ty tys' x x0 =>
+        fun (H : ty :: tys' = tys) =>
+          eq_rect (ty :: tys')
+            (fun l : list type => k1 ty -> klist k1 tys' -> klist k2 l)
+            (fun (X1 : k1 ty) (X2 : klist k1 tys') =>Kcons (f ty X1) (mapk f X2))
+            tys H x x0
+    end  eq_refl.
+
+Lemma mapk_mapk:
+  forall {type: Type} [k1 k2 k3: type -> Type] (f: forall ty, k1 ty -> k2 ty) (g: forall ty, k2 ty -> k3 ty)
+           (tys: list type) (l: klist k1 tys), 
+     mapk g (mapk f l) = mapk (fun ty x => g ty (f ty x)) l.
+Proof.
+induction l; simpl; auto.
+f_equal; auto.
+Qed.
+
 Module StuffNotNeeded.
 Require Import Recdef.
 
