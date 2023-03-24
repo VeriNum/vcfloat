@@ -9,7 +9,7 @@ COQFLAGS := $(shell cat _CoqProject)
 
 target:  vcfloat2 tests
 
-tests: ../Test/Test.vo ../Test/TestPaper.vo ../Test/Test2.vo ../Test/summation.vo ../Test/autobisect.vo
+tests: ../Test/Test.vo ../Test/TestFunc.vo ../Test/TestPaper.vo ../Test/Test2.vo ../Test/summation.vo ../Test/autobisect.vo
 
 # the vcfloat2 target is the core VCFloat tool for VCFloat2 users who don't need
 # CompCert-based reification
@@ -32,7 +32,7 @@ endif
 	install -m 0644 $(INSTALLFILES) $(INSTALLDIR)
 
 depend: 
-	$(COQDEP) $(COQFLAGS) *.v cverif/*.v ../Test/*.v > .depend
+	$(COQDEP) $(COQFLAGS) *.v ../Test/*.v > .depend
 
 all_clean:
 	rm *.vo *.vok *.vos *.glob

@@ -188,13 +188,18 @@ prove_roundoff_bound.
 prove_rndval.
 clear BOUND BOUND0.
 assert (Rabs (1 + u0) <= 1 + d) as Hu2. 
-{ subst e; eapply Rle_trans;
- [apply Rabs_triang | eapply Rplus_le_compat;
-                                      [ rewrite Rabs_R1; apply Rle_refl | apply H0 ]]. }
+{ subst e; eapply Rle_trans;  [apply Rabs_triang |]; eapply Rplus_le_compat;
+  [ rewrite Rabs_R1; apply Rle_refl |  ].
+subst d. unfold error_bound in H0.
+rewrite (IZR_Zpower Zaux.radix2) by lia.
+change (bpow _ ?n) with (2 * bpow Zaux.radix2 (Z.pred n)).
+rewrite Rinv_mult. assumption.
+}
 assert (Rabs u <= e) as Hu1.
-{ subst e; eapply Rle_trans;
- [ apply Rle_refl | apply H ] 
-.
+{ subst e.
+rewrite (IZR_Zpower Zaux.radix2) by lia.
+change (bpow _ ?n) with (2 * bpow Zaux.radix2 (Z.pred n)).
+rewrite Rinv_mult. assumption.
 }
 apply Rlt_Rminus.
 rewrite Rmult_1_l.
@@ -228,6 +233,7 @@ field_simplify a
 end.
 assert (He0: Rabs e1 <= e).
 { eapply Rle_trans. apply E. subst e; simpl; nra. }
+rename e2 into d0.
 assert (Hd: Rabs d0 <= d).
 { eapply Rle_trans. apply E0. subst d; simpl; nra. }
 replace (a * d0 + b * d0 + e1) with ((a + b) * d0 + e1) by nra.
