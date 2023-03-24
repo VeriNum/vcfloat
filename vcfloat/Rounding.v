@@ -570,12 +570,6 @@ Definition rnd_of_unop
       | Exact1 o => (Runop_of_exact_unop ty o r, (si, shift))
     end. 
 
-(*
-        let es1 := mset shift d (error_bound ty Normal') in
-        let e := Pos.succ d in
-        let es2 := mset es1 e (error_bound ty Denormal') in
-*)
-
 Definition rel_error r n d :=
      RBinop Tree.Mul r 
         (RBinop Tree.Add  (RAtom (RConst fone))
@@ -669,13 +663,13 @@ Fixpoint rndval
                in rnd_of_func si1 s1 _ ff r1
    end.
 
-Fixpoint rndval_klist (si: positive) (shift: MSHIFT) (tys: list type) (l': klist expr tys) {struct l'}: 
+Fixpoint rndval_klist (si: positive) (shift: MSHIFT) {tys: list type} (l': klist expr tys) {struct l'}: 
                                 (klist (fun _ => rexpr) tys * (positive * MSHIFT))  :=
           match  l' 
           with
           | Knil => (Knil, (si,shift))
           | Kcons h tl => let '(r1, (si1,s1)) := rndval si shift _ h in 
-                                    let '(r2, (si2,s2)) := rndval_klist si1 s1 _ tl in
+                                    let '(r2, (si2,s2)) := rndval_klist si1 s1 tl in
                                       (Kcons r1 r2, (si2,s2))
           end.
 
@@ -845,7 +839,7 @@ Proof.
    unfold rnd_of_func.
   clear - IH.
    intros.
-   destruct (rndval_klist si shift ff_args args) eqn:?H.
+   destruct (rndval_klist si shift args) eqn:?H.
    destruct p as [si2 s2].
    apply Pos.le_trans with si2.
    + clear H. revert k si shift si2 s2 H0.
@@ -854,7 +848,7 @@ Proof.
      * inversion H0; clear H0; subst. lia.
      * apply Kforall_inv in IH. destruct IH.
         destruct (rndval si shift _ k) as (r1 & si1 & s1) eqn:EQ1.
-        destruct (rndval_klist si1 s1 _ args) as (r3 & si3 & s3) eqn:EQ2.
+        destruct (rndval_klist si1 s1 args) as (r3 & si3 & s3) eqn:EQ2.
         inversion H0; clear H0; subst.
         eapply Pos.le_trans.
         apply (H _ _ _ _ _ EQ1).
@@ -862,9 +856,9 @@ Proof.
    + eapply rnd_of_func'_shift_incr; eauto. 
 Qed.
 
-Lemma rndval_klist_shift_incr tys x:
+Lemma rndval_klist_shift_incr tys (x: klist expr tys) :
   forall si shift y si' shift',
-    rndval_klist si shift tys x = (y, (si', shift')) ->
+    rndval_klist si shift x = (y, (si', shift')) ->
     (si <= si')%positive.
 Proof.
 intros.
@@ -872,7 +866,7 @@ revert si shift y si' shift' H; induction x; intros.
 simpl in H. inversion H; lia.
 simpl in H.
 destruct (rndval si shift ty k) as (r1 & si1 & s1) eqn:EQ1.
-destruct (rndval_klist si1 s1 tys x) as (r2 & si2 & s2) eqn:EQ2.
+destruct (rndval_klist si1 s1  x) as (r2 & si2 & s2) eqn:EQ2.
 inversion H; clear H; subst.
 apply rndval_shift_incr in EQ1.
 apply IHx in EQ2. lia.
@@ -910,7 +904,7 @@ Proof.
    unfold rnd_of_func.
    clear - IH.
    intros.
-   destruct (rndval_klist si shift ff_args args) as [k [si2 s2]] eqn:?H.
+   destruct (rndval_klist si shift args) as [k [si2 s2]] eqn:?H.
    apply (rnd_of_func'_shift_le _ _ _ _ _ _ _ _ _ H); clear H.
    clear - IH H0. rename ff_args into tys.
    revert k si shift si2 s2 H0.
@@ -920,7 +914,7 @@ Proof.
  + inversion H0; clear H0; subst. simpl.  lia.
  + apply Kforall_inv in IH. destruct IH.
     destruct (rndval si shift _ k) as (r1 & si1 & s1) eqn:EQ1.
-    destruct (rndval_klist si1 s1 _ args) as (r3 & si3 & s3) eqn:EQ2.
+    destruct (rndval_klist si1 s1 args) as (r3 & si3 & s3) eqn:EQ2.
     inversion H0; clear H0; subst.
     pose proof (rndval_klist_shift_incr _ _ _ _ _ _ _ EQ2).
     pose proof (rndval_shift_incr _ _ _ _ _ _ _ EQ1).
@@ -936,14 +930,14 @@ Qed.
 
 Lemma rndval_klist_shift_le tys (x: klist expr tys):
   forall si shift y si' shift',
-    rndval_klist si shift _ x = (y, (si', shift')) ->
+    rndval_klist si shift x = (y, (si', shift')) ->
     (max_error_var_klist _ y <=  si')%positive.
 Proof.
   induction x; simpl; intros.
   inversion H; clear H; subst.
   simpl. lia.
    destruct (rndval si shift _ k) as (r1 & si1 & s1) eqn:EQ1.
-   destruct (rndval_klist si1 s1 _ x) as (r3 & si3 & s3) eqn:EQ2.
+   destruct (rndval_klist si1 s1 x) as (r3 & si3 & s3) eqn:EQ2.
    inversion H; clear H; subst.
    pose proof (rndval_klist_shift_incr _ _ _ _ _ _ _ EQ2).
    apply IHx in EQ2.
@@ -999,7 +993,7 @@ Proof.
    fold @rndval_klist.
    unfold rnd_of_func.
    intros.
-   destruct (rndval_klist si shift (ff_args f4) args) as [k [si2 s2]] eqn:?H.
+   destruct (rndval_klist si shift args) as [k [si2 s2]] eqn:?H.
    apply rnd_of_func'_shift_unchanged in H.
    rewrite H by (apply rndval_klist_shift_incr in H1; lia).
    clear shift' H.
@@ -1011,7 +1005,7 @@ Proof.
    inversion H1; clear H1; subst; auto.
    apply Kforall_inv in IH. destruct IH.
     destruct (rndval si shift _ k) as (r1 & si1 & s1) eqn:EQ1.
-    destruct (rndval_klist si1 s1 _ args) as (r3 & si3 & s3) eqn:EQ2.
+    destruct (rndval_klist si1 s1 args) as (r3 & si3 & s3) eqn:EQ2.
     pose proof (rndval_klist_shift_incr _ _ _ _ _ _ _ EQ2).
     pose proof (rndval_shift_incr _ _ _ _ _ _ _ EQ1).
     inversion H1; clear H1; subst.
@@ -1025,13 +1019,13 @@ Qed.
 
 Lemma rndval_klist_shift_unchanged tys (x: klist expr tys):
   forall si shift y si' shift',
-    rndval_klist si shift _ x = (y, (si', shift')) ->
+    rndval_klist si shift x = (y, (si', shift')) ->
   same_upto si (mget shift) (mget shift').
 Proof.
   induction x; simpl; intros; intro; intros.
   inversion H; clear H; subst; auto.
   destruct (rndval si shift _ k) as (r1 & si1 & s1) eqn:EQ1.
-  destruct (rndval_klist si1 s1 _ x) as (r3 & si3 & s3) eqn:EQ2.
+  destruct (rndval_klist si1 s1 x) as (r3 & si3 & s3) eqn:EQ2.
   inversion H; clear H; subst.
   pose proof (rndval_shift_unchanged _ _ _ _ _ _ _ EQ1 _ H0).
   pose proof (IHx _ _ _ _ _ EQ2 i).
@@ -1110,10 +1104,10 @@ Fixpoint revars (r: rexpr): MSET.t :=
     | _ => MSET.empty
   end.
 
-Fixpoint revars_klist (tys: list type) (es: klist (fun _ => rexpr) tys) : MSET.t :=
+Fixpoint revars_klist {tys: list type} (es: klist (fun _ => rexpr) tys) : MSET.t :=
         match es with
         | Knil => MSET.empty
-        | Kcons h tl => MSET.union (revars h) (revars_klist _ tl)
+        | Kcons h tl => MSET.union (revars h) (revars_klist tl)
        end.
 
 Lemma reval_error_ext_strong errors1 env errors2 e:
@@ -1147,7 +1141,7 @@ Proof.
  destruct ff; simpl in *.
  clear - args IH. rename ff_args into tys.
  rename ff_realfunc into f.
- fold (revars_klist tys args).
+ fold (revars_klist args).
  intro.
  change (reval_klist env errors2 args f = reval_klist env errors1 args f).
  revert IH H; induction args; intros.
@@ -1185,7 +1179,7 @@ Proof.
 - (* RFunc *)
  destruct ff; simpl in *.
  clear - args IH. rename ff_args into tys.
- fold (revars_klist tys args).
+ fold (revars_klist args).
  intro.
  change (i < max_error_var_klist tys args)%positive.
  revert IH H; induction args; intros.
@@ -1706,162 +1700,138 @@ Fixpoint rndval_with_cond'
       let '(rs, p) := rnd_of_cast_with_cond si1 s1 fromty ty (round_knowl_denote k) r1 in
       (rs, p ++ p1)
     | Func _ ff args => 
-       let fix rndval_with_cond'_klist {tys: list type} (l': klist expr tys) 
-                      (si: positive) (shift: MSHIFT) {struct l'}: 
+       let fix rndval_with_cond'_klist (si: positive) (shift: MSHIFT) {tys: list type} (l': klist expr tys)                     {struct l'}: 
                    klist (fun _ => rexpr) tys * (positive*MSHIFT) * list (rexpr * bool) :=
           match l' (* in (klist _ l)  return (function_type (map RR l) R -> R) *)
           with
           | Knil => (Knil, (si, shift), nil)
           | Kcons h tl => let  '((r1, (si1, s1)), p1) := rndval_with_cond' si shift h in
                                     let '((r2, (si2, s2)), p2) := rndval_with_cond'_klist
-                                                      tl si1 s1 in
+                                                      si1 s1 tl in
                                     (Kcons r1 r2, (si2,s2), p1++p2)
           end
-          in let '((rn, (si', s')), pn) := rndval_with_cond'_klist args si shift in
+          in let '((rn, (si', s')), pn) := rndval_with_cond'_klist si shift args in
               let '(rs,p) := rnd_of_func_with_cond si' s' ff rn
                in (rs, p++pn)
   end. 
 
-Fixpoint rndval_with_cond'_klist {tys: list type} (l': klist expr tys) 
-                      (si: positive) (shift: MSHIFT) {struct l'}: 
+Fixpoint rndval_with_cond'_klist (si: positive) (shift: MSHIFT) {tys: list type} (l': klist expr tys) 
+                       {struct l'}: 
                    klist (fun _ => rexpr) tys * (positive*MSHIFT) * list (rexpr * bool) :=
           match l'
           with
           | Knil => (Knil, (si, shift), nil)
           | Kcons h tl => let  '((r1, (si1, s1)), p1) := rndval_with_cond' si shift h in
-                                    let '((r2, (si2, s2)), p2) := rndval_with_cond'_klist
-                                                      tl si1 s1 in
+                                    let '((r2, (si2, s2)), p2) := rndval_with_cond'_klist si1 s1 tl in
                                     (Kcons r1 r2, (si2,s2), p1++p2)
           end.
 
-Lemma rnd_of_binop_with_cond_left si shift ty o r1 r2:
-  fst (rnd_of_binop_with_cond si shift ty o r1 r2) =
-  rnd_of_binop si shift ty o r1 r2.
+Lemma rnd_of_binop_with_cond_left {si shift ty o r1 r2 a c}:
+  rnd_of_binop_with_cond si shift ty o r1 r2 = (a,c) ->
+  rnd_of_binop si shift ty o r1 r2 = a.
 Proof.
-  unfold rnd_of_binop_with_cond, rnd_of_binop.
-  destruct o; simpl; auto.
-  destruct (
-make_rounding si shift (round_knowl_denote knowl) ty
-         (RBinop (Rbinop_of_rounded_binop op) r1 r2)
-    ); simpl; auto.
+  unfold rnd_of_binop_with_cond, rnd_of_binop; intros.
+  destruct o; try congruence.
+  destruct (make_rounding _ _ _ _ _); congruence.
 Qed.
 
-Lemma rnd_of_cast_with_cond_left si shift ty ty0 knowl r1:
-   fst (rnd_of_cast_with_cond si shift ty ty0 knowl r1) =
-   rnd_of_cast si shift ty ty0 knowl r1.
+
+Lemma rnd_of_cast_with_cond_left {si shift ty ty0 knowl r1 a c}:
+   rnd_of_cast_with_cond si shift ty ty0 knowl r1 = (a,c) ->
+   rnd_of_cast si shift ty ty0 knowl r1 = a.
 Proof.
-  unfold rnd_of_cast_with_cond, rnd_of_cast.
-  destruct (
-      type_leb ty ty0
-    ); auto.
-  destruct (make_rounding si shift knowl ty0 r1).
-  auto.
+   unfold rnd_of_cast_with_cond, rnd_of_cast; intros.
+  destruct (type_leb _ _); try congruence.
+  destruct (make_rounding _ _ _ _ _); congruence.
 Qed.
 
-Lemma rnd_of_unop_with_cond_left si shift ty o r1:
-  fst (rnd_of_unop_with_cond si shift ty o r1) =
-  rnd_of_unop si shift ty o r1.
+Lemma rnd_of_unop_with_cond_left {si shift ty o r1  a c}:
+  rnd_of_unop_with_cond si shift ty o r1 = (a,c) ->
+  rnd_of_unop si shift ty o r1 = a.
 Proof.
-  unfold rnd_of_unop_with_cond, rnd_of_unop.
-  destruct o; simpl; auto.
-- (* Rounded1 *)
- destruct op.
- + (* SQRT *)
-    destruct (
-        make_rounding si shift (round_knowl_denote knowl) ty
-                      (Runop_of_rounded_unop ty SQRT r1)
-      ); simpl; auto.
- + (* InvShift *)
-    destruct knowl as [ [ | ] | ]; simpl; auto.
+  unfold rnd_of_unop_with_cond, rnd_of_unop; intros.
+  destruct o; simpl; try congruence.
+ destruct op; try congruence.
+  destruct (make_rounding _ _ _ _ _); congruence.
+  destruct knowl as [ [ | ] | ]; simpl in *; congruence.
 Qed.
 
-Lemma rnd_of_func_with_cond_left si shift ty ff args:
-  fst (rnd_of_func_with_cond si shift ff args) = rnd_of_func si shift ty ff args.
+Lemma rnd_of_func_with_cond_left {si shift ty ff args  a c}:
+  rnd_of_func_with_cond si shift ff args  = (a,c) ->
+  rnd_of_func si shift ty ff args = a.
 Proof.
- reflexivity.
+ unfold rnd_of_func_with_cond; intros; congruence.
 Qed.
 
-Lemma rndval_with_cond_left ty (e: expr ty):
-  forall si shift,
-    fst (rndval_with_cond' si shift e) = rndval si shift _ e.
+Lemma rndval_with_cond_left {si shift ty} {e: expr ty} {a c}:
+    rndval_with_cond' si shift e = (a,c) ->
+   rndval si shift _ e = a.
 Proof.
-  induction e; simpl; auto.
+  revert si shift a c;
+  induction e; simpl; intros; try congruence.
 - (* Binop *)
-    intros.
     specialize (IHe1 si shift).
-    destruct (rndval_with_cond' si shift e1).
-    simpl in IHe1.
-    subst.
-    destruct (rndval si shift _ e1).
-    destruct p as [n ?].
-    specialize (IHe2 n m).
-    destruct (rndval_with_cond' n m e2).
-    simpl in IHe2.
-    subst.
-    destruct (rndval n m _ e2).
-    destruct p as [n0 ?].
-    specialize (rnd_of_binop_with_cond_left n0 m0 ty b r r0).
-    destruct (rnd_of_binop_with_cond n0 m0 ty b r r0);
-      simpl; auto.
+    destruct (rndval_with_cond' si shift e1) as [[r1 [si1 s1]] p1].
+    rewrite (IHe1 _ _ (eq_refl _)).
+    specialize (IHe2 si1 s1).
+    destruct (rndval_with_cond' si1 s1 e2) as [[r2 [si2 s2]] p2].
+    rewrite (IHe2 _ _ (eq_refl _)).
+    destruct (rnd_of_binop_with_cond si2 s2 ty b r1 r2) as [[r3 [si3 s3]] p3] eqn:?H.
+    apply @rnd_of_binop_with_cond_left in H0.
+    congruence.
 - (* Unop *)
    intros.
   specialize (IHe si shift).
-  destruct (rndval_with_cond' si shift e); simpl in *; subst.
-  destruct (rndval si shift _ e).
-  destruct p as [n ?].
-  specialize (rnd_of_unop_with_cond_left n m ty u r).
-  destruct (
-      rnd_of_unop_with_cond n m ty u r
-    ); simpl; auto.
+  destruct (rndval_with_cond' si shift e) as [[r1 [si1 s1]] p1].
+  rewrite (IHe _ _ (eq_refl _)).
+  destruct (rnd_of_unop_with_cond si1 s1 ty u r1) as [[r2 [si2 s2]] p2] eqn:?H.
+  apply rnd_of_unop_with_cond_left in H0. congruence.
 - (* Cast *) 
   intros.
   specialize (IHe si shift).
-  destruct (rndval_with_cond' si shift e); simpl in *; subst.
-  destruct (rndval si shift _ e).
-  destruct p as [n ?].
-  specialize (rnd_of_cast_with_cond_left n m fromty ty
-                 (round_knowl_denote knowl) r).
-  destruct (
-      rnd_of_cast_with_cond n m _ _ _ _
-    ); simpl; auto.
+  destruct (rndval_with_cond' si shift e) as [[r1 [si1 s1]] p1]. 
+  rewrite (IHe _ _ (eq_refl _)).
+  destruct (rnd_of_cast_with_cond si1 s1 fromty ty
+                 (round_knowl_denote knowl) r1)
+                   as [[r2 [si2 s2]] p2] eqn:?H.
+  apply rnd_of_cast_with_cond_left in H0. 
+  congruence.
 - (* Func *)
  intros.
-  fold @rndval_with_cond'_klist.
-  fold (@rndval_klist si shift (ff_args f4)).
-  destruct (rndval_with_cond'_klist args si shift) as [[r1 [si1 s1]] l1] eqn:?H.
-  destruct (rndval_klist si shift (ff_args f4) args) as [r2 [si2 s2]] eqn:?H.
-  unfold rnd_of_func_with_cond, rnd_of_func.
+  fold @rndval_with_cond'_klist in *.
+  fold (@rndval_klist si shift (ff_args f4)) in *.
+  destruct (rndval_with_cond'_klist si shift args) as [[r1 [si1 s1]] l1] eqn:?H.
+  destruct (rndval_klist si shift args) as [r2 [si2 s2]] eqn:?H.
+  unfold rnd_of_func_with_cond, rnd_of_func in *.
   assert ((si1,s1,r1) = (si2,s2,r2)); [ | simpl; congruence].
   clear P Q.
-  revert si shift r1 si1 s1 l1 H r2 si2 s2 H0 IH.
+  clear a c H.
+  revert si shift r1 si1 s1 l1 r2 si2 s2 H0 IH H1.
   induction args; simpl; intros.
   congruence.
   destruct (rndval si shift ty0 k)  as [r1' [si1' s1']] eqn:?H.
-  destruct (rndval_klist si1' s1' tys args) as [r2' [si2' s2']] eqn:?H.
-  inversion H0; clear H0; subst.
+  destruct (rndval_klist si1' s1' args) as [r2' [si2' s2']] eqn:?H.
   destruct (rndval_with_cond' si shift k) as [[r3 [si3 s3]] c3] eqn:?H.
-  destruct (rndval_with_cond'_klist args si3 s3) as [[r4 [si4 s4]] c4] eqn:?H.
-  inversion H; clear H; subst.
+  destruct (rndval_with_cond'_klist si3 s3 args) as [[r4 [si4 s4]] c4] eqn:?H.
   apply Kforall_inv in IH; destruct IH.
-  specialize (H si shift).
-  rewrite H0 in H. simpl in H. rewrite H1 in H. clear H1.
-  inversion H; clear H; subst.
-  specialize (IHargs _ _ _ _ _ _ H3  _ _ _ H2 H4); clear H4 H3 H2.
+  inversion H1; clear H1; inversion H0; clear H0; subst.
+  apply H5 in H3.
+  rewrite H3 in H; inversion H; clear H; subst.
+  clear H5 H3.
+  specialize (IHargs _ _ _ _ _ _ _ _ _ H4 H6 H2); clear H4 H6 H2.
   congruence.
 Qed.
 
-Lemma rndval_with_cond_klist_left tys (e: klist expr tys):
-  forall si shift,
-    fst (rndval_with_cond'_klist e si shift) = rndval_klist si shift _ e.
+Lemma rndval_with_cond_klist_left {si shift tys} {e: klist expr tys} {a c}:
+   rndval_with_cond'_klist si shift e = (a,c) ->
+   rndval_klist si shift e = a.
 Proof.
-  intros.
-  revert si shift;  induction e; simpl; intros; auto.
-  pose proof (rndval_with_cond_left ty k si shift).
-  destruct (rndval_with_cond' si shift k); simpl in H; subst.
-  destruct (rndval si shift ty k) as [r1 [si1 s1]] eqn:?H.
-  specialize (IHe si1 s1).
-  destruct (rndval_with_cond'_klist e si1 s1) as [[r2 [si2 s2]] p2].
-  simpl. rewrite <- IHe. simpl. auto.
+  revert si shift a c;  induction e; simpl; intros; auto.
+  congruence.
+  destruct (rndval_with_cond' si shift k) as [[r1 [si1 s1]] p1] eqn:?H.
+  destruct (rndval_with_cond'_klist si1 s1 e) as [[r2 [si2 s2]] p2] eqn:?H.
+  rewrite (rndval_with_cond_left H0).
+  apply IHe in H1. rewrite H1. congruence.
 Qed.
 
 Lemma rndval_with_cond_shift_cond ty (e: expr ty):
@@ -1883,119 +1853,62 @@ Proof.
              as [rs' p']
              eqn:EQ.
     inversion H; clear H; subst.
-    generalize (rndval_with_cond_left _ e1 si shift).
-    rewrite EQ1.
-    simpl.
-    intros.
-    symmetry in H.   
-    generalize (rndval_with_cond_left _ e2 si1 s1).
-    rewrite EQ2.
-    simpl.
-    intros.
-    symmetry in H1.
-    generalize (rnd_of_binop_with_cond_left si2 s2 ty b r1 r2).
-    rewrite EQ.
-    intros.
-    symmetry in H2.
-    simpl in H2.
-    generalize H.
-    intro.
+    pose proof (rndval_with_cond_left EQ1).
+    pose proof (rndval_with_cond_left EQ2).
+    pose proof (rnd_of_binop_with_cond_left EQ).
+    pose proof (rndval_shift_le _ _ _ _ _ _ _ H).
     apply rndval_shift_incr in H.
-    apply rndval_shift_le in H3.
-    generalize H1.
-    intro.
+    pose proof (rndval_shift_le _ _ _ _ _ _ _ H1).
     apply rndval_shift_incr in H1.
-    apply rndval_shift_le in H4.
-    generalize H2.
-    intro.
-    apply rnd_of_binop_shift_incr in H2.
-    apply rnd_of_binop_shift_le in H5; try lia.
-    apply in_app_or in H0.
-    destruct H0.
-    {
-      eapply rnd_of_binop_with_cond_shift_cond; eauto.
-      lia.
-    }
-    apply in_app_or in H0.
-    destruct H0.
-    {
-      eapply IHe1 in H0; [ | eassumption ] .
-      lia.
-    }
-    eapply IHe2 in H0; [ | eassumption ].
-    lia.
+    pose proof (rnd_of_binop_shift_incr _ _ _ _ _ _ _ _ _ H2).
+    apply rnd_of_binop_shift_le in H2; try lia.
+    rewrite !in_app_iff in H0.
+    destruct H0 as [?|[?|?]].
+      eapply rnd_of_binop_with_cond_shift_cond; eauto; lia.
+      eapply IHe1 in H0; [ | eassumption ]; lia .
+      eapply IHe2 in H0; [ | eassumption ]; lia .
   - (* Unop *)
-  destruct (rndval_with_cond' si shift e) as [[r1 [si1 s1]] p1] eqn:EQ1.
-  destruct (rnd_of_unop_with_cond si1 s1 ty u r1) eqn:EQ.
-  inversion H; clear H; subst.
-  generalize (rndval_with_cond_left _ e si shift).
-  rewrite EQ1.
-  simpl.
-  intros.
-  symmetry in H.   
-  generalize (rnd_of_unop_with_cond_left si1 s1 ty u r1).
-  rewrite EQ.
-  intros.
-  symmetry in H1.
-  simpl in H1.
-  generalize H.
-  intro.
-  apply rndval_shift_incr in H.
-  apply rndval_shift_le in H2.
-  generalize H1.
-  intro.
-  apply rnd_of_unop_shift_incr in H1.
-  apply rnd_of_unop_shift_le in H3; try lia.
-  apply in_app_or in H0.
-  destruct H0.
-  +
-    eapply rnd_of_unop_with_cond_shift_cond; eauto.
-  +
-   eapply IHe in H0; [ | eassumption ] .
-   lia.
- -
+    destruct (rndval_with_cond' si shift e) as [[r1 [si1 s1]] p1] eqn:EQ1.
+    destruct (rnd_of_unop_with_cond si1 s1 ty u r1) eqn:EQ.
+    inversion H; clear H; subst.
+    pose proof (rndval_with_cond_left EQ1).
+    pose proof (rnd_of_unop_with_cond_left EQ).
+    pose proof (rndval_shift_le _ _ _ _ _ _ _ H).
+    apply rndval_shift_incr in H.
+    pose proof (rnd_of_unop_shift_incr _ _ _ _ _ _ _ _ H1).
+    apply rnd_of_unop_shift_le in H1; try lia.
+    rewrite !in_app_iff in H0.
+    destruct H0.
+      eapply rnd_of_unop_with_cond_shift_cond; eauto.
+      eapply IHe in H0; [ | eassumption ]; lia.
+ - (* Cast *)
   destruct (rndval_with_cond' si shift e) as [[r1 [si1 s1]] p1] eqn:EQ1.
   destruct (rnd_of_cast_with_cond si1 s1 fromty ty (round_knowl_denote knowl)  r1) eqn:EQ.
   inversion H; clear H; subst.
-  generalize (rndval_with_cond_left _ e si shift).
-  rewrite EQ1.
-  simpl.
-  intros.
-  symmetry in H.   
-  generalize (rnd_of_cast_with_cond_left si1 s1 fromty ty (round_knowl_denote knowl) r1).
-  rewrite EQ.
-  intros.
-  symmetry in H1.
-  simpl in H1.
-  generalize H.
-  intro.
-  apply rndval_shift_incr in H.
-  apply rndval_shift_le in H2.
-  generalize H1.
-  intro.
-  apply rnd_of_cast_shift_incr in H1.
-  apply rnd_of_cast_shift_le in H3; try lia.
-  apply in_app_or in H0.
+    pose proof (rndval_with_cond_left EQ1).
+    pose proof (rnd_of_cast_with_cond_left EQ).
+    pose proof (rndval_shift_le _ _ _ _ _ _ _ H).
+    apply rndval_shift_incr in H.
+    pose proof (rnd_of_cast_shift_incr _ _ _ _ _ _ _ _ _ H1).
+    apply rnd_of_cast_shift_le in H1; try lia.
+    rewrite !in_app_iff in H0.
   destruct H0.
-  +
-    eapply rnd_of_cast_with_cond_shift_cond; eauto.
-  +
-   eapply IHe in H0; [ | eassumption ] .
-   lia.
+       eapply rnd_of_cast_with_cond_shift_cond; eauto.
+       eapply IHe in H0; [ | eassumption ]; lia.
 - (* Func *)
  fold @rndval_with_cond'_klist in H.
- destruct (rndval_with_cond'_klist args si shift) as [[r2 [si2 s2]] c2] eqn:?H.
+ destruct (rndval_with_cond'_klist si shift args) as [[r2 [si2 s2]] c2] eqn:?H.
  inversion H; clear H; subst.
  unfold func_no_overflow, rnd_of_func, rnd_of_func', fst in H0.
  change (?a :: ?b ++ ?c) with ((a::b)++c) in H0.
  apply in_app_iff in H0.
  destruct H0 as [[H0|H0]|H0].
  + unfold no_overflow in *. inversion H0; clear H0; subst.
-     assert (H4 := rndval_with_cond_klist_left _ args si shift); rewrite H1 in H4; simpl in H4; symmetry in H4.
+     assert (H4 := rndval_with_cond_klist_left H1).
       pose proof (rndval_klist_shift_le _ _ _ _ _ _ _ H4).
      destruct (ff_rel (ff_ff f4)), (ff_abs (ff_ff f4)); simpl;
      change (_ (ff_args f4) r2) with  (max_error_var_klist (ff_args f4) r2); lia.
- + assert (H4 := rndval_with_cond_klist_left _ args si shift); rewrite H1 in H4; simpl in H4; symmetry in H4.
+ + assert (H4 := rndval_with_cond_klist_left H1).
       pose proof (rndval_klist_shift_le _ _ _ _ _ _ _ H4).
       clear - H H0.
       destruct f4 as [tys pre rf ff]; simpl in *. clear - H0 H.
@@ -2016,18 +1929,18 @@ Proof.
       inversion H1; clear H1; subst. contradiction.
       apply Kforall_inv in IH; destruct IH as [IH' IH].
         destruct (rndval_with_cond' si shift k) as [[r1 [si1 s1]] p1] eqn:?H.
-        destruct (rndval_with_cond'_klist args si1 s1) as [[r3 [si3 s3]] p3] eqn:?H.
+        destruct (rndval_with_cond'_klist si1 s1 args) as [[r3 [si3 s3]] p3] eqn:?H.
         inversion H1; clear H1; subst.
        apply in_app_iff in H0; destruct H0.
        specialize (IH' _ _ _ _ _ _ H _ _ H0). 
-       assert (H4 := rndval_with_cond_klist_left _ args si1 s1); rewrite H2 in H4; simpl in H4; symmetry in H4.
+       assert (H4 := rndval_with_cond_klist_left H2).
        pose proof (rndval_klist_shift_incr _ _ _ _ _ _ _ H4). lia.
        apply IHargs in H2; eauto.
 Qed.
 
 Lemma rndval_with_cond_klist_shift_cond tys (e: klist expr tys):
   forall si shift r' si' shift' cond,
-  rndval_with_cond'_klist e si shift = ((r', (si', shift')), cond) ->
+  rndval_with_cond'_klist si shift e = ((r', (si', shift')), cond) ->
   forall e' b',
     In (e', b') cond ->
     (max_error_var e' <= si')%positive.
@@ -2035,11 +1948,10 @@ Proof.
   induction e; simpl; intros.
   inversion H; clear H; subst; contradiction H0.
  destruct (rndval_with_cond' si shift k) as [[r1 [si1 s1]] p1] eqn:?H.
- destruct (rndval_with_cond'_klist e si1 s1) as [[r3 [si3 s3]] p3] eqn:?H.
+ destruct (rndval_with_cond'_klist si1 s1 e) as [[r3 [si3 s3]] p3] eqn:?H.
   inversion H; clear H; subst.
- pose proof (rndval_with_cond_left _ k si shift). rewrite H1 in H. simpl in H. symmetry in H.
- pose proof (rndval_with_cond_klist_left _ e si1 s1).
- rewrite H2 in H3. simpl in H3.  symmetry in H3.
+  pose proof (rndval_with_cond_left H1).
+ pose proof (rndval_with_cond_klist_left H2).
  pose proof (rndval_shift_incr _ _ _ _ _ _ _ H).
  pose proof (rndval_shift_le _ _ _ _ _ _ _ H).
  pose proof (rndval_klist_shift_incr _ _ _ _ _ _ _ H3).
@@ -2251,7 +2163,7 @@ exists errors2 : positive -> R,
     (fop_of_unop (Rounded1 (InvShift pow ltr) None) ty (fval env e)).
 Proof.
 intros.
-assert (K1 := rndval_with_cond_left _ e si shift); rewrite EQ1 in K1; simpl in K1; symmetry in K1.
+assert (K1 := rndval_with_cond_left EQ1).
 inversion EQ; clear EQ; subst.
 set (op := RBinop Tree.Mul _) in *.
 set (s := mset s1 si1 (ty, Denormal')) in *.
@@ -2373,31 +2285,6 @@ Fixpoint list_real_args (xl: list R) (tys: list type): function_type (map RR tys
   | _ :: tys' => (fun x : R => list_real_args (x :: xl) tys')
   end.
 
-(*
-Fixpoint mapk {type: Type} {k1 k2: type -> Type} (f: forall ty: type, k1 ty -> k2 ty) 
-  {tys: list type} (al: klist k1 tys) : klist k2 tys := 
-    match al in (klist _ l) return (l = tys -> klist k2 tys) with
-    | Knil =>
-        fun H : [] = tys =>
-          eq_rect [] (fun l : list type => klist k2 l) Knil tys H
-    | @Kcons _ _ ty tys' x x0 =>
-        fun (H : ty :: tys' = tys) =>
-          eq_rect (ty :: tys')
-            (fun l : list type => k1 ty -> klist k1 tys' -> klist k2 l)
-            (fun (X1 : k1 ty) (X2 : klist k1 tys') =>Kcons (f ty X1) (mapk f X2))
-            tys H x x0
-    end  eq_refl.
-
-Lemma mapk_mapk:
-  forall {type: Type} [k1 k2 k3: type -> Type] (f: forall ty, k1 ty -> k2 ty) (g: forall ty, k2 ty -> k3 ty)
-           (tys: list type) (l: klist k1 tys), 
-     mapk g (mapk f l) = mapk (fun ty x => g ty (f ty x)) l.
-Proof.
-induction l; simpl; auto.
-f_equal; auto.
-Qed.
-*)
-
 Definition rwcc_klist errors1 si (s: MSHIFT) env tys (args: klist expr tys) (r: klist (fun _ => rexpr) tys) := 
       exists errors2,
         same_upto si errors1 errors2
@@ -2408,8 +2295,6 @@ Definition rwcc_klist errors1 si (s: MSHIFT) env tys (args: klist expr tys) (r: 
         Kforall (fun ty (f: ftype ty) => is_finite _ _ f = true) fv
         /\
         mapk (fun ty r => reval r env errors2) r = mapk (fun ty (x: ftype' ty) => B2R _ _ x) fv.
-
-(* TODO: move "args" argument of rndval_with_cond'_klist to after "shift" argument *)
 
 Definition adjust_err (coeff: N) (delta: R) := match coeff with N0 => R0 | Npos x => delta / IZR (Zpos x) end.
 
@@ -2438,7 +2323,7 @@ Lemma rndval_with_cond_correct_klist :
        args),
   expr_klist_valid args = true ->
   forall si shift r si' s' p,
-    rndval_with_cond'_klist args si shift = ((r, (si', s')), p) ->
+    rndval_with_cond'_klist si shift args = ((r, (si', s')), p) ->
     (forall i, In i p -> eval_cond1 env s' i) ->
     forall errors1, errors_bounded shift errors1 ->
     rwcc_klist errors1 si s' env tys args r.
@@ -2457,16 +2342,14 @@ Proof.
  apply Kforall_inv in IH; destruct IH as [IH1 IH].
  simpl in H0. 
  destruct (rndval_with_cond' si shift k) as [[r1 [si1 s1]] p1] eqn:?H.
- destruct (rndval_with_cond'_klist args si1 s1) as [[r2 [si2 s2]] p2] eqn:?H.
+ destruct (rndval_with_cond'_klist si1 s1 args) as [[r2 [si2 s2]] p2] eqn:?H.
  inversion H0; clear H0; subst.
  specialize (IHargs IH H3 _ _ _ _ _ _ H5); clear IH H3.
  apply (IH1 H _ _ _ _ _ _ H4) in H2; clear IH1.
 2:{ intros. eapply eval_cond1_preserved; try apply H1.
      intros. subst i.
-  pose proof (rndval_with_cond_klist_left _ args si1 s1).
-   rewrite H5 in H3; symmetry in H3; simpl in H3.
-  pose proof (rndval_with_cond_left _ k si shift).
-   rewrite H4 in H6; symmetry in H6; simpl in H6.
+  pose proof (rndval_with_cond_klist_left H5).
+  pose proof (rndval_with_cond_left H4).
   intros ? ?.
   rewrite (rndval_klist_shift_unchanged _ _ _ _ _ _ _ H3); auto.
   pose proof (rndval_with_cond_shift_cond _ _ _ _ _ _ _ _ H4 _ _ H0). lia.
@@ -2478,8 +2361,7 @@ Proof.
   apply in_app_iff; auto.
 }
  destruct H2 as [errors3 [? [? [? ?]]]].
- pose proof (rndval_with_cond_left _ k si shift).
- rewrite H4 in H10; symmetry in H10; simpl in H10.
+ pose proof (rndval_with_cond_left H4).
  pose proof (rndval_shift_incr _ _ _ _ _ _ _ H10).
  exists errors3; split; [ |split; [ | split]]; auto.
  intros ? ?.
@@ -2528,20 +2410,9 @@ Proof.
     rewrite andb_true_iff in H.
     destruct H.
 
-    assert (K1 := rndval_with_cond_left _ e1 si shift).
-    rewrite EQ1 in K1.
-    symmetry in K1.
-    simpl in K1.
-    generalize (rndval_with_cond_left _ e2 si1 s1).
-    rewrite EQ2.
-    intro K2.
-    symmetry in K2.
-    simpl in K2.
-    generalize (rnd_of_binop_with_cond_left si2_ s2 ty b r1 r2).
-    intro K_.
-    rewrite EQ in K_.
-    simpl in K_.
-    symmetry in K_.
+    assert (K1 := rndval_with_cond_left EQ1).
+    assert (K2 := rndval_with_cond_left EQ2).
+    assert (K_ := rnd_of_binop_with_cond_left EQ).
 
    assert (N : forall i : cond, In i p1 -> eval_cond1 env s1 i).
     {
@@ -2887,16 +2758,8 @@ Proof.
   rewrite andb_true_iff in H.
   destruct H.
 
-  generalize (rndval_with_cond_left _ e si shift).
-  rewrite EQ1.
-  intro K1.
-  symmetry in K1.
-  simpl in K1.
-  generalize (rnd_of_unop_with_cond_left si1 s1 ty u r1).
-  rewrite EQ.
-  simpl.
-  intro K_.
-  symmetry in K_.
+  assert (K1 := rndval_with_cond_left EQ1).
+  assert (K_ := rnd_of_unop_with_cond_left EQ).
 
   assert (N: forall i : cond, In i p1 -> eval_cond1 env s1 i).
   {
@@ -3144,16 +3007,8 @@ Proof.
   destruct (rnd_of_cast_with_cond si1 s1  fromty ty (round_knowl_denote knowl) r1) as [rs p_] eqn:EQ.
   inversion H0; clear H0; subst.
 
-  generalize (rndval_with_cond_left _ e si shift).
-  rewrite EQ1.
-  intro K1.
-  symmetry in K1.
-  simpl in K1.
-  generalize (rnd_of_cast_with_cond_left si1 s1 fromty ty (round_knowl_denote knowl) r1).
-  rewrite EQ.
-  simpl.
-  intro K_.
-  symmetry in K_.
+  assert (K1 := rndval_with_cond_left EQ1).
+  assert (K2 := rnd_of_cast_with_cond_left EQ).
 
   assert (N: forall i : cond, In i p1 -> eval_cond1 env s1 i).
   {
@@ -3262,7 +3117,7 @@ Proof.
  change (expr_klist_valid args = true) in H.
  simpl in H0.
  fold (@rndval_with_cond'_klist) in H0.
- destruct ( rndval_with_cond'_klist args si shift) as [[r2 [si2 s2]] p2] eqn:?H.
+ destruct ( rndval_with_cond'_klist si shift args) as [[r2 [si2 s2]] p2] eqn:?H.
  inversion H0; clear H0; subst.
  assert (EC2: forall i : rexpr * bool, In i p2 -> eval_cond1 env s2 i). {
     intros. eapply eval_cond1_preserved; try apply H1.
@@ -3273,7 +3128,7 @@ Proof.
     right. apply in_app_iff; auto.
  }
  eapply rndval_with_cond_correct_klist in IH; try eassumption; clear H EC2.
- assert (MEV := rndval_with_cond_klist_left _ args si shift). rewrite H3 in MEV. symmetry in MEV.
+ assert (MEV := rndval_with_cond_klist_left H3).
  apply rndval_klist_shift_le in MEV.
  destruct IH as [errors2 [? [? [? ?]]]].
  rewrite mapk_mapk in H5.
@@ -3288,7 +3143,7 @@ Proof.
      reval r env errors0 = B2R (fprec ty) (femax ty) (fval_klist env args (ff_func (ff_ff f4)))).
  2:{ destruct H6 as [err [? ?]]; exists err; split; auto. intros ? ?. rewrite <- H; auto. }
  assert (Hsi: (si <= si2 /\ max_error_var_klist (ff_args f4) r2 <= si2)%positive). {
-    pose proof (rndval_with_cond_klist_left _ args si shift). rewrite H3 in H6; simpl in H6; symmetry in H6.
+    pose proof (rndval_with_cond_klist_left H3).
     pose proof (rndval_klist_shift_incr _ _ _ _ _ _ _ H6).
     pose proof (rndval_klist_shift_le _ _ _ _ _ _ _ H6).
     auto.
