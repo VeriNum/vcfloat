@@ -10,6 +10,7 @@ authors: [
   "Benoit Meister"
   "Richard Lethin"
 ]
+homepage: "https://verinum.org/vcfloat/"
 maintainer: "Andrew W. Appel <appel@princeton.edu>"
 dev-repo: "git+https://github.com/VeriNum/vcfloat"
 bug-reports: "https://github.com/VeriNum/vcfloat/issues"
