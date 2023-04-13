@@ -1,5 +1,4 @@
 opam-version: "2.0"
-version: "dev"
 synopsis: "VCFloat: Floating Point Round-off Error Analysis"
 description: "VCFloat is a tool for Coq proofs about floating-point round-off error."
 authors: [
@@ -29,7 +28,14 @@ run-test: [
 depends: [
   "coq" {>= "8.16" & < "8.18~"}
   "coq-flocq" {>= "4.1.0" & < "5.0"}
+  "coq-interval" {>= "4.5.2"}
+  "coq-compcert" {>= "3.11"}
+  "coq-bignums"
 ]
-url {
-  src: "git+https://github.com/VeriNum/vcfloat.git#master"
-}
+tags: [
+  "date:2023-04-13"
+  "keyword:decision procedure"
+  "keyword:floating-point arithmetic"
+  "category:Computer Science/Decision Procedures and Certified Algorithms/Decision procedures"
+  "logpath:VCFloat"
+  ]
