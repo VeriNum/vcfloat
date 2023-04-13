@@ -14,7 +14,7 @@ target: summation.vo
 	$(COQC) $(COQFLAGS) $*.v
 
 depend: 
-	$(COQDEP) $(COQFLAGS) *.v cverif/*.v > .depend
+	$(COQDEP) $(COQFLAGS) *.v > .depend
 
 all_clean: rm *.vo *.vok *.vos *.glob
 
