@@ -1,6 +1,5 @@
-(* WARNING: This opam file has not been tested *)
 opam-version: "2.0"
-version: "dev"
+version: "2.1"
 synopsis: "VCFloat: Floating Point Round-off Error Analysis"
 description: "VCFloat is a tool for Coq proofs about floating-point round-off error."
 authors: [
@@ -12,7 +11,6 @@ authors: [
   "Richard Lethin"
 ]
 maintainer: "Andrew W. Appel <appel@princeton.edu>"
-homepage: "http://"
 dev-repo: "git+https://github.com/VeriNum/vcfloat"
 bug-reports: "https://github.com/VeriNum/vcfloat/issues"
 license: "LGPL-3.0-or-later"
