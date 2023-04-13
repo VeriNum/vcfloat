@@ -34,7 +34,6 @@ More properties about real numbers.
 
 Require Export Reals Psatz.
 Require Export Lia.
-From Coquelicot Require Import Coquelicot.
 Open Scope R_scope.
 
 Lemma increasing_weaken f x y:
@@ -1056,13 +1055,22 @@ Proof.
 Qed.
 
 Lemma Rdiv_le_0_compat_Raux : forall r1 r2 : R, 0 <= r1 -> 0 < r2 -> 0 <= r1 / r2.
-Proof. apply Rdiv_le_0_compat; auto. Qed.
+Proof.
+ intros.
+ Search (0 <= _ * _).
+ apply Rmult_le_pos; auto.
+ apply Rinv_0_lt_compat in H0. lra.
+Qed.
 
 Lemma  Rabs_div_Raux : forall a b : R, b <> 0 -> Rabs (a/b) = (Rabs a) / (Rabs b).
-Proof. apply Rabs_div; auto. Qed.
+Proof.
+intros.
+unfold Rdiv.
+rewrite Rabs_mult. rewrite Rabs_inv. auto.
+Qed.
 
 Lemma Rabs_div_eq : forall a b , b <> 0 -> 0 <= b -> Rabs (a /b) = Rabs a / b.
-Proof. intros. rewrite Rabs_div; try nra; replace (Rabs b) with b; try nra; symmetry; apply Rabs_pos_eq; auto. Qed.
+Proof. intros. rewrite Rabs_div_Raux; try nra; replace (Rabs b) with b; try nra; symmetry; apply Rabs_pos_eq; auto. Qed.
 
 Lemma Rminus_rel_error : 
 forall u1 u2 v1 v2, ((u1 - v1) ) - (u2 - v2) = (u1 - u2) - (v1 - v2).
