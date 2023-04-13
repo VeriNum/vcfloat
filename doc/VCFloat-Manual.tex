@@ -1,4 +1,5 @@
 \documentclass[article]{memoir}
+\usepackage{hyperref}
 \usepackage{amssymb}
 \usepackage{amsmath}
 \usepackage{listings}
@@ -20,11 +21,17 @@
 
 
 
-\title{VCFloat 2.0 Reference Manual}
+\title{VCFloat 2.1 Reference Manual}
 \author{Andrew W. Appel \and Ariel E. Kellison}
 
 \begin{document}
 \maketitle
+
+
+\renewcommand\cftchapteraftersnumb{\normalfont}
+\renewcommand\cftbeforechapterskip{1pt plus 1pt}
+\vspace{-20pt}
+\tableofcontents*
 
 \chapter{Introduction}
 \label{section:Introduction}
@@ -185,7 +192,10 @@ The following functions can also be used:
 \item[\textsf{BABS}]  ~~~(absolute value)
 \item[\textsf{BSQRT}]  ~~~(square root)
 \item[\textsf{cast~$t$}]  ~~~~(cast to $\mathsf{ftype}(t)$)
+\item[sin, cos, fma, \ldots] ~~~~You can also use user-defined functions, as long as you provide proofs (or axioms) about
+their accuracy; see Section~\ref{userdefined}.
 \end{description}
+
 
 \chapter{Example}
 
@@ -421,8 +431,6 @@ left by \lstinline{prove_rndval} are easy to prove using the Coq
 Interval package, as shown here by \lstinline{all:interval}.
 Section~\ref{goal1} explains and discusses these goals.
 
-\pagebreak 
-
 The second subgoal
 is always proved by
 \lstinline{prove_roundoff_bound2}, which leaves
@@ -479,7 +487,6 @@ certain subexpressions don't overflow into infinities or NaNs,
 that certain subexpressions don't underflow into subnormal numbers,
 or even that certain subexpressions \emph{always} underflow.
 
-\pagebreak
 The \lstinline{prove_rndval} tactic expands
 the \lstinline{prove_rndval} goal into one subgoal per VC.
 A typical subgoal might be equivalent to this:
@@ -738,6 +745,51 @@ operations and that \lstinline{error_rewrites} produces 125
 subgoals (and this is even after \lstinline{error_rewrites} has 
 automatically discharged a few!). 
 
+\newpage
+\chapter{User-defined functions}
+\label{userdefined}
+
+Any function that takes 0 or more float arguments (not necessarily
+all of the same \lstinline{type}) and produces a float result can be used
+in VCFloat.  You must provide a \lstinline{floatfunc_package} to describe
+its characteristics:
+
+\begin{lstlisting}
+Record floatfunc (args: list type) (result: type) 
+     (precond: klist bounds args)
+     (realfunc: function_type (map RR args) R) := 
+ {ff_func: function_type (map ftype' args) (ftype' result);
+  ff_rel: N;
+  ff_abs: N;
+  ff_acc: acc_prop args result ff_rel ff_abs precond realfunc ff_func
+ }.
+
+Record floatfunc_package (ty: type) :=
+ {ff_args: list type;
+  ff_precond: klist bounds ff_args;
+  ff_realfunc: function_type (map RR ff_args) R;
+  ff_ff: floatfunc ff_args ty ff_precond ff_realfunc}.
+\end{lstlisting}
+Suppose $p$ is floatfunc package, that is, \lstinline{$p$: floatfunc_package(ty)}.
+Then \lstinline{ff_args $p$} are a list of argument types, and \lstinline{ty}
+is the result type.  For example,
+suppose \lstinline{ff_args $p$ =[Tdouble,Tsingle]} and \lstinline{ty=Tsingle},
+then the function \lstinline{$f$ = ff_func(ff_ff $p$)} has type
+\lstinline{$f$: ftype Tdouble -> ftype Tsingle -> ftype Tsingle},
+because \lstinline{function_type (map ftype' (ff_args $p$)) (ftype' ty)}
+is convertible to \lstinline{ftype Tdouble -> ftype Tsingle -> ftype Tsingle}.
+
+The specification of this function is as follows:  There is a real-valued
+function \lstinline{ff_realfunc($p$): R -> R -> R};
+and \lstinline{ff_acc} is the theorem that
+$f$ approximates this function within relative error \lstinline{ff_rel $p$}
+and absolute error \lstinline{ff_abs $p$}, provided that the arguments
+to $f$ are within the bounds specified by \lstinline{ff_precond}.
+
+The development \href{../Test/TestFunc.v}{\lstinline{Test/TestFunc.v}} in the VCFloat repository demonstrates
+how to to use floatfunc packages.
+
+
 \chapter{Abstract \emph{versus} transparent valmap}
 
 When you have proved a \lstinline{prove_roundoff_bound} theorem
@@ -776,7 +828,6 @@ make use of them.  You can also prove a theorem in which the
 accuracy bound is dependent on the variables in your valmap---for example,
 a \emph{relative error} bound.
 
-\pagebreak 
 \chapter{Annotations}
 
 Floating-point error analysis can be slightly more precise
@@ -905,10 +956,10 @@ it's simpler if you don't have to.
 
 VCFloat comes with several worked examples, in the Test and FPBench directories:
 \begin{description}
-\item[Test/TestRefman.v]  the running example from this reference manual
-\item[Test/TestPaper.v]  the (similar) running example from ``VCFloat2: Floating-point error analysis in Coq''
-\item[Test/summation.v]  An example of a relative error bound (this example is still a work in progress)
-\item[FPBench/$*$.v]  examples from the FPBench benchmark suite (fpbench.org)
+\item[\href{../Test/TestRefman.v}{Test/TestRefman.v}]  the running example from this reference manual
+\item[\href{../Test/TestPaper.v}{Test/TestPaper.v}]  the (similar) running example from ``VCFloat2: Floating-point error analysis in Coq''
+\item[\href{../Test/TestFunc.v}{Test/TestFunc.v}]  An example of user-supplied functions.
+\item[\href{../FPBench/}{FPBench/$*$.v}]  examples from the FPBench benchmark suite (fpbench.org)
 \end{description}
 
 \chapter{Bibliography}
