@@ -20,4 +20,3 @@ interval*/*
 coqopts
 *.crashcoqide
 *.cache
-vcfloat/.depend
