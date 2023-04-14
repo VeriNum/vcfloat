@@ -34,17 +34,15 @@ endif
 depend: 
 	$(COQDEP) $(COQFLAGS) *.v ../Test/*.v > .depend
 
-.depend:
-	$(error to build the .depend file: make depend)
-
-all_clean:
-	rm *.vo *.vok *.vos *.glob
-
 ifneq ($(MAKECMDGOALS),depend)
  ifneq ($(MAKECMDGOALS),clean)
   include .depend
  endif
 endif
+
+all_clean:
+	rm *.vo *.vok *.vos *.glob
+
 
 clean:
 	rm -f {*,*/*}.{vo,vo?,glob}
