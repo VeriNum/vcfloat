@@ -1,3 +1,5 @@
+# the _real_ opam file for coq-vcfloat is at [adjusted for version number]
+# https://github.com/coq/opam-coq-archive/blob/master/released/packages/coq-vcfloat/coq-vcfloat.2.1/opam
 opam-version: "2.0"
 synopsis: "VCFloat: Floating Point Round-off Error Analysis"
 description: "VCFloat is a tool for Coq proofs about floating-point round-off error."
