@@ -1,24 +1,23 @@
 (** VCFloat: A Unified Coq Framework for Verifying C Programs with
  Floating-Point Computations. Application to SAR Backprojection.
  
- Version 1.0 (2015-12-04)
- 
+ Version 2.0 (2021-present)
+ Copyright (C) 2023 Andrew W. Appel and Ariel E. Kellison
+
+ Version 1.0 (2015-12-04) 
  Copyright (C) 2015 Reservoir Labs Inc.
- All rights reserved.
  
- This file, which is part of VCFloat, is free software. You can
- redistribute it and/or modify it under the terms of the GNU General
- Public License as published by the Free Software Foundation, either
- version 3 of the License (GNU GPL v3), or (at your option) any later
- version. A verbatim copy of the GNU GPL v3 is included in gpl-3.0.txt.
+ Licensed by LGPL, see ../LICENSE
  
  This file is distributed in the hope that it will be useful, but
  WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See LICENSE for
  more details about the use and redistribution of this file and the
  whole VCFloat library.
- 
- This work is sponsored in part by DARPA MTO as part of the Power
+
+    Version 2.0 is supported by the National Science Foundation
+ grants 2219757 and 2219758.
+    Version 1.0 was sponsored in part by DARPA MTO as part of the Power
  Efficiency Revolution for Embedded Computing Technologies (PERFECT)
  program (issued by DARPA/CMO under Contract No: HR0011-12-C-0123). The
  views and conclusions contained in this work are those of the authors
@@ -29,30 +28,19 @@
  
  
  If you are using or modifying VCFloat in your work, please consider
- citing the following paper:
+ citing the following papers:
  
  Tahina Ramananandro, Paul Mountcastle, Benoit Meister and Richard
- Lethin.
- A Unified Coq Framework for Verifying C Programs with Floating-Point
- Computations.
- In CPP (5th ACM/SIGPLAN conference on Certified Programs and Proofs)
+ Lethin.  A Unified Coq Framework for Verifying C Programs with Floating-Point
+ Computations. In CPP (5th ACM/SIGPLAN conference on Certified Programs and Proofs)
  2016.
- 
- 
- VCFloat requires third-party libraries listed in ACKS along with their
- copyright information.
- 
- VCFloat depends on third-party libraries listed in ACKS along with
- their copyright and licensing information.
-*)
-(**
-Author: Tahina Ramananandro <ramananandro@reservoir.com>
 
-VCFloat: core and annotated languages for floating-point operations.
+ Andrew W. Appel and Ariel E. Kellison. VCFloat2: Floating-point Error 
+ Analysis in Coq. April 2022.
+
 *)
 
 (** FPCore module.
-   [note by Andrew W. Appel]
   These definitions, which were previously part of FPLang.v, are 
   separated out to support a modularity principle:  some clients
   may want the definitions of [type], [BPLUS] etc.  but not the
@@ -99,14 +87,86 @@ Proof.
   assumption.
 Qed.
 
-Record type: Type := TYPE
+
+Record nonstdtype 
+   (fprecp: positive)
+   (femax: Z)
+   (fprec := Z.pos fprecp)
+   (fprec_lt_femax_bool: ZLT fprec femax)
+   (fprecp_not_one_bool: Bool.Is_true (negb (Pos.eqb fprecp xH))) := NONSTD 
+  { nonstd_rep: Type;
+    nonstd_to_R: nonstd_rep -> R;
+    nonstd_is_finite: nonstd_rep -> bool;
+    nonstd_compare: comparison -> bool -> nonstd_rep -> nonstd_rep -> bool}.
+
+Record type: Type := GTYPE
   {
     fprecp: positive;
     femax: Z;
     fprec := Z.pos fprecp;
     fprec_lt_femax_bool: ZLT fprec femax;
-    fprecp_not_one_bool: Bool.Is_true (negb (Pos.eqb fprecp xH))
+    fprecp_not_one_bool: Bool.Is_true (negb (Pos.eqb fprecp xH));
+    nonstd: option (nonstdtype fprecp femax fprec_lt_femax_bool fprecp_not_one_bool)
   }.
+
+Definition TYPE fprecp femax fprec_lt_femax fprecp_not_one :=
+  GTYPE  fprecp femax fprec_lt_femax fprecp_not_one None.
+
+
+Definition ftype (ty: type) : Type := 
+ match nonstd ty with 
+ | None => binary_float (fprec ty) (femax ty)
+ | Some t => nonstd_rep _ _ _ _ t
+ end.
+
+Class is_standard (t: type) := 
+   Is_standard: match nonstd t with None => True | _ => False end. 
+
+
+Definition ftype_of_float {t: type} {STD: is_standard t} 
+    (x: binary_float (fprec t) (femax t)) : ftype t.
+unfold ftype.
+destruct t; simpl.
+destruct nonstd0; simpl; auto.
+contradiction.
+Defined.
+
+Definition float_of_ftype {t: type} {STD: is_standard t}
+      (x: ftype t) : binary_float (fprec t) (femax t).
+unfold ftype.
+destruct t; simpl.
+destruct nonstd0; simpl; auto.
+contradiction.
+Defined.
+
+Lemma float_of_ftype_of_float {t: type} (STD1 STD2: is_standard t):
+  forall x, @float_of_ftype t STD1 (@ftype_of_float t STD2 x) = x.
+Proof.
+intros.
+destruct t.
+destruct nonstd0; try contradiction.
+reflexivity.
+Qed.
+
+Lemma ftype_of_float_of_ftype {t: type} (STD1 STD2: is_standard t):
+  forall x, @ftype_of_float t STD1 (@float_of_ftype t STD2 x) = x.
+Proof.
+intros.
+destruct t.
+destruct nonstd0; try contradiction.
+reflexivity.
+Qed.
+
+Lemma float_of_ftype_irr:
+  forall t (STD1 STD2: is_standard t) (x: ftype t),
+  @float_of_ftype t STD1 x = @float_of_ftype t STD2 x.
+Proof.
+intros.
+unfold float_of_ftype.
+destruct t as [? ? ? ? ? [|]].
+contradiction STD1.
+auto.
+Qed.
 
 Lemma Is_true_eq a (h1 h2: Bool.Is_true a):
   h1 = h2.
@@ -116,30 +176,60 @@ Proof.
   destruct h1. destruct h2. reflexivity.
 Defined. 
 
-Lemma type_ext t1 t2:
-  fprecp t1 = fprecp t2 -> femax t1 = femax t2 -> t1 = t2.
+Definition is_finite {t: type} (x: ftype t): bool.
+destruct t as [precp emax prec prec_lt precp_not [n|]].
+apply (nonstd_is_finite precp emax prec_lt precp_not n x).
+apply (Binary.is_finite prec emax x).
+Defined.
+
+Definition extend_comp (c: comparison) (b: bool) (d: option comparison) :=
+ match d with
+ | None => false
+ | Some c' =>
+ match c, b, c' with
+ | Gt, true, Gt => true
+ | Gt, false, Lt => true
+ | Gt, false, Eq => true
+ | Eq, true, Eq => true
+ | Eq, false, Gt => true
+ | Eq, false, Lt => true
+ | Lt, true, Lt => true
+ | Lt, false, Gt => true
+ | Lt, false, Eq => true
+ | _, _, _ => false
+ end
+ end.
+
+Definition compare {t: type} (c: comparison) (b: bool) (x y: ftype t) : bool.
+destruct t as [precp emax prec prec_lt precp_not [n|]].
+apply (nonstd_compare precp emax prec_lt precp_not n c b x y).
+apply (extend_comp c b (Binary.Bcompare prec emax x y)).
+Defined.
+
+Lemma type_ext (t1 t2: type) :
+  fprecp t1 = fprecp t2 -> femax t1 = femax t2 -> is_standard t1 -> is_standard t2 -> t1 = t2.
 Proof.
-  destruct t1. destruct t2. simpl. intros. subst.
-  f_equal; apply Is_true_eq.
+  unfold is_standard.
+  destruct t1. destruct t2. simpl. subst fprec0 fprec1. intros. subst.
+  destruct nonstd0; try contradiction. destruct nonstd1; try contradiction.
+  assert (fprec_lt_femax_bool0 = fprec_lt_femax_bool1) by apply Is_true_eq.
+  assert (fprecp_not_one_bool0 = fprecp_not_one_bool1) by apply Is_true_eq.
+  subst. reflexivity.
 Defined. (* required for the semantics of cast *)
 
-Lemma type_ext' t1 t2:
-  fprec t1 = fprec t2 -> femax t1 = femax t2 -> t1 = t2.
+Lemma type_eq_iff (t1 t2: type):
+   is_standard t1 -> is_standard t2 ->
+  (((fprecp t1 = fprecp t2 /\ femax t1 = femax t2) <-> t1 = t2)).
 Proof.
-  intros.
-  apply type_ext; auto.
-  apply Zpos_eq_iff.
-  assumption.
-Qed.
-
-Lemma type_eq_iff t1 t2:
-  ((fprecp t1 = fprecp t2 /\ femax t1 = femax t2) <-> t1 = t2).
-Proof.
+  unfold is_standard. intros.
+  destruct t1 as [? ? ? ? ? [|]]; try contradiction.
+  destruct t2 as [? ? ? ? ? [|]]; try contradiction.
+  simpl in *.
   split.
   {
     destruct 1; auto using type_ext.
   }
-  intuition congruence.
+  intro. inversion H1; clear H1; subst. auto.
 Qed.
 
 Import Bool.
@@ -148,25 +238,30 @@ Definition type_eqb t1 t2 :=
   Pos.eqb (fprecp t1) (fprecp t2) && Z.eqb (femax t1) (femax t2).
 
 Lemma type_eqb_eq t1 t2:
+   is_standard t1 -> is_standard t2 ->
   (type_eqb t1 t2 = true <-> t1 = t2).
 Proof.
+  intros.
   unfold type_eqb.
   rewrite andb_true_iff.
   rewrite Pos.eqb_eq.
   rewrite Z.eqb_eq.
-  apply type_eq_iff.
+  apply type_eq_iff; auto.
 Qed.
 
 Lemma type_eq_dec (t1 t2: type): 
+   is_standard t1 -> is_standard t2 ->
   {t1 = t2} + {t1 <> t2}.
 Proof.
-  destruct t1. destruct t2.
+  unfold is_standard. intros.
+  destruct t1 as [? ? ? ? ? [|]]; try contradiction.
+  destruct t2 as [? ? ? ? ? [|]]; try contradiction.
   destruct (Pos.eq_dec fprecp0 fprecp1); [ |   right; intro K; injection K; congruence ].
   subst.
   destruct (Z.eq_dec femax0 femax1); [ |   right; intro K; injection K; congruence ].
   subst.
   left.
-  apply type_ext; auto. 
+  apply type_ext; auto.
 Defined.
 
 Lemma fprec_lt_femax' ty: (fprec ty < femax ty)%Z.
@@ -205,10 +300,29 @@ Proof.
   reflexivity.
 Defined.
 
-Definition ftype ty := binary_float (fprec ty) (femax ty).
+Definition FT2R {t: type} : ftype t -> R :=
+ match
+   nonstd t as o0
+   return
+     (nonstd t = o0 ->
+      match o0 with
+      | Some t0 =>
+          nonstd_rep (fprecp t) (femax t) (fprec_lt_femax_bool t)
+            (fprecp_not_one_bool t) t0
+      | None => binary_float (fprec t) (femax t)
+      end -> R)
+ with
+ | Some a =>
+     (fun
+        (n : nonstdtype (fprecp t) (femax t)
+               (fprec_lt_femax_bool t) (fprecp_not_one_bool t))
+        (_ : nonstd t = Some n) =>
+      nonstd_to_R (fprecp t) (femax t) (fprec_lt_femax_bool t)
+        (fprecp_not_one_bool t) n) a
+ | None => fun _ : nonstd t = None => B2R (fprec t) (femax t)
+ end eq_refl.
 
-Definition FT2R {t: type} : ftype t -> R := B2R (fprec t) (femax t).
-
+  
 Definition nan_payload prec emax : Type := {x : binary_float prec emax
                                                           | is_nan prec emax x = true}.
 
@@ -393,7 +507,7 @@ Proof.
 Qed.
 
 Lemma binary_float_finite_equiv_eqb prec emax (b1 b2: binary_float prec emax):
-is_finite prec emax b1  = true -> 
+Binary.is_finite prec emax b1  = true -> 
 binary_float_equiv b1 b2 -> binary_float_eqb b1 b2 = true .
 Proof.
   destruct b1; destruct b2; simpl;
@@ -431,7 +545,7 @@ apply Z.eqb_eq; reflexivity.
 Qed.
 
 Lemma binary_float_inf_equiv_eqb prec emax (b1 b2: binary_float prec emax):
-is_finite prec emax b1  = false -> 
+Binary.is_finite prec emax b1  = false -> 
 is_nan prec emax b1  = false -> 
 binary_float_equiv b1 b2 -> binary_float_eqb b1 b2 = true .
 Proof.
@@ -450,6 +564,58 @@ intros.
 destruct b1; simpl in H0; try discriminate.
 destruct b2; simpl in H; try contradiction.
 simpl; reflexivity.
+Qed.
+
+Definition float_equiv {ty} (b1 b2: ftype ty) : Prop.
+unfold ftype, nonstd;
+destruct ty as [? ? ? ? ? [|]]; simpl in *.
+exact
+match (nonstd_is_finite _ _ _ _ _ b1), (nonstd_is_finite _ _ _ _ _ b2) with
+ | true, true => b1=b2
+ | false, false => True
+ | _, _ => False
+end.
+exact (binary_float_equiv b1 b2).
+Defined.
+
+Lemma float_equiv_refl: forall ty (b: ftype ty), float_equiv b b.
+Proof.
+intros. destruct ty as [? ? ? ? ? [|]]; simpl in *.
+destruct (nonstd_is_finite fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b); auto.
+apply binary_float_equiv_refl.
+Qed.
+
+Lemma float_equiv_sym: forall ty (b1 b2: ftype ty), 
+   float_equiv b1 b2 -> float_equiv b2 b1.
+Proof.
+intros.
+destruct ty as [? ? ? ? ? [|]]; simpl in *.
+destruct (nonstd_is_finite fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b2),
+(nonstd_is_finite fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b1)
+; auto.
+apply binary_float_equiv_sym; auto.
+Qed.
+
+Lemma float_equiv_trans: forall ty (b1 b2 b3: ftype ty), 
+   float_equiv b1 b2 -> float_equiv b2 b3 -> float_equiv b1 b3.
+Proof.
+intros.
+destruct ty as [? ? ? ? ? [|]]; simpl in *.
+destruct (nonstd_is_finite fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b2),
+(nonstd_is_finite fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b1),
+(nonstd_is_finite fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b3);
+subst; auto; contradiction.
+eapply binary_float_equiv_trans; eassumption.
+Qed.
+
+Lemma float_equiv_binary_float_equiv:
+ forall ty (STD: is_standard ty) (b1 b2: ftype ty),
+  float_equiv b1 b2 <-> binary_float_equiv (float_of_ftype b1) (float_of_ftype b2).
+Proof.
+intros.
+destruct ty as [? ? ? ? ? [|]]; simpl in *.
+contradiction.
+reflexivity.
 Qed.
 
 Lemma exact_inverse (prec emax : Z) 
@@ -543,90 +709,117 @@ Defined.
 Section WITHNANS.
 Context {NANS: Nans}.
 
-Definition cast (tto: type) {tfrom: type} (f: ftype tfrom): ftype tto :=
-  match type_eq_dec tfrom tto with
-    | left r => eq_rect _ _ f _ r
-    | _ => Bconv (fprec tfrom) (femax tfrom) (fprec tto) (femax tto)
-                        (fprec_gt_0 _) (fprec_lt_femax _) (conv_nan _ _) BinarySingleNaN.mode_NE f
-  end.
+Definition cast (tto: type) {tfrom: type} (STDto: is_standard tto) (STDfrom: is_standard tfrom) (f: ftype tfrom): ftype tto.
 
-Lemma cast_finite tfrom tto:
+refine
+
+  match type_eq_dec tfrom tto STDfrom STDto with
+    | left r => eq_rect _ _ f _ (f_equal _ r)
+    | right _ => _ (*Bconv (fprec tfrom) (femax tfrom) (fprec tto) (femax tto)
+                        (fprec_gt_0 _) (fprec_lt_femax _) (conv_nan _ _) BinarySingleNaN.mode_NE f *)
+  end.
+unfold ftype in *.
+destruct (nonstd tto) eqn:?H.
+destruct tto. destruct nonstd0; try contradiction. inversion H.
+destruct (nonstd tfrom) eqn:?H.
+destruct tfrom. destruct nonstd0; try contradiction. discriminate.
+apply (Bconv (fprec tfrom) (femax tfrom) (fprec tto) (femax tto)
+                        (fprec_gt_0 _) (fprec_lt_femax _) (conv_nan _ _) BinarySingleNaN.mode_NE f)
+.
+Defined.
+
+
+Lemma cast_finite tfrom tto (STDfrom: is_standard tfrom) (STDto: is_standard tto):
   type_le tfrom tto ->
   forall f,
-  is_finite _ _ f = true ->
-  is_finite _ _ (@cast tto tfrom f) = true.
+  Binary.is_finite _ _ f = true ->
+  Binary.is_finite _ _ (float_of_ftype (@cast tto tfrom STDto STDfrom (ftype_of_float f))) = true.
 Proof.
   unfold cast.
   intros.
-  destruct (type_eq_dec tfrom tto).
+  destruct (type_eq_dec tfrom tto STDfrom STDto).
   {
-    subst. assumption.
+    subst. simpl. rewrite float_of_ftype_of_float.
+    assumption.
   }
   destruct H.
+  destruct tfrom as [? ? ? ? ? [|]]; try contradiction.
+  destruct tto as [? ? ? ? ? [|]]; try contradiction.
+  simpl in *.
   apply Bconv_widen_exact; auto with zarith.
   typeclasses eauto.
 Qed.
 
-Lemma cast_eq tfrom tto:
+Lemma cast_eq tfrom tto STDfrom STDto:
   type_le tfrom tto ->
   forall f,
-    is_finite _ _ f = true ->
-    B2R _ _ (@cast tto tfrom f) = B2R _ _ f.
+    Binary.is_finite _ _ f = true ->
+    B2R _ _ (float_of_ftype (@cast tto tfrom STDto STDfrom (ftype_of_float f))) = 
+           B2R _ _ f.
 Proof.
   unfold cast.
   intros.
-  destruct (type_eq_dec tfrom tto).
+  destruct (type_eq_dec tfrom tto _ _).
   {
     subst.
+    unfold eq_rect, f_equal.
+    rewrite float_of_ftype_of_float.
     reflexivity.
   }
   destruct H.
+  destruct tfrom as [? ? ? ? ? [|]]; try contradiction.
+  destruct tto as [? ? ? ? ? [|]]; try contradiction.
+  simpl in *.  
   apply Bconv_widen_exact; auto with zarith.
   typeclasses eauto.
 Qed.
 
-Lemma cast_id ty f:
-    @cast ty ty f = f.
+Lemma cast_id ty STD1 STD2 f:
+    @cast ty ty STD1 STD2 f = f.
 Proof.
   unfold cast.
   destruct (type_eq_dec ty ty); try congruence.
-  assert (e = eq_refl) as K.
-  {
-    apply Eqdep_dec.eq_proofs_unicity.
-    intros.
-    unfold not.
-    rewrite <- type_eqb_eq.
-    destruct (type_eqb x y); intuition congruence.
-  }
-  rewrite K.
-  reflexivity.
+  change ty with ((fun x => x) ty).
+  change f with ((fun (a:type) (x:ftype a) => x) ty f).
+  apply f_equal_dep2.
+  symmetry; apply Eqdep.EqdepTheory.eq_rect_eq.
 Qed.
 
-Definition BINOP (op: ltac:( let t := type of Bplus in exact t ) ) op_nan ty 
-    : ftype ty -> ftype ty -> ftype ty 
-    := op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (op_nan ty) BinarySingleNaN.mode_NE.
+
+Definition BINOP (op: ltac:( let t := type of Bplus in exact t ) ) op_nan 
+    ty `{STD: is_standard ty}
+    (x y: ftype ty) : ftype ty := 
+   ftype_of_float (op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) 
+                     (op_nan ty) BinarySingleNaN.mode_NE
+            (float_of_ftype x) (float_of_ftype y)).
 
 Definition BPLUS := BINOP Bplus plus_nan.
 Definition BMINUS := BINOP Bminus plus_nan. (* NOTE: must be same as the one used for plus *)
 
 Definition BMULT := BINOP Bmult mult_nan.
 Definition BDIV := BINOP Bdiv div_nan.
-Definition BABS {ty} := Babs _ (femax ty) (abs_nan ty).
-Definition BOPP {ty} := Bopp _ (femax ty) (opp_nan ty).
 
-Definition UNOP (op: ltac:( let t := type of Bsqrt in exact t ) ) op_nan ty 
-    : ftype ty -> ftype ty
-    := op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (op_nan ty) BinarySingleNaN.mode_NE.
+Definition UNOP (op: ltac:( let t := type of Bsqrt in exact t ) ) op_nan
+    ty `{STD: is_standard ty}
+      (x: ftype ty) : ftype ty := 
+      ftype_of_float (op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) 
+                     (op_nan ty) BinarySingleNaN.mode_NE
+            (float_of_ftype x)).
+
+Definition BABS {ty} {STD: is_standard ty} (x: ftype ty) := 
+   ftype_of_float (Babs _ (femax ty) (abs_nan ty) (float_of_ftype x)).
+Definition BOPP {ty} {STD: is_standard ty} (x: ftype ty) :=
+   ftype_of_float (Bopp _ (femax ty) (opp_nan ty) (float_of_ftype x)).
 
 Definition BSQRT :=  UNOP Bsqrt sqrt_nan.
 Arguments BSQRT {ty}.
 
 End WITHNANS.
 
-Arguments BPLUS {NANS ty}.
-Arguments BMINUS {NANS ty}.
-Arguments BMULT {NANS ty}.
-Arguments BDIV {NANS ty}.
+Arguments BPLUS {NANS ty STD}.
+Arguments BMINUS {NANS ty STD}.
+Arguments BMULT {NANS ty STD}.
+Arguments BDIV {NANS ty STD}.
 
 Definition Norm {T} (x: T) := x.
 Definition Denorm {T} (x: T) := x.
@@ -641,50 +834,32 @@ Proof.
   constructor; compute; congruence.
 Qed.
 
-Definition extend_comp (c: comparison) (b: bool) (d: option comparison) :=
- match d with
- | None => false
- | Some c' =>
- match c, b, c' with
- | Gt, true, Gt => true
- | Gt, false, Lt => true
- | Gt, false, Eq => true
- | Eq, true, Eq => true
- | Eq, false, Gt => true
- | Eq, false, Lt => true
- | Lt, true, Lt => true
- | Lt, false, Gt => true
- | Lt, false, Eq => true
- | _, _, _ => false
- end
- end.
+Definition BCMP {ty: type} `{STD: is_standard ty} (c: comparison) (b: bool) (x y: ftype ty) :=
+  extend_comp c b (Binary.Bcompare (fprec ty) (femax ty) (float_of_ftype x) (float_of_ftype y)).
 
-Definition BCMP {ty: type} (c: comparison) (b: bool) (x y: ftype ty) :=
-  extend_comp c b (Binary.Bcompare (fprec ty) (femax ty) x y).
-
-Notation "x + y" := (@BPLUS _ Tsingle x y) (at level 50, left associativity) : float32_scope.
-Notation "x - y"  := (@BMINUS _ Tsingle x y) (at level 50, left associativity) : float32_scope.
-Notation "x * y"  := (@BMULT _ Tsingle x y) (at level 40, left associativity) : float32_scope.
-Notation "x / y"  := (@BDIV _ Tsingle x y) (at level 40, left associativity) : float32_scope.
-Notation "- x" := (@BOPP _ Tsingle x) (at level 35, right associativity) : float32_scope.
-Notation "x <= y" := (@BCMP Tsingle Gt false x y) (at level 70, no associativity) : float32_scope. 
-Notation "x < y" := (@BCMP Tsingle Gt true y x) (at level 70, no associativity) : float32_scope. 
-Notation "x >= y" := (@BCMP Tsingle Lt false x y) (at level 70, no associativity) : float32_scope. 
-Notation "x > y" := (@BCMP Tsingle Gt true x y) (at level 70, no associativity) : float32_scope. 
+Notation "x + y" := (@BPLUS _ Tsingle _ x y) (at level 50, left associativity) : float32_scope.
+Notation "x - y"  := (@BMINUS _ Tsingle _ x y) (at level 50, left associativity) : float32_scope.
+Notation "x * y"  := (@BMULT _ Tsingle _ x y) (at level 40, left associativity) : float32_scope.
+Notation "x / y"  := (@BDIV _ Tsingle _ x y) (at level 40, left associativity) : float32_scope.
+Notation "- x" := (@BOPP _ Tsingle _ x) (at level 35, right associativity) : float32_scope.
+Notation "x <= y" := (@BCMP Tsingle _ Gt false x y) (at level 70, no associativity) : float32_scope. 
+Notation "x < y" := (@BCMP Tsingle _ Gt true y x) (at level 70, no associativity) : float32_scope. 
+Notation "x >= y" := (@BCMP Tsingle _ Lt false x y) (at level 70, no associativity) : float32_scope. 
+Notation "x > y" := (@BCMP Tsingle _ Gt true x y) (at level 70, no associativity) : float32_scope. 
 Notation "x <= y <= z" := (x <= y /\ y <= z)%F32 (at level 70, y at next level) : float32_scope.
 Notation "x <= y < z" := (x <= y /\ y < z)%F32 (at level 70, y at next level) : float32_scope.
 Notation "x < y < z" := (x < y /\ y < z)%F32 (at level 70, y at next level) : float32_scope.
 Notation "x < y <= z" := (x < y /\ y <= z)%F32 (at level 70, y at next level) : float32_scope.
 
-Notation "x + y" := (@BPLUS _ Tdouble x y) (at level 50, left associativity) : float64_scope.
-Notation "x - y"  := (@BMINUS _ Tdouble x y) (at level 50, left associativity) : float64_scope.
-Notation "x * y"  := (@BMULT _ Tdouble x y) (at level 40, left associativity) : float64_scope.
-Notation "x / y"  := (@BDIV _ Tdouble x y) (at level 40, left associativity) : float64_scope.
-Notation "- x" := (@BOPP _ Tdouble x) (at level 35, right associativity) : float64_scope.
-Notation "x <= y" := (@BCMP Tdouble Gt false x y) (at level 70, no associativity) : float64_scope. 
-Notation "x < y" := (@BCMP Tdouble Gt true y x) (at level 70, no associativity) : float64_scope. 
-Notation "x >= y" := (@BCMP Tdouble Lt false x y) (at level 70, no associativity) : float64_scope. 
-Notation "x > y" := (@BCMP Tdouble Gt true x y) (at level 70, no associativity) : float64_scope. 
+Notation "x + y" := (@BPLUS _ Tdouble _ x y) (at level 50, left associativity) : float64_scope.
+Notation "x - y"  := (@BMINUS _ Tdouble _ x y) (at level 50, left associativity) : float64_scope.
+Notation "x * y"  := (@BMULT _ Tdouble _ x y) (at level 40, left associativity) : float64_scope.
+Notation "x / y"  := (@BDIV _ Tdouble _ x y) (at level 40, left associativity) : float64_scope.
+Notation "- x" := (@BOPP _ Tdouble _ x) (at level 35, right associativity) : float64_scope.
+Notation "x <= y" := (@BCMP Tdouble _ Gt false x y) (at level 70, no associativity) : float64_scope. 
+Notation "x < y" := (@BCMP Tdouble _ Gt true y x) (at level 70, no associativity) : float64_scope. 
+Notation "x >= y" := (@BCMP Tdouble _ Lt false x y) (at level 70, no associativity) : float64_scope. 
+Notation "x > y" := (@BCMP Tdouble _ Gt true x y) (at level 70, no associativity) : float64_scope. 
 Notation "x <= y <= z" := (x <= y /\ y <= z)%F64 (at level 70, y at next level) : float64_scope.
 Notation "x <= y < z" := (x <= y /\ y < z)%F64 (at level 70, y at next level) : float64_scope.
 Notation "x < y < z" := (x < y /\ y < z)%F64 (at level 70, y at next level) : float64_scope.
@@ -751,26 +926,26 @@ Ltac compute_float_operation E :=
 
 Ltac compute_binary_floats :=
 repeat (match goal with
-| |- context [@BDIV ?NANS ?t ?x1 ?x2] =>
+| |- context [@BDIV ?NANS ?t ?STD ?x1 ?x2] =>
            const_float x1; const_float x2;
-           let c := constr:(@BDIV NANS t) in 
-           let d := eval  cbv [BINOP BDIV BMULT BPLUS BMINUS BOPP] in c in 
-           change c with d
-| |- context [@BMULT ?NANS ?t ?x1 ?x2] =>
+           change (@BDIV NANS t STD x1 x2) 
+            with (Bdiv (fprec t) (femax t) (fprec_gt_0 t)
+              (fprec_lt_femax t) (div_nan t) BinarySingleNaN.mode_NE x1 x2)
+| |- context [@BMULT ?NANS ?t ?STD ?x1 ?x2] =>
            const_float x1; const_float x2;
-           let c := constr:(@BMULT NANS t) in 
-           let d := eval  cbv [BINOP BDIV BMULT BPLUS BMINUS BOPP] in c in 
-           change c with d
-| |- context [@BPLUS ?NANS ?t ?x1 ?x2] =>
+           change (@BMULT NANS t STD x1 x2) 
+             with (Bmult (fprec t) (femax t) (fprec_gt_0 t)
+                (fprec_lt_femax t) (mult_nan t) BinarySingleNaN.mode_NE x1 x2)
+| |- context [@BPLUS ?NANS ?t ?STD ?x1 ?x2] =>
            const_float x1; const_float x2;
-           let c := constr:(@BPLUS NANS t) in 
-           let d := eval  cbv [BINOP BDIV BMULT BPLUS BMINUS BOPP] in c in 
-           change c with d
-| |- context [@BMINUS ?NANS ?t ?x1 ?x2] =>
+           change (@BPLUS NANS t STD x1 x2) 
+           with (Bplus (fprec t) (femax t) (fprec_gt_0 t)
+                 (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE x1 x2)
+| |- context [@BMINUS ?NANS ?t ?STD ?x1 ?x2] =>
            const_float x1; const_float x2;
-           let c := constr:(@BMINUS NANS t) in 
-           let d := eval  cbv [BINOP BDIV BMULT BPLUS BMINUS BOPP] in c in 
-           change c with d
+           change (@BMINUS NANS t STD x1 x2) 
+           with (Bminus (fprec t) (femax t) (fprec_gt_0 t)
+              (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE x1 x2)
 | |- context [Bdiv ?prec ?emax ?a ?b ?c ?d ?x1 ?x2] =>
    const_float x1; const_float x2;
    tryif (const_Z prec; const_Z emax)
@@ -805,23 +980,47 @@ end; simpl FF2B);
 
 Import Float_notations.
 
-Local Lemma test_compute_binary_floats {NANS: Nans}:
-  (@BPLUS _ Tsingle 1.5 3.5 = @BDIV _ Tsingle 10.0 2)%F32.
-Proof. compute_binary_floats. auto. Qed.
-
-Definition Zconst (t: type) : Z -> ftype t :=
-  BofZ (fprec t) (femax t) (Pos2Z.is_pos (fprecp t)) (fprec_lt_femax t).
-
-Lemma BPLUS_commut {NANS: Nans}: forall t a b, 
-    plus_nan t a b = plus_nan t b a -> BPLUS a b = BPLUS b a.
+#[export] Instance is_standard_None: forall ty: type,
+  match nonstd ty with None => True | _ => False end -> is_standard ty.
 Proof.
-intros. apply Bplus_commut; auto.
+destruct ty as [? ? ? ? ? [ | ]]; simpl; auto.
 Qed.
 
-Lemma BMULT_commut {NANS: Nans}: forall t a b, 
-    mult_nan t a b = mult_nan t b a -> BMULT a b = BMULT b a.
+
+#[export] Hint Extern 1 (is_standard _) => (apply is_standard_None; apply I) : typeclass_instances.
+
+
+Local Lemma test_compute_binary_floats {NANS: Nans}:
+  (@BPLUS _ Tsingle _ 1.5 3.5 = @BDIV _ Tsingle _ 10.0 2)%F32.
 Proof.
-intros. apply Bmult_commut; auto.
+ compute_binary_floats.
+ auto. Qed.
+
+Definition Zconst (t: type) `{STD: is_standard t} (i: Z) : ftype t :=
+    ftype_of_float 
+  (BofZ (fprec t) (femax t) (Pos2Z.is_pos (fprecp t)) (fprec_lt_femax t) i).
+
+Lemma BPLUS_commut {NANS: Nans}: forall (t: type) `{STD: is_standard t} 
+     (a b: ftype t), 
+    plus_nan t (float_of_ftype a) (float_of_ftype b) = 
+    plus_nan t (float_of_ftype b) (float_of_ftype a) -> 
+    BPLUS a b = BPLUS b a.
+Proof.
+intros. 
+unfold BPLUS, BINOP.
+f_equal.
+apply Bplus_commut; auto.
+Qed.
+
+Lemma BMULT_commut {NANS: Nans}: forall t `{STD: is_standard t} a b, 
+    mult_nan t (float_of_ftype a) (float_of_ftype b) = 
+    mult_nan t (float_of_ftype b) (float_of_ftype a) -> 
+    BMULT a b = BMULT b a.
+Proof.
+intros.
+unfold BMULT, BINOP.
+f_equal.
+apply Bmult_commut; auto.
 Qed.
 
 Definition RR (_: type) : Type := R.
@@ -836,8 +1035,9 @@ Definition default_abs (t: type) : R :=
 Definition bounds (t: type) : Type :=  (ftype t * bool) * (ftype t * bool).
 Definition interp_bounds {t} (bnds: bounds t) (x: ftype t) : bool :=
  let '((lo,blo),(hi,bhi)) := bnds in
- (if blo then BCMP Lt true lo x  else BCMP Gt false lo x) &&
- (if bhi then BCMP Lt true x hi  else BCMP Gt false x hi).
+ (if blo then compare Lt true lo x  else compare Gt false lo x) &&
+ (if bhi then compare Lt true x hi  else compare Gt false x hi).
+
 
 Definition rounded_finite (t: type) (x: R) : Prop :=
   (Rabs (Generic_fmt.round Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))
@@ -856,7 +1056,7 @@ destruct args as [ | a r].
 exact (     (rel=0 <-> abs=0)%N
                  /\ ( rel=0 -> exact_round result rf)%N
                 /\ (rounded_finite result rf ->
-                   Binary.is_finite _ _ f = true /\ 
+                   is_finite f = true /\ 
                    exists delta epsilon,
                   (Rabs delta <= IZR (Z.of_N rel) * default_rel result 
                       /\ Rabs epsilon <= IZR (Z.of_N abs) * default_abs result /\

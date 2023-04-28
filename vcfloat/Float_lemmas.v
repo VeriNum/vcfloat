@@ -12,8 +12,9 @@ Global Existing Instance fprec_gt_0. (* to override the Opaque one in Interval p
 
 Local Open Scope R_scope.
 
+(*
 Lemma binary_float_eqb_eq_rect_r:
- forall ty1 ty2 (a b: binary_float (fprec ty1) (femax ty1))
+ forall ty1 ty2 (STD: is_standard ty1) (a b: binary_float (fprec ty1) (femax ty1))
   (H: ty2=ty1),
 @binary_float_eqb (fprec ty1) (femax ty1) (fprec ty2) (femax ty2) 
   a (@eq_rect_r type ty1 ftype b ty2 H) = 
@@ -22,6 +23,7 @@ Proof.
 intros. subst ty2.
 reflexivity.
 Qed.
+*)
 
 Lemma center_R_correct a b x:
  0 <= b - a - Rabs (2 * x - (a + b)) ->
@@ -235,11 +237,11 @@ Proof.
 Qed.
 
 Definition B2 ty e := FF2B_gen (fprec ty) (femax ty) (F2 (fprecp ty) (femax ty) e).
-Definition B2_opp ty e := BOPP (B2 ty e).
+Definition B2_opp ty (STD: is_standard ty) e := BOPP (ftype_of_float (B2 ty e)).
 
 Lemma B2_finite ty e:
   (e + 1 <= femax ty)%Z ->
-  is_finite _ _ (B2 ty e) = true.
+  Binary.is_finite _ _ (B2 ty e) = true.
 Proof.
   unfold B2.
   intros.
@@ -324,12 +326,13 @@ Proof.
   apply FLT.FLT_format_generic; auto.
 Qed.
 
-Lemma FLT_format_mult_beta_n ty (x: ftype ty) n rnd
+Lemma FLT_format_mult_beta_n ty (STD: is_standard ty) (x: ftype ty) n rnd
       {H: Generic_fmt.Valid_rnd rnd}:
   Generic_fmt.round
       Zaux.radix2
       (FLT.FLT_exp (3 - femax ty - fprec ty) (fprec ty))
-      rnd (B2R _ _ x * Raux.bpow Zaux.radix2 (Z.of_N n)) = B2R _ _ x * Raux.bpow Zaux.radix2 (Z.of_N n).
+      rnd (B2R _ _ (float_of_ftype x) * Raux.bpow Zaux.radix2 (Z.of_N n)) = 
+         B2R _ _ (float_of_ftype x) * Raux.bpow Zaux.radix2 (Z.of_N n).
 Proof.
   intros.
   apply Generic_fmt.round_generic; auto.
@@ -409,13 +412,14 @@ Proof.
   apply Raux.bpow_ge_0.
 Qed.
 
-Lemma FLT_format_div_beta_1 ty (x: ftype ty) n rnd
+Lemma FLT_format_div_beta_1 ty (x: binary_float (fprec ty) (femax ty)) n rnd
       {H: Generic_fmt.Valid_rnd rnd}:
   Raux.bpow Zaux.radix2 (3 - femax ty + Z.pos n - 1) <= Rabs (B2R _ _ x) ->
   Generic_fmt.round
       Zaux.radix2
       (FLT.FLT_exp (3 - femax ty - fprec ty) (fprec ty))
-      rnd (B2R _ _ x * / Raux.bpow Zaux.radix2 (Z.pos n)) = B2R _ _ x / Raux.bpow Zaux.radix2 (Z.pos n).
+      rnd (B2R _ _ x * / Raux.bpow Zaux.radix2 (Z.pos n)) = 
+          B2R _ _ x / Raux.bpow Zaux.radix2 (Z.pos n).
 Proof.
   intros.
   apply Generic_fmt.round_generic; auto.
@@ -428,10 +432,10 @@ Proof.
   lia.
 Qed.
 
-Lemma Bdiv_beta_no_overflow' ty (x: ftype ty) n:
-  is_finite _ _ x = true ->
+Lemma Bdiv_beta_no_overflow' ty (STD: is_standard ty) (x: ftype ty) n:
+  Binary.is_finite _ _ (float_of_ftype x) = true ->
   (n >= 0)%Z ->
-  Rabs (B2R _ _ x / Raux.bpow Zaux.radix2 n) < Raux.bpow Zaux.radix2 (femax ty).
+  Rabs (B2R _ _ (float_of_ftype x) / Raux.bpow Zaux.radix2 n) < Raux.bpow Zaux.radix2 (femax ty).
 Proof.
   intros.
   unfold Rdiv.
@@ -451,20 +455,20 @@ Proof.
   lia.
 Qed.
 
-Lemma Bdiv_beta_no_overflow ty (x: ftype ty) n:
-  is_finite _ _ x = true ->
-  Rabs (B2R _ _ x / Raux.bpow Zaux.radix2 (Z.pos n)) < Raux.bpow Zaux.radix2 (femax ty).
+Lemma Bdiv_beta_no_overflow ty (STD: is_standard ty) (x: ftype ty) n:
+  Binary.is_finite _ _ (float_of_ftype x) = true ->
+  Rabs (B2R _ _ (float_of_ftype x) / Raux.bpow Zaux.radix2 (Z.pos n)) < Raux.bpow Zaux.radix2 (femax ty).
 Proof.
   intros.
   apply Bdiv_beta_no_overflow'; auto.
  lia.
 Qed.
 
-Theorem Bdiv_mult_inverse_finite ty:
+Theorem Bdiv_mult_inverse_finite ty  :
   forall x y z: (Binary.binary_float (fprec ty) (femax ty)),
-  is_finite _ _ x = true ->
-  is_finite _ _ y = true ->
-  is_finite _ _ z = true ->
+  Binary.is_finite _ _ x = true ->
+  Binary.is_finite _ _ y = true ->
+  Binary.is_finite _ _ z = true ->
   Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
   Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) BinarySingleNaN.mode_NE x y =
   Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) BinarySingleNaN.mode_NE x z .
@@ -504,8 +508,8 @@ Qed.
 Theorem Bdiv_mult_inverse_nan ty:
   forall x y z: (Binary.binary_float (fprec ty) (femax ty)),
   is_nan _ _ x = false ->
-  is_finite _ _ y = true ->
-  is_finite _ _ z = true ->
+  Binary.is_finite _ _ y = true ->
+  Binary.is_finite _ _ z = true ->
   Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
   Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) BinarySingleNaN.mode_NE x y =
   Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) BinarySingleNaN.mode_NE x z .
@@ -552,8 +556,8 @@ Qed.
 
 Theorem Bdiv_mult_inverse_equiv ty:
   forall x y z: (Binary.binary_float (fprec ty) (femax ty)),
-  is_finite _ _ y = true ->
-  is_finite _ _ z = true ->
+  Binary.is_finite _ _ y = true ->
+  Binary.is_finite _ _ z = true ->
   Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
   binary_float_equiv
   (Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) BinarySingleNaN.mode_NE x y) 
@@ -576,8 +580,8 @@ Qed.
 Theorem Bdiv_mult_inverse_equiv2 ty:
   forall x1 x2 y z: (Binary.binary_float (fprec ty) (femax ty)),
   binary_float_equiv x1 x2 ->
-  is_finite _ _ y = true ->
-  is_finite _ _ z = true ->
+  Binary.is_finite _ _ y = true ->
+  Binary.is_finite _ _ z = true ->
   Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
   binary_float_equiv
   (Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) BinarySingleNaN.mode_NE x1 y) 
@@ -627,8 +631,8 @@ forall (prec emax : Z) (prec_gt_0_ : FLX.Prec_gt_0 prec)
           (FLT.FLT_exp (3 - emax - prec) prec) 
           (BinarySingleNaN.round_mode m)
           (B2R prec emax x * B2R prec emax y) /\
-        is_finite prec emax (Bmult prec emax prec_gt_0_ Hmax mult_nan m y x) =
-        is_finite prec emax x && is_finite prec emax y /\
+        Binary.is_finite prec emax (Bmult prec emax prec_gt_0_ Hmax mult_nan m y x) =
+        Binary.is_finite prec emax x && Binary.is_finite prec emax y /\
         (is_nan prec emax (Bmult prec emax prec_gt_0_ Hmax mult_nan m y x) =
          false ->
          Bsign prec emax (Bmult prec emax prec_gt_0_ Hmax mult_nan m y x) =
@@ -674,7 +678,7 @@ Qed.
 
 Lemma F2R_B2F:
  forall ty x, 
-    is_finite (fprec ty) (femax ty) x = true ->
+    Binary.is_finite (fprec ty) (femax ty) x = true ->
     F2R radix2 (B2F x) = B2R (fprec ty) (femax ty) x.
 Proof.
 intros.
@@ -684,8 +688,8 @@ destruct x; auto; lra.
 Qed.
 
 Lemma InvShift_finite_aux:
- forall (pow : positive) (ty : type) (x : ftype ty),
-   is_finite (fprec ty) (femax ty) x = true ->
+ forall (pow : positive) (ty : type) (x: binary_float (fprec ty) (femax ty)),
+   Binary.is_finite (fprec ty) (femax ty) x = true ->
   Rabs (round radix2 (FLT_exp (3 - femax ty - fprec ty) (fprec ty)) (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE)
      (B2R (fprec ty) (femax ty) x * / bpow radix2 (Z.pos pow))) < bpow radix2 (femax ty).
 Proof.
@@ -739,12 +743,9 @@ apply Rmult_le_compat_l; try lra.
 apply Rle_Rinv in H2; lra.
 Qed.
 
-
-
-
 Lemma InvShift_accuracy_aux:
   forall ty x pow, 
-    is_finite (fprec ty) (femax ty) x = true ->
+    Binary.is_finite (fprec ty) (femax ty) x = true ->
   Rabs (round radix2 (FLT_exp (3 - femax ty - fprec ty) (fprec ty)) (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE)
         (B2R (fprec ty) (femax ty) x * bpow radix2 (- Z.pos pow)) -
             bpow radix2 (- Z.pos pow) * B2R (fprec ty) (femax ty) x) <=
