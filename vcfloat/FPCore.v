@@ -97,7 +97,7 @@ Record nonstdtype
     nonstd_to_F: nonstd_rep -> option (float radix2);
     nonstd_compare: nonstd_rep -> nonstd_rep -> option comparison;
     nonstd_finite_compare: forall x: nonstd_rep,
-           if nonstd_to_F x then nonstd_compare x x = Some Eq else False;
+           if nonstd_to_F x then nonstd_compare x x = Some Eq else True;
     nonstd_compare_correct: forall (f1 f2 : nonstd_rep) g1 g2,
       nonstd_to_F f1 = Some g1 ->
       nonstd_to_F f2 = Some g2 ->
