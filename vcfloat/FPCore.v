@@ -87,7 +87,6 @@ Proof.
   assumption.
 Qed.
 
-
 Record nonstdtype 
    (fprecp: positive)
    (femax: Z)
@@ -95,9 +94,61 @@ Record nonstdtype
    (fprec_lt_femax_bool: ZLT fprec femax)
    (fprecp_not_one_bool: Bool.Is_true (negb (Pos.eqb fprecp xH))) := NONSTD 
   { nonstd_rep: Type;
-    nonstd_to_R: nonstd_rep -> R;
-    nonstd_is_finite: nonstd_rep -> bool;
-    nonstd_compare: comparison -> bool -> nonstd_rep -> nonstd_rep -> bool}.
+    nonstd_to_F: nonstd_rep -> option (float radix2);
+    nonstd_compare: nonstd_rep -> nonstd_rep -> option comparison;
+    nonstd_finite_compare: forall x: nonstd_rep,
+           if nonstd_to_F x then nonstd_compare x x = Some Eq else False;
+    nonstd_compare_correct: forall (f1 f2 : nonstd_rep) g1 g2,
+      nonstd_to_F f1 = Some g1 ->
+      nonstd_to_F f2 = Some g2 ->
+      nonstd_compare f1 f2 = Some (Rcompare (F2R g1) (F2R g2))
+}.
+
+
+Arguments nonstd_rep [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool] _.
+
+Arguments nonstd_to_F [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n] _.
+Arguments nonstd_compare [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n]
+    _ _.
+Arguments nonstd_finite_compare [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n] 
+    x.
+Arguments nonstd_compare_correct [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n]
+    f1 f2 g1 g2.
+
+Definition nonstd_to_R {fprecp femax fprec_lt_femax_bool fprecp_not_one_bool}
+      {n: nonstdtype fprecp femax fprec_lt_femax_bool fprecp_not_one_bool}
+      (x: nonstd_rep n) : R :=
+  match nonstd_to_F x with Some f => F2R f | None => R0 end.
+
+Definition nonstd_is_finite {fprecp: positive} {femax: Z} 
+        {fprec_lt_femax_bool: ZLT (Z.pos fprecp) femax}
+        {fprecp_not_one_bool: Bool.Is_true (negb (Pos.eqb fprecp xH))}
+        {n: nonstdtype fprecp femax fprec_lt_femax_bool fprecp_not_one_bool}
+        (x: nonstd_rep n) :=
+ match nonstd_to_F x with Some _ => true | _ => false end.
+
+Definition nonstd_is_nan {fprecp: positive} {femax: Z} 
+        {fprec_lt_femax_bool: ZLT (Z.pos fprecp) femax}
+        {fprecp_not_one_bool: Bool.Is_true (negb (Pos.eqb fprecp xH))}
+        {n: nonstdtype fprecp femax fprec_lt_femax_bool fprecp_not_one_bool}
+        (x: nonstd_rep n) :=
+  match nonstd_compare x x with Some Eq => false | _ => true end.
+
+Lemma nonstd_compare_correct': 
+  forall {fprecp femax fprec_lt_femax_bool fprecp_not_one_bool}
+   {n: nonstdtype fprecp femax fprec_lt_femax_bool fprecp_not_one_bool}
+    (f1 f2: nonstd_rep n),
+   match nonstd_to_F f1 with Some _ => true | _ => false end = true ->
+   match nonstd_to_F f2 with Some _ => true | _ => false end = true ->
+   nonstd_compare f1 f2 = Some (Rcompare (nonstd_to_R f1) (nonstd_to_R f2)).
+Proof.
+intros.
+pose proof (nonstd_compare_correct f1 f2).
+unfold nonstd_to_R.
+destruct (nonstd_to_F f1) as [g1|] eqn:?H; [ | discriminate].
+destruct (nonstd_to_F f2) as [g2|] eqn:?H; [ | discriminate].
+eauto.
+Qed.
 
 Record type: Type := GTYPE
   {
@@ -116,7 +167,7 @@ Definition TYPE fprecp femax fprec_lt_femax fprecp_not_one :=
 Definition ftype (ty: type) : Type := 
  match nonstd ty with 
  | None => binary_float (fprec ty) (femax ty)
- | Some t => nonstd_rep _ _ _ _ t
+ | Some t => nonstd_rep t
  end.
 
 Class is_standard (t: type) := 
@@ -178,9 +229,16 @@ Defined.
 
 Definition is_finite {t: type} (x: ftype t): bool.
 destruct t as [precp emax prec prec_lt precp_not [n|]].
-apply (nonstd_is_finite precp emax prec_lt precp_not n x).
+apply (match nonstd_to_F x with Some _ => true | _ => false end).
 apply (Binary.is_finite prec emax x).
 Defined.
+
+Definition is_nan {t: type} (x: ftype t) : bool.
+destruct t as [precp emax prec prec_lt precp_not [n|]].
+apply (nonstd_is_nan x).
+apply (Binary.is_nan prec emax x).
+Defined.
+
 
 Definition extend_comp (c: comparison) (b: bool) (d: option comparison) :=
  match d with
@@ -200,11 +258,14 @@ Definition extend_comp (c: comparison) (b: bool) (d: option comparison) :=
  end
  end.
 
-Definition compare {t: type} (c: comparison) (b: bool) (x y: ftype t) : bool.
+Definition compare' {t: type} (x y: ftype t) : option comparison.
 destruct t as [precp emax prec prec_lt precp_not [n|]].
-apply (nonstd_compare precp emax prec_lt precp_not n c b x y).
-apply (extend_comp c b (Binary.Bcompare prec emax x y)).
+apply (nonstd_compare x y).
+apply (Binary.Bcompare prec emax x y).
 Defined.
+
+Definition compare {t: type} (c: comparison) (b: bool) (x y: ftype t) : bool :=
+ extend_comp c b (compare' x y).
 
 Lemma type_ext (t1 t2: type) :
   fprecp t1 = fprecp t2 -> femax t1 = femax t2 -> is_standard t1 -> is_standard t2 -> t1 = t2.
@@ -306,25 +367,17 @@ Definition FT2R {t: type} : ftype t -> R :=
    return
      (nonstd t = o0 ->
       match o0 with
-      | Some t0 =>
-          nonstd_rep (fprecp t) (femax t) (fprec_lt_femax_bool t)
-            (fprecp_not_one_bool t) t0
+      | Some t0 => nonstd_rep t0
       | None => binary_float (fprec t) (femax t)
       end -> R)
  with
- | Some a =>
-     (fun
-        (n : nonstdtype (fprecp t) (femax t)
-               (fprec_lt_femax_bool t) (fprecp_not_one_bool t))
-        (_ : nonstd t = Some n) =>
-      nonstd_to_R (fprecp t) (femax t) (fprec_lt_femax_bool t)
-        (fprecp_not_one_bool t) n) a
+ | Some a => fun _ : nonstd t = Some a => @nonstd_to_R _ _ _ _ a
  | None => fun _ : nonstd t = None => B2R (fprec t) (femax t)
  end eq_refl.
 
   
-Definition nan_payload prec emax : Type := {x : binary_float prec emax
-                                                          | is_nan prec emax x = true}.
+Definition nan_payload prec emax : Type := 
+   {x : binary_float prec emax | Binary.is_nan prec emax x = true}.
 
 Class Nans: Type :=
   {
@@ -384,7 +437,7 @@ Definition nan_pl_eqb' {prec1 emax1 prec2 emax2}
          (n1: nan_payload prec1 emax1) (n2: nan_payload prec2 emax2) : bool.
 destruct n1 as [x1 e1].
 destruct n2 as [x2 e2].
-unfold is_nan in *.
+unfold Binary.is_nan in *.
 destruct x1; try discriminate.
 destruct x2; try discriminate.
 apply (Bool.eqb s s0 && Pos.eqb pl pl0).
@@ -397,7 +450,7 @@ Proof.
 intros.
 destruct n1 as [x1 e1], n2 as [x2 e2].
 simpl.
-unfold is_nan in *.
+unfold Binary.is_nan in *.
 destruct x1; try discriminate.
 destruct x2; try discriminate.
 unfold nan_pl_eqb. simpl.
@@ -528,7 +581,7 @@ apply binary_float_eqb_equiv in H; apply H.
 Qed.
 
 Lemma binary_float_equiv_eq prec emax (b1 b2: binary_float prec emax):
-   binary_float_equiv b1 b2 -> is_nan _ _ b1 =  false -> b1 = b2.
+   binary_float_equiv b1 b2 -> Binary.is_nan _ _ b1 =  false -> b1 = b2.
 Proof.
 intros. 
 assert (binary_float_eqb b1 b2 = true). 
@@ -546,7 +599,7 @@ Qed.
 
 Lemma binary_float_inf_equiv_eqb prec emax (b1 b2: binary_float prec emax):
 Binary.is_finite prec emax b1  = false -> 
-is_nan prec emax b1  = false -> 
+Binary.is_nan prec emax b1  = false -> 
 binary_float_equiv b1 b2 -> binary_float_eqb b1 b2 = true .
 Proof.
   destruct b1; destruct b2; simpl;
@@ -558,7 +611,7 @@ Qed.
 
 
 Lemma binary_float_equiv_nan prec emax (b1 b2: binary_float prec emax):
-binary_float_equiv b1 b2 -> is_nan _ _ b1 = true -> is_nan _ _ b2 = true.
+binary_float_equiv b1 b2 -> Binary.is_nan _ _ b1 = true -> Binary.is_nan _ _ b2 = true.
 Proof. 
 intros.
 destruct b1; simpl in H0; try discriminate.
@@ -570,18 +623,43 @@ Definition float_equiv {ty} (b1 b2: ftype ty) : Prop.
 unfold ftype, nonstd;
 destruct ty as [? ? ? ? ? [|]]; simpl in *.
 exact
-match (nonstd_is_finite _ _ _ _ _ b1), (nonstd_is_finite _ _ _ _ _ b2) with
- | true, true => b1=b2
- | false, false => True
+match (nonstd_is_nan b1), (nonstd_is_nan b2) with
+ | false, false => b1=b2
+ | true, true => True
  | _, _ => False
 end.
 exact (binary_float_equiv b1 b2).
 Defined.
 
+Definition float_equiv_alt {ty} (b1 b2: ftype ty) : Prop :=
+ match is_nan b1, is_nan b2 with
+ | false, false => b1=b2
+ | true, true => True
+ | _, _ => False
+ end.
+
+
+Lemma float_equiv_alt_eq: forall {ty} (b1 b2: ftype ty),
+  float_equiv_alt b1 b2 <-> float_equiv b1 b2.
+Proof.
+intros.
+unfold float_equiv_alt, float_equiv, binary_float_equiv.
+destruct ty as [? ? ? ? ? [|]]; simpl.
+-
+
+tauto.
+-
+destruct b1, b2; split; simpl; intro; try contradiction; try congruence.
+inversion H; auto.
+destruct H as [? [? ?]]; subst; auto.
+f_equal. apply Classical_Prop.proof_irrelevance.
+Qed.
+
+
 Lemma float_equiv_refl: forall ty (b: ftype ty), float_equiv b b.
 Proof.
 intros. destruct ty as [? ? ? ? ? [|]]; simpl in *.
-destruct (nonstd_is_finite fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b); auto.
+destruct (@nonstd_is_nan fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b); auto.
 apply binary_float_equiv_refl.
 Qed.
 
@@ -590,9 +668,8 @@ Lemma float_equiv_sym: forall ty (b1 b2: ftype ty),
 Proof.
 intros.
 destruct ty as [? ? ? ? ? [|]]; simpl in *.
-destruct (nonstd_is_finite fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b2),
-(nonstd_is_finite fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b1)
-; auto.
+destruct (@nonstd_is_nan fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b2),
+    (@nonstd_is_nan fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b1); auto.
 apply binary_float_equiv_sym; auto.
 Qed.
 
@@ -601,9 +678,9 @@ Lemma float_equiv_trans: forall ty (b1 b2 b3: ftype ty),
 Proof.
 intros.
 destruct ty as [? ? ? ? ? [|]]; simpl in *.
-destruct (nonstd_is_finite fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b2),
-(nonstd_is_finite fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b1),
-(nonstd_is_finite fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b3);
+destruct (@nonstd_is_nan fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b2),
+(@nonstd_is_nan fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b1),
+(@nonstd_is_nan fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool0 n b3);
 subst; auto; contradiction.
 eapply binary_float_equiv_trans; eassumption.
 Qed.
@@ -1072,7 +1149,12 @@ Record floatfunc (args: list type) (result: type)
  {ff_func: function_type (map ftype' args) (ftype' result);
   ff_rel: N;
   ff_abs: N;
-  ff_acc: acc_prop args result ff_rel ff_abs precond realfunc ff_func
+  ff_acc: acc_prop args result ff_rel ff_abs precond realfunc ff_func;
+  ff_congr: forall al bl: klist ftype args,
+      Kforall2 (@float_equiv) al bl ->
+      float_equiv 
+         (applyk ftype args result ff_func (fun _ t => t) al)
+         (applyk ftype args result ff_func (fun _ t => t) bl)
  }.
 
 Record floatfunc_package ty:=

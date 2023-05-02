@@ -507,7 +507,7 @@ Qed.
 
 Theorem Bdiv_mult_inverse_nan ty:
   forall x y z: (Binary.binary_float (fprec ty) (femax ty)),
-  is_nan _ _ x = false ->
+  Binary.is_nan _ _ x = false ->
   Binary.is_finite _ _ y = true ->
   Binary.is_finite _ _ z = true ->
   Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
@@ -604,7 +604,7 @@ Qed.
 Lemma is_nan_normalize:
   forall prec emax (H0: FLX.Prec_gt_0 prec) (H1 : (prec < emax)%Z)
                    mode m e s, 
-  is_nan _ _ (binary_normalize prec emax H0 H1 mode m e s) = false.
+  Binary.is_nan _ _ (binary_normalize prec emax H0 H1 mode m e s) = false.
 Proof.
 intros.
 apply is_nan_BSN2B'.
@@ -633,7 +633,7 @@ forall (prec emax : Z) (prec_gt_0_ : FLX.Prec_gt_0 prec)
           (B2R prec emax x * B2R prec emax y) /\
         Binary.is_finite prec emax (Bmult prec emax prec_gt_0_ Hmax mult_nan m y x) =
         Binary.is_finite prec emax x && Binary.is_finite prec emax y /\
-        (is_nan prec emax (Bmult prec emax prec_gt_0_ Hmax mult_nan m y x) =
+        (Binary.is_nan prec emax (Bmult prec emax prec_gt_0_ Hmax mult_nan m y x) =
          false ->
          Bsign prec emax (Bmult prec emax prec_gt_0_ Hmax mult_nan m y x) =
          xorb (Bsign prec emax x) (Bsign prec emax y))

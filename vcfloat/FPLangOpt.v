@@ -118,7 +118,7 @@ Context {NANS: Nans}.
 
 Definition fcval_nonrec {ty} (e: expr ty): option (ftype ty) :=
   match e with
-    | Const _ f => Some f
+    | Const _ STD f => Some (ftype_of_float f)
     | _ => None
   end.
 
@@ -153,13 +153,13 @@ Fixpoint fcval {ty} (e: expr ty) {struct e}: expr ty :=
       let e'2 := fcval e2 in
       match option_pair_of_options (fcval_nonrec e'1) (fcval_nonrec e'2) with
         | Some (v1, v2) =>
-          Const _ (fop_of_binop b _ _ v1 v2)
+          Const _ _ (float_of_ftype (fop_of_binop b _ _ v1 v2))
         | None => Binop b e'1 e'2
       end
     | @Unop _ STD b e =>
       let e' := fcval e in
       match fcval_nonrec e' with
-        | Some v => Const _ (fop_of_unop b _ _ v)
+        | Some v => Const _ _ (float_of_ftype (fop_of_unop b _ _ v))
         | _ => Unop b e'
       end
     | Func _ ff el =>
@@ -192,7 +192,7 @@ Proof.
       apply fcval_nonrec_correct with (env := env) in V1.
       apply fcval_nonrec_correct with (env := env) in V2.
       simpl.
-      subst. congruence.
+      subst. rewrite ftype_of_float_of_ftype. congruence.
     +
     clear OPT.
     simpl. congruence.
@@ -200,7 +200,7 @@ Proof.
   destruct (fcval_nonrec (fcval e)) eqn:V_.
   +
     apply fcval_nonrec_correct with (env := env) in V_.
-    subst. simpl. congruence.
+    subst. simpl. rewrite ftype_of_float_of_ftype. congruence.
   +
   simpl. congruence.
 - 
@@ -426,7 +426,8 @@ Proof.
           subst.
           apply binary_float_eqb_eq in FEQ.
           rewrite <- FEQ.
-          rewrite ftype_of_float_of_ftype.
+          rewrite ftype_of_float_of_ftype in *.
+          rewrite IHe1.
           reflexivity.
     *
         clear FEQ.
@@ -443,14 +444,14 @@ Proof.
           subst.
           apply binary_float_eqb_eq in FEQ.
           rewrite <- FEQ.
-          rewrite ftype_of_float_of_ftype.
+          rewrite ftype_of_float_of_ftype, IHe1.
           reflexivity.
        --
         clear FEQ.
         revert IHe2.
         generalize (fval env (fshift e2)).
         intros.
-        subst.
+        subst. rewrite IHe1.
         reflexivity.
    +
      destruct (Binary.Bsign _ _ _); [ auto | ].
@@ -475,6 +476,7 @@ Proof.
           apply binary_float_eqb_eq in FEQ.
           rewrite <- FEQ.
           rewrite ftype_of_float_of_ftype.
+          rewrite IHe2.
           reflexivity.
     *
         clear FEQ.
@@ -492,6 +494,7 @@ Proof.
           apply binary_float_eqb_eq in FEQ.
           rewrite <- FEQ.
           rewrite ftype_of_float_of_ftype.
+          rewrite IHe2.
           reflexivity.
      --
         clear FEQ.
@@ -499,6 +502,7 @@ Proof.
         generalize (fval env (fshift e1)).
         intros.
         subst.
+        rewrite IHe2.
         reflexivity.
   +
       clear E1 E2.
@@ -895,15 +899,6 @@ intros.
 destruct x,y; try contradiction; auto.
 Qed.
 
-
-Lemma ff_congr: forall {ty} (f: floatfunc_package ty)
-      (al bl: klist ftype (ff_args f)),
-      Kforall2 (@float_equiv) al bl ->
-      float_equiv 
-         (applyk ftype (ff_args f) ty (ff_func (ff_ff f)) (fun _ t => t) al)
-         (applyk ftype (ff_args f) ty (ff_func (ff_ff f)) (fun _ t => t) bl).
-Admitted.  (* Need to add this to the definition of floatfunc_package *)
-
 Lemma fval_klist_applyk:
  forall ty tys (env: forall ty, FPLang.V -> ftype ty) (args: klist expr tys)
      (f: function_type (List.map ftype' tys) (ftype' ty)),
@@ -932,8 +927,7 @@ try (set (x2 := fval env e2) in *; clearbody x2).
  destruct (Bexact_inverse _ ) eqn:EINV; [ | clear EINV].
  2: apply binary_float_equiv_BOP; [apply IHe1 | apply IHe2].
  assert (H := proj1 (Bexact_inverse_correct _ _ _ _ _ _ EINV)).
- replace (Const ty f) with (Const ty (ftype_of_float (float_of_ftype f)))
-   by (f_equal; apply ftype_of_float_of_ftype).
+ rewrite float_of_ftype_of_float.
  repeat apply binary_float_eqb_lem1; intros; subst.
  + simpl.
    unfold BMULT, BDIV, BINOP.
@@ -963,8 +957,6 @@ try (set (x2 := fval env e2) in *; clearbody x2).
    symmetry; apply Bexact_inverse_congr; auto.
  + simpl.
    apply binary_float_equiv_BDIV; auto.
-   rewrite float_of_ftype_of_float; auto.
-Search BDIV.
 - (* unop case *)
  simpl.
 revert IHe.
@@ -980,13 +972,26 @@ apply binary_float_equiv_UOP; apply IHe.
   induction IH; constructor; auto.
 Qed.
 
+Lemma nonstandard_is_finite_is_nan:
+  forall fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n a,
+ @nonstd_is_finite fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n a = true ->
+ @nonstd_is_nan fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n a = false.
+Proof.
+intros.
+unfold nonstd_is_finite in H.
+pose proof (nonstd_finite_compare a).
+destruct (nonstd_to_F a); try discriminate.
+unfold nonstd_is_nan. rewrite H0; auto.
+Qed.
+
 Lemma float_equiv_eq: forall ty (a b: ftype ty),
   is_finite a = true -> float_equiv a b -> a=b.
 Proof.
 intros.
 destruct ty as [? ? ? ? ? [|]]; simpl in *.
+apply nonstandard_is_finite_is_nan in H.
 rewrite H in H0.
-destruct (nonstd_is_finite fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n b); auto.
+destruct (@nonstd_is_nan fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n b); auto.
 contradiction.
 apply binary_float_equiv_eq; auto.
 destruct a; try discriminate; reflexivity.

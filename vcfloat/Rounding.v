@@ -165,7 +165,7 @@ Qed.
 Fixpoint reval (e: rexpr) (env: forall ty, FPLang.V -> ftype ty) (eenv: positive -> R): R :=
   match e with
     | RAtom (RConst q) => F2R _ q
-    | RAtom (RVar ty n) => B2R _ _ (env ty n)
+    | RAtom (RVar ty n) => FT2R (env ty n)
     | RAtom (RError n) => eenv n
     | RUnop o e => Prog.unary Prog.real_operations o (reval e env eenv)
     | RBinop o e1 e2 => Prog.binary Prog.real_operations o (reval e1 env eenv) (reval e2 env eenv)
@@ -637,7 +637,7 @@ Fixpoint rndval
          (shift: MSHIFT)
          (ty: type) (e: expr ty) {struct e} : rexpr * (positive * MSHIFT) :=
   match e with
-    | Const _ f => (RAtom (RConst (B2F f)), (si, shift))
+    | Const _ _ f => (RAtom (RConst (B2F f)), (si, shift))
     | Var _ i => (RAtom (RVar ty i), (si, shift))
     | Binop b e1 e2 =>
       let '(r1, (si1, s1)) := rndval si shift _ e1 in
@@ -646,7 +646,7 @@ Fixpoint rndval
     | Unop b e1 =>
       let '(r1, (si1, s1)) := rndval si shift _ e1 in
       rnd_of_unop si1 s1 ty b r1
-    | Cast _ fromty k e1 => 
+    | Cast _ fromty STDto STDfrom k e1 => 
       let '(r1, (si1, s1)) := rndval si shift fromty e1 in
       rnd_of_cast si1 s1 fromty ty (round_knowl_denote k) r1
     | Func _ ff args => 
@@ -1634,23 +1634,64 @@ Proof.
       simpl. lia.
 Qed.
 
-Definition interp_all_bounds (env:  forall x, FPLang.V -> binary_float (fprec x) (femax x))
+Definition interp_all_bounds (env:  forall x, FPLang.V -> ftype x)
     {tys: list type} (bl: klist bounds tys) (args: klist expr tys) :=
  Kforall2 (fun ty (bd: bounds ty) (e: expr ty) => interp_bounds bd (fval env e) = true) bl args.
 
-Definition vacuous_lo_bound {ty} (bnd: bounds ty) :=
- match bnd with ((B754_infinity _ _ true, false), _) => true | _ => false end.
-Definition vacuous_hi_bound {ty} (bnd: bounds ty) :=
- match bnd with (_,(B754_infinity _ _ false, false)) => true | _ => false end.
+Definition vacuous_lo_bound {ty} (bnd: bounds ty) : bool.
+destruct ty as [? ? ? ? ? [|]].
+exact false.
+exact
+ match bnd with
+ | ((lo, false), _) => 
+     match float_of_ftype lo with
+     | B754_infinity _ _ true => true 
+     | _ => false
+     end
+ | _ => false 
+ end.
+Defined.
+
+Definition vacuous_hi_bound {ty} (bnd: bounds ty) : bool.
+destruct ty as [? ? ? ? ? [|]].
+exact false.
+exact
+ match bnd with
+ | (_, (hi, false)) => 
+     match float_of_ftype hi with
+     | B754_infinity _ _ false => true 
+     | _ => false
+     end
+ | _ => false 
+ end.
+Defined.
+
+Definition Defsfloat_of_ftype {ty} (x: ftype ty) : option (float radix2).
+destruct ty as [? ? ? ? ? [|]].
+exact (nonstd_to_F x).
+apply (Some (B2F x)).
+Defined.
+
+
+Definition FT2F {ty} (x: ftype ty) : float radix2.
+destruct ty as [? ? ? ? ? [|]].
+exact
+match nonstd_to_F x with
+| Some f => f
+| None => {| Fnum:=0; Fexp:=0 |}
+end.
+exact (B2F x).
+Defined.
+
 
 Definition bounds_to_cond {ty} (bnd: bounds ty) (r: rexpr) : list cond := 
  let '((lo,blo),(hi,bhi)) := bnd in
   (if vacuous_lo_bound bnd then [] 
-   else if is_finite _ _ lo then [(RBinop Tree.Sub r (RAtom (RConst (B2F lo))), blo)]
+   else if is_finite lo then [(RBinop Tree.Sub r (RAtom (RConst (FT2F lo))), blo)]
    else [False_cond])
    ++ 
   (if vacuous_hi_bound bnd then [] 
-   else if is_finite _ _ hi then [(RBinop Tree.Sub (RAtom (RConst (B2F hi))) r, bhi)]
+   else if is_finite hi then [(RBinop Tree.Sub (RAtom (RConst (FT2F hi))) r, bhi)]
    else [False_cond]).
 
 Fixpoint bounds_to_conds {tys} (bnds: klist bounds tys) (args: klist (fun _ => rexpr) tys) : list cond.
@@ -1684,7 +1725,7 @@ Fixpoint rndval_with_cond'
          {ty} (e: expr ty) {struct e}
    : rexpr * (positive * MSHIFT) * list (rexpr * bool) :=
   match e with
-    | Const _ f => ((RAtom (RConst (B2F f)), (si, shift)), nil)
+    | Const _ _ f => ((RAtom (RConst (B2F f)), (si, shift)), nil)
     | Var _ i => ((RAtom (RVar ty i), (si, shift)), nil)
     | Binop b e1 e2 =>
       let '((r1, (si1, s1)), p1) := rndval_with_cond' si shift e1 in
@@ -1695,7 +1736,7 @@ Fixpoint rndval_with_cond'
       let '((r1, (si1, s1)), p1) := rndval_with_cond' si shift e1 in
       let '(rs, p) := rnd_of_unop_with_cond si1 s1 ty b r1 in
       (rs, p ++ p1)
-    | Cast _ fromty k e1 => 
+    | Cast _ fromty STDto STDfrom k e1 => 
       let '((r1, (si1, s1)), p1) := rndval_with_cond' si shift e1 in
       let '(rs, p) := rnd_of_cast_with_cond si1 s1 fromty ty (round_knowl_denote k) r1 in
       (rs, p ++ p1)
@@ -1920,9 +1961,9 @@ Proof.
      destruct p1 as [[lo blo] [hi bhi]]. unfold bounds_to_cond in H0.
          apply in_app_iff in H0. destruct H0.
          destruct (vacuous_lo_bound (lo, blo, (hi, bhi))) eqn:?H. contradiction.
-         destruct (is_finite _ _ lo) eqn:?H; destruct H0; try contradiction; inversion H0; clear H0; subst; simpl; lia.
+         destruct (is_finite lo) eqn:?H; destruct H0; try contradiction; inversion H0; clear H0; subst; simpl; lia.
          destruct (vacuous_hi_bound (lo, blo, (hi, bhi))) eqn:?H. destruct H0.
-         destruct (is_finite _ _ hi) eqn:?H; destruct H0; try contradiction; inversion H0; clear H0; subst; simpl; lia.
+         destruct (is_finite hi) eqn:?H; destruct H0; try contradiction; inversion H0; clear H0; subst; simpl; lia.
          eapply IHtys; try eassumption. lia.
   + clear - H1 H0 IH.
       revert si shift r2 si2 s2 c2 H1 H0; induction args; simpl; intros. 
@@ -1977,15 +2018,15 @@ Qed.
 
 Theorem fop_of_rounded_binop_correct op shift errors
     (Herr: errors_bounded shift errors)
-        ty e1
-        (F1: is_finite _ _ e1 = true)
+        ty (STD: is_standard ty) e1
+        (F1: is_finite e1 = true)
         env r1
         (V1: reval r1 env errors =
-             B2R _ _ e1)
+             FT2R e1)
         e2
-        (F2: is_finite _ _ e2 = true)
+        (F2: is_finite e2 = true)
         r2
-        (V2: reval r2 env errors = B2R _ _ e2)
+        (V2: reval r2 env errors = FT2R e2)
         r
         (V_: reval r env errors =
             Generic_fmt.round Zaux.radix2
@@ -2004,8 +2045,8 @@ Theorem fop_of_rounded_binop_correct op shift errors
         (NO_OVERFLOW:
            eval_cond1 env shift (no_overflow ty r))
 :
-  is_finite _ _ (fop_of_rounded_binop op ty e1 e2) = true /\
-  B2R _ _ (fop_of_rounded_binop op ty e1 e2) =
+  is_finite (fop_of_rounded_binop op ty _ e1 e2) = true /\
+  FT2R (fop_of_rounded_binop op ty _ e1 e2) =
   reval r env errors.
 Proof.
   intros.
@@ -2014,7 +2055,8 @@ Proof.
   rewrite Rmult_1_l in NO_OVERFLOW.
   rewrite V_ in * |- *.
   clear r V_.
-  repeat rewrite B2R_correct in *.
+  rewrite is_finite_Binary in *.
+(*  repeat rewrite B2R_correct in *. *)
   destruct op;
     cbn -[Zminus] in * |- * ;
     rewrite V1 in * |- *;
@@ -2025,34 +2067,38 @@ Proof.
     generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
     change (SpecFloat.fexp _ _) with (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
     change (BinarySingleNaN.round_mode _) with ZnearestE.
+    rewrite <- !FT2R_ftype_of_float, !ftype_of_float_of_ftype.
     rewrite Raux.Rlt_bool_true by lra.
     destruct 1 as (? & ? & _).
-    auto.
+    unfold BPLUS, BINOP; rewrite float_of_ftype_of_float; auto.
   }
   {
     (* minus *)
     generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
     change (SpecFloat.fexp _ _) with (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
     change (BinarySingleNaN.round_mode _) with ZnearestE.
+    rewrite <- !FT2R_ftype_of_float, !ftype_of_float_of_ftype.
     rewrite Raux.Rlt_bool_true by lra.
     destruct 1 as (? & ? & _).
-    auto.
+    unfold BMINUS, BINOP; rewrite float_of_ftype_of_float; auto.
   }
   {
     (* mult *)
-    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE e1 e2).
+    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (float_of_ftype e1) (float_of_ftype e2)).
     change (SpecFloat.fexp _ _) with (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
     change (BinarySingleNaN.round_mode _) with ZnearestE.
+    rewrite <- !FT2R_ftype_of_float, !ftype_of_float_of_ftype.
     rewrite Raux.Rlt_bool_true by lra.
     rewrite F1. rewrite F2.
     simpl andb.
     destruct 1 as (? & ? & _).
-    auto.
+    unfold BMULT, BINOP; rewrite float_of_ftype_of_float; auto.
   }
   (* div *)
-  generalize (fun K => Bdiv_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (div_nan _) BinarySingleNaN.mode_NE e1 e2 K).
+  generalize (fun K => Bdiv_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (div_nan _) BinarySingleNaN.mode_NE (float_of_ftype e1) (float_of_ftype e2) K).
     change (SpecFloat.fexp _ _) with (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
     change (BinarySingleNaN.round_mode _) with ZnearestE.
+    rewrite <- !FT2R_ftype_of_float, !ftype_of_float_of_ftype.
     rewrite Raux.Rlt_bool_true by lra.
   rewrite F1.
   destruct 1 as (? & ? & _).
@@ -2063,16 +2109,15 @@ Proof.
     apply Rabs_lt_pos in COND.
     congruence.
   }
-  auto.
+    unfold BDIV, BINOP; rewrite float_of_ftype_of_float; auto.
 Qed.
 
 Theorem fop_of_rounded_unop_correct shift errors
     (Herr: errors_bounded shift errors)
-        ty e1
-        (F1: is_finite _ _ e1 = true)
+        ty (STD: is_standard ty) e1
+        (F1: is_finite e1 = true)
         env r1
-        (V1: reval r1 env errors =
-             B2R _ _ e1)
+        (V1: reval r1 env errors = FT2R e1)
         r
         (V_: reval r env errors =
             Generic_fmt.round Zaux.radix2
@@ -2087,8 +2132,8 @@ Theorem fop_of_rounded_unop_correct shift errors
               In i ((r1, false) :: nil) ->
               eval_cond1 env shift i))
 :
-  is_finite _ _ (fop_of_rounded_unop SQRT ty e1) = true /\
-  B2R _ _ (fop_of_rounded_unop SQRT ty e1) =
+  is_finite (fop_of_rounded_unop SQRT ty _ e1) = true /\
+  FT2R (fop_of_rounded_unop SQRT ty _ e1) =
   reval r env errors.
 Proof.
   intros.
@@ -2097,15 +2142,21 @@ Proof.
   repeat rewrite B2R_correct in *.
     cbn -[Zminus] in * |- * ;
     rewrite V1 in * |- *.
-    generalize (Bsqrt_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (sqrt_nan _) BinarySingleNaN.mode_NE e1).
+    generalize (Bsqrt_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (sqrt_nan _) 
+          BinarySingleNaN.mode_NE (float_of_ftype e1)).
     destruct 1 as (? & ? & _).
+    unfold BSQRT, UNOP.
+    rewrite FT2R_ftype_of_float.
+    rewrite <- (FT2R_ftype_of_float (float_of_ftype e1)), ftype_of_float_of_ftype in H.
+    rewrite is_finite_Binary in *. rewrite float_of_ftype_of_float in *.
     split; auto.
     specialize (COND _ (or_introl _ (refl_equal _))).
     simpl in COND.
     specialize (COND _ Herr).
     rewrite V1 in COND.
     clear r1 V1.
-    destruct e1; auto.
+    rewrite <- (ftype_of_float_of_ftype _ _ e1), FT2R_ftype_of_float in COND.
+    destruct (float_of_ftype e1); auto.
     destruct s; auto.
     exfalso.
     revert COND.
@@ -2134,16 +2185,16 @@ Proof.
 Qed.
 
 Lemma rndval_with_cond_correct_uInvShift:
-forall (env : forall x : type, FPLang.V -> binary_float (fprec x) (femax x))
- (Henv : forall (ty : type) (i : FPLang.V),  is_finite (fprec ty) (femax ty) (env ty i) = true)
+forall (env : forall x : type, FPLang.V -> ftype x)
+ (Henv : forall (ty : type) (i : FPLang.V), is_finite (env ty i) = true)
 (pow : positive)
- (ltr : bool) ty (e : expr ty) (si : positive) (r1 : rexpr) (s1 : MSHIFT)
+ (ltr : bool) ty (STDty: is_standard ty) 
+ (e : expr ty) (si : positive) (r1 : rexpr) (s1 : MSHIFT)
  (errors1 errors1_1 : positive-> R)
  (E1 : same_upto si errors1 errors1_1)
  (EB1 : errors_bounded s1 errors1_1)
- (F1 : is_finite (fprec ty) (femax ty) (fval env e) = true)
- (V1 : reval r1 env errors1_1 =
-         B2R (fprec ty) (femax ty) (fval env e))
+ (F1 : is_finite (fval env e) = true)
+ (V1 : reval r1 env errors1_1 = FT2R (fval env e))
  (H0 : expr_valid e = true)
  (shift : MSHIFT) (r : rexpr) (si2 : positive) (s : MSHIFT) (si1 : positive) (p1 : list cond) 
  (EQ1 : rndval_with_cond' si shift e = (r1, (si1, s1), p1))
@@ -2156,11 +2207,9 @@ forall (env : forall x : type, FPLang.V -> binary_float (fprec x) (femax x))
 exists errors2 : positive -> R,
    same_upto si errors1 errors2 /\
   (forall i, Rabs (errors2 i) <= error_bound (mget s i)) /\
-  is_finite (fprec ty) (femax ty)
-    (fop_of_unop (Rounded1 (InvShift pow ltr) None) ty (fval env e)) = true /\
+  is_finite (fop_of_unop (Rounded1 (InvShift pow ltr) None) ty _ (fval env e)) = true /\
   reval r env errors2 =
-  B2R (fprec ty) (femax ty)
-    (fop_of_unop (Rounded1 (InvShift pow ltr) None) ty (fval env e)).
+  FT2R (fop_of_unop (Rounded1 (InvShift pow ltr) None) ty _ (fval env e)).
 Proof.
 intros.
 assert (K1 := rndval_with_cond_left EQ1).
@@ -2168,8 +2217,7 @@ inversion EQ; clear EQ; subst.
 set (op := RBinop Tree.Mul _) in *.
 set (s := mset s1 si1 (ty, Denormal')) in *.
 pose (eps :=
-  B2R (fprec ty) (femax ty)
-    (fop_of_unop (Rounded1 (InvShift pow ltr) None) ty (fval env e)) -
+  FT2R (fop_of_unop (Rounded1 (InvShift pow ltr) None) ty _ (fval env e)) -
   F2R radix2 (B2F (B2 ty (Z.neg pow))) * reval r1 env errors1_1).
 pose (errors2 i := if Pos.eq_dec i si1  then eps else errors1_1 i).
 exists errors2.
@@ -2213,10 +2261,7 @@ destruct (Pos.eq_dec i si1).
   rewrite V1.
   simpl.
   destruct (Pos.eq_dec si1 si1) as [ _ |]; [ | congruence].
-  set (a := F2R _ _).
-  set (b := B2R _ _ _).
-  set (c := B2R _ _ _).
-  ring.
+  destruct ltr; ring.
 Qed.
 
 Definition rwcc errors1 si (s: MSHIFT) env ty (e: expr ty) r := 
@@ -2226,9 +2271,9 @@ Definition rwcc errors1 si (s: MSHIFT) env ty (e: expr ty) r :=
         errors_bounded s errors2
         /\
         let fv := fval env e in
-        is_finite _ _ fv = true
+        is_finite fv = true
         /\
-        reval r env errors2 = B2R _ _ fv.
+        reval r env errors2 = FT2R fv.
 
 Definition fvalr_klist (env: forall ty, FPLang.V -> ftype ty) {T: Type} :=
   fix fvalr_klist {l1: list type} (l': klist expr l1) (f: function_type (map RR l1) T) {struct l'}: T :=
@@ -2292,9 +2337,9 @@ Definition rwcc_klist errors1 si (s: MSHIFT) env tys (args: klist expr tys) (r: 
         errors_bounded s errors2
         /\
         let fv := mapk (fun ty => @fval _ env ty) args in
-        Kforall (fun ty (f: ftype ty) => is_finite _ _ f = true) fv
+        Kforall (fun ty (f: ftype ty) => is_finite f = true) fv
         /\
-        mapk (fun ty r => reval r env errors2) r = mapk (fun ty (x: ftype' ty) => B2R _ _ x) fv.
+        mapk (fun ty r => reval r env errors2) r = mapk (fun ty (x: ftype' ty) => FT2R x) fv.
 
 Definition adjust_err (coeff: N) (delta: R) := match coeff with N0 => R0 | Npos x => delta / IZR (Zpos x) end.
 
@@ -2309,8 +2354,64 @@ Proof.
  replace 1 with (/ 1) by nra. apply Rinv_le. lra. apply IZR_le. lia.
 Qed.
 
+Lemma B2R_float_of_ftype: forall {ty} {STD: is_standard ty} (x: ftype ty),
+    B2R _ _ (float_of_ftype x) = FT2R x.
+Proof.
+intros.
+rewrite <- (ftype_of_float_of_ftype _ _ x).
+rewrite FT2R_ftype_of_float.
+rewrite ftype_of_float_of_ftype; auto.
+Qed.
+
+Lemma cast_standard: forall NAN tto tfrom STDto STDfrom f,
+  @cast NAN tto tfrom STDto STDfrom (f: ftype tfrom) =
+  match type_eq_dec tfrom tto STDfrom STDto with
+    | left r => eq_rect _ _ f _ r
+    | _ =>  ftype_of_float
+           (Bconv (fprec tfrom) (femax tfrom) (fprec tto) (femax tto)
+                        (fprec_gt_0 _) (fprec_lt_femax _) (conv_nan _ _) 
+                 BinarySingleNaN.mode_NE (float_of_ftype f))
+  end.
+Proof.
+intros.
+unfold cast.
+destruct (type_eq_dec _ _ _ _).
+- subst. reflexivity.
+- destruct tto as [? ? ? ? ? [|]]; try contradiction.
+  destruct tfrom as [? ? ? ? ? [|]]; try contradiction.
+  reflexivity.
+Qed.
+
+Lemma F2R_FT2F: forall ty (x: ftype ty), F2R radix2 (FT2F x) = FT2R x.
+Proof.
+intros.
+unfold FT2F, FT2R.
+destruct ty as [? ? ? ? ? [|]]; simpl.
+unfold nonstd_to_R.
+unfold F2R, Defs.F2R.
+destruct (@nonstd_to_F fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n x).
+destruct f; simpl. auto. lra.
+unfold F2R, B2F, B2R.
+destruct x; auto; lra.
+Qed.
+
+Lemma compare'_correct
+     : forall ty (f1 f2 : ftype ty),
+       is_finite f1 = true ->
+       is_finite f2 = true ->
+       compare' f1 f2 =
+       Some (Rcompare (FT2R f1) (FT2R f2)).
+Proof.
+clear.
+intros.
+destruct ty as [? ? ? ? ? [|]].
+simpl.
+apply nonstd_compare_correct'; auto.
+apply Bcompare_correct; auto.
+Qed.
+
 Lemma rndval_with_cond_correct_klist : 
-   forall env (Henv: forall ty i, is_finite _ _ (env ty i) = true) 
+   forall env (Henv: forall ty i, is_finite (env ty i) = true) 
         tys (args: klist expr tys)
   (IH : Kforall
        (fun (ty : type) (e : expr ty) =>
@@ -2375,7 +2476,7 @@ Proof.
  apply rndval_shift_le in H10; lia.
 Qed.
 
-Theorem rndval_with_cond_correct' env (Henv: forall ty i, is_finite _ _ (env ty i) = true) ty (e: expr ty) :
+Theorem rndval_with_cond_correct' env (Henv: forall ty i, is_finite (env ty i) = true) ty (e: expr ty) :
   expr_valid e = true ->
   forall si shift r si' s' p,
     rndval_with_cond' si shift e = ((r, (si', s')), p) ->
@@ -2387,6 +2488,7 @@ Proof.
 -  (* const *)
     unfold rwcc.
     simpl in *.
+    rewrite <- (float_of_ftype_of_float _ _ f), <- is_finite_Binary in H.
     inversion H0; clear H0; subst.
     simpl.
     exists errors1.
@@ -2394,7 +2496,7 @@ Proof.
     split; auto.
     split; auto.
     symmetry.
-    rewrite F2R_eq.
+    rewrite FT2R_ftype_of_float, F2R_eq.
     apply B2F_F2R_B2R.
 - (* var *)
     unfold rwcc.
@@ -2561,7 +2663,7 @@ Proof.
         }
 
         assert (K := fop_of_rounded_binop_correct _ _ _ EB 
-                                                 _ _ F1
+                                                 _ _ _ F1
                                                  _ _ V1
                                                  _ F2
                                                  _ V2
@@ -2599,10 +2701,11 @@ Proof.
         rewrite Rmult_1_l in *.
         specialize (H1 _ EB2).
         specialize (H1' _ EB2).
-
+        rewrite is_finite_Binary in F1,F2.
         generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
         intro K.
         change ( Z.pos (fprecp ty)) with (fprec ty) in K.
+        rewrite !B2R_float_of_ftype in *.
         rewrite <- V1 in K.
         rewrite <- V2 in K.
         rewrite Generic_fmt.round_generic in K; try typeclasses eauto.
@@ -2617,6 +2720,9 @@ Proof.
             rewrite r in K.
             destruct K as (KR & KF & _).
             exists errors1_2.
+            simpl fval. unfold BMINUS, BINOP.
+            rewrite is_finite_Binary, float_of_ftype_of_float.
+            rewrite FT2R_ftype_of_float.
             split; auto.
             intros; intro.
             etransitivity.
@@ -2629,9 +2735,10 @@ Proof.
           }
           exfalso.
           pose proof 
-          (abs_B2R_lt_emax _ _ (fval env e1)).
+          (abs_B2R_lt_emax _ _ (float_of_ftype (fval env e1))).
           pose proof 
-          (abs_B2R_lt_emax _ _ (fval env e2)).
+          (abs_B2R_lt_emax _ _ (float_of_ftype (fval env e2))).
+          rewrite !B2R_float_of_ftype in *.
           rewrite <- V1 in H3.
           rewrite <- V2 in H4.
           apply Raux.Rabs_lt_inv in H3.
@@ -2643,8 +2750,8 @@ Proof.
           contradiction.
         }
         apply Sterbenz.sterbenz; try typeclasses eauto.
-        * rewrite V1. apply generic_format_B2R.
-        * rewrite V2. apply generic_format_B2R.
+        * rewrite V1. rewrite <- B2R_float_of_ftype. apply generic_format_B2R.
+        * rewrite V2. rewrite <- B2R_float_of_ftype. apply generic_format_B2R.
         * lra.
 
     + (* plus zero *)
@@ -2675,49 +2782,53 @@ Proof.
           apply Rabs_pos.
          }
          destruct zero_left.
-         {
-          rewrite V1 in ZERO.
-          pose proof (abs_B2R_lt_emax _ _ (fval env e2)).
+         --
+          rewrite V1 in ZERO. rewrite <- B2R_float_of_ftype in ZERO.
+          pose proof (abs_B2R_lt_emax _ _ (float_of_ftype (fval env e2))).
+          rewrite is_finite_Binary in F1,F2.
           destruct minus.
-          {
+          ++
+            unfold BMINUS, BINOP.
             generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
             rewrite ZERO.
             rewrite Rminus_0_l.
             rewrite Generic_fmt.round_opp.
-            rewrite Generic_fmt.round_generic; try typeclasses eauto.
-            {
-              rewrite Rabs_Ropp.
-              rewrite Raux.Rlt_bool_true by assumption.
-              unfold BMINUS.
-              unfold BINOP.
-              simpl reval.
-              destruct 1 as (BV & BF & _).
-              simpl femax in BV, BF |- * .
-              rewrite BV.
-              intuition.
-            }
-            apply generic_format_B2R.
-          }
-          generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
-          rewrite ZERO.
-          rewrite Rplus_0_l.
-          rewrite Generic_fmt.round_generic; try typeclasses eauto.
-          {
+            rewrite Generic_fmt.round_generic
+               by (try typeclasses eauto; apply generic_format_B2R).
+            rewrite Rabs_Ropp.
+            rewrite Raux.Rlt_bool_true by assumption.
+            unfold BMINUS.
+            unfold BINOP.
+            simpl reval.
+            destruct 1 as (BV & BF & _).
+            simpl femax in BV, BF |- * .
+            rewrite <- B2R_float_of_ftype in V2.
+            rewrite FT2R_ftype_of_float,
+                   is_finite_Binary, float_of_ftype_of_float, BV.
+            intuition.
+          ++
+            generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
+            rewrite ZERO.
+            rewrite Rplus_0_l.
+            rewrite Generic_fmt.round_generic
+               by (try typeclasses eauto; apply generic_format_B2R).
             rewrite Raux.Rlt_bool_true by assumption.
             unfold BPLUS.
             unfold BINOP.
             simpl reval.
             destruct 1 as (BV & BF & _).
             simpl femax in BV, BF |- * .
-            rewrite BV.
+            rewrite <- B2R_float_of_ftype in V2.
+            rewrite FT2R_ftype_of_float,
+                   is_finite_Binary, float_of_ftype_of_float, BV.
             intuition.
-          }
-          apply generic_format_B2R.          
-        }
-        rewrite V2 in ZERO.
-        pose proof (abs_B2R_lt_emax _ _ (fval env e1)).
-        destruct minus.
-        {
+                      
+        --
+          rewrite V2 in ZERO.  rewrite <- B2R_float_of_ftype in ZERO.
+          pose proof (abs_B2R_lt_emax _ _ (float_of_ftype (fval env e1))).
+          rewrite is_finite_Binary in F1,F2|-*.
+          destruct minus.
+          {
           generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
           rewrite ZERO.
           rewrite Rminus_0_r.
@@ -2729,26 +2840,30 @@ Proof.
             simpl reval.
             destruct 1 as (BV & BF & _).
             simpl femax in BV, BF |- * .
-            rewrite BV.
+              rewrite <- B2R_float_of_ftype in V1,V2.
+              rewrite FT2R_ftype_of_float,
+                     float_of_ftype_of_float, BV.
             intuition.
           }
           apply generic_format_B2R.
-        }
-        generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
-        rewrite ZERO.
-        rewrite Rplus_0_r.
-        rewrite Generic_fmt.round_generic; try typeclasses eauto.
-        {
+         }
+         generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
+         rewrite ZERO.
+         rewrite Rplus_0_r.
+         rewrite Generic_fmt.round_generic; try typeclasses eauto.
+         {
           rewrite Raux.Rlt_bool_true by assumption.
           unfold BPLUS.
           unfold BINOP.
           simpl reval.
           destruct 1 as (BV & BF & _).
           simpl femax in BV, BF |- * .
-          rewrite BV.
+              rewrite <- B2R_float_of_ftype in V1,V2.
+              rewrite FT2R_ftype_of_float,
+                     float_of_ftype_of_float, BV.
           intuition.
-        }
-        apply generic_format_B2R.          
+         }
+         apply generic_format_B2R.          
 
 - (* unop *)
   simpl in *.
@@ -2854,7 +2969,7 @@ Proof.
       left.   destruct H3. left; auto. destruct H3.
     }
     assert (K := fop_of_rounded_unop_correct _ _ EB 
-                                             _ _ F1
+                                             _ _ _ F1
                                              _ _ V1
                                              _ R L).
     clear L.
@@ -2889,8 +3004,8 @@ Proof.
     rewrite Z.leb_le in H.
     apply center_Z_correct in H.
     assert (B2_FIN := B2_finite ty (Z.neg pow) (proj2 H)).
-    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) (fval env e)).
-    generalize (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) (fval env e)).
+    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) (float_of_ftype (fval env e))).
+    generalize (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) (float_of_ftype (fval env e))).
     rewrite Rmult_comm.
     change (SpecFloat.fexp (fprec ty) (femax ty))
      with  (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
@@ -2901,7 +3016,7 @@ Proof.
     {
       unfold Rdiv.
       rewrite <- Raux.bpow_opp.
-      rewrite F1.
+      rewrite <- is_finite_Binary, F1.
       rewrite B2_FIN.
       simpl andb.
       rewrite Raux.Rlt_bool_true.
@@ -2909,7 +3024,10 @@ Proof.
         unfold BMULT, BINOP.
         destruct 1 as (LC & ? & ?).
         destruct 1 as (L & ? & ?).
-        destruct ltr; split; auto; rewrite V1.
+        rewrite <- B2R_float_of_ftype.
+        rewrite is_finite_Binary.
+        destruct ltr; rewrite !float_of_ftype_of_float; split; auto; 
+          rewrite V1, <- B2R_float_of_ftype.
         {
           rewrite LC.
           ring.
@@ -2919,11 +3037,12 @@ Proof.
       }
       rewrite Raux.bpow_opp.
       apply Bdiv_beta_no_overflow.
+      rewrite <- is_finite_Binary.
       assumption.
     }
     specialize (H1 _ (or_introl _ (refl_equal _))).
     specialize (H1 _ EB1).
-    cbn -[Zminus] in H1.
+    cbn -[Zminus] in H1. rewrite B2R_float_of_ftype.
     rewrite <- V1.
     lra.
   -- eapply rndval_with_cond_correct_uInvShift; eassumption.
@@ -2947,17 +3066,19 @@ Proof.
    * (* abs *)
       simpl in * |- *.
       unfold BABS.
-      rewrite is_finite_Babs.
+      rewrite is_finite_Binary, float_of_ftype_of_float.
+      rewrite is_finite_Babs, <- is_finite_Binary, FT2R_ftype_of_float.
       split; auto.
-      rewrite B2R_Babs.
+      rewrite B2R_Babs, B2R_float_of_ftype.
       congruence.
 
    * (* opp *)
       simpl in * |- * .
       unfold BOPP.
-      rewrite is_finite_Bopp.
+      rewrite is_finite_Binary, float_of_ftype_of_float.
+      rewrite is_finite_Bopp, <- is_finite_Binary, FT2R_ftype_of_float.
       split; auto.
-      rewrite B2R_Bopp.
+      rewrite B2R_Bopp, B2R_float_of_ftype.
       congruence.
 
    * (* shift *)
@@ -2969,9 +3090,9 @@ Proof.
       generalize (B2_finite ty (Z.of_N pow) (proj2 H)).
       intro B2_FIN.
       generalize
-          (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.of_N pow)) (fval env e)).
+          (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.of_N pow)) (float_of_ftype (fval env e))).
       generalize
-         (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.of_N pow)) (fval env e)).
+         (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.of_N pow)) (float_of_ftype (fval env e))).
       rewrite Rmult_comm.
       replace (Z.of_N (pow + 1)) with (Z.of_N pow + 1)%Z in H by (rewrite N2Z.inj_add; simpl; ring).
       specialize (H1 _ (or_introl _ (refl_equal _)) _ EB1).
@@ -2981,6 +3102,7 @@ Proof.
     change (SpecFloat.fexp (fprec ty) (femax ty))
      with  (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
       rewrite FLT_format_mult_beta_n; try typeclasses eauto.
+      rewrite is_finite_Binary in F1. 
       rewrite F1.
       rewrite B2_FIN.
       simpl andb.
@@ -2988,8 +3110,10 @@ Proof.
       {
         unfold BMULT, BINOP.
         destruct 1 as (LC & ? & ?).
-        destruct 1 as (L & ? & ?).        
-        destruct ltr; split; auto; rewrite V1.
+        destruct 1 as (L & ? & ?).
+        rewrite is_finite_Binary.        
+        destruct ltr; rewrite FT2R_ftype_of_float, !float_of_ftype_of_float;
+        split; auto; rewrite V1, <- B2R_float_of_ftype.
         {
           rewrite LC.
           ring.
@@ -2997,7 +3121,7 @@ Proof.
         rewrite L.
         ring.
       }
-      rewrite Rmult_comm.
+      rewrite Rmult_comm, B2R_float_of_ftype.
       lra.
 
  - (* cast *)
@@ -3029,7 +3153,10 @@ Proof.
 
   simpl.
   simpl in *.
-  unfold cast.
+
+
+  
+  rewrite cast_standard.
   unfold rnd_of_cast_with_cond in EQ.
   destruct (type_eq_dec fromty ty).
   {
@@ -3042,17 +3169,21 @@ Proof.
     }
     apply type_le_refl.
   }
+  
   destruct (type_leb fromty ty) eqn:LEB.
   {
     inversion EQ; clear EQ; subst.
     rewrite type_leb_le in LEB.
     inversion LEB.
+    rewrite is_finite_Binary in F1.
     generalize ((fun J1 =>
                   Bconv_widen_exact _ _ _ _ J1 (fprec_gt_0 _) (fprec_lt_femax _) 
                         (Z.le_ge _ _ H0) (Z.le_ge _ _ H3) (conv_nan _ _) BinarySingleNaN.mode_NE _ F1) ltac:( typeclasses eauto ) ).
     destruct 1 as (K & L & _).
     symmetry in K.
-    rewrite <- V1 in K.
+    rewrite B2R_float_of_ftype, <- V1 in K.
+    rewrite is_finite_Binary, float_of_ftype_of_float.
+    rewrite FT2R_ftype_of_float.
     eauto.
   }
   destruct (make_rounding si1 s1 (round_knowl_denote knowl) ty r1) eqn:ROUND.
@@ -3089,14 +3220,17 @@ Proof.
   specialize (K L _ EB1 _ L'  (fun x : Z => negb (Z.even x))); clear L L'.
   destruct K as (errors2 & E & R & EB).
   rewrite V1 in R.
+  rewrite is_finite_Binary in F1.
   generalize (Bconv_correct _ _ _ _ (fprec_gt_0 _) (fprec_lt_femax ty) (conv_nan _ _) BinarySingleNaN.mode_NE _ F1).
   unfold BinarySingleNaN.round_mode.
-  rewrite <- R.
+  rewrite !B2R_float_of_ftype, <- R.
   rewrite Raux.Rlt_bool_true.
   {
     destruct 1 as (J & K & _).
     symmetry in J.
     exists errors2.
+    rewrite is_finite_Binary, float_of_ftype_of_float.
+    rewrite FT2R_ftype_of_float.
     split; auto.
     intros; intro.
     etransitivity.
@@ -3139,8 +3273,8 @@ Proof.
  assert (exists errors0 : positive -> R,
      same_upto si errors2 errors0 /\
      errors_bounded s' errors0 /\
-     is_finite (fprec ty) (femax ty) (fval_klist env args (ff_func (ff_ff f4))) = true /\
-     reval r env errors0 = B2R (fprec ty) (femax ty) (fval_klist env args (ff_func (ff_ff f4)))).
+     is_finite (fval_klist env args (ff_func (ff_ff f4))) = true /\
+     reval r env errors0 = FT2R (fval_klist env args (ff_func (ff_ff f4)))).
  2:{ destruct H6 as [err [? ?]]; exists err; split; auto. intros ? ?. rewrite <- H; auto. }
  assert (Hsi: (si <= si2 /\ max_error_var_klist (ff_args f4) r2 <= si2)%positive). {
     pose proof (rndval_with_cond_klist_left H3).
@@ -3159,6 +3293,7 @@ Proof.
   clearbody r4.
   destruct f4 as [tys pre rf [f rel abs ACC]]; simpl in *.
   move args before tys.
+  clear ff_congr.
   generalize dependent tys.
   clear - Henv H0 Hsi Hr2.
   induction args; intros.
@@ -3246,7 +3381,7 @@ Proof.
 
  + apply Kforall_inv in H4. destruct H4.
     change (Kforall
-       (fun (ty : type) (f : ftype ty) => is_finite (fprec ty) (femax ty) f = true)
+       (fun (ty : type) (f : ftype ty) => is_finite f = true)
        (mapk (fun ty : type => fval env) args)) in H2.
     destruct (klist_cons r2) as [r1 [r2' ?]]; subst r2; rename r2' into r2.
     destruct (klist_cons pre) as [p1 [pre' ?]]; subst pre; rename pre' into pre.
@@ -3273,22 +3408,31 @@ Proof.
          }
           unfold bounds_to_cond in H.
           destruct p1 as [[lo blo] [hi bhi]]; simpl; rewrite andb_true_iff; split.
-          - destruct (vacuous_lo_bound (lo, blo, (hi, bhi))) eqn:?H.
-           + destruct blo, lo; try destruct s; try discriminate; destruct (fval env k); try destruct s; try discriminate; reflexivity.
-           + destruct (is_finite (fprec ty0) (femax ty0) lo) eqn:?H.
-             * apply (H (RBinop Tree.Sub r1 (RAtom (RConst (B2F lo))), blo)) in EB4; simpl in EB4.
-                rewrite <- H0, H4, F2R_B2F in EB4 by auto.
-                destruct blo; unfold BCMP, extend_comp; simpl; rewrite Bcompare_correct; auto;
-                destruct (Rcompare_spec (B2R _ _ lo) (B2R _ _ (fval env k))); auto; lra.
+          - destruct (vacuous_lo_bound (lo, blo, (hi, bhi))) eqn:H2.
+           + clear - H2 H1.
+             destruct ty0 as [? ? ? ? ? [|]]; [discriminate |].
+             simpl in H2. destruct blo, lo; try destruct s; try discriminate.
+             destruct (fval env k); try destruct s; try discriminate; reflexivity.
+           + destruct (is_finite lo) eqn:?H.
+             * apply (H (RBinop Tree.Sub r1 (RAtom (RConst (FT2F lo))), blo)) in EB4; simpl in EB4.
+
+                rewrite F2R_FT2F in EB4.
+                rewrite <- H0, H4 in EB4 by auto.
+                destruct blo; unfold compare, extend_comp; simpl;
+                rewrite compare'_correct; auto;
+                destruct (Rcompare_spec (FT2R lo) (FT2R (fval env k))); auto; lra.
                 rewrite in_app_iff; simpl; auto.
              * apply (H False_cond) in EB4; simpl in EB4. lra. rewrite in_app_iff; simpl; auto.
-          - destruct (vacuous_hi_bound (lo, blo, (hi, bhi))) eqn:?H.
-           + destruct bhi, hi; try destruct s; try discriminate; destruct (fval env k); try destruct s; try discriminate; reflexivity.
-           + destruct (is_finite (fprec ty0) (femax ty0) hi) eqn:?H.
-             * apply (H (RBinop Tree.Sub (RAtom (RConst (B2F hi))) r1, bhi)) in EB4; simpl in EB4.
-                rewrite <- H0, H4, F2R_B2F in EB4 by auto.
-                destruct bhi; unfold BCMP, extend_comp; simpl; rewrite Bcompare_correct; auto;
-                destruct (Rcompare_spec (B2R _ _ (fval env k))  (B2R _ _ hi)); auto; lra.
+          - destruct (vacuous_hi_bound (lo, blo, (hi, bhi))) eqn:H2.
+           + clear - H2 H1.
+             destruct ty0 as [? ? ? ? ? [|]]; [discriminate |].
+             simpl in H2. destruct bhi, hi; try destruct s; try discriminate; destruct (fval env k); try destruct s; try discriminate; reflexivity.
+           + destruct (is_finite hi) eqn:?H.
+             * apply (H (RBinop Tree.Sub (RAtom (RConst (FT2F hi))) r1, bhi)) in EB4; simpl in EB4.
+                rewrite F2R_FT2F, <- H0, H4 in EB4 by auto.
+                destruct bhi; unfold compare, extend_comp; simpl;
+                 rewrite compare'_correct; auto;
+                destruct (Rcompare_spec (FT2R (fval env k))  (FT2R hi)); auto; lra.
                 rewrite !in_app_iff; simpl; auto.
              * apply (H False_cond) in EB4; simpl in EB4. lra. rewrite !in_app_iff; simpl; auto.
         }
@@ -3304,7 +3448,7 @@ Definition environ := forall ty : type, FPLang.V -> ftype ty.
 
 Definition env_all_finite (env: environ) :=
   forall (ty : type) (i : FPLang.V),
-        is_finite (fprec ty) (femax ty) (env ty i) = true.
+        is_finite (env ty i) = true.
 
 Definition eval_cond (s: MSHIFT) (c: cond) (env: environ) : Prop :=
   eval_cond1 env s c.
@@ -3323,9 +3467,9 @@ Theorem rndval_with_cond_correct
         (errors_bounded s errors)
         /\
         let fv := fval env e in
-        is_finite _ _ fv = true
+        is_finite fv = true
         /\
-        reval r env errors = B2R _ _ fv
+        reval r env errors = FT2R fv
 .
 Proof.
 intros.

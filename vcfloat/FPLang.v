@@ -129,7 +129,7 @@ Unset Elimination Schemes.
 (* See https://coq.zulipchat.com/#narrow/stream/237977-Coq-users/topic/Coq.20can't.20recognize.20a.20strictly.20positive.20occurrence
    for a discussion of Func1,Func2, etc. *)   
 Inductive expr (ty: type): Type :=
-| Const (f: ftype ty)
+| Const (STD: is_standard ty) (f: Binary.binary_float (fprec ty) (femax ty))
 | Var (i: V)
 | Binop (STD: is_standard ty) (b: binop) (e1 e2: expr ty)
 | Unop (STD: is_standard ty) (u: unop) (e1: expr ty)
@@ -143,7 +143,7 @@ Arguments Unop [ty STD] u e1.
 Set Elimination Schemes.
 Lemma expr_ind:
   forall P : forall ty : type, expr ty -> Prop,
-  (forall (ty : type) (f : ftype ty), P ty (Const ty f)) ->
+  (forall (ty : type) STD f, P ty (Const ty STD f)) ->
   (forall (ty : type) (i : FPLang.V), P ty (Var ty i)) ->
   (forall (ty : type) (STD: is_standard ty) (b : binop) (e1 : expr ty),
    P ty e1 -> forall e2 : expr ty, P ty e2 -> P ty (Binop b e1 e2)) ->
@@ -160,7 +160,7 @@ intros.
 refine (
 (fix F (ty : type) (e : expr ty) {struct e} : P ty e :=
   match e as e0 return (P ty e0) with
-  | Const _ f5 => H ty f5
+  | Const _ _ f5 => H ty _ f5
   | Var _ i => H0 ty i
   | @Binop _ STD b e1 e2 => H1 ty STD b e1 (F ty e1) e2 (F ty e2)
   | @Unop _ STD u e1 => H2 ty STD u e1 (F ty e1)
@@ -218,7 +218,7 @@ Definition Rop_of_unop (r: unop): R -> R :=
 
 Fixpoint expr_height {ty} (e: expr ty) {struct e} : nat := 
  match e with
- | Const _ _ => O
+ | Const _ _ _ => O
  | Var _ _ => O
  | Binop _ e1 e2 => S (Nat.max (expr_height e1) (expr_height e2))
  | Unop _ e => S (expr_height e)
@@ -243,7 +243,7 @@ Defined.
 
 Fixpoint rval (env: forall ty, V -> ftype ty) {ty: type} (e: expr ty): R :=
   match e with
-    | Const _ f => FT2R f
+    | Const _ _ f => B2R _ _ f
     | Var _ i => FT2R (env ty i)
     | Binop b e1 e2 =>  Rop_of_binop b (rval env e1) (rval env e2)
     | Unop b e => Rop_of_unop b (rval env e)
@@ -280,7 +280,7 @@ Definition unop_valid ty (u: unop): bool :=
 
 Fixpoint expr_valid {ty} (e: expr ty): bool :=
   match e with
-    | Const _ f => is_finite f
+    | Const _ _ f => Binary.is_finite _ _ f
     | Var _ _ => true
     | Binop _ e1 e2 => andb (expr_valid e1) (expr_valid e2)
     | Unop u e => unop_valid ty u && expr_valid e
@@ -354,7 +354,7 @@ Definition fop_of_unop (r: unop) :=
 
 Fixpoint fval (env: forall ty, V -> ftype ty) {ty} (e: expr ty) {struct e}: ftype ty :=
       match e with
-      | Const _ f => f
+      | Const _ STD f => ftype_of_float f
       | Var _ i => env ty i
       | Binop b e1 e2 => fop_of_binop b _ _ (fval env e1) (fval env e2)
       | Unop u e1 => fop_of_unop u _ _ (fval env e1)
@@ -379,8 +379,8 @@ Definition fval_klist (env: forall ty, V -> ftype ty) {T: Type} :=
 
 Lemma is_nan_cast:
   forall  t1 t2 STD1 STD2 x1,
-   is_nan _ _ (float_of_ftype x1) = false ->
-   is_nan _ _ (float_of_ftype (@cast _ t2 t1 STD2 STD1 x1)) = false.
+   Binary.is_nan _ _ (float_of_ftype x1) = false ->
+   Binary.is_nan _ _ (float_of_ftype (@cast _ t2 t1 STD2 STD1 x1)) = false.
 Proof.
 intros.
 unfold cast.
@@ -400,8 +400,8 @@ Qed.
 
 Lemma cast_is_nan :
   forall t1 t2 STD1 STD2 x1,
-  is_nan _ _ (float_of_ftype x1) = true ->
-  is_nan _ _ (float_of_ftype (@cast _ t1 t2 STD2 STD1 x1)) = true.
+  Binary.is_nan _ _ (float_of_ftype x1) = true ->
+  Binary.is_nan _ _ (float_of_ftype (@cast _ t1 t2 STD2 STD1 x1)) = true.
 Proof.
 intros.
 unfold cast.
