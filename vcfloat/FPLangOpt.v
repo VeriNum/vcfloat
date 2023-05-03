@@ -724,7 +724,7 @@ Local Ltac binary_float_eqb_cases :=
   let H := fresh in 
   apply binary_float_eqb_lem1; [intro H; rewrite H in *; clear H | ].
 
-Local Lemma Bmult_div_inverse_equiv ty:
+Local Lemma Bmult_div_inverse_equiv ty {STD: is_standard ty}:
   forall x y z: (Binary.binary_float (fprec ty) (femax ty)),
   Binary.is_finite _ _ y = true ->
   Binary.is_finite _ _ z = true ->
@@ -734,7 +734,7 @@ Local Lemma Bmult_div_inverse_equiv ty:
   (Binary.Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) BinarySingleNaN.mode_NE x y) .
 Proof. intros. apply binary_float_equiv_sym; apply Bdiv_mult_inverse_equiv; auto. Qed.
 
-Theorem Bmult_div_inverse_equiv2 ty:
+Theorem Bmult_div_inverse_equiv2 ty {STD: is_standard ty}:
   forall x1 x2 y z: (Binary.binary_float (fprec ty) (femax ty)),
   binary_float_equiv x1 x2 ->
   Binary.is_finite _ _ y = true ->

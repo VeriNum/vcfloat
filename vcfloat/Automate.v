@@ -2,9 +2,9 @@
  Copyright (C) 2021-2022 Andrew W. Appel.
 *)
 
+Require Import Flocq.IEEE754.Binary.
 From vcfloat Require Import FPLang FPLangOpt RAux Rounding Reify Float_notations.
 Require Import Interval.Tactic.
-Import Binary.
 Import Coq.Lists.List ListNotations.
 Set Bullet Behavior "Strict Subproofs".
 
@@ -95,10 +95,16 @@ assert (0 < type_hibound t). {
   pose proof (Rlt_pow 2 b a) H2 H1.
   lra.
 }
+unfold FT2R.
+destruct t as [? ? ? ? ? [|]]; simpl in *.
+-
+unfold type_hibound, FPCore.fprec in *; simpl in *.
+apply nonstd_bounds.
+-
 destruct x; simpl; try lra.
-pose proof (bounded_le_emax_minus_prec _ _ (fprec_gt_0 t) _ _ e0).
-fold (type_hibound t) in H0.
+pose proof (bounded_le_emax_minus_prec _ _ (fprec_gt_0 _) _ _ e0).
 simpl.
+change (bpow radix2 (FPCore.femax ?t) - _) with (type_hibound t) in H0.
 pose proof (Float_prop.F2R_gt_0 Zaux.radix2 {| Defs.Fnum := Z.pos m; Defs.Fexp := e |})
    ltac:(simpl; lia).
 destruct s; unfold SpecFloat.cond_Zopp.
@@ -112,7 +118,8 @@ Definition boundsmap_denote (bm: boundsmap) (vm: valmap) : Prop :=
    match Maps.PTree.get i bm, Maps.PTree.get i vm with
    | Some {|var_type:=t; var_name:=i'; var_lobound:=lo; var_hibound:=hi|}, Some v => 
               i=i' /\ t = projT1 v /\ 
-              is_finite (fprec _) (femax _) (projT2 v) = true /\ lo <= FT2R (projT2 v) <= hi
+              is_finite (projT2 v) = true 
+               /\ lo <= FT2R (projT2 v) <= hi
    | None, None => True
    | _, _ => False
    end.
@@ -123,7 +130,7 @@ Definition boundsmap_denote_pred (vm: valmap) (ib: ident*varinfo) :=
                   exists v,
                     i=i' /\
                     Maps.PTree.get i vm = Some (existT ftype t v) /\
-              is_finite (fprec _) (femax _) v = true /\ lo <= FT2R v <= hi
+              is_finite v = true /\ lo <= FT2R v <= hi
                    end.
 
 Lemma boundsmap_denote_e:

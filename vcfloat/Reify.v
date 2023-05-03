@@ -19,7 +19,12 @@ Definition ident := positive.
 
 Definition placeholder32: ident -> ftype Tsingle. intro. apply 0%F32. Qed.
 
-Definition placeholder ty: ident -> ftype ty. intro. apply (B754_zero _ _ false). Qed.
+Definition placeholder ty: ident -> ftype ty.
+intros.
+destruct ty as [? ? ? ? ? [|]].
+apply nonstd_nonempty.
+apply (ftype_of_float (B754_zero _ _ false)).
+Qed.
 
 Definition func {ty} (f: floatfunc_package ty) := ff_func (ff_ff f).
 Ltac apply_func ff := 

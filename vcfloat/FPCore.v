@@ -94,6 +94,7 @@ Record nonstdtype
    (fprec_lt_femax_bool: ZLT fprec femax)
    (fprecp_not_one_bool: Bool.Is_true (negb (Pos.eqb fprecp xH))) := NONSTD 
   { nonstd_rep: Type;
+    nonstd_nonempty: nonstd_rep;
     nonstd_to_F: nonstd_rep -> option (float radix2);
     nonstd_compare: nonstd_rep -> nonstd_rep -> option comparison;
     nonstd_finite_compare: forall x: nonstd_rep,
@@ -101,13 +102,19 @@ Record nonstdtype
     nonstd_compare_correct: forall (f1 f2 : nonstd_rep) g1 g2,
       nonstd_to_F f1 = Some g1 ->
       nonstd_to_F f2 = Some g2 ->
-      nonstd_compare f1 f2 = Some (Rcompare (F2R g1) (F2R g2))
+      nonstd_compare f1 f2 = Some (Rcompare (F2R g1) (F2R g2));
+    nonstd_bounds: forall x: nonstd_rep, 
+       ( - (bpow radix2 femax - bpow radix2 (femax - Z.pos fprecp)) <=
+        match nonstd_to_F x with Some f => F2R f | None => R0 end <=
+        bpow radix2 femax - bpow radix2 (femax - Z.pos fprecp) )%R
+
 }.
 
 
-Arguments nonstd_rep [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool] _.
+Arguments nonstd_rep [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool] n.
+Arguments nonstd_rep [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool] n.
 
-Arguments nonstd_to_F [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n] _.
+Arguments nonstd_to_F [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n] n.
 Arguments nonstd_compare [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n]
     _ _.
 Arguments nonstd_finite_compare [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n] 
@@ -381,45 +388,45 @@ Definition nan_payload prec emax : Type :=
 
 Class Nans: Type :=
   {
-    conv_nan: forall ty1 ty2, 
+    conv_nan: forall ty1 ty2 {STD1: is_standard ty1} {STD2: is_standard ty2}, 
                 binary_float (fprec ty1) (femax ty1) -> (* guaranteed to be a nan, if this is not a nan then any result will do *)
                 nan_payload (fprec ty2) (femax ty2)
     ;
     plus_nan:
-      forall ty,
+      forall ty {STD: is_standard ty},
         binary_float (fprec ty) (femax ty) ->
         binary_float (fprec ty) (femax ty) ->
         nan_payload (fprec ty) (femax ty)
     ;
     mult_nan:
-      forall ty,
+      forall ty {STD: is_standard ty},
         binary_float (fprec ty) (femax ty) ->
         binary_float (fprec ty) (femax ty) ->
         nan_payload (fprec ty) (femax ty)
     ;
     div_nan:
-      forall ty,
+      forall ty {STD: is_standard ty},
         binary_float (fprec ty) (femax ty) ->
         binary_float (fprec ty) (femax ty) ->
         nan_payload (fprec ty) (femax ty)
     ;
     abs_nan:
-      forall ty,
+      forall ty {STD: is_standard ty},
         binary_float (fprec ty) (femax ty) -> (* guaranteed to be a nan, if this is not a nan then any result will do *)
         nan_payload (fprec ty) (femax ty)
     ;
     opp_nan:
-      forall ty,
+      forall ty {STD: is_standard ty},
         binary_float (fprec ty) (femax ty) -> (* guaranteed to be a nan, if this is not a nan then any result will do *)
         nan_payload (fprec ty) (femax ty)
     ;
     sqrt_nan:
-      forall ty,
+      forall ty {STD: is_standard ty},
         binary_float (fprec ty) (femax ty) ->
         nan_payload (fprec ty) (femax ty)
     ;
     fma_nan:
-      forall ty,
+      forall ty {STD: is_standard ty},
         binary_float (fprec ty) (femax ty) ->
         binary_float (fprec ty) (femax ty) ->
         binary_float (fprec ty) (femax ty) ->
@@ -863,11 +870,16 @@ Proof.
 Qed.
 
 
-Definition BINOP (op: ltac:( let t := type of Bplus in exact t ) ) op_nan 
+Definition BINOP (op: ltac:( let t := type of Bplus in exact t ) ) 
+      (op_nan: forall ty : type,
+       is_standard ty ->
+       binary_float (fprec ty) (femax ty) ->
+       binary_float (fprec ty) (femax ty) ->
+       nan_payload (fprec ty) (femax ty))
     ty `{STD: is_standard ty}
     (x y: ftype ty) : ftype ty := 
    ftype_of_float (op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) 
-                     (op_nan ty) BinarySingleNaN.mode_NE
+                     (op_nan ty _) BinarySingleNaN.mode_NE
             (float_of_ftype x) (float_of_ftype y)).
 
 Definition BPLUS := BINOP Bplus plus_nan.
@@ -880,7 +892,7 @@ Definition UNOP (op: ltac:( let t := type of Bsqrt in exact t ) ) op_nan
     ty `{STD: is_standard ty}
       (x: ftype ty) : ftype ty := 
       ftype_of_float (op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) 
-                     (op_nan ty) BinarySingleNaN.mode_NE
+                     (op_nan ty STD) BinarySingleNaN.mode_NE
             (float_of_ftype x)).
 
 Definition BABS {ty} {STD: is_standard ty} (x: ftype ty) := 
@@ -904,6 +916,10 @@ Definition Sterbenz {T} (x: T) := x.
 
 Definition Tsingle := TYPE 24 128 I I.
 Definition Tdouble := TYPE 53 1024 I I.
+
+
+Instance is_standard_Tsingle: is_standard Tsingle := I. (* move these to FPCore *)
+Instance is_standard_Tdouble: is_standard Tdouble := I.
 
 Lemma single_le_double:
   type_le Tsingle Tdouble.

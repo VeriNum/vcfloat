@@ -89,7 +89,7 @@ Section WITHNANS.
 
 Context {NANS: Nans}.
 
-Definition Bsqrt ty := Bsqrt _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (sqrt_nan ty) BinarySingleNaN.mode_NE.
+Definition Bsqrt ty {STD: is_standard ty}:= Bsqrt _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (sqrt_nan ty) BinarySingleNaN.mode_NE.
 
 Inductive FF2B_gen_spec (prec emax: Z) (x: full_float): binary_float prec emax -> Prop :=
   | FF2B_gen_spec_invalid (Hx: valid_binary prec emax x = false):
@@ -464,7 +464,7 @@ Proof.
  lia.
 Qed.
 
-Theorem Bdiv_mult_inverse_finite ty  :
+Theorem Bdiv_mult_inverse_finite ty {STD: is_standard ty} :
   forall x y z: (Binary.binary_float (fprec ty) (femax ty)),
   Binary.is_finite _ _ x = true ->
   Binary.is_finite _ _ y = true ->
@@ -505,7 +505,7 @@ Proof.
   rewrite HMUL, HDIV in *; auto.
 Qed.
 
-Theorem Bdiv_mult_inverse_nan ty:
+Theorem Bdiv_mult_inverse_nan ty {STD: is_standard ty}:
   forall x y z: (Binary.binary_float (fprec ty) (femax ty)),
   Binary.is_nan _ _ x = false ->
   Binary.is_finite _ _ y = true ->
@@ -554,7 +554,7 @@ Proof.
   rewrite HMUL, HDIV in *; auto.
 Qed.
 
-Theorem Bdiv_mult_inverse_equiv ty:
+Theorem Bdiv_mult_inverse_equiv ty {STD: is_standard ty}:
   forall x y z: (Binary.binary_float (fprec ty) (femax ty)),
   Binary.is_finite _ _ y = true ->
   Binary.is_finite _ _ z = true ->
@@ -577,7 +577,7 @@ destruct x.
    apply Bdiv_mult_inverse_finite; auto.
 Qed.
 
-Theorem Bdiv_mult_inverse_equiv2 ty:
+Theorem Bdiv_mult_inverse_equiv2 ty {STD: is_standard ty}:
   forall x1 x2 y z: (Binary.binary_float (fprec ty) (femax ty)),
   binary_float_equiv x1 x2 ->
   Binary.is_finite _ _ y = true ->
