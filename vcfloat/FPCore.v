@@ -103,6 +103,7 @@ Record nonstdtype
       nonstd_to_F f1 = Some g1 ->
       nonstd_to_F f2 = Some g2 ->
       nonstd_compare f1 f2 = Some (Rcompare (F2R g1) (F2R g2));
+    nonstd_nonempty_finite: if nonstd_to_F nonstd_nonempty then True else False;
     nonstd_bounds: forall x: nonstd_rep, 
        ( - (bpow radix2 femax - bpow radix2 (femax - Z.pos fprecp)) <=
         match nonstd_to_F x with Some f => F2R f | None => R0 end <=
@@ -112,7 +113,7 @@ Record nonstdtype
 
 
 Arguments nonstd_rep [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool] n.
-Arguments nonstd_rep [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool] n.
+Arguments nonstd_nonempty [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool] n.
 
 Arguments nonstd_to_F [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n] n.
 Arguments nonstd_compare [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n]
@@ -121,6 +122,9 @@ Arguments nonstd_finite_compare [fprecp femax fprec_lt_femax_bool fprecp_not_one
     x.
 Arguments nonstd_compare_correct [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n]
     f1 f2 g1 g2.
+Arguments nonstd_nonempty_finite [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool] n.
+
+Arguments nonstd_bounds [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n] x.
 
 Definition nonstd_to_R {fprecp femax fprec_lt_femax_bool fprecp_not_one_bool}
       {n: nonstdtype fprecp femax fprec_lt_femax_bool fprecp_not_one_bool}
@@ -918,8 +922,8 @@ Definition Tsingle := TYPE 24 128 I I.
 Definition Tdouble := TYPE 53 1024 I I.
 
 
-Instance is_standard_Tsingle: is_standard Tsingle := I. (* move these to FPCore *)
-Instance is_standard_Tdouble: is_standard Tdouble := I.
+#[export] Instance is_standard_Tsingle: is_standard Tsingle := I. (* move these to FPCore *)
+#[export] Instance is_standard_Tdouble: is_standard Tdouble := I.
 
 Lemma single_le_double:
   type_le Tsingle Tdouble.

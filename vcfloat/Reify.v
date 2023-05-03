@@ -19,12 +19,18 @@ Definition ident := positive.
 
 Definition placeholder32: ident -> ftype Tsingle. intro. apply 0%F32. Qed.
 
-Definition placeholder ty: ident -> ftype ty.
+Definition placeholderx ty: ident -> {x: ftype ty | is_finite x = true}.
 intros.
 destruct ty as [? ? ? ? ? [|]].
-apply nonstd_nonempty.
-apply (ftype_of_float (B754_zero _ _ false)).
+exists (nonstd_nonempty n).
+simpl.
+pose proof (nonstd_nonempty_finite n).
+destruct (nonstd_to_F _); auto; contradiction.
+exists (ftype_of_float (B754_zero _ _ false)).
+reflexivity.
 Qed.
+
+Definition placeholder ty i : ftype ty := proj1_sig (placeholderx ty i).
 
 Definition func {ty} (f: floatfunc_package ty) := ff_func (ff_ff f).
 Ltac apply_func ff := 
