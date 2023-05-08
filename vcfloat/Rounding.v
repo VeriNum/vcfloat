@@ -2185,7 +2185,7 @@ Proof.
 Qed.
 
 Lemma rndval_with_cond_correct_uInvShift:
-forall (env : forall x : type, FPLang.V -> ftype x)
+forall `{coll: collection} (env : forall x : type, FPLang.V -> ftype x)
  (Henv : forall (ty : type) (i : FPLang.V), is_finite (env ty i) = true)
 (pow : positive)
  (ltr : bool) ty (STDty: is_standard ty) 
@@ -2195,7 +2195,7 @@ forall (env : forall x : type, FPLang.V -> ftype x)
  (EB1 : errors_bounded s1 errors1_1)
  (F1 : is_finite (fval env e) = true)
  (V1 : reval r1 env errors1_1 = FT2R (fval env e))
- (H0 : expr_valid e = true)
+ (H0 : expr_valid e)
  (shift : MSHIFT) (r : rexpr) (si2 : positive) (s : MSHIFT) (si1 : positive) (p1 : list cond) 
  (EQ1 : rndval_with_cond' si shift e = (r1, (si1, s1), p1))
  (p_ : list (rexpr * bool))
@@ -2411,18 +2411,18 @@ apply Bcompare_correct; auto.
 Qed.
 
 Lemma rndval_with_cond_correct_klist : 
-   forall env (Henv: forall ty i, is_finite (env ty i) = true) 
+   forall `{coll: collection} env (Henv: forall ty i, is_finite (env ty i) = true) 
         tys (args: klist expr tys)
   (IH : Kforall
        (fun (ty : type) (e : expr ty) =>
-        expr_valid e = true ->
+        expr_valid e ->
         forall si shift r si' s' p,
            rndval_with_cond' si shift e = (r, (si', s'), p) ->
         (forall i : rexpr * bool, In i p -> eval_cond1 env s' i) ->
         forall errors1 : positive -> R,
         errors_bounded shift errors1 -> rwcc errors1 si s' env ty e r)
        args),
-  expr_klist_valid args = true ->
+  expr_klist_valid args ->
   forall si shift r si' s' p,
     rndval_with_cond'_klist si shift args = ((r, (si', s')), p) ->
     (forall i, In i p -> eval_cond1 env s' i) ->
@@ -2439,7 +2439,7 @@ Proof.
  constructor.
  auto.
 -
- apply andb_true_iff in H. destruct H.
+ destruct H.
  apply Kforall_inv in IH; destruct IH as [IH1 IH].
  simpl in H0. 
  destruct (rndval_with_cond' si shift k) as [[r1 [si1 s1]] p1] eqn:?H.
@@ -2476,8 +2476,9 @@ Proof.
  apply rndval_shift_le in H10; lia.
 Qed.
 
-Theorem rndval_with_cond_correct' env (Henv: forall ty i, is_finite (env ty i) = true) ty (e: expr ty) :
-  expr_valid e = true ->
+Theorem rndval_with_cond_correct' 
+   `{coll: collection} env (Henv: forall ty i, is_finite (env ty i) = true) ty (e: expr ty) :
+  expr_valid e ->
   forall si shift r si' s' p,
     rndval_with_cond' si shift e = ((r, (si', s')), p) ->
     (forall i, In i p -> eval_cond1 env s' i) ->
@@ -2509,7 +2510,6 @@ Proof.
     destruct (rndval_with_cond' si1 s1 e2) as [[r2 [si2_ s2]] p2] eqn:EQ2.
     destruct (rnd_of_binop_with_cond si2_ s2 ty b r1 r2) as [rs p_] eqn:EQ.
     inversion H0; clear H0; subst.
-    rewrite andb_true_iff in H.
     destruct H.
 
     assert (K1 := rndval_with_cond_left EQ1).
@@ -2870,7 +2870,6 @@ Proof.
   destruct (rndval_with_cond' si shift e) as [[r1 [si1 s1]] p1] eqn:EQ1.
   destruct (rnd_of_unop_with_cond si1 s1 ty u r1) as [rs p_] eqn:EQ.
   inversion H0; clear H0; subst.
-  rewrite andb_true_iff in H.
   destruct H.
 
   assert (K1 := rndval_with_cond_left EQ1).
@@ -3248,7 +3247,7 @@ Proof.
   lra.
 - (* Func *)
  change (fval env (Func ty f4 args)) with (fval_klist env args (ff_func (ff_ff f4))).
- change (expr_klist_valid args = true) in H.
+ change (expr_klist_valid args) in H.
  simpl in H0.
  fold (@rndval_with_cond'_klist) in H0.
  destruct ( rndval_with_cond'_klist si shift args) as [[r2 [si2 s2]] p2] eqn:?H.
@@ -3458,8 +3457,8 @@ Definition rndval_with_cond {ty} (e: expr ty) : rexpr * MSHIFT * list (environ -
   in (r, s, map (eval_cond s) p).
 
 Theorem rndval_with_cond_correct 
-    env (Henv: env_all_finite env) {ty} (e: expr ty):
-  expr_valid e = true ->
+    `{coll: collection} env (Henv: env_all_finite env) {ty} (e: expr ty):
+  expr_valid e ->
   forall r s p,
     rndval_with_cond e = (r, s, p) ->
     Forall (fun c => c env) p ->

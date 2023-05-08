@@ -266,8 +266,22 @@ Definition rval_klist (env: forall ty, V -> ftype ty) {ty: type}  :=
           | Kcons h tl => fun f0 => rval_klist tl (f0 (rval env h))
           end f.
 
+Definition collection_ok (cl: list type) :=
+ forall t1 t2, In t1 cl -> In t2 cl ->
+        fprec t1 = fprec t2 -> femax t1 = femax t2 -> t1=t2.
+
+Definition collection := sig collection_ok.
+Existing Class collection.
+
+Definition incollection {coll: collection} t : Prop :=
+ match nonstd t with 
+ | Some _ => In t (proj1_sig coll)
+ | _ => True
+ end.
+
 Section WITHNAN.
 Context {NANS: Nans}.
+
 
 Definition unop_valid ty (u: unop): bool :=
   match u with
@@ -278,26 +292,28 @@ Definition unop_valid ty (u: unop): bool :=
     | _ => true
   end.
 
-Fixpoint expr_valid {ty} (e: expr ty): bool :=
+Fixpoint expr_valid `{coll: collection} {ty} (e: expr ty): Prop :=
   match e with
-    | Const _ _ f => Binary.is_finite _ _ f
-    | Var _ _ => true
-    | Binop _ e1 e2 => andb (expr_valid e1) (expr_valid e2)
-    | Unop u e => unop_valid ty u && expr_valid e
+    | Const _ _ f => Binary.is_finite _ _ f = true
+    | Var _ _ => In ty (proj1_sig coll)
+    | Binop _ e1 e2 => expr_valid e1 /\ expr_valid e2
+    | Unop u e => unop_valid ty u = true /\ expr_valid e
     | Cast _ _  _ _ _ e => expr_valid e
     | Func _ ff en => 
-       let fix expr_klist_valid {tys: list type} (es: klist expr tys) : bool :=
+       let fix expr_klist_valid {tys: list type} (es: klist expr tys) : Prop :=
         match es with
-        | Knil => true 
-        | Kcons h tl => expr_valid h && expr_klist_valid tl 
+        | Knil => True 
+        | Kcons h tl => expr_valid h /\ expr_klist_valid tl 
        end
        in expr_klist_valid en
   end.
 
-Fixpoint expr_klist_valid {tys: list type} (es: klist expr tys) : bool :=
-        match es with
-        | Knil => true 
-        | Kcons h tl => expr_valid h && expr_klist_valid tl 
+Definition expr_klist_valid `{coll: collection} : 
+       forall {tys: list type} (es: klist expr tys), Prop :=
+  fix expr_klist_valid {tys: list type} (es: klist expr tys) : Prop :=
+     match es with
+        | Knil => True 
+        | Kcons h tl => expr_valid h /\ expr_klist_valid tl 
        end.
 
 Definition fop_of_rounded_binop (r: rounded_binop): 
