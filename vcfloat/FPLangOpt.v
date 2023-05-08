@@ -116,13 +116,13 @@ Qed.
 Section WITHNAN.
 Context {NANS: Nans}.
 
-Definition fcval_nonrec {ty} (e: expr ty): option (ftype ty) :=
+Definition fcval_nonrec `{coll: collection} {ty} (e: expr ty): option (ftype ty) :=
   match e with
     | Const _ STD f => Some (ftype_of_float f)
     | _ => None
   end.
 
-Lemma fcval_nonrec_correct ty e:
+Lemma fcval_nonrec_correct `{coll: collection} ty e:
   forall (v: ftype ty), fcval_nonrec e = Some v ->
             forall env, fval env e = v.
 Proof.
@@ -146,9 +146,9 @@ Qed.
 
 (* Partial evaluation of constants *)
 
-Fixpoint fcval {ty} (e: expr ty) {struct e}: expr ty :=
+Fixpoint fcval `{coll: collection} {ty} (e: expr ty) {struct e}: expr ty :=
   match e with
-    | @Binop _ STD b e1 e2 =>
+    | @Binop _ _ STD b e1 e2 =>
       let e'1 := fcval e1 in
       let e'2 := fcval e2 in
       match option_pair_of_options (fcval_nonrec e'1) (fcval_nonrec e'2) with
@@ -156,7 +156,7 @@ Fixpoint fcval {ty} (e: expr ty) {struct e}: expr ty :=
           Const _ _ (float_of_ftype (fop_of_binop b _ _ v1 v2))
         | None => Binop b e'1 e'2
       end
-    | @Unop _ STD b e =>
+    | @Unop _ _ STD b e =>
       let e' := fcval e in
       match fcval_nonrec e' with
         | Some v => Const _ _ (float_of_ftype (fop_of_unop b _ _ v))
@@ -173,14 +173,14 @@ Fixpoint fcval {ty} (e: expr ty) {struct e}: expr ty :=
     | _ => e
   end.
 
-Fixpoint fcval_klist  {tys: list type} (l': klist expr tys) {struct l'}: klist expr tys :=
+Fixpoint fcval_klist `{coll: collection} {tys: list type} (l': klist expr tys) {struct l'}: klist expr tys :=
           match  l' in (klist _ l) return (klist expr l)
           with
           | Knil => Knil
           | Kcons h tl => Kcons (fcval h) (fcval_klist tl)
           end.
 
-Lemma fcval_correct env ty (e: expr ty):
+Lemma fcval_correct `{coll: collection} env ty (e: expr ty):
   fval env (fcval e) = fval env e.
 Proof.
   induction e; simpl; auto.
@@ -204,11 +204,11 @@ Proof.
   +
   simpl. congruence.
 - 
- match goal with |- _ = (?G _ _ _) =>  change G with (@fval_klist _ env (ftype ty)) end.
+ match goal with |- _ = (?G _ _ _) =>  change G with (@fval_klist _ _ env (ftype ty)) end.
 
   set (func := ff_func _). clearbody func.
   set (tys := ff_args f4) in *. clearbody tys.
-  fold (@fcval_klist tys args).
+  fold (@fcval_klist _ tys args).
   induction args. simpl. reflexivity.
   simpl.
   apply Kforall_inv in IH. destruct IH.
@@ -337,7 +337,7 @@ Definition to_inv_power_2 {prec emax} (x: Binary.binary_float prec emax) :=
   Pos.of_nat (blog (BigZ.of_Z 2) O q (Z.to_nat emax))
 .
 
-Definition fshift_mult {ty} `{STD: is_standard ty}  (e'1 e'2: expr ty ) :=
+Definition fshift_mult `{coll: collection} {ty} `{STD: is_standard ty}  (e'1 e'2: expr ty ) :=
         match fcval_nonrec e'1 with
           | Some c1 =>
             if Binary.Bsign _ _ (float_of_ftype c1) then Binop (Rounded2 MULT None) e'1 e'2
@@ -367,7 +367,7 @@ Definition fshift_mult {ty} `{STD: is_standard ty}  (e'1 e'2: expr ty ) :=
             end                  
         end.
 
-Fixpoint fshift {ty} (e: expr ty) {struct e}: expr ty :=
+Fixpoint fshift `{coll: collection} {ty} (e: expr ty) {struct e}: expr ty :=
   match e with
     | Binop b e1 e2 =>
       let e'1 := fshift e1 in
@@ -387,13 +387,13 @@ Fixpoint fshift {ty} (e: expr ty) {struct e}: expr ty :=
     | _ => e
   end.
 
-Lemma fshift_correct env ty (e: expr ty):
+Lemma fshift_correct `{coll: collection} env ty (e: expr ty):
  fval env (fshift e) = fval env e.
 Proof.
   induction e; simpl; unfold fshift_mult; auto.
 - (* binop case *)
   assert (DEFAULT:    
-          fval env (@Binop _ STD b (fshift e1) (fshift e2)) =
+          fval env (@Binop _ _ STD b (fshift e1) (fshift e2)) =
             fop_of_binop b _ _ (fval env e1) (fval env e2)). {
       revert IHe1 IHe2.
       simpl.
@@ -535,7 +535,7 @@ Definition to_power_2_pos {prec emax} (x: Binary.binary_float prec emax) :=
   Pos.of_nat (blog (BigZ.of_Z 2) O q (Z.to_nat emax))
 .
 
-Fixpoint fshift_div {ty} (e: expr ty) {struct e}: expr ty :=
+Fixpoint fshift_div `{coll: collection} {ty} (e: expr ty) {struct e}: expr ty :=
   match e with
     | Binop b e1 e2 =>
       let e'1 := fshift_div e1 in
@@ -571,7 +571,7 @@ Fixpoint fshift_div {ty} (e: expr ty) {struct e}: expr ty :=
     | _ => e
   end.
 
-Fixpoint fshift_div_klist {tys: list type} (l': klist expr tys) {struct l'}: klist expr tys :=
+Fixpoint fshift_div_klist `{coll: collection} {tys: list type} (l': klist expr tys) {struct l'}: klist expr tys :=
           match  l' in (klist _ l) return (klist expr l)
           with
           | Knil => Knil
@@ -900,20 +900,21 @@ destruct x,y; try contradiction; auto.
 Qed.
 
 Lemma fval_klist_applyk:
- forall ty tys (env: forall ty, FPLang.V -> ftype ty) (args: klist expr tys)
+ forall `{coll: collection} ty tys (env: environ) (args: klist expr tys)
      (f: function_type (List.map ftype' tys) (ftype' ty)),
    fval_klist env args f = 
-   applyk ftype tys ty f (fun _ t => t) (mapk (@fval _ env) args).
+   applyk ftype tys ty f (fun _ t => t) (mapk (@fval _ _ env) args).
 Proof.
 induction args; intros; simpl; auto.
 unfold eq_rect_r, eq_rect. simpl.
 apply IHargs.
 Qed.
 
-Lemma fshift_div_correct' env ty (e: expr ty) :
+Lemma fshift_div_correct' `{coll: collection} env ty (e: expr ty) :
  float_equiv (fval env (fshift_div e))  (fval env e).
 Proof.
-induction e; cbn [fshift_div]; auto with vcfloat; unfold fval; fold (@fval _ env ty);
+induction e; cbn [fshift_div]; auto with vcfloat; 
+ unfold fval; fold (@fval _ _ env ty);
 try (set (x1 := fval env e1) in *; clearbody x1);
 try (set (x2 := fval env e2) in *; clearbody x2).
 - (* binop case *)
@@ -966,7 +967,9 @@ rewrite float_equiv_binary_float_equiv in IHe|-*.
 apply binary_float_equiv_UOP; apply IHe.
 - (* func case *)
   fold @fshift_div_klist.
-  match goal with |- float_equiv (?G _ _ _) _ =>  change G with (@fval_klist _ env (ftype ty)) end.
+  match goal with |- float_equiv (?G _ _ _) _ => 
+      change G with (@fval_klist _ _ env (ftype ty)) 
+  end.
   rewrite !fval_klist_applyk.
   apply ff_congr.
   induction IH; constructor; auto.
@@ -997,7 +1000,7 @@ apply binary_float_equiv_eq; auto.
 destruct a; try discriminate; reflexivity.
 Qed.
 
-Lemma fshift_div_correct env ty (e: expr ty):
+Lemma fshift_div_correct `{coll: collection} env ty (e: expr ty):
   is_finite (fval env (fshift_div e)) = true -> 
   fval env (fshift_div e) = fval env e.
 Proof.
@@ -1008,7 +1011,7 @@ Qed.
 
 (* Erasure of rounding annotations *)
 
-Fixpoint erase {ty} (e: expr ty) {struct e}: expr ty :=
+Fixpoint erase `{coll: collection} {ty} (e: expr ty) {struct e}: expr ty :=
   match e with
     | Binop (Rounded2 u k) e1 e2 => Binop (Rounded2 u None) (erase e1) (erase e2)
     | Binop SterbenzMinus e1 e2 => Binop (Rounded2 MINUS None) (erase e1) (erase e2)
@@ -1027,14 +1030,14 @@ Fixpoint erase {ty} (e: expr ty) {struct e}: expr ty :=
     | _ => e
   end.
 
-Fixpoint erase_klist  {tys: list type} (l': klist expr tys) {struct l'}: klist expr tys :=
+Fixpoint erase_klist `{coll: collection} {tys: list type} (l': klist expr tys) {struct l'}: klist expr tys :=
           match  l' in (klist _ l) return (klist expr l)
           with
           | Knil => Knil
           | Kcons h tl => Kcons (erase h) (erase_klist tl)
           end.
 
-Lemma erase_correct env ty (e: expr ty):
+Lemma erase_correct `{coll: collection} env ty (e: expr ty):
  fval env (erase e) = fval env e.
 Proof.
   induction e; simpl; auto.
@@ -1045,7 +1048,7 @@ Proof.
   set (func := ff_func _). clearbody func.
   set (tys := ff_args f4) in *. clearbody tys.
   fold @erase_klist.
- match goal with |- ?G _ _ _ = _ =>  change G with (@fval_klist _ env (ftype ty)) end.
+ match goal with |- ?G _ _ _ = _ =>  change G with (@fval_klist _ _ env (ftype ty)) end.
   induction args. simpl; auto. 
  simpl.
   apply Kforall_inv in IH. destruct IH.

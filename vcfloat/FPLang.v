@@ -124,27 +124,40 @@ Definition round_knowl_denote (r: option rounding_knowledge) :=
  | Some Denormal => Denormal'
  end.
 
+Definition collection_ok (cl: list type) :=
+ forall t1 t2, In t1 cl -> In t2 cl ->
+        fprec t1 = fprec t2 -> femax t1 = femax t2 -> t1=t2.
+
+Definition collection := sig collection_ok.
+Existing Class collection.
+
+Definition incollection {coll: collection} t : Prop :=
+ match nonstd t with 
+ | Some _ => In t (proj1_sig coll)
+ | _ => True
+ end.
+
 Unset Elimination Schemes.
 
 (* See https://coq.zulipchat.com/#narrow/stream/237977-Coq-users/topic/Coq.20can't.20recognize.20a.20strictly.20positive.20occurrence
    for a discussion of Func1,Func2, etc. *)   
-Inductive expr (ty: type): Type :=
+Inductive expr `{coll: collection} (ty: type) : Type :=
 | Const (STD: is_standard ty) (f: Binary.binary_float (fprec ty) (femax ty))
-| Var (i: V)
+| Var (IN: incollection ty) (i: V)
 | Binop (STD: is_standard ty) (b: binop) (e1 e2: expr ty)
 | Unop (STD: is_standard ty) (u: unop) (e1: expr ty)
 | Cast (fromty: type) (STDto: is_standard ty) (STDfrom: is_standard fromty) (knowl: option rounding_knowledge) (e1: expr fromty)
 | Func (f: floatfunc_package ty) (args: klist expr (ff_args f))
 .
 
-Arguments Binop [ty STD] b e1 e2.
-Arguments Unop [ty STD] u e1.
+Arguments Binop [coll ty STD] b e1 e2.
+Arguments Unop [coll ty STD] u e1.
 
 Set Elimination Schemes.
-Lemma expr_ind:
+Lemma expr_ind `{coll: collection}:
   forall P : forall ty : type, expr ty -> Prop,
   (forall (ty : type) STD f, P ty (Const ty STD f)) ->
-  (forall (ty : type) (i : FPLang.V), P ty (Var ty i)) ->
+  (forall (ty : type) (IN: incollection ty) (i : FPLang.V), P ty (Var ty IN i)) ->
   (forall (ty : type) (STD: is_standard ty) (b : binop) (e1 : expr ty),
    P ty e1 -> forall e2 : expr ty, P ty e2 -> P ty (Binop b e1 e2)) ->
   (forall (ty : type) (STD: is_standard ty) (u : unop) (e1 : expr ty), P ty e1 -> P ty (Unop u e1)) ->
@@ -161,9 +174,9 @@ refine (
 (fix F (ty : type) (e : expr ty) {struct e} : P ty e :=
   match e as e0 return (P ty e0) with
   | Const _ _ f5 => H ty _ f5
-  | Var _ i => H0 ty i
-  | @Binop _ STD b e1 e2 => H1 ty STD b e1 (F ty e1) e2 (F ty e2)
-  | @Unop _ STD u e1 => H2 ty STD u e1 (F ty e1)
+  | Var _ IN i => H0 ty IN i
+  | @Binop _ _ STD b e1 e2 => H1 ty STD b e1 (F ty e1) e2 (F ty e2)
+  | @Unop _ _ STD u e1 => H2 ty STD u e1 (F ty e1)
   | Cast _ fromty STDto STDfrom knowl e1 => H3 ty fromty STDto STDfrom knowl e1 (F fromty e1)
   | Func _ f5 args => _ 
     end) ty e).
@@ -216,22 +229,6 @@ Definition Rop_of_unop (r: unop): R -> R :=
     | Exact1 op => Rop_of_exact_unop op
   end.
 
-Fixpoint expr_height {ty} (e: expr ty) {struct e} : nat := 
- match e with
- | Const _ _ _ => O
- | Var _ _ => O
- | Binop _ e1 e2 => S (Nat.max (expr_height e1) (expr_height e2))
- | Unop _ e => S (expr_height e)
- | Cast _ _ _ _ _ e => S (expr_height e)
- | Func _ _ en => 
-    let fix expr_klist_height {tys: list type} (l': klist expr tys) : list nat :=
-        match l' with
-        | Knil => nil
-        | Kcons h tl => (expr_height h) :: expr_klist_height tl
-        end in
-    S (fold_right Nat.max O (expr_klist_height en))
- end.
-
 Definition RR' (x: R) : Type := R.
 
 Fixpoint apply_list (l: list R) (f: function_type (map RR' l) R) {struct l} : R.
@@ -241,10 +238,17 @@ Fixpoint apply_list (l: list R) (f: function_type (map RR' l) R) {struct l} : R.
  apply (apply_list l). apply f. hnf. apply r.
 Defined.
 
-Fixpoint rval (env: forall ty, V -> ftype ty) {ty: type} (e: expr ty): R :=
+Definition environ {coll: collection} := 
+  forall (ty : type) (IN: incollection ty), FPLang.V -> ftype ty.
+
+Definition env_all_finite `{coll: collection} (env: environ) :=
+  forall (ty : type) (IN: incollection ty) (i : FPLang.V),
+        is_finite (env ty IN i) = true.
+
+Fixpoint rval `{coll: collection} (env: environ) {ty: type} (e: expr ty): R :=
   match e with
     | Const _ _ f => B2R _ _ f
-    | Var _ i => FT2R (env ty i)
+    | Var _ IN i => FT2R (env ty IN i)
     | Binop b e1 e2 =>  Rop_of_binop b (rval env e1) (rval env e2)
     | Unop b e => Rop_of_unop b (rval env e)
     | Cast _ _  _ _ _ e => rval env e
@@ -258,26 +262,13 @@ Fixpoint rval (env: forall ty, V -> ftype ty) {ty: type} (e: expr ty): R :=
           in rval_klist en (ff_realfunc ff)
   end.
 
-Definition rval_klist (env: forall ty, V -> ftype ty) {ty: type}  :=
+Definition rval_klist `{coll: collection} (env: environ) {ty: type}  :=
  fix rval_klist {tys: list type} (l': klist expr tys) (f: function_type (map RR tys) R) {struct l'}: R :=
           match l' in (klist _ l)  return (function_type (map RR l) R -> R)
           with
           | Knil => fun f0 => f0
           | Kcons h tl => fun f0 => rval_klist tl (f0 (rval env h))
           end f.
-
-Definition collection_ok (cl: list type) :=
- forall t1 t2, In t1 cl -> In t2 cl ->
-        fprec t1 = fprec t2 -> femax t1 = femax t2 -> t1=t2.
-
-Definition collection := sig collection_ok.
-Existing Class collection.
-
-Definition incollection {coll: collection} t : Prop :=
- match nonstd t with 
- | Some _ => In t (proj1_sig coll)
- | _ => True
- end.
 
 Section WITHNAN.
 Context {NANS: Nans}.
@@ -295,7 +286,7 @@ Definition unop_valid ty (u: unop): bool :=
 Fixpoint expr_valid `{coll: collection} {ty} (e: expr ty): Prop :=
   match e with
     | Const _ _ f => Binary.is_finite _ _ f = true
-    | Var _ _ => In ty (proj1_sig coll)
+    | Var _ _ _ => True
     | Binop _ e1 e2 => expr_valid e1 /\ expr_valid e2
     | Unop u e => unop_valid ty u = true /\ expr_valid e
     | Cast _ _  _ _ _ e => expr_valid e
@@ -368,10 +359,10 @@ Definition fop_of_unop (r: unop) :=
  | Exact1 u => fop_of_exact_unop u
  end.
 
-Fixpoint fval (env: forall ty, V -> ftype ty) {ty} (e: expr ty) {struct e}: ftype ty :=
+Fixpoint fval `{coll: collection} (env: environ) {ty} (e: expr ty) {struct e}: ftype ty :=
       match e with
       | Const _ STD f => ftype_of_float f
-      | Var _ i => env ty i
+      | Var _ IN i => env ty IN i
       | Binop b e1 e2 => fop_of_binop b _ _ (fval env e1) (fval env e2)
       | Unop u e1 => fop_of_unop u _ _ (fval env e1)
       | Cast _ tfrom STDto STDfrom o e1 => @cast _ ty tfrom STDto STDfrom (fval env e1)
@@ -385,7 +376,7 @@ Fixpoint fval (env: forall ty, V -> ftype ty) {ty} (e: expr ty) {struct e}: ftyp
           in fval_klist en (ff_func (ff_ff ff))
       end.
 
-Definition fval_klist (env: forall ty, V -> ftype ty) {T: Type} :=
+Definition fval_klist `{coll: collection} (env: environ) {T: Type} :=
   fix fval_klist {l1: list type} (l': klist expr l1) (f: function_type (map ftype' l1) T) {struct l'}: T :=
           match  l' in (klist _ l) return (function_type (map ftype' l) T -> T)
           with

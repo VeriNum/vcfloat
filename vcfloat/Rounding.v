@@ -117,14 +117,14 @@ Qed.
 Section WITH_NAN.
 Context {NANS: Nans}.
 
-Inductive ratom: Type :=
+Inductive ratom `{coll: collection}: Type :=
 | RConst (_: Defs.float Zaux.radix2)
-| RVar (ty: type) (_: FPLang.V)
+| RVar (ty: type) (IN: incollection ty) (_: FPLang.V)
 | RError (_: positive)
 .
 
 Unset Elimination Schemes.
-Inductive rexpr: Type :=
+Inductive rexpr `{coll: collection}: Type :=
   | RAtom (_: ratom)
   | RUnop (o: Tree.unary_op) (e: rexpr)
   | RBinop (o: Tree.binary_op) (e1 e2: rexpr)
@@ -132,7 +132,7 @@ Inductive rexpr: Type :=
 .
 
 Set Elimination Schemes.
-Lemma rexpr_ind:
+Lemma rexpr_ind `{coll: collection}:
   forall P : rexpr -> Prop,
   (forall (r : ratom), P (RAtom r)) ->
   (forall o e1, P e1 -> P (RUnop o e1)) ->
@@ -162,10 +162,10 @@ apply F.
 apply IHargs.
 Qed.
 
-Fixpoint reval (e: rexpr) (env: forall ty, FPLang.V -> ftype ty) (eenv: positive -> R): R :=
+Fixpoint reval `{coll: collection} (e: rexpr) (env: environ) (eenv: positive -> R): R :=
   match e with
     | RAtom (RConst q) => F2R _ q
-    | RAtom (RVar ty n) => FT2R (env ty n)
+    | RAtom (RVar ty IN n) => FT2R (env ty IN n)
     | RAtom (RError n) => eenv n
     | RUnop o e => Prog.unary Prog.real_operations o (reval e env eenv)
     | RBinop o e1 e2 => Prog.binary Prog.real_operations o (reval e1 env eenv) (reval e2 env eenv)
@@ -179,7 +179,7 @@ Fixpoint reval (e: rexpr) (env: forall ty, FPLang.V -> ftype ty) (eenv: positive
           in reval_klist args (ff_realfunc ff)
   end.
 
-Definition reval_klist {T} (env: forall ty, FPLang.V -> ftype ty) (eenv: positive -> R) :=
+Definition reval_klist `{coll: collection} {T} (env: environ) (eenv: positive -> R) :=
  fix reval_klist {tys: list type} (l': klist (fun _ => rexpr) tys) (f: function_type (map RR tys) T) {struct l'}: T :=
           match l' in (klist _ l)  return (function_type (map RR l) T -> T)
           with
@@ -187,7 +187,7 @@ Definition reval_klist {T} (env: forall ty, FPLang.V -> ftype ty) (eenv: positiv
           | Kcons h tl => fun f0 => reval_klist tl (f0 (reval h env eenv))
           end f. 
 
-Fixpoint max_error_var (e: rexpr): positive :=
+Fixpoint max_error_var `{coll: collection} (e: rexpr): positive :=
   match e with
     | RAtom (RError n) =>Pos.succ n
     | RUnop _ e => max_error_var e
@@ -202,13 +202,14 @@ Fixpoint max_error_var (e: rexpr): positive :=
     | _ => 1%positive
   end.
 
-Fixpoint max_error_var_klist (tys: list type) (es: klist (fun _ => rexpr) tys) : positive :=
+Definition max_error_var_klist `{coll: collection} :=
+  fix max_error_var_klist (tys: list type) (es: klist (fun _ => rexpr) tys) : positive :=
         match es with
         | Knil => 1%positive
         | Kcons h tl => Pos.max (max_error_var h) (max_error_var_klist _ tl)
        end.
 
-Lemma reval_error_ext eenv1 env eenv2 e:
+Lemma reval_error_ext `{coll: collection} eenv1 env eenv2 e:
   (forall i, (i < max_error_var e)%positive ->
                  eenv1 i = eenv2 i) ->
   reval e env eenv1 = reval e env eenv2.
@@ -235,9 +236,9 @@ Proof.
     intros. apply H; lia.
 Qed.
 
-Lemma reval_error_klist_ext:
+Lemma reval_error_klist_ext `{coll: collection}:
   forall (eenv1 eenv2  : positive -> R)
-    (env : forall ty : type, FPLang.V -> ftype ty)
+    (env : environ)
     (tys : list type)
    (args : klist (fun _ : type => rexpr) tys)
   (f : function_type (map RR tys) R),
@@ -280,7 +281,7 @@ Proof.
     apply Raux.bpow_ge_0.
 Qed.
 
-Definition make_rounding
+Definition make_rounding `{coll: collection}
            (si: positive)
            (shift: MSHIFT)
            (kn:  rounding_knowledge') (ty: type) (x: rexpr):
@@ -331,6 +332,7 @@ Definition make_rounding
     end.
 
 Lemma make_rounding_shift_incr
+      `{coll: collection}
       si
       shift
       kn ty x
@@ -348,6 +350,7 @@ Definition same_upto {T} (si: positive) (s1 s2: positive ->T) :=
   forall i, (i < si)%positive -> s2 i = s1 i.
 
 Lemma make_rounding_shift_unchanged
+      `{coll: collection}
       si
       shift
       kn ty x
@@ -369,6 +372,7 @@ all: try (    inversion 1; subst; intros;
 Qed.
 
 Lemma make_rounding_shift_le
+      `{coll: collection}
       si
       shift
       kn ty x
@@ -393,7 +397,7 @@ Definition rounding_cond ty k x :=
     | Denormal2' => True
   end.
 
-Lemma make_rounding_correct
+Lemma make_rounding_correct `{coll: collection}
       si shift kn ty x y si' shift':
   make_rounding si shift (round_knowl_denote kn) ty x = (y, (si', shift')) ->
   (max_error_var x <= si)%positive ->
@@ -503,7 +507,7 @@ Definition Rbinop_of_rounded_binop o :=
     | DIV => Tree.Div
   end.
 
-Definition rnd_of_binop
+Definition rnd_of_binop `{coll: collection}
            si
            (shift: MSHIFT)
            (ty: type)
@@ -526,7 +530,7 @@ Definition rnd_of_binop
                       (RBinop (Rbinop_of_rounded_binop o') r1 r2)
     end.
 
-Definition rnd_of_cast
+Definition rnd_of_cast `{coll: collection}
            si
            (shift: MSHIFT)
            (tyfrom tyto: type)
@@ -539,20 +543,20 @@ Definition rnd_of_cast
     make_rounding si shift k tyto r
 .
 
-Definition Runop_of_rounded_unop ty o :=
+Definition Runop_of_rounded_unop `{coll: collection} ty o :=
   match o with
     | SQRT => RUnop Tree.Sqrt
     | InvShift n _ => RBinop Tree.Mul (RAtom (RConst (B2F (B2 ty (- Z.pos n)))))
   end.
 
-Definition Runop_of_exact_unop ty o :=
+Definition Runop_of_exact_unop `{coll: collection} ty o :=
   match o with
     | Abs => RUnop Tree.Abs
     | Opp => RUnop Tree.Neg
     | Shift n _ => RBinop Tree.Mul (RAtom (RConst (B2F (B2 ty (Z.of_N n)))))
   end.
 
-Definition rnd_of_unop
+Definition rnd_of_unop `{coll: collection} 
            si
            (shift: MSHIFT)
            (ty: type)
@@ -570,15 +574,15 @@ Definition rnd_of_unop
       | Exact1 o => (Runop_of_exact_unop ty o r, (si, shift))
     end. 
 
-Definition rel_error r n d :=
+Definition rel_error `{coll: collection} r n d :=
      RBinop Tree.Mul r 
         (RBinop Tree.Add  (RAtom (RConst fone))
            (RBinop Tree.Mul (RAtom (RConst (Float radix2 (Z.of_N n) 0))) (RAtom (RError d)))).
 
-Definition abs_error r n e :=
+Definition abs_error `{coll: collection} r n e :=
      RBinop Tree.Add r (RBinop Tree.Mul (RAtom (RConst (Float radix2 (Z.of_N n) 0))) (RAtom (RError e))).
 
-Definition rnd_of_func' (si: positive) (shift: MSHIFT) ty (rel abs: N) (r: rexpr) :
+Definition rnd_of_func' `{coll: collection} (si: positive) (shift: MSHIFT) ty (rel abs: N) (r: rexpr) :
            rexpr * (positive * MSHIFT) :=
         let d := si in
         let es1 := mset shift d (ty, Normal') in
@@ -586,12 +590,12 @@ Definition rnd_of_func' (si: positive) (shift: MSHIFT) ty (rel abs: N) (r: rexpr
         let es2 := mset es1 e (ty, Denormal') in
         (abs_error (rel_error r rel d) abs e, (Pos.succ e, es2)).
 
-Definition rnd_of_func (si: positive) (shift: MSHIFT) (ty: type) 
+Definition rnd_of_func `{coll: collection} (si: positive) (shift: MSHIFT) (ty: type) 
                       ff (r: klist (fun _ => rexpr) (ff_args ff)) :
           rexpr * (positive * MSHIFT) :=
   rnd_of_func' si shift ty (ff_rel (ff_ff ff)) (ff_abs (ff_ff ff)) (RFunc ty ff r).
 
-Lemma rnd_of_func'_shift_incr
+Lemma rnd_of_func'_shift_incr `{coll: collection} 
       si
       shift
       ty rel abs x
@@ -604,7 +608,7 @@ Proof.
   inversion 1; subst; auto; lia.
 Qed.
 
-Lemma rnd_of_func'_shift_unchanged
+Lemma rnd_of_func'_shift_unchanged `{coll: collection} 
       si
       shift
       ty rel abs x
@@ -618,7 +622,7 @@ Proof.
   repeat destruct (Pos.eq_dec _ _); subst; auto; lia.
 Qed.
 
-Lemma rnd_of_func'_shift_le
+Lemma rnd_of_func'_shift_le `{coll: collection} 
       si
       shift
       ty rel abs x
@@ -632,13 +636,13 @@ Proof.
   repeat (apply Pos.max_lub; auto; lia).
 Qed.
 
-Fixpoint rndval 
+Fixpoint rndval `{coll: collection} 
          (si: positive)
          (shift: MSHIFT)
          (ty: type) (e: expr ty) {struct e} : rexpr * (positive * MSHIFT) :=
   match e with
     | Const _ _ f => (RAtom (RConst (B2F f)), (si, shift))
-    | Var _ i => (RAtom (RVar ty i), (si, shift))
+    | Var _ IN i => (RAtom (RVar ty IN i), (si, shift))
     | Binop b e1 e2 =>
       let '(r1, (si1, s1)) := rndval si shift _ e1 in
       let '(r2, (si2, s2)) := rndval si1 s1 _ e2 in
@@ -663,7 +667,8 @@ Fixpoint rndval
                in rnd_of_func si1 s1 _ ff r1
    end.
 
-Fixpoint rndval_klist (si: positive) (shift: MSHIFT) {tys: list type} (l': klist expr tys) {struct l'}: 
+Definition rndval_klist `{coll: collection} :=
+  fix rndval_klist (si: positive) (shift: MSHIFT) {tys: list type} (l': klist expr tys) {struct l'}: 
                                 (klist (fun _ => rexpr) tys * (positive * MSHIFT))  :=
           match  l' 
           with
@@ -673,7 +678,7 @@ Fixpoint rndval_klist (si: positive) (shift: MSHIFT) {tys: list type} (l': klist
                                       (Kcons r1 r2, (si2,s2))
           end.
 
-Lemma rnd_of_binop_shift_incr si shift ty b r1 r2 r si' shift':
+Lemma rnd_of_binop_shift_incr  `{coll: collection} si shift ty b r1 r2 r si' shift':
   rnd_of_binop si shift ty b r1 r2 = (r, (si', shift')) ->
   (si <= si')%positive.
 Proof.
@@ -683,7 +688,7 @@ Proof.
   - inversion H; clear H; subst. lia.
 Qed.
 
-Lemma rnd_of_binop_shift_le si shift ty b r1 r2 r si' shift':
+Lemma rnd_of_binop_shift_le  `{coll: collection} si shift ty b r1 r2 r si' shift':
   rnd_of_binop si shift ty b r1 r2 = (r, (si', shift')) ->
     (max_error_var r1 <= si)%positive ->
     (max_error_var r2 <= si)%positive ->
@@ -701,7 +706,7 @@ Proof.
     destruct minus; auto.
 Qed.
 
-Lemma rnd_of_binop_shift_unchanged  si shift ty b r1 r2 r si' shift':
+Lemma rnd_of_binop_shift_unchanged  `{coll: collection} si shift ty b r1 r2 r si' shift':
   rnd_of_binop si shift ty b r1 r2 = (r, (si', shift')) ->
   same_upto si (mget shift) (mget shift').
 Proof.
@@ -717,7 +722,7 @@ Proof.
   }
 Qed.
 
-Lemma rnd_of_cast_shift_incr si shift ty ty0 knowl r1 y si' shift':
+Lemma rnd_of_cast_shift_incr  `{coll: collection} si shift ty ty0 knowl r1 y si' shift':
   rnd_of_cast si shift ty ty0 knowl r1 = (y, (si', shift')) ->
   (si <= si')%positive.
 Proof.
@@ -727,7 +732,7 @@ Proof.
   - intros. eapply make_rounding_shift_incr; eauto.
 Qed.
 
-Lemma rnd_of_cast_shift_le si shift ty ty0 knowl r1 y si' shift':
+Lemma rnd_of_cast_shift_le  `{coll: collection} si shift ty ty0 knowl r1 y si' shift':
   rnd_of_cast si shift ty ty0 knowl r1 = (y, (si', shift')) ->
   (max_error_var r1 <= si)%positive ->
     (max_error_var y <= si')%positive.
@@ -738,7 +743,7 @@ Proof.
   - intros; eapply make_rounding_shift_le; eauto.
 Qed.
 
-Lemma rnd_of_cast_shift_unchanged si shift ty ty0 knowl r1 y si' shift':
+Lemma rnd_of_cast_shift_unchanged  `{coll: collection} si shift ty ty0 knowl r1 y si' shift':
   rnd_of_cast si shift ty ty0 knowl r1 = (y, (si', shift')) ->
   same_upto si (mget shift) (mget shift').
 Proof.
@@ -747,8 +752,8 @@ Proof.
   - congruence.
   - apply make_rounding_shift_unchanged.
 Qed.
-    
-Lemma rnd_of_unop_shift_incr si shift ty u r1 y si' shift':
+
+Lemma rnd_of_unop_shift_incr `{coll: collection} si shift ty u r1 y si' shift':
   rnd_of_unop si shift ty u r1 = (y, (si', shift')) ->
   (si <= si')%positive.
 Proof.
@@ -766,7 +771,7 @@ Proof.
    inversion_clear 1; auto; lia.
 Qed.
 
-Lemma rnd_of_unop_shift_le si  shift ty u r1 y si' shift':
+Lemma rnd_of_unop_shift_le `{coll: collection} si shift ty u r1 y si' shift':
   rnd_of_unop si shift ty u r1 = (y, (si', shift')) ->
   (max_error_var r1 <= si)%positive ->
   (max_error_var y  <=  si')%positive.
@@ -785,7 +790,7 @@ Proof.
     destruct o; simpl; auto. lia.
 Qed.
 
-Lemma rnd_of_unop_shift_unchanged si  shift ty u r1 y si' shift':
+Lemma rnd_of_unop_shift_unchanged `{coll: collection} si shift ty u r1 y si' shift':
   rnd_of_unop si shift ty u r1 = (y, (si', shift')) ->
   same_upto si (mget shift) (mget shift').
 Proof.
@@ -803,7 +808,7 @@ Proof.
     inversion_clear 1; auto with arith.
 Qed.
 
-Lemma rndval_shift_incr ty x:
+Lemma rndval_shift_incr `{coll: collection} ty x:
   forall si shift y si' shift',
     rndval si shift ty x = (y, (si', shift')) ->
     (si <= si')%positive.
@@ -833,8 +838,8 @@ Proof.
   eapply Pos.le_trans.
   + eapply IHx; eauto.
   + eapply rnd_of_cast_shift_incr; eauto.
-- (* Func *) 
-   fold @rndval_klist.
+- (* Func *)
+   fold (@rndval_klist _).
    destruct f4; simpl in *.
    unfold rnd_of_func.
   clear - IH.
@@ -853,10 +858,10 @@ Proof.
         eapply Pos.le_trans.
         apply (H _ _ _ _ _ EQ1).
         eapply IHargs in H1; eauto.
-   + eapply rnd_of_func'_shift_incr; eauto. 
+   + eapply rnd_of_func'_shift_incr; eassumption.
 Qed.
 
-Lemma rndval_klist_shift_incr tys (x: klist expr tys) :
+Lemma rndval_klist_shift_incr `{coll: collection} tys (x: klist expr tys) :
   forall si shift y si' shift',
     rndval_klist si shift x = (y, (si', shift')) ->
     (si <= si')%positive.
@@ -872,7 +877,7 @@ apply rndval_shift_incr in EQ1.
 apply IHx in EQ2. lia.
 Qed.
 
-Lemma rndval_shift_le ty (x: expr ty):
+Lemma rndval_shift_le `{coll: collection} ty (x: expr ty):
   forall si shift y si' shift',
     rndval si shift _ x = (y, (si', shift')) ->
     (max_error_var y <=  si')%positive.
@@ -899,7 +904,7 @@ Proof.
   destruct (rndval si shift _ x) as (r1 & si1 & s1) eqn:EQ1.
   eapply rnd_of_cast_shift_le; eauto.
 - (* Func *) 
-   fold @rndval_klist.
+   fold (@rndval_klist _).
    destruct f4; simpl in *.
    unfold rnd_of_func.
    clear - IH.
@@ -928,7 +933,7 @@ Proof.
   clear - EQ1 H1 H0 H2. lia.
 Qed.
 
-Lemma rndval_klist_shift_le tys (x: klist expr tys):
+Lemma rndval_klist_shift_le `{coll: collection} tys (x: klist expr tys):
   forall si shift y si' shift',
     rndval_klist si shift x = (y, (si', shift')) ->
     (max_error_var_klist _ y <=  si')%positive.
@@ -946,7 +951,7 @@ Proof.
    pose proof (rndval_shift_incr _ _ _ _ _ _ _ EQ1). lia.
 Qed.
 
-Lemma rndval_shift_unchanged ty (x: expr ty):
+Lemma rndval_shift_unchanged `{coll: collection} ty (x: expr ty):
   forall si shift y si' shift',
     rndval si shift _ x = (y, (si', shift')) ->
   same_upto si (mget shift) (mget shift').
@@ -990,7 +995,7 @@ Proof.
     eapply rndval_shift_incr; eauto.
   + eapply IHx; eauto.
 - (* Func *) 
-   fold @rndval_klist.
+   fold (@rndval_klist _).
    unfold rnd_of_func.
    intros.
    destruct (rndval_klist si shift args) as [k [si2 s2]] eqn:?H.
@@ -1017,7 +1022,7 @@ Proof.
     apply H; lia.
 Qed.
 
-Lemma rndval_klist_shift_unchanged tys (x: klist expr tys):
+Lemma rndval_klist_shift_unchanged `{coll: collection} tys (x: klist expr tys):
   forall si shift y si' shift',
     rndval_klist si shift x = (y, (si', shift')) ->
   same_upto si (mget shift) (mget shift').
@@ -1036,19 +1041,19 @@ Proof.
 Qed.
 
 (*  "(a, b) holds" iff 0 (if b then < else <=) a *)
-Definition cond: Type := (rexpr * bool).
+Definition cond `{coll: collection} : Type := (rexpr * bool).
 
-Definition False_cond : cond  := 
+Definition False_cond `{coll: collection} : cond  := 
    (* a condition that is impossible to satisfy *)
  (RAtom (RConst (Float radix2 0 0)), true).
 
-Definition eval_cond1 env m (c: cond) :=
+Definition eval_cond1 `{coll: collection} env m (c: cond) :=
   let '(e, b) := c in
   forall errors, errors_bounded m errors ->
     (if b then Rlt else Rle) 0 (reval e env errors)
 .
 
-Lemma evalcond1_False: forall env m, eval_cond1 env m False_cond -> False.
+Lemma evalcond1_False `{coll: collection} : forall env m, eval_cond1 env m False_cond -> False.
 Proof.
 intros.
 hnf in H.
@@ -1060,7 +1065,7 @@ rewrite Rabs_R0.
 apply error_bound_nonneg.
 Qed.
 
-Lemma eval_cond1_preserved m1 m2 env c:
+Lemma eval_cond1_preserved `{coll: collection} m1 m2 env c:
   ( forall e b,  c = (e, b) ->  same_upto (max_error_var e) (mget m1) (mget m2)) ->
   eval_cond1 env m1 c ->
   eval_cond1 env m2 c.
@@ -1089,7 +1094,7 @@ Proof.
   reflexivity.
 Qed.
 
-Fixpoint revars (r: rexpr): MSET.t :=
+Fixpoint revars `{coll: collection} (r: rexpr): MSET.t :=
   match r with
     | RAtom (RError n) => MSET.singleton n
     | RUnop _ e => revars e
@@ -1104,13 +1109,14 @@ Fixpoint revars (r: rexpr): MSET.t :=
     | _ => MSET.empty
   end.
 
-Fixpoint revars_klist {tys: list type} (es: klist (fun _ => rexpr) tys) : MSET.t :=
+Definition revars_klist `{coll: collection} :=
+ fix revars_klist {tys: list type} (es: klist (fun _ => rexpr) tys) : MSET.t :=
         match es with
         | Knil => MSET.empty
         | Kcons h tl => MSET.union (revars h) (revars_klist tl)
        end.
 
-Lemma reval_error_ext_strong errors1 env errors2 e:
+Lemma reval_error_ext_strong `{coll: collection} errors1 env errors2 e:
   (forall i, MSET.In i (revars e) -> errors2 i = errors1 i) ->
   reval e env errors2 = reval e env errors1.
 Proof.
@@ -1157,7 +1163,7 @@ Proof.
  rewrite MSET.union_spec. auto.
 Qed.
 
-Lemma revars_max_error_var e:
+Lemma revars_max_error_var `{coll: collection} e:
   forall i, MSET.In i (revars e) -> 
             (i < max_error_var e)%positive.
 Proof.
@@ -1279,18 +1285,18 @@ Proof.
   eapply H; eauto.
 Qed.
 
-Let P env e (b: bool) errors :=
+Let P `{coll: collection}  env e (b: bool) errors :=
   (if b then Rlt else Rle) 0 (reval e env errors).
 
 Let Q m i err := 
   Rabs err <= error_bound (mget m i).
 
-Definition eval_cond2 env m (c: cond) :=
+Definition eval_cond2 `{coll: collection} env m (c: cond) :=
   let '(e, b) := c in
   enum_forall 0 (Q m) (MSET.elements (revars e)) (P env e b)
 .
 
-Lemma eval_cond2_correct env (m: MSHIFT) c:
+Lemma eval_cond2_correct `{coll: collection} env (m: MSHIFT) c:
   eval_cond2 env m c <-> eval_cond1 env m c.
 Proof.
   unfold eval_cond2, eval_cond1.
@@ -1338,7 +1344,7 @@ Definition is_div o :=
     | _ => false
   end.
 
-Definition rounding_cond_ast ty k x: list cond :=
+Definition rounding_cond_ast `{coll: collection} ty k x: list cond :=
   match k with
     | Normal' =>
       (RBinop Tree.Sub (RUnop Tree.Abs x) (RAtom (RConst (Defs.Float _ 1 (3 - femax ty - 1)))), false) :: nil
@@ -1348,7 +1354,7 @@ Definition rounding_cond_ast ty k x: list cond :=
     | Unknown' => nil 
   end.
 
-Lemma rounding_cond_ast_shift ty k x e b:
+Lemma rounding_cond_ast_shift `{coll: collection} ty k x e b:
   In (e, b) (rounding_cond_ast ty k x) ->
   (max_error_var e <= max_error_var x)%positive.
 Proof.
@@ -1363,7 +1369,7 @@ Proof.
   Transparent Zminus.
 Qed.
 
-Lemma rounding_cond_ast_correct m env ty knowl r errors:
+Lemma rounding_cond_ast_correct `{coll: collection} m env ty knowl r errors:
   errors_bounded m errors ->
   (forall i, In i (rounding_cond_ast ty knowl r) -> eval_cond1 env m i) ->
   rounding_cond ty knowl (reval r env errors)
@@ -1385,13 +1391,13 @@ Proof.
   lra.
 Qed.
 
-Definition no_overflow ty x: cond := 
+Definition no_overflow `{coll: collection} ty x: cond := 
   (RBinop Tree.Sub (RAtom (RConst (Defs.Float _ 1 (femax ty)))) (RUnop Tree.Abs x), true).
 
-Definition rnd_of_plus_zero_cond (zero_left: bool) r1 r2 :=
+Definition rnd_of_plus_zero_cond `{coll: collection} (zero_left: bool) r1 r2 :=
   (RUnop Tree.Neg (RUnop Tree.Abs (if zero_left then r1 else r2)), false) :: nil.  
 
-Definition rnd_of_binop_with_cond
+Definition rnd_of_binop_with_cond`{coll: collection} 
            si
            (shift: MSHIFT)
            (ty: type)
@@ -1428,7 +1434,7 @@ Definition rnd_of_binop_with_cond
            ++ no_overflow ty r :: rounding_cond_ast ty (round_knowl_denote k) ru)
     end.
 
-Lemma rounding_cond_ast_shift_cond ty k r e b:
+Lemma rounding_cond_ast_shift_cond `{coll: collection} ty k r e b:
   In (e, b) (rounding_cond_ast ty k r) ->
      (max_error_var e = max_error_var r)%positive.
 Proof.
@@ -1444,7 +1450,7 @@ Proof.
   simpl. lia.
 Qed.
 
-Lemma rnd_of_binop_with_cond_shift_cond si shift ty o r1 r2 r' si' shift' cond:
+Lemma rnd_of_binop_with_cond_shift_cond `{coll: collection} si shift ty o r1 r2 r' si' shift' cond:
   rnd_of_binop_with_cond si shift ty o r1 r2 = ((r', (si', shift')), cond) ->
   (max_error_var r1 <= si)%positive ->
   (max_error_var r2 <= si)%positive ->
@@ -1508,7 +1514,7 @@ Proof.
   }
 Qed.
 
-Definition rnd_of_cast_with_cond
+Definition rnd_of_cast_with_cond `{coll: collection} 
            si
            (shift: MSHIFT)
            (tyfrom tyto: type)
@@ -1523,7 +1529,7 @@ Definition rnd_of_cast_with_cond
     (rs, no_overflow tyto r' :: rounding_cond_ast tyto k r)
 .
 
-Lemma rnd_of_cast_with_cond_shift_cond
+Lemma rnd_of_cast_with_cond_shift_cond `{coll: collection} 
       si shift tyfrom tyto k r r' si' shift' cond:
   rnd_of_cast_with_cond si shift tyfrom tyto k r = ((r', (si', shift')), cond) ->
   (max_error_var r <= si)%positive ->
@@ -1554,7 +1560,7 @@ Proof.
   lia.
 Qed.
 
-Definition rnd_of_unop_with_cond
+Definition rnd_of_unop_with_cond `{coll: collection} 
            si
            (shift: MSHIFT)
            (ty: type)
@@ -1584,7 +1590,8 @@ Definition rnd_of_unop_with_cond
          end)
     end.
 
-Lemma rnd_of_unop_with_cond_shift_cond si shift ty o r1 r' si' shift' cond:
+Lemma rnd_of_unop_with_cond_shift_cond `{coll: collection} 
+   si shift ty o r1 r' si' shift' cond:
   rnd_of_unop_with_cond si shift ty o r1 = ((r', (si', shift')), cond) ->
   (max_error_var r1 <= si)%positive ->
   forall e b,
@@ -1634,7 +1641,7 @@ Proof.
       simpl. lia.
 Qed.
 
-Definition interp_all_bounds (env:  forall x, FPLang.V -> ftype x)
+Definition interp_all_bounds `{coll: collection} (env:  environ)
     {tys: list type} (bl: klist bounds tys) (args: klist expr tys) :=
  Kforall2 (fun ty (bd: bounds ty) (e: expr ty) => interp_bounds bd (fval env e) = true) bl args.
 
@@ -1684,7 +1691,7 @@ exact (B2F x).
 Defined.
 
 
-Definition bounds_to_cond {ty} (bnd: bounds ty) (r: rexpr) : list cond := 
+Definition bounds_to_cond `{coll: collection} {ty} (bnd: bounds ty) (r: rexpr) : list cond := 
  let '((lo,blo),(hi,bhi)) := bnd in
   (if vacuous_lo_bound bnd then [] 
    else if is_finite lo then [(RBinop Tree.Sub r (RAtom (RConst (FT2F lo))), blo)]
@@ -1694,39 +1701,39 @@ Definition bounds_to_cond {ty} (bnd: bounds ty) (r: rexpr) : list cond :=
    else if is_finite hi then [(RBinop Tree.Sub (RAtom (RConst (FT2F hi))) r, bhi)]
    else [False_cond]).
 
-Fixpoint bounds_to_conds {tys} (bnds: klist bounds tys) (args: klist (fun _ => rexpr) tys) : list cond.
+Fixpoint bounds_to_conds `{coll: collection} {tys} (bnds: klist bounds tys) (args: klist (fun _ => rexpr) tys) : list cond.
 inversion bnds as [ | ty tys' b1 bnds'].
 exact nil.
 subst tys.
 inversion args as [ | ty1 tys1' e1 args'].
 subst.
-exact (bounds_to_cond b1 e1 ++ bounds_to_conds _ bnds' args').
+exact (bounds_to_cond b1 e1 ++ bounds_to_conds _ _ bnds' args').
 Defined.
 
 Definition type_hibound' (t: type) :=
 (*   Float radix2 (Z.pow 2 (femax t) - Z.pow 2 (femax t - fprec t)) 1. *)
   Float radix2 (Z.pow 2 (fprec t) - 1) (femax t - fprec t).
 
-Definition func_no_overflow si shift {ty: type}
+Definition func_no_overflow `{coll: collection} si shift {ty: type}
      (ff:  floatfunc_package ty) 
      (args: klist (fun _ => rexpr) (ff_args ff)) : cond :=
   no_overflow ty (fst (rnd_of_func si shift _ ff args)).
 
-Definition rnd_of_func_with_cond
+Definition rnd_of_func_with_cond `{coll: collection} 
     (si: positive) (shift: MSHIFT) {ty: type} (ff:  floatfunc_package ty) 
      (args: klist (fun _ => rexpr) (ff_args ff)) :
      rexpr * (positive * MSHIFT) * list cond :=
   (rnd_of_func si shift ty ff args, 
      func_no_overflow si shift ff args :: bounds_to_conds (ff_precond ff) args).
 
-Fixpoint rndval_with_cond'
+Fixpoint rndval_with_cond' `{coll: collection} 
          (si: positive)
          (shift: MSHIFT)
          {ty} (e: expr ty) {struct e}
    : rexpr * (positive * MSHIFT) * list (rexpr * bool) :=
   match e with
     | Const _ _ f => ((RAtom (RConst (B2F f)), (si, shift)), nil)
-    | Var _ i => ((RAtom (RVar ty i), (si, shift)), nil)
+    | Var _ IN i => ((RAtom (RVar ty IN i), (si, shift)), nil)
     | Binop b e1 e2 =>
       let '((r1, (si1, s1)), p1) := rndval_with_cond' si shift e1 in
       let '((r2, (si2, s2)), p2) := rndval_with_cond' si1 s1 e2 in
@@ -1756,7 +1763,8 @@ Fixpoint rndval_with_cond'
                in (rs, p++pn)
   end. 
 
-Fixpoint rndval_with_cond'_klist (si: positive) (shift: MSHIFT) {tys: list type} (l': klist expr tys) 
+Definition rndval_with_cond'_klist `{coll: collection} :=
+ fix rndval_with_cond'_klist (si: positive) (shift: MSHIFT) {tys: list type} (l': klist expr tys) 
                        {struct l'}: 
                    klist (fun _ => rexpr) tys * (positive*MSHIFT) * list (rexpr * bool) :=
           match l'
@@ -1767,7 +1775,7 @@ Fixpoint rndval_with_cond'_klist (si: positive) (shift: MSHIFT) {tys: list type}
                                     (Kcons r1 r2, (si2,s2), p1++p2)
           end.
 
-Lemma rnd_of_binop_with_cond_left {si shift ty o r1 r2 a c}:
+Lemma rnd_of_binop_with_cond_left `{coll: collection} {si shift ty o r1 r2 a c}:
   rnd_of_binop_with_cond si shift ty o r1 r2 = (a,c) ->
   rnd_of_binop si shift ty o r1 r2 = a.
 Proof.
@@ -1777,7 +1785,7 @@ Proof.
 Qed.
 
 
-Lemma rnd_of_cast_with_cond_left {si shift ty ty0 knowl r1 a c}:
+Lemma rnd_of_cast_with_cond_left `{coll: collection} {si shift ty ty0 knowl r1 a c}:
    rnd_of_cast_with_cond si shift ty ty0 knowl r1 = (a,c) ->
    rnd_of_cast si shift ty ty0 knowl r1 = a.
 Proof.
@@ -1786,7 +1794,7 @@ Proof.
   destruct (make_rounding _ _ _ _ _); congruence.
 Qed.
 
-Lemma rnd_of_unop_with_cond_left {si shift ty o r1  a c}:
+Lemma rnd_of_unop_with_cond_left `{coll: collection} {si shift ty o r1  a c}:
   rnd_of_unop_with_cond si shift ty o r1 = (a,c) ->
   rnd_of_unop si shift ty o r1 = a.
 Proof.
@@ -1797,14 +1805,14 @@ Proof.
   destruct knowl as [ [ | ] | ]; simpl in *; congruence.
 Qed.
 
-Lemma rnd_of_func_with_cond_left {si shift ty ff args  a c}:
+Lemma rnd_of_func_with_cond_left `{coll: collection} {si shift ty ff args  a c}:
   rnd_of_func_with_cond si shift ff args  = (a,c) ->
   rnd_of_func si shift ty ff args = a.
 Proof.
  unfold rnd_of_func_with_cond; intros; congruence.
 Qed.
 
-Lemma rndval_with_cond_left {si shift ty} {e: expr ty} {a c}:
+Lemma rndval_with_cond_left `{coll: collection} {si shift ty} {e: expr ty} {a c}:
     rndval_with_cond' si shift e = (a,c) ->
    rndval si shift _ e = a.
 Proof.
@@ -1839,8 +1847,8 @@ Proof.
   congruence.
 - (* Func *)
  intros.
-  fold @rndval_with_cond'_klist in *.
-  fold (@rndval_klist si shift (ff_args f4)) in *.
+  fold (@rndval_with_cond'_klist _) in *.
+  fold (@rndval_klist _ si shift (ff_args f4)) in *.
   destruct (rndval_with_cond'_klist si shift args) as [[r1 [si1 s1]] l1] eqn:?H.
   destruct (rndval_klist si shift args) as [r2 [si2 s2]] eqn:?H.
   unfold rnd_of_func_with_cond, rnd_of_func in *.
@@ -1863,7 +1871,7 @@ Proof.
   congruence.
 Qed.
 
-Lemma rndval_with_cond_klist_left {si shift tys} {e: klist expr tys} {a c}:
+Lemma rndval_with_cond_klist_left `{coll: collection} {si shift tys} {e: klist expr tys} {a c}:
    rndval_with_cond'_klist si shift e = (a,c) ->
    rndval_klist si shift e = a.
 Proof.
@@ -1875,7 +1883,7 @@ Proof.
   apply IHe in H1. rewrite H1. congruence.
 Qed.
 
-Lemma rndval_with_cond_shift_cond ty (e: expr ty):
+Lemma rndval_with_cond_shift_cond `{coll: collection} ty (e: expr ty):
   forall si shift r' si' shift' cond,
   rndval_with_cond' si shift e = ((r', (si', shift')), cond) ->
   forall e' b',
@@ -1937,7 +1945,7 @@ Proof.
        eapply rnd_of_cast_with_cond_shift_cond; eauto.
        eapply IHe in H0; [ | eassumption ]; lia.
 - (* Func *)
- fold @rndval_with_cond'_klist in H.
+ fold (@rndval_with_cond'_klist _) in H.
  destruct (rndval_with_cond'_klist si shift args) as [[r2 [si2 s2]] c2] eqn:?H.
  inversion H; clear H; subst.
  unfold func_no_overflow, rnd_of_func, rnd_of_func', fst in H0.
@@ -1979,7 +1987,7 @@ Proof.
        apply IHargs in H2; eauto.
 Qed.
 
-Lemma rndval_with_cond_klist_shift_cond tys (e: klist expr tys):
+Lemma rndval_with_cond_klist_shift_cond `{coll: collection} tys (e: klist expr tys):
   forall si shift r' si' shift' cond,
   rndval_with_cond'_klist si shift e = ((r', (si', shift')), cond) ->
   forall e' b',
@@ -2016,7 +2024,7 @@ Proof.
   lra.
 Qed.
 
-Theorem fop_of_rounded_binop_correct op shift errors
+Theorem fop_of_rounded_binop_correct `{coll: collection} op shift errors
     (Herr: errors_bounded shift errors)
         ty (STD: is_standard ty) e1
         (F1: is_finite e1 = true)
@@ -2112,7 +2120,7 @@ Proof.
     unfold BDIV, BINOP; rewrite float_of_ftype_of_float; auto.
 Qed.
 
-Theorem fop_of_rounded_unop_correct shift errors
+Theorem fop_of_rounded_unop_correct `{coll: collection} shift errors
     (Herr: errors_bounded shift errors)
         ty (STD: is_standard ty) e1
         (F1: is_finite e1 = true)
@@ -2185,8 +2193,8 @@ Proof.
 Qed.
 
 Lemma rndval_with_cond_correct_uInvShift:
-forall `{coll: collection} (env : forall x : type, FPLang.V -> ftype x)
- (Henv : forall (ty : type) (i : FPLang.V), is_finite (env ty i) = true)
+forall `{coll: collection} (env : environ)
+ (Henv : forall (ty : type) IN (i : FPLang.V), is_finite (env ty IN i) = true)
 (pow : positive)
  (ltr : bool) ty (STDty: is_standard ty) 
  (e : expr ty) (si : positive) (r1 : rexpr) (s1 : MSHIFT)
@@ -2264,7 +2272,7 @@ destruct (Pos.eq_dec i si1).
   destruct ltr; ring.
 Qed.
 
-Definition rwcc errors1 si (s: MSHIFT) env ty (e: expr ty) r := 
+Definition rwcc errors1 `{coll: collection} si (s: MSHIFT) env ty (e: expr ty) r := 
       exists errors2,
         same_upto si errors1 errors2
         /\
@@ -2275,7 +2283,7 @@ Definition rwcc errors1 si (s: MSHIFT) env ty (e: expr ty) r :=
         /\
         reval r env errors2 = FT2R fv.
 
-Definition fvalr_klist (env: forall ty, FPLang.V -> ftype ty) {T: Type} :=
+Definition fvalr_klist `{coll: collection} (env: environ) {T: Type} :=
   fix fvalr_klist {l1: list type} (l': klist expr l1) (f: function_type (map RR l1) T) {struct l'}: T :=
           match  l' in (klist _ l) return (function_type (map RR l) T -> T)
           with
@@ -2300,7 +2308,7 @@ apply IZR_neq.
 intro; discriminate.
 Qed.
 
-Lemma rnd_of_func'_e:
+Lemma rnd_of_func'_e `{coll: collection}:
   forall si s ty rel abs ff r r2 x,
   rnd_of_func' si s ty rel abs (RFunc ty ff r) = (r2, x) ->
   forall env errors,
@@ -2316,7 +2324,7 @@ simpl.
 rewrite !Rmult_1_r. reflexivity.
 Qed.
 
-Definition rfval_klist (env: forall ty, FPLang.V -> ftype ty) :=
+Definition rfval_klist `{coll: collection} (env: environ) :=
   fix fval_klist {l1: list type} (l': klist expr l1) (f: function_type (map RR l1) R) {struct l'}: R :=
           match  l' in (klist _ l) return (function_type (map RR l) R -> R)
           with
@@ -2330,13 +2338,13 @@ Fixpoint list_real_args (xl: list R) (tys: list type): function_type (map RR tys
   | _ :: tys' => (fun x : R => list_real_args (x :: xl) tys')
   end.
 
-Definition rwcc_klist errors1 si (s: MSHIFT) env tys (args: klist expr tys) (r: klist (fun _ => rexpr) tys) := 
+Definition rwcc_klist errors1 `{coll: collection} si (s: MSHIFT) env tys (args: klist expr tys) (r: klist (fun _ => rexpr) tys) := 
       exists errors2,
         same_upto si errors1 errors2
         /\
         errors_bounded s errors2
         /\
-        let fv := mapk (fun ty => @fval _ env ty) args in
+        let fv := mapk (fun ty => @fval _ _ env ty) args in
         Kforall (fun ty (f: ftype ty) => is_finite f = true) fv
         /\
         mapk (fun ty r => reval r env errors2) r = mapk (fun ty (x: ftype' ty) => FT2R x) fv.
@@ -2411,7 +2419,7 @@ apply Bcompare_correct; auto.
 Qed.
 
 Lemma rndval_with_cond_correct_klist : 
-   forall `{coll: collection} env (Henv: forall ty i, is_finite (env ty i) = true) 
+   forall `{coll: collection} env (Henv: forall ty IN i, is_finite (env ty IN i) = true) 
         tys (args: klist expr tys)
   (IH : Kforall
        (fun (ty : type) (e : expr ty) =>
@@ -2477,7 +2485,7 @@ Proof.
 Qed.
 
 Theorem rndval_with_cond_correct' 
-   `{coll: collection} env (Henv: forall ty i, is_finite (env ty i) = true) ty (e: expr ty) :
+   `{coll: collection} env (Henv: forall ty IN i, is_finite (env ty IN i) = true) ty (e: expr ty) :
   expr_valid e ->
   forall si shift r si' s' p,
     rndval_with_cond' si shift e = ((r, (si', s')), p) ->
@@ -3249,7 +3257,7 @@ Proof.
  change (fval env (Func ty f4 args)) with (fval_klist env args (ff_func (ff_ff f4))).
  change (expr_klist_valid args) in H.
  simpl in H0.
- fold (@rndval_with_cond'_klist) in H0.
+ fold (@rndval_with_cond'_klist _) in H0.
  destruct ( rndval_with_cond'_klist si shift args) as [[r2 [si2 s2]] p2] eqn:?H.
  inversion H0; clear H0; subst.
  assert (EC2: forall i : rexpr * bool, In i p2 -> eval_cond1 env s2 i). {
@@ -3443,16 +3451,12 @@ Qed.
 
 Definition empty_shiftmap := mempty (Tdouble, Unknown').
 
-Definition environ := forall ty : type, FPLang.V -> ftype ty.
 
-Definition env_all_finite (env: environ) :=
-  forall (ty : type) (i : FPLang.V),
-        is_finite (env ty i) = true.
 
-Definition eval_cond (s: MSHIFT) (c: cond) (env: environ) : Prop :=
+Definition eval_cond `{coll: collection} (s: MSHIFT) (c: cond) (env: environ) : Prop :=
   eval_cond1 env s c.
 
-Definition rndval_with_cond {ty} (e: expr ty) : rexpr * MSHIFT * list (environ -> Prop) :=
+Definition rndval_with_cond `{coll: collection} {ty} (e: expr ty) : rexpr * MSHIFT * list (environ -> Prop) :=
  let '((r,(si,s)),p) := rndval_with_cond' 1%positive empty_shiftmap e
   in (r, s, map (eval_cond s) p).
 

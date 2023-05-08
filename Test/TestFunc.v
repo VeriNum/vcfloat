@@ -29,21 +29,72 @@ Parameter c_function: forall (args: list type) (res: type) (bnds: klist bounds a
    {ff: function_type (map ftype' args) (ftype res) 
    | acc_prop args res rel 1 bnds f ff}.
 
-Ltac floatfunc' args res bnds rel f :=
+Ltac floatfunc' args res bnds rel f H :=
  let abs := constr:(1%N) in
  let cf := constr:(c_function args res bnds rel f) in
- let ff1 := constr:(Build_floatfunc args res _ f (proj1_sig cf) rel abs (proj2_sig cf)) in
+ let ff1 := constr:(Build_floatfunc args res _ f (proj1_sig cf) rel abs (proj2_sig cf) H) in
  exact (Build_floatfunc_package _ _  _ _ ff1).
 
-Definition vacuous_bnds ty : bounds ty := ((B754_infinity (fprec ty) (femax ty) true, false), 
-                              (B754_infinity (fprec ty) (femax ty) false, false)).
+Definition vacuous_bnds ty `{STD: is_standard ty} : bounds ty := 
+   ((ftype_of_float (B754_infinity (fprec ty) (femax ty) true), false), 
+    (ftype_of_float (B754_infinity (fprec ty) (femax ty) false), false)).
 
 Definition silly_bnds : bounds Tdouble :=
   ((-6, true), (99, false))%F64.
 
-Definition cosff := ltac:(floatfunc' [Tdouble] Tdouble (Kcons (vacuous_bnds Tdouble) Knil) 3%N Rtrigo_def.cos).
+Lemma cos_congr: forall al bl : klist ftype [Tdouble],
+  Kforall2 (@float_equiv) al bl ->
+  float_equiv
+    (applyk ftype [Tdouble] Tdouble
+       (proj1_sig
+          (c_function [Tdouble] Tdouble (Kcons (vacuous_bnds Tdouble) Knil)
+             3 cos)) (fun (ty : type) (t : ftype ty) => t) al)
+    (applyk ftype [Tdouble] Tdouble
+       (proj1_sig
+          (c_function [Tdouble] Tdouble (Kcons (vacuous_bnds Tdouble) Knil)
+             3 cos)) (fun (ty : type) (t : ftype ty) => t) bl).
+Proof.
+simpl; intros.
+inversion H; clear H; subst.
+apply Classical_Prop.EqdepTheory.inj_pair2 in H2, H3.
+subst al bl.
+inversion H5; clear H5; subst.
+apply Classical_Prop.EqdepTheory.inj_pair2 in H, H0.
+subst.
+change (binary_float_equiv ah bh) in H4.
+simpl.
+unfold eq_rect_r, eq_rect; simpl.
+Admitted.
+
+
+Lemma sin_congr: forall al bl : klist ftype [Tdouble],
+  Kforall2 (@float_equiv) al bl ->
+  float_equiv
+    (applyk ftype [Tdouble] Tdouble
+       (proj1_sig
+          (c_function [Tdouble] Tdouble (Kcons silly_bnds Knil)
+             5 sin)) (fun (ty : type) (t : ftype ty) => t) al)
+    (applyk ftype [Tdouble] Tdouble
+       (proj1_sig
+          (c_function [Tdouble] Tdouble (Kcons silly_bnds Knil)
+             5 sin)) (fun (ty : type) (t : ftype ty) => t) bl).
+Proof.
+simpl; intros.
+inversion H; clear H; subst.
+apply Classical_Prop.EqdepTheory.inj_pair2 in H2, H3.
+subst al bl.
+inversion H5; clear H5; subst.
+apply Classical_Prop.EqdepTheory.inj_pair2 in H, H0.
+subst.
+change (binary_float_equiv ah bh) in H4.
+simpl.
+unfold eq_rect_r, eq_rect; simpl.
+Admitted.
+
+
+Definition cosff := ltac:(floatfunc' [Tdouble] Tdouble (Kcons (vacuous_bnds Tdouble) Knil) 3%N Rtrigo_def.cos cos_congr).
 Definition cos := ltac:(apply_func cosff).
-Definition sinff := ltac:(floatfunc' [Tdouble] Tdouble (Kcons silly_bnds Knil) 5%N Rtrigo_def.sin).
+Definition sinff := ltac:(floatfunc' [Tdouble] Tdouble (Kcons silly_bnds Knil) 5%N Rtrigo_def.sin sin_congr).
 Definition sin := ltac:(apply_func sinff).
 
 Lemma test_reify1: False.
@@ -51,9 +102,9 @@ Proof.
 pose (e := (1 +  cos 2)%F64).
 let u := reify_float_expr e in 
  constr_eq u 
-  (Binop (Rounded2 PLUS None) (Const Tdouble 1%F64)
+  (Binop (Rounded2 PLUS None) (Const Tdouble I 1%F64)
        (Func Tdouble cosff
-          (Kcons (Const Tdouble 2%F64) Knil))).
+          (Kcons (Const Tdouble I 2%F64) Knil))).
 Abort.
 
 
@@ -87,7 +138,7 @@ Definition vmap_list (x : ftype Tdouble) :=
   compute it into a lookup-tree ___here___, not later in each place
   where we look something up. *)
 Definition vmap (x : ftype Tdouble) : valmap :=
- ltac:(let z := compute_PTree (valmap_of_list (vmap_list x)) in exact z).
+ ltac:(make_valmap_of_list (vmap_list x)).
 
 (**  Demonstration of reification and reflection.   When you have a 
   deep-embedded "expr"ession, you can get back the shallow embedding

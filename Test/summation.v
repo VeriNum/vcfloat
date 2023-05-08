@@ -21,7 +21,7 @@ Inductive sum_rel {A : Type} (default: A) (sum_op : A -> A -> A) : list A -> A -
     sum_rel default sum_op l s ->
     sum_rel default sum_op (a::l) (sum sum_op a s).
 
-Definition sum_rel_F := @sum_rel (ftype Tsingle) (-0)%F32 (@BPLUS _ Tsingle).
+Definition sum_rel_F := @sum_rel (ftype Tsingle) (-0)%F32 (@BPLUS _ Tsingle _).
 Definition sum_rel_R := @sum_rel R 0%R Rplus.
 
 
@@ -117,7 +117,7 @@ eapply sum_rel_R_Rabs_eq; apply H3.
 Qed.
 
 Lemma plus_zero a:
-is_finite _ _ a = true -> 
+is_finite a = true -> 
 (a + -0)%F32 = a.
 Proof.
 destruct a; simpl; auto;
@@ -128,7 +128,7 @@ Qed.
 
 Lemma sum_rel_F_single :
 forall (a : ftype Tsingle) (fs : ftype Tsingle)
-  (HFIN: is_finite _ _ a = true),
+  (HFIN: is_finite a = true),
   sum_rel_F [a] fs -> fs = a.
 Proof.
 intros.
@@ -154,8 +154,8 @@ Definition _b := 2%positive. (* accumulator *)
 Definition vmap_list ty (a b : ftype ty) := 
    [(_a, existT ftype _ a); (_b, existT ftype _ b)].
 
-Definition vmap {ty} (a b : ftype ty) : valmap :=
- ltac:(let z := compute_PTree (valmap_of_list (vmap_list ty a b)) in exact z).
+Definition vmap (*{ty}*) (a b : ftype Tsingle) : valmap :=
+ ltac:(make_valmap_of_list (vmap_list Tsingle a b)).
 
 Definition bmap_list : list varinfo := 
   [ trivbound_varinfo Tsingle _a;
@@ -164,8 +164,9 @@ Definition bmap_list : list varinfo :=
 Definition bmap : boundsmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list bmap_list) in exact z).
 
-Definition sum_expr {ty} (a b : ftype ty) := ltac :( let e' :=
-  HO_reify_float_expr constr:([_a; _b]) (@BPLUS _ ty) in exact e').
+Definition sum_expr (*{ty} {STD: is_standard ty} *)(a b : ftype Tsingle) := 
+  ltac :( let e' :=
+  HO_reify_float_expr constr:([_a; _b]) (@BPLUS _ (*ty*)Tsingle _) in exact e').
 
 Lemma real_lt_1 :
 forall a b c,
@@ -179,7 +180,7 @@ Lemma prove_rndoff' :
   let d := / IZR (2 ^ 24) in 
       let ov := powerRZ 2 (femax Tsingle) in
   Rabs (FT2R a + FT2R b) <= (ov - 2 * e) / (1 + d) -> 
-  prove_roundoff_bound bmap (vmap a b) (@sum_expr Tsingle a b) 
+  prove_roundoff_bound bmap (vmap a b) (@sum_expr (*Tsingle*) a b) 
      (Rabs ( FT2R a + FT2R b) * d + e).
 Proof.
 intros ? ? ? ?  ? bnd.
@@ -236,7 +237,8 @@ assert (He0: Rabs e1 <= e).
 rename e2 into d0.
 assert (Hd: Rabs d0 <= d).
 { eapply Rle_trans. apply E0. subst d; simpl; nra. }
-replace (a * d0 + b * d0 + e1) with ((a + b) * d0 + e1) by nra.
+compute_every fprec.
+replace (B2R 24 128 a * d0 + B2R 24 128 b * d0 + e1) with ((B2R 24 128 a + B2R 24 128 b) * d0 + e1) by nra.
 eapply Rle_trans; [
 apply Rabs_triang | eapply Rle_trans; [apply Rplus_le_compat; [rewrite Rabs_mult; eapply Rle_trans;
   [apply Rmult_le_compat; 
@@ -247,7 +249,7 @@ Qed.
 
 Lemma reflect_reify_sumF : 
   forall a b,
-  fval (env_ (vmap a b)) (@sum_expr Tsingle a b) = sum (@BPLUS _ Tsingle)  a b .
+  fval (env_ (vmap a b)) (@sum_expr (*Tsingle*) a b) = sum (@BPLUS _ Tsingle _)  a b .
 Proof. reflexivity. Qed.
 
 Lemma reflect_reify_sumR : 

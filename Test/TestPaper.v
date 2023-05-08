@@ -53,7 +53,7 @@ Definition step_vmap_list (x v : ftype Tsingle) :=
   compute it into a lookup-tree ___here___, not later in each place
   where we look something up. *)
 Definition step_vmap (x v : ftype Tsingle) : valmap :=
- ltac:(let z := compute_PTree (valmap_of_list (step_vmap_list x v)) in exact z).
+ ltac:(make_valmap_of_list (step_vmap_list x v)).
 
 (**  Demonstration of reification and reflection.   When you have a 
   deep-embedded "expr"ession, you can get back the shallow embedding

@@ -60,11 +60,18 @@ Ltac find_type prec emax :=
      constr:(TYPE precp emax Logic.I Logic.I)
  end.
 
+Ltac prove_incollection :=
+ lazymatch goal with |- @incollection ?coll ?ty =>
+ red; try apply I;
+ repeat (try (left; reflexivity); right);
+ fail "Failed to prove incollection" coll ty "; that is, the type is a nonstandard type that does not appear to be declared in your collection"
+ end.
+
 Ltac reify_float_expr E :=
  match E with
- | placeholder32 ?i => constr:(Var Tsingle i)
- | placeholder ?ty ?i => constr:(Var ty i)
- | Zconst ?t ?z => constr:(Const t (Zconst t z))
+ | placeholder32 ?i => constr:(Var Tsingle ltac:(prove_incollection) i)
+ | placeholder ?ty ?i => constr:(Var ty ltac:(prove_incollection) i)
+ | Zconst ?t ?z => constr:(Const t I (Zconst t z))
  | BPLUS ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(Binop (Rounded2 PLUS None) a' b')
  | Norm (BPLUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
@@ -103,11 +110,11 @@ Ltac reify_float_expr E :=
                                       constr:(f')
  | @cast _ Tdouble Tdouble ?f => let f':= reify_float_expr f in 
                                       constr:(f')
- | b32_B754_zero _ => constr:(Const Tsingle E)
- | b64_B754_zero _ => constr:(Const Tdouble E)
- | b64_B754_finite _ _ _ _ => constr:(Const Tdouble E)
- | b32_B754_finite _ _ _ _ => constr:(Const Tsingle E)
- | b64_B754_finite _ _ _ _ => constr:(Const Tdouble E)
+ | b32_B754_zero _ => constr:(Const Tsingle I E)
+ | b64_B754_zero _ => constr:(Const Tdouble I E)
+ | b64_B754_finite _ _ _ _ => constr:(Const Tdouble I E)
+ | b32_B754_finite _ _ _ _ => constr:(Const Tsingle I E)
+ | b64_B754_finite _ _ _ _ => constr:(Const Tdouble I E)
  | Sterbenz (BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(Binop SterbenzMinus a' b')
  | @func ?ty ?ff ?a1 => let a1' := reify_float_expr a1 in 

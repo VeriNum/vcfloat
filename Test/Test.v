@@ -69,7 +69,7 @@ Definition leapfrog_vmap_list (x v : ftype Tsingle) :=
   compute it into a lookup-tree ___here___, not later in each place
   where we look something up. *)
 Definition leapfrog_vmap (x v : ftype Tsingle) : valmap :=
- ltac:(let z := compute_PTree (valmap_of_list (leapfrog_vmap_list x v)) in exact z).
+ ltac:(make_valmap_of_list (leapfrog_vmap_list x v)).
 
 (**  Demonstration of reification and reflection.   When you have a 
   deep-embedded "expr"ession, you can get back the shallow embedding
@@ -140,7 +140,6 @@ prove_roundoff_bound.
 - 
  prove_roundoff_bound2.
  match goal with |- Rabs ?a <= _ => field_simplify a end. (* improves the bound *)
-
  (* Right now, just "interval" would solve the goal.
   but to see how we guess the bound to use, try this instead: *)
   match goal with |- Rabs ?a <= _ => interval_intro (Rabs a) end.
