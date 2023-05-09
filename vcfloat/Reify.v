@@ -62,7 +62,7 @@ Ltac find_type prec emax :=
 
 Ltac prove_incollection :=
  lazymatch goal with |- @incollection ?coll ?ty =>
- red; try apply I;
+ auto with typeclass_instances; red; try apply I;
  repeat (try (left; reflexivity); right);
  fail "Failed to prove incollection" coll ty "; that is, the type is a nonstandard type that does not appear to be declared in your collection"
  end.
@@ -127,7 +127,7 @@ Ltac reify_float_expr E :=
                                             let a3' := reify_float_expr a3 in 
                                             constr:(Func ty ff (Kcons a1' (Kcons a2' (Kcons a3' Knil))))
  | _ => let E' := eval red in E in reify_float_expr E'
- | _ => fail 100 "could not reify bot" E
+ | _ => fail 100 "could not reify" E
  end.
 
 Ltac HO_reify_float_expr names E :=

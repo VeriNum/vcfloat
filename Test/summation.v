@@ -154,8 +154,8 @@ Definition _b := 2%positive. (* accumulator *)
 Definition vmap_list ty (a b : ftype ty) := 
    [(_a, existT ftype _ a); (_b, existT ftype _ b)].
 
-Definition vmap (*{ty}*) (a b : ftype Tsingle) : valmap :=
- ltac:(make_valmap_of_list (vmap_list Tsingle a b)).
+Definition vmap {ty} `{IN: incollection ty} (a b : ftype ty) : valmap :=
+ ltac:(make_valmap_of_list (vmap_list ty a b)).
 
 Definition bmap_list : list varinfo := 
   [ trivbound_varinfo Tsingle _a;
@@ -164,15 +164,24 @@ Definition bmap_list : list varinfo :=
 Definition bmap : boundsmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list bmap_list) in exact z).
 
-Definition sum_expr (*{ty} {STD: is_standard ty} *)(a b : ftype Tsingle) := 
+Lemma standard_incollection: forall `{coll: collection} ty, 
+  is_standard ty -> incollection ty.
+Proof.
+intros.
+destruct ty as [? ? ? ? ? [|]]; try contradiction.
+red; simpl; auto.
+Qed.
+
+Hint Resolve standard_incollection : typeclass_instances.
+
+Definition sum_expr {ty} {STD: is_standard ty} (a b : ftype ty) := 
   ltac :( let e' :=
-  HO_reify_float_expr constr:([_a; _b]) (@BPLUS _ (*ty*)Tsingle _) in exact e').
+  HO_reify_float_expr constr:([_a; _b]) (@BPLUS _ ty _) in exact e').
 
 Lemma real_lt_1 :
 forall a b c,
 a <= b -> b < c -> a < c.
 Proof. intros; apply Rle_lt_trans with b; auto. Qed.
-
 
 Lemma prove_rndoff' :
   forall (a b : ftype Tsingle) ,
@@ -180,7 +189,7 @@ Lemma prove_rndoff' :
   let d := / IZR (2 ^ 24) in 
       let ov := powerRZ 2 (femax Tsingle) in
   Rabs (FT2R a + FT2R b) <= (ov - 2 * e) / (1 + d) -> 
-  prove_roundoff_bound bmap (vmap a b) (@sum_expr (*Tsingle*) a b) 
+  prove_roundoff_bound bmap (vmap a b) (@sum_expr Tsingle _ a b) 
      (Rabs ( FT2R a + FT2R b) * d + e).
 Proof.
 intros ? ? ? ?  ? bnd.
@@ -248,13 +257,13 @@ nra.
 Qed.
 
 Lemma reflect_reify_sumF : 
-  forall a b,
-  fval (env_ (vmap a b)) (@sum_expr (*Tsingle*) a b) = sum (@BPLUS _ Tsingle _)  a b .
+  forall a b : ftype Tsingle,
+  fval (env_ (vmap a b)) (sum_expr a b) = sum (@BPLUS _ Tsingle _)  a b .
 Proof. reflexivity. Qed.
 
 Lemma reflect_reify_sumR : 
-  forall a b,
-  rval (env_ (vmap a b)) (@sum_expr (*Tsingle*) a b) = FT2R a + FT2R b .
+  forall a b: ftype Tsingle,
+  rval (env_ (vmap a b)) (sum_expr a b) = FT2R a + FT2R b .
 Proof. reflexivity. Qed.
 
 Lemma prove_rndoff:

@@ -136,6 +136,7 @@ Definition incollection {coll: collection} t : Prop :=
  | Some _ => In t (proj1_sig coll)
  | _ => True
  end.
+Existing Class incollection.
 
 Unset Elimination Schemes.
 
