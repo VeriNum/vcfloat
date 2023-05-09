@@ -10,6 +10,15 @@ Set Bullet Behavior "Strict Subproofs".
 
 Open Scope R_scope.
 
+
+Definition dubdub : nonstdtype 106 1024 I I. Admitted.
+Definition Tdubdub : type := GTYPE _ _ _ _ (Some dubdub).
+
+Instance coll : collection.
+ exists [Tdubdub]. hnf; intros. destruct H; try contradiction. destruct H0; try contradiction.
+ subst; auto.
+Defined.
+
 Section WITHNANS.
 Context {NANS: Nans}.
 
@@ -29,34 +38,43 @@ Ltac floatfunc' args res bnds rel f :=
  let ff1 := constr:(Build_floatfunc args res _ f (proj1_sig cf) rel abs (proj1 (proj2_sig cf)) (proj2 (proj2_sig cf))) in
  exact (Build_floatfunc_package _ _  _ _ ff1).
 
-Definition vacuous_bnds ty `{STD: is_standard ty} : bounds ty := 
-   ((ftype_of_float (B754_infinity (fprec ty) (femax ty) true), false), 
-    (ftype_of_float (B754_infinity (fprec ty) (femax ty) false), false)).
+Axiom some_lo: ftype Tdubdub.
+Axiom some_hi: ftype Tdubdub.
+Axiom some_lo': Defs.float Zaux.radix2.
+Axiom some_hi': Defs.float Zaux.radix2.
+Axiom nonstd_to_F_lo: nonstd_to_F some_lo = Some some_lo'.
+Axiom nonstd_to_F_hi: nonstd_to_F some_hi = Some some_hi'.
 
-Definition silly_bnds : bounds Tdouble :=
-  ((-6, true), (99, false))%F64.
 
+Definition some_bounds : bounds Tdubdub :=
+  ((some_lo, true), (some_hi, false)).
 
-Definition cosff := ltac:(floatfunc' [Tdouble] Tdouble (Kcons (vacuous_bnds Tdouble) Knil) 3%N Rtrigo_def.cos).
+Definition cosff := ltac:(floatfunc' [Tdubdub] Tdubdub (Kcons some_bounds Knil) 3%N Rtrigo_def.cos).
 Definition cos := ltac:(apply_func cosff).
-Definition sinff := ltac:(floatfunc' [Tdouble] Tdouble (Kcons silly_bnds Knil) 5%N Rtrigo_def.sin).
+Definition sinff := ltac:(floatfunc' [Tdubdub] Tdubdub (Kcons some_bounds Knil) 5%N Rtrigo_def.sin).
 Definition sin := ltac:(apply_func sinff).
 
-Lemma test_reify1: False.
-Proof.
-pose (e := (1 +  cos 2)%F64).
-let u := reify_float_expr e in 
- constr_eq u 
-  (Binop (Rounded2 PLUS None) (Const Tdouble I 1%F64)
-       (Func Tdouble cosff
-          (Kcons (Const Tdouble I 2%F64) Knil))).
-Abort.
+Definition plusff := ltac:(floatfunc' [Tdubdub;Tdubdub] Tdubdub (Kcons some_bounds (Kcons some_bounds Knil)) 0%N Rplus).
+Definition plus := ltac:(apply_func plusff).
+Definition multff := ltac:(floatfunc' [Tdubdub;Tdubdub] Tdubdub (Kcons some_bounds (Kcons some_bounds Knil)) 0%N Rmult).
+Definition mult := ltac:(apply_func multff).
+(*
 
-Definition F (x : ftype Tdouble ) : ftype Tdouble := 
-  (cos x * cos x + sin x * sin x)%F64.
+Definition F (x : ftype Tdubdub ) : ftype Tdubdub := 
+  plus (mult (cos x) (cos x)) (mult (sin x) (sin x)).
+*)
+
+Definition F (x : ftype Tdubdub ) : ftype Tdubdub := 
+  plus x x.
+
+Instance incoll_dubdub: incollection Tdubdub.
+hnf; auto.
+Defined.
 
 
-Definition _x : ident := 1%positive.  
+Definition _x : ident := 1%positive.
+(*Arguments Var {coll} ty {IN} _.*)
+
 (** These two lines compute a deep-embedded "expr"ession from
   a shallow-embedded Coq expression.  *)
 Definition F' := ltac:(let e' := 
@@ -71,23 +89,46 @@ Print F'.  (* Demonstrates what x' looks like *)
   make an association list mapping _x to x, and _v to v,  each labeled
   by its floating-point type.  *)
 
-Definition vmap_list (x : ftype Tdouble) := 
+Definition vmap_list (x : ftype Tdubdub) := 
    [(_x, existT ftype _ x)].
 
 (** Step two, build that into "varmap" data structure, taking care to
   compute it into a lookup-tree ___here___, not later in each place
   where we look something up. *)
-Definition vmap (x : ftype Tdouble) : valmap :=
+Definition vmap (x : ftype Tdubdub) : valmap :=
  ltac:(make_valmap_of_list (vmap_list x)).
 
 (**  Demonstration of reification and reflection.   When you have a 
   deep-embedded "expr"ession, you can get back the shallow embedding
    by applying the "fval" function *)
 
+Require Import vcfloat.FPLib.
+
+Lemma env_x: forall x IN, env_ (vmap x) Tdubdub IN _x = x.
+Proof.
+intros.
+unfold vmap, env_.
+simpl.
+unfold eq_rect, eq_ind_r, eq_ind.
+simpl.
+destruct IN; simpl; try contradiction.
+destruct (compute_valmap_valid _ _); simpl; try contradiction.
+simpl in e0.
+proof_irr.
+fold Tdubdub.
+assert (e = eq_refl _).
+apply proof_irr.
+subst.
+auto.
+Qed.
+
 Lemma reflect_reify_x : forall x, 
              fval (env_ (vmap x)) F' = F x.
 Proof.
 intros.
+cbv [F plus mult cos sin plusff multff cosff sinff func].
+simpl.
+rewrite !env_x.
 reflexivity.
 Qed.
 
@@ -101,7 +142,7 @@ Qed.
 (** First we make an association list.  This one says that 
    -2.0 <= x <= 2.0   and   -2.0 <= v <= 2.0  *)
 Definition bmap_list : list varinfo := 
-  [ Build_varinfo Tdouble _x (-2)  2 ].
+  [ Build_varinfo Tdubdub _x (-2)  2 ].
 
 (** Then we calculate an efficient lookup table, the "boundsmap". *)
 Definition bmap : boundsmap :=
@@ -117,12 +158,15 @@ intros.
 prove_roundoff_bound.
 -
 prove_rndval.
-all: interval.
+interval.
+simpl.
+admit.
 - 
 prove_roundoff_bound2.
- match goal with |- Rabs ?a <= _ => field_simplify a end. (* improves the bound *)
+ match goal with |- (Rabs ?a <= _)%R => field_simplify a end. (* improves the bound *)
  interval.
-Qed.
+all:fail.
+Admitted.
 
 Derive x_acc 
  SuchThat  (forall vmap,  prove_roundoff_bound bmap vmap F' x_acc)

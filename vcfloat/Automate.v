@@ -1344,7 +1344,7 @@ end;
  destruct H2 as [FIN H2]; split; [assumption  | ]; clear FIN;
  clearbody e;
  simpl in e;
- change (B2R _ _ e) with (FT2R e) in H2;
+ try change (B2R _ _ e) with (FT2R e) in H2;
  match goal with H2 : _ = @FT2R ?t1 e |- context [@FT2R ?t2 e] =>
   change t2 with t1
  end;

@@ -70,7 +70,7 @@ Ltac prove_incollection :=
 Ltac reify_float_expr E :=
  match E with
  | placeholder32 ?i => constr:(Var Tsingle ltac:(prove_incollection) i)
- | placeholder ?ty ?i => constr:(Var ty ltac:(prove_incollection) i)
+ | placeholder ?ty ?i => constr:(@Var ltac:(auto with typeclass_instances) ty ltac:(prove_incollection) i)
  | Zconst ?t ?z => constr:(Const t I (Zconst t z))
  | BPLUS ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(Binop (Rounded2 PLUS None) a' b')
