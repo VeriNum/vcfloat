@@ -254,7 +254,7 @@ Proof. reflexivity. Qed.
 
 Lemma reflect_reify_sumR : 
   forall a b,
-  rval (env_ (vmap a b)) (@sum_expr Tsingle a b) = FT2R a + FT2R b .
+  rval (env_ (vmap a b)) (@sum_expr (*Tsingle*) a b) = FT2R a + FT2R b .
 Proof. reflexivity. Qed.
 
 Lemma prove_rndoff:
@@ -401,9 +401,9 @@ Lemma prove_rndoff_n :
   let n := length l in 
   let A := (1 + d)^(n-1) - 1 in
   (forall a0, In a0 l -> 
-  is_finite (fprec Tsingle) 128 a0 = true /\
+  is_finite a0 = true /\
   Rabs (FT2R a0) <= (ov - 2 * e - A * e/d * (1 + d)) / ((1 + (A + 1) * INR n) * (1 + d))) -> 
-  is_finite (fprec Tsingle) (femax Tsingle) fs = true /\
+  is_finite fs = true /\
   Rabs (rs - FT2R fs) <= error_rel (length l)  rs_abs.
 Proof.
 induction l.
@@ -426,7 +426,7 @@ destruct Hl.
 (* case empty l *)
 +
 subst; simpl.
-assert (HFIN: is_finite (fprec Tsingle) 128 a = true).
+assert (HFIN: is_finite a = true).
 {
 apply H2; simpl; auto.
 }
@@ -605,7 +605,7 @@ fold sum_rel_R in H7.
 assert (IHLp:
 forall a0 : ftype Tsingle,
 In a0 l ->
-is_finite (fprec Tsingle) 128 a0 = true /\
+is_finite a0 = true /\
 Rabs (FT2R a0) <=
 (ov - 2 * e - ((1 + d) ^ (length l - 1) - 1) * e / d * (1 + d)) /
 ((1 + ((1 + d) ^ (length l - 1) - 1 + 1) * INR (length l)) * (1 + d))).
@@ -757,7 +757,7 @@ rewrite map_length; auto.
 
 assert (HBMD: boundsmap_denote bmap (vmap a s1)).
 {
-assert (is_finite (fprec Tsingle) (femax Tsingle) s1 = true). {
+assert (is_finite s1 = true). {
   eapply IHl.
   apply H5.
   apply H6.

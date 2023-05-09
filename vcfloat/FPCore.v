@@ -797,7 +797,7 @@ Defined.
 Section WITHNANS.
 Context {NANS: Nans}.
 
-Definition cast (tto: type) {tfrom: type} (STDto: is_standard tto) (STDfrom: is_standard tfrom) (f: ftype tfrom): ftype tto.
+Definition cast (tto: type) {tfrom: type} {STDto: is_standard tto} {STDfrom: is_standard tfrom} (f: ftype tfrom): ftype tto.
 
 refine
 
