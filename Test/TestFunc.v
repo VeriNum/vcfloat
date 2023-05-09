@@ -27,12 +27,12 @@ Definition default_abs (t: type) : R :=
 
 Parameter c_function: forall (args: list type) (res: type) (bnds: klist bounds args) (rel: N) (f: function_type (map RR args) R),
    {ff: function_type (map ftype' args) (ftype res) 
-   | acc_prop args res rel 1 bnds f ff}.
+   | acc_prop args res rel 1 bnds f ff /\ floatfunc_congr ff}.
 
-Ltac floatfunc' args res bnds rel f H :=
+Ltac floatfunc' args res bnds rel f :=
  let abs := constr:(1%N) in
  let cf := constr:(c_function args res bnds rel f) in
- let ff1 := constr:(Build_floatfunc args res _ f (proj1_sig cf) rel abs (proj2_sig cf) H) in
+ let ff1 := constr:(Build_floatfunc args res _ f (proj1_sig cf) rel abs (proj1 (proj2_sig cf)) (proj2 (proj2_sig cf))) in
  exact (Build_floatfunc_package _ _  _ _ ff1).
 
 Definition vacuous_bnds ty `{STD: is_standard ty} : bounds ty := 
@@ -42,59 +42,10 @@ Definition vacuous_bnds ty `{STD: is_standard ty} : bounds ty :=
 Definition silly_bnds : bounds Tdouble :=
   ((-6, true), (99, false))%F64.
 
-Lemma cos_congr: forall al bl : klist ftype [Tdouble],
-  Kforall2 (@float_equiv) al bl ->
-  float_equiv
-    (applyk ftype [Tdouble] Tdouble
-       (proj1_sig
-          (c_function [Tdouble] Tdouble (Kcons (vacuous_bnds Tdouble) Knil)
-             3 cos)) (fun (ty : type) (t : ftype ty) => t) al)
-    (applyk ftype [Tdouble] Tdouble
-       (proj1_sig
-          (c_function [Tdouble] Tdouble (Kcons (vacuous_bnds Tdouble) Knil)
-             3 cos)) (fun (ty : type) (t : ftype ty) => t) bl).
-Proof.
-simpl; intros.
-inversion H; clear H; subst.
-apply Classical_Prop.EqdepTheory.inj_pair2 in H2, H3.
-subst al bl.
-inversion H5; clear H5; subst.
-apply Classical_Prop.EqdepTheory.inj_pair2 in H, H0.
-subst.
-change (binary_float_equiv ah bh) in H4.
-simpl.
-unfold eq_rect_r, eq_rect; simpl.
-Admitted.
 
-
-Lemma sin_congr: forall al bl : klist ftype [Tdouble],
-  Kforall2 (@float_equiv) al bl ->
-  float_equiv
-    (applyk ftype [Tdouble] Tdouble
-       (proj1_sig
-          (c_function [Tdouble] Tdouble (Kcons silly_bnds Knil)
-             5 sin)) (fun (ty : type) (t : ftype ty) => t) al)
-    (applyk ftype [Tdouble] Tdouble
-       (proj1_sig
-          (c_function [Tdouble] Tdouble (Kcons silly_bnds Knil)
-             5 sin)) (fun (ty : type) (t : ftype ty) => t) bl).
-Proof.
-simpl; intros.
-inversion H; clear H; subst.
-apply Classical_Prop.EqdepTheory.inj_pair2 in H2, H3.
-subst al bl.
-inversion H5; clear H5; subst.
-apply Classical_Prop.EqdepTheory.inj_pair2 in H, H0.
-subst.
-change (binary_float_equiv ah bh) in H4.
-simpl.
-unfold eq_rect_r, eq_rect; simpl.
-Admitted.
-
-
-Definition cosff := ltac:(floatfunc' [Tdouble] Tdouble (Kcons (vacuous_bnds Tdouble) Knil) 3%N Rtrigo_def.cos cos_congr).
+Definition cosff := ltac:(floatfunc' [Tdouble] Tdouble (Kcons (vacuous_bnds Tdouble) Knil) 3%N Rtrigo_def.cos).
 Definition cos := ltac:(apply_func cosff).
-Definition sinff := ltac:(floatfunc' [Tdouble] Tdouble (Kcons silly_bnds Knil) 5%N Rtrigo_def.sin sin_congr).
+Definition sinff := ltac:(floatfunc' [Tdouble] Tdouble (Kcons silly_bnds Knil) 5%N Rtrigo_def.sin).
 Definition sin := ltac:(apply_func sinff).
 
 Lemma test_reify1: False.

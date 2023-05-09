@@ -1163,6 +1163,14 @@ exact (forall z: ftype a, interp_bounds bnds z = true ->
              acc_prop r result rel abs pre (rf (FT2R z)) (f z)).
 Defined.
 
+Definition floatfunc_congr {args: list type} {result: type} 
+      (func: function_type (map ftype' args) (ftype' result)) : Prop :=
+  forall (al bl: klist ftype args),
+      Kforall2 (@float_equiv) al bl ->
+      float_equiv 
+         (applyk ftype args result func (fun _ t => t) al)
+         (applyk ftype args result func (fun _ t => t) bl).
+
 Record floatfunc (args: list type) (result: type) 
      (precond: klist bounds args)
      (realfunc: function_type (map RR args) R) := 
@@ -1170,11 +1178,7 @@ Record floatfunc (args: list type) (result: type)
   ff_rel: N;
   ff_abs: N;
   ff_acc: acc_prop args result ff_rel ff_abs precond realfunc ff_func;
-  ff_congr: forall al bl: klist ftype args,
-      Kforall2 (@float_equiv) al bl ->
-      float_equiv 
-         (applyk ftype args result ff_func (fun _ t => t) al)
-         (applyk ftype args result ff_func (fun _ t => t) bl)
+  ff_congr: floatfunc_congr ff_func
  }.
 
 Record floatfunc_package ty:=
