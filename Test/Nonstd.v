@@ -92,6 +92,7 @@ Print F'.  (* Demonstrates what x' looks like *)
 Definition vmap_list (x : ftype Tdubdub) := 
    [(_x, existT ftype _ x)].
 
+
 (** Step two, build that into "varmap" data structure, taking care to
   compute it into a lookup-tree ___here___, not later in each place
   where we look something up. *)
@@ -104,31 +105,11 @@ Definition vmap (x : ftype Tdubdub) : valmap :=
 
 Require Import vcfloat.FPLib.
 
-Lemma env_x: forall x IN, env_ (vmap x) Tdubdub IN _x = x.
-Proof.
-intros.
-unfold vmap, env_.
-simpl.
-unfold eq_rect, eq_ind_r, eq_ind.
-simpl.
-destruct IN; simpl; try contradiction.
-destruct (compute_valmap_valid _ _); simpl; try contradiction.
-simpl in e0.
-proof_irr.
-fold Tdubdub.
-assert (e = eq_refl _).
-apply proof_irr.
-subst.
-auto.
-Qed.
 
 Lemma reflect_reify_x : forall x, 
              fval (env_ (vmap x)) F' = F x.
 Proof.
 intros.
-cbv [F plus mult cos sin plusff multff cosff sinff func].
-simpl.
-rewrite !env_x.
 reflexivity.
 Qed.
 

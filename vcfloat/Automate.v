@@ -219,6 +219,48 @@ Definition valmap_of_list `{coll: collection} (* obsolete? *)
      (vl: list (ident * sigT ftype)) VALID : valmap :=
   make_valmap (valmap_of_list' vl) VALID.
 
+Fixpoint test_ptree' {T: Type} (P: T -> Prop) (t: Maps.PTree.tree' T) :=
+ match t with
+ | Maps.PTree.Node001 r => test_ptree' P r
+ | Maps.PTree.Node010 x => P x
+ | Maps.PTree.Node011 x r => P x /\ test_ptree' P r
+ | Maps.PTree.Node100 l => test_ptree' P l
+ | Maps.PTree.Node101 l r => test_ptree' P l /\ test_ptree' P r
+ | Maps.PTree.Node110 l x => test_ptree' P l /\ P x
+ | Maps.PTree.Node111 l x r => test_ptree' P l /\ P x /\ test_ptree' P r
+ end.
+
+Definition test_ptree {T: Type} (P: T -> Prop) (t: Maps.PTree.t T) :=
+ match t with
+ | Maps.PTree.Nodes t' => test_ptree' P t'
+ | Maps.PTree.Empty => True
+ end.
+
+Lemma test_ptree_correct: forall (T: Type) (P: T -> Prop) (t: Maps.PTree.t T),
+  test_ptree P t ->
+   forall i x, Maps.PTree.get i t = Some x -> P x.
+Proof.
+intros ? ? ?.
+unfold Maps.PTree.get.
+destruct t; simpl in *.
+discriminate.
+induction t; simpl; intros; destruct i; simpl in *; eauto; try discriminate;
+repeat match goal with H: _ /\ _ |- _ => destruct H end;
+eauto;
+try solve [injection H0; intro; subst; auto].
+Defined.
+
+
+Lemma compute_valmap_valid `{coll: collection}:
+ forall (vm: Maps.PTree.t (sigT ftype)),
+ test_ptree (fun x => incollection (projT1 x)) vm ->
+ valmap_valid vm.
+Proof.
+hnf; intros.
+exact (test_ptree_correct _ _ _ H).
+Defined.
+
+(*
 
 Lemma compute_valmap_valid `{coll: collection}:
  forall (vm: Maps.PTree.t (sigT ftype)),
@@ -233,13 +275,15 @@ rewrite Forall_forall in H.
 apply H in H0.
 auto.
 Qed.
+*)
 
 Ltac make_valmap_of_list vml :=
    lazymatch goal with |- valmap => idtac end;
    let z := compute_PTree (valmap_of_list' vml) in 
    exists z;
    apply compute_valmap_valid;
-   repeat apply Forall_cons; try apply Forall_nil; prove_incollection.
+   repeat apply conj; try apply I; 
+   cbv [test_ptree test_ptree']; prove_incollection.
 
 Definition shiftmap := MSHIFT.
 
