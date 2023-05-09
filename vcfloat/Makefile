@@ -9,7 +9,7 @@ COQFLAGS := $(shell cat _CoqProject)
 
 target:  vcfloat2 tests
 
-tests: ../Test/Test.vo ../Test/TestFunc.vo ../Test/TestPaper.vo ../Test/Test2.vo ../Test/summation.vo ../Test/autobisect.vo
+tests: ../Test/Test.vo ../Test/TestFunc.vo ../Test/TestPaper.vo ../Test/Test2.vo ../Test/summation.vo ../Test/autobisect.vo ../Test/Nonstd.vo
 
 # the vcfloat2 target is the core VCFloat tool for VCFloat2 users who don't need
 # CompCert-based reification
