@@ -5,7 +5,7 @@ Require Import Setoid.
 
 Import Coq.Lists.List ListNotations.
 Import Tree. (* must import this _after_ List *)
-Import Interval Private Interval_helper I2 IT2.IH I2.T Xreal Eval.Reify.
+Import Interval Private Interval_helper I2 IT2.IH Xreal Eval.Reify.
 
 Import Basic.
 Import Bool.
