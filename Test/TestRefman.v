@@ -329,7 +329,7 @@ vm_compute in counts4;
 pose (t3 := eval e3 __vars); 
 pose (t4 := eval e4 __vars); 
 cbv [eval nth nullary_real unary_real binary_real bpow' __vars] in t3, t4;
-elimtype False; clear - t3 t4 counts0 counts1 counts2 counts3 counts4.
+exfalso; clear - t3 t4 counts0 counts1 counts2 counts3 counts4.
 Open Scope Z.
 
 (*
