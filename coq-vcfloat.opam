@@ -1,5 +1,5 @@
 # the _real_ opam file for coq-vcfloat is at [adjusted for version number]
-# https://github.com/coq/opam-coq-archive/blob/master/released/packages/coq-vcfloat/coq-vcfloat.2.1/opam
+# https://github.com/coq/opam-coq-archive/blob/master/released/packages/coq-vcfloat/coq-vcfloat.2.1.1/opam
 opam-version: "2.0"
 synopsis: "VCFloat: Floating Point Round-off Error Analysis"
 description: "VCFloat is a tool for Coq proofs about floating-point round-off error."
@@ -28,13 +28,13 @@ run-test: [
 ]
 depends: [
   "coq" {>= "8.16" & < "8.18~"}
-  "coq-flocq" {>= "4.1.0" & < "5.0"}
-  "coq-interval" {>= "4.5.2"}
-  "coq-compcert" {>= "3.11"}
+  "coq-flocq" {>= "4.1.1" & < "5.0"}
+  "coq-interval" {>= "4.8.0"}
+  "coq-compcert" {>= "3.12"}
   "coq-bignums"
 ]
 tags: [
-  "date:2023-04-13"
+  "date:2023-08-31"
   "keyword:decision procedure"
   "keyword:floating-point arithmetic"
   "category:Computer Science/Decision Procedures and Certified Algorithms/Decision procedures"
