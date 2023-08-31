@@ -246,7 +246,7 @@ Proof.
   rewrite (FF2B_gen_correct _ _ _ (F2_valid_binary _ _ H)).
   set (j := F2_valid_binary _ _ _). clearbody j. revert j.
   destruct (F2 _ _ _) eqn:?H; intros; auto;
-  elimtype False; clear - H0; unfold F2 in H0;
+  exfalso; clear - H0; unfold F2 in H0;
   destruct (Z_lt_le_dec _ _) in H0; inversion H0.
 Qed.
 
@@ -666,7 +666,7 @@ unfold B2, F2 in H0;
 destruct (Z_lt_le_dec (e + 1) (3 - femax ty)); [ | lia];
 inversion H0; auto.
 all:
-elimtype False;
+exfalso;
 unfold B2, F2 in H0;
 destruct (Z_lt_le_dec (e + 1) (3 - femax ty)); [ | lia];
 inversion H0.

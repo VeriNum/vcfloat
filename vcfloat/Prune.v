@@ -577,7 +577,7 @@ match goal with |- context [F.real (F.max ?a ?b)] =>
 end].
 unfold Xcmp.
 destruct (F.toX l) eqn:Hl1. {
-  elimtype False; clear - Hl Hl1.
+  exfalso; clear - Hl Hl1.
   unfold F.toX in *.
   unfold F.toF in *.
   unfold F.classify in *.
@@ -585,7 +585,7 @@ destruct (F.toX l) eqn:Hl1. {
   destruct (FloatOps.Prim2SF l); try destruct s; simpl in *; try discriminate.
 }
 destruct (F.toX u) eqn:Hu1. {
-  elimtype False; clear - Hu Hu1.
+  exfalso; clear - Hu Hu1.
   unfold F.toX in *.
   unfold F.toF in *.
   unfold F.classify in *.
