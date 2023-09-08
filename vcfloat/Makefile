@@ -1,11 +1,12 @@
 # This Makefile assumes that coq already has access to
 # Flocq, Interval, CompCert, etc.,
-# which will be true if coq was installed through opam 
+# which will be true if coq was installed through opam
 # or as a "Coq Platform" package.
 
 COQC=coqc
 COQDEP=coqdep
 COQFLAGS := $(shell cat _CoqProject)
+COQEXTRAFLAGS?=
 
 target:  vcfloat2 tests
 
@@ -16,7 +17,7 @@ tests: ../Test/Test.vo ../Test/TestFunc.vo ../Test/TestPaper.vo ../Test/Test2.vo
 vcfloat2:  VCFloat.vo FPCompCert.vo Version.vo FPLib.vo
 
 %.vo: %.v
-	$(COQC) $(COQFLAGS) $*.v
+	$(COQC) $(COQFLAGS) $(COQEXTRAFLAGS) $*.v
 
 ifdef INSTALLDIR
 INSTALLFILES=$(shell make -Bn vcfloat2 2>/dev/null | awk '/^coqc.*v$$/{print $$NF"o"}')
@@ -31,7 +32,7 @@ endif
 	install -d $(INSTALLDIR)
 	install -m 0644 $(INSTALLFILES) $(INSTALLDIR)
 
-depend: 
+depend:
 	$(COQDEP) $(COQFLAGS) *.v ../Test/*.v > .depend
 
 ifneq ($(MAKECMDGOALS),depend)
