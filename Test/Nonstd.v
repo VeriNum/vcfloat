@@ -71,7 +71,7 @@ Definition dub : nonstdtype 53 1024 I I :=
 
 Definition Tdub : type := GTYPE _ _ _ _ (Some dub).
 
-Instance coll : collection.
+#[export] Instance coll : collection.
  exists [Tdub]. hnf; intros. destruct H; try contradiction. destruct H0; try contradiction.
  subst; auto.
 Defined.

@@ -1742,5 +1742,5 @@ Ltac bisect_all_vars t params :=
              Private.do_interval_intro t Interval_helper.ie_none params
   end.
 
-Existing Instance empty_collection.  (* By default, we don't have any
+#[export] Existing Instance empty_collection.  (* By default, we don't have any
    nonstandard types. *)

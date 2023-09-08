@@ -905,9 +905,9 @@ Lemma fval_klist_applyk:
    fval_klist env args f = 
    applyk ftype tys ty f (fun _ t => t) (mapk (@fval _ _ env) args).
 Proof.
-induction args; intros; simpl; auto.
-unfold eq_rect_r, eq_rect. simpl.
-apply IHargs.
+induction args; intros; simpl; auto;
+ (* This part no longer needed in Coq 8.17: *)
+  unfold eq_rect_r, eq_rect; simpl; apply IHargs.
 Qed.
 
 Lemma fshift_div_correct' `{coll: collection} env ty (e: expr ty) :
