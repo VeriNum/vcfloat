@@ -3107,14 +3107,14 @@ rewrite reflect_coeff_spec. auto.
 Qed.
 
 Lemma reflect_elements: forall ta tb, reflect_table ta == reflect_table tb -> 
-  reflect_list (Table.elements ta) == reflect_list (Table.elements tb).
+  reflect_list (Table.bindings ta) == reflect_list (Table.bindings tb).
 Proof.
 intros. intro. specialize (H env).
  unfold reflect_table in H.
- rewrite !Table.fold_1 in H.
+ rewrite !Table.fold_spec in H.
  unfold reflect_list.
- set (al := Table.elements ta) in *.
- set (bl := Table.elements tb) in *.
+ set (al := Table.bindings ta) in *.
+ set (bl := Table.bindings tb) in *.
  clearbody al bl.
  assert (forall al, 
    eval (fold_right Add0 zeroexpr (map reflect_intable al)) env =
@@ -3148,11 +3148,11 @@ intros. intro. specialize (H env).
 Qed.
 
 Lemma reflect_table_elements:
-  forall t, reflect_table t == reflect_list (Table.elements t).
+  forall t, reflect_table t == reflect_list (Table.bindings t).
 Proof.
 intros. intro.
 unfold reflect_table.
-rewrite Table.fold_1.
+rewrite Table.fold_spec.
 rewrite <- reflect_list_rev.
 rewrite <- fold_left_rev_right.
 unfold reflect_list. 
@@ -3168,15 +3168,15 @@ Qed.
 
 Definition sort_using_table (nts: list normterm) : expr -> expr :=
   fold_left (fun e it => Add0 (reflect_intable (collapse_intable it)) e)
-  (Table.elements
-    (fold_left add_to_table nts (Table.empty intable_t))).
+  (Table.bindings
+    (fold_left add_to_table nts (@Table.empty intable_t))).
 
 Definition sort_using_table_alt (nts: list normterm) (e0: expr) : expr :=
  Ebinary Add e0 
  (reflect_list
   (map collapse_intable
-  (Table.elements
-    (fold_right (Basics.flip add_to_table) (Table.empty intable_t) nts)))).
+  (Table.bindings
+    (fold_right (Basics.flip add_to_table) (@Table.empty intable_t) nts)))).
 
 Lemma reflect_list_map:
  forall  (f: Table.key * intable_t -> Table.key * intable_t)
@@ -3197,14 +3197,14 @@ Lemma sort_using_table_eq: forall nts e,
 Proof.
 unfold sort_using_table, sort_using_table_alt.
 intros.
-assert (reflect_table (fold_left add_to_table nts (Table.empty intable_t)) ==
-          reflect_table (fold_right (Basics.flip add_to_table) (Table.empty intable_t) nts)). {
+assert (reflect_table (fold_left add_to_table nts (@Table.empty intable_t)) ==
+          reflect_table (fold_right (Basics.flip add_to_table) (@Table.empty intable_t) nts)). {
  intro.
  rewrite <- fold_left_rev_right.
  fold (Basics.flip add_to_table).
  rewrite rev_alt.
  set (nl := @nil normterm).
- set (t1 := Table.empty intable_t).
+ set (t1 := @Table.empty intable_t).
  replace t1 with (fold_right (Basics.flip add_to_table) t1 nl) at 2 by reflexivity.
  clearbody nl. clearbody t1.
  revert nl; induction nts; simpl; intros; auto.
