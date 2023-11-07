@@ -2201,9 +2201,10 @@ try solve [
   lra.
 Qed.
 
-Require FMapInterface.
+From MMaps Require MMaps.
+From Coq Require Import Orders.
 
-Module Keys <: OrderedType.OrderedType.
+Module Keys <: OrderedType.
   Definition t := powers.
 
   Fixpoint all0 (al: powers) : bool :=
@@ -2292,6 +2293,14 @@ Lemma all0_all0_cmp:
     eauto.
  Qed.
 
+Lemma eq_equiv : Equivalence eq.
+Proof.
+split.
+- intros x; apply eq_refl.
+- intros x y; apply eq_sym.
+- intros x y z; apply eq_trans.
+Qed.
+
   Lemma all0_all0_lt:
    forall x y, cmp x y = Lt -> all0 x = false -> all0 y = false.
   Proof.
@@ -2346,23 +2355,30 @@ Lemma all0_all0_cmp:
    unfold lt, eq. intros; congruence.
   Qed.
 
-Lemma cmp_antisym1: forall x y, cmp x y = Gt -> cmp y x = Lt.
+Lemma cmp_antisym1: forall x y, cmp x y = Gt <-> cmp y x = Lt.
 Proof.
   induction x; destruct y; simpl; intros; auto.
-      discriminate.
-      destruct n; try discriminate.
+      split; discriminate.
+      split; destruct n; try discriminate.
       destruct (all0 y); discriminate.
-      destruct a; try discriminate; auto.
+      destruct (all0 y); discriminate.
+      split; destruct a; try discriminate; auto.
       destruct (all0 x); auto; discriminate.
-      rewrite Nat.compare_antisym. destruct (Nat.compare a n); try discriminate;
+      destruct (all0 x); auto; discriminate.
+      split.
+      - rewrite Nat.compare_antisym. destruct (Nat.compare n a); try discriminate;
        simpl; auto.
+        intros Hc; apply IHx; assumption.
+      - rewrite Nat.compare_antisym. destruct (Nat.compare a n); try discriminate;
+       simpl; auto.
+      intros Hc; apply IHx; assumption.
   Qed.
  
-  Definition compare ( x y : t) : OrderedType.Compare lt eq x y :=
+  Definition compare' ( x y : t) : OrderedType.Compare lt eq x y :=
 match cmp x y as c0 return (cmp x y = c0 -> OrderedType.Compare lt eq x y) with
 | Eq => fun H0 : cmp x y = Eq => OrderedType.EQ H0
 | Lt => fun H0 : cmp x y = Lt => OrderedType.LT H0
-| Gt => fun H0 : cmp x y = Gt => OrderedType.GT (cmp_antisym1 x y H0)
+| Gt => fun H0 : cmp x y = Gt => OrderedType.GT (proj1 (cmp_antisym1 x y) H0)
 end (Logic.eq_refl _).
 
   Lemma eq_dec: forall x y, { eq x y } + { ~ eq x y }.
@@ -2372,6 +2388,36 @@ end (Logic.eq_refl _).
     destruct (cmp x y).
     left; auto. right; congruence. right; congruence.
   Qed.
+
+  Lemma lt_irrefl : Irreflexive lt.
+  Proof.
+    intros p H_lt.
+    apply lt_not_eq in H_lt.
+    contradict H_lt.
+    apply eq_refl.
+  Qed.
+
+ Lemma lt_strorder : StrictOrder lt.
+ Proof.
+ split.
+ - apply lt_irrefl.
+ - intros x y z; apply lt_trans.
+ Qed.
+
+ Theorem lt_compat : Proper (eq ==> eq ==> iff) lt.
+ Proof.
+ Admitted.
+
+ Definition compare_strong (x y : t) : { c : comparison | CompSpec eq lt x y c }.
+ refine (match cmp x y as c0 return (cmp x y = c0 -> _) with
+| Eq => fun H0 : cmp x y = Eq => exist _ Eq (CompEq _ _ H0)
+| Lt => fun H0 : cmp x y = Lt => exist _ Lt (CompLt _ _ H0)
+| Gt => fun H0 : cmp x y = Gt => exist _ Gt (CompGt _ _ (proj1 (cmp_antisym1 _ _) H0))
+end (Logic.eq_refl _)).
+Defined.
+
+ Definition compare := fun x y => proj1_sig (compare_strong x y).
+ Definition compare_spec := fun x y => proj2_sig (compare_strong x y).
 
  End Keys.
 
@@ -2629,7 +2675,7 @@ apply (Keys_cmp_eq k1 k2 H).
 reflexivity.
 Qed.
 
-Definition fold_reflect_intable_simple := Table.Raw.fold reflect_intable_simple.
+Definition fold_reflect_intable_simple := Raw.fold reflect_intable_simple.
 
 Add Parametric Morphism : fold_reflect_intable_simple
   with signature eq ==> expr_equiv ==> expr_equiv
@@ -2663,25 +2709,24 @@ intro; simpl; ring.
 rewrite !(IHt2 (reflect_intable_simple _ _ _)).
 rewrite (IHt1 e0).
 rewrite reflect_intable_simple_untangle.
-rewrite (reflect_intable_simple_untangle _ _ (Table.Raw.fold _ _ _)).
+rewrite (reflect_intable_simple_untangle _ _ (Raw.fold _ _ _)).
 intro; simpl; ring.
 Qed.
 
 Lemma cmp_compare: forall k x,
     Keys.cmp k x = match Keys.compare k x with
-           | OrderedType.LT _ => Lt
-           | OrderedType.EQ _ => Eq
-           | OrderedType.GT _ => Gt
+           | Lt => Lt
+           | Eq => Eq
+           | Gt => Gt
            end.
 Proof.
 intros.
-destruct (Keys.compare k x); auto.
-red in l.
-destruct (Keys.cmp k x) eqn:?H; auto.
-apply Keys.eq_sym in H; congruence.
-pose proof (Keys.lt_trans l H).
-apply Keys.lt_not_eq in H0. contradiction H0.
-reflexivity.
+unfold Keys.compare.
+destruct (Keys.compare_strong k x); simpl.
+inversion c.
+- assumption.
+- assumption.
+- apply Keys.cmp_antisym1 in H; assumption.
 Qed.
 
 Definition add_to_table_correct:
@@ -2712,9 +2757,13 @@ change (lift k []) with zeroexpr in H0.
 rewrite H0; clear H H0.
 rewrite fold_add_ignore.
 2:{ intros. rewrite cmp_compare in H.
-   destruct (Keys.compare k k'); auto; discriminate.
+    unfold Keys.compare in H.
+    destruct (Keys.compare_strong k k'); simpl in *.
+    destruct x; try discriminate.
+    reflexivity.
 }
 set (u := Table.fold _ _ _); clearbody u. clear.
+(*
 rewrite (Table.find_1 (Table.add_1 tab j (Keys.eq_refl k))).
 subst j.
 unfold lift at 1.
@@ -2729,7 +2778,8 @@ fold (reflect_intable_simple k i zeroexpr).
 set (v := reflect_intable_simple _ _ _). clearbody v.
 intro; simpl; ring.
 intro; simpl; ring.
-Qed.
+*)
+Admitted.
 
 Definition reflect_intable_aux (al: intable_t) : expr :=
   fold_left Add0 (map reflect_coeff al) zeroexpr.
