@@ -2358,7 +2358,7 @@ Qed.
 Lemma cmp_antisym1: forall x y, cmp x y = Gt <-> cmp y x = Lt.
 Proof.
   induction x; destruct y; simpl; intros; auto.
-      split; discriminate.
+  split; discriminate.
       split; destruct n; try discriminate.
       destruct (all0 y); discriminate.
       destruct (all0 y); discriminate.
@@ -2404,17 +2404,149 @@ end (Logic.eq_refl _).
  - intros x y z; apply lt_trans.
  Qed.
 
+ Lemma eq_lt_lt_left : forall (x a b : t),
+  eq a b -> lt x a -> lt x b.
+ Proof.
+   unfold eq, lt.
+   induction x; destruct a; destruct b; simpl; intros; auto.
+   - destruct n; discriminate.
+   - destruct n; try discriminate.
+     destruct (all0 a); discriminate.
+   - destruct n0; try discriminate; [|reflexivity].
+     destruct n; try discriminate.
+     rewrite Nat.compare_refl in H.
+     pose proof (cmp_eq_all0 _ _ H).
+     apply eq_sym in H.
+     pose proof (cmp_eq_all0 _ _ H).
+     destruct (all0 a) eqn:?; try discriminate.
+     destruct (all0 b) eqn:?; try congruence.
+     specialize (H2 ltac:(auto)).
+     congruence.
+   - destruct (all0 x) eqn:?; try discriminate.
+     * destruct a; try discriminate. 
+       destruct n; try discriminate. 
+       simpl in H.
+       destruct (all0 a) eqn:?; try discriminate.
+       rewrite (all0_all0_cmp _ _ Heqb Heqb0) in H0.
+       discriminate.
+     * destruct a; try discriminate.
+       destruct n; try discriminate.
+       simpl in H.
+       destruct (all0 a) eqn:?; try discriminate.
+       pose proof (all0_all0_lt _ _ H0 Heqb).
+       congruence.
+   - destruct n; try reflexivity.
+     destruct a; try discriminate.
+     * destruct (all0 x); discriminate.
+     * destruct n; try discriminate.
+       simpl in H.
+       apply (IHx _ _ H); auto.
+   - destruct a0; try discriminate.
+     destruct n; discriminate.
+   - destruct a0; try discriminate.
+     destruct n0; try discriminate.
+     destruct n; try discriminate.
+     simpl in H.
+     destruct (Nat.compare n0 n) eqn:?H; try discriminate.
+     apply Nat.compare_eq in H1.
+     subst.
+     destruct (Nat.compare a n) eqn:?H; [ |reflexivity|discriminate].
+     apply Nat.compare_eq in H1.
+     subst.
+     apply (IHx _ _ H); auto.
+ Qed.
+
+ Lemma all0_true_false_lt : forall (b x : t),   
+   all0 b = true ->
+   all0 x = false ->
+   cmp b x = Lt.
+ Proof.   
+   induction b; destruct x; simpl; intros; auto.
+   - congruence.
+   - destruct n; try reflexivity.
+     rewrite H0; reflexivity.
+   - congruence.
+   - destruct a; try discriminate.
+     destruct n; try discriminate.
+     * rewrite Nat.compare_refl.
+       apply IHb; auto.
+     * rewrite Nat.compare_antisym.
+       simpl; reflexivity.
+  Qed.
+
+ Lemma eq_lt_lt_right : forall (x a b : t),
+  eq a b -> lt a x -> lt b x.
+ Proof.
+   unfold eq, lt.
+   induction x; destruct a; destruct b; simpl; intros; auto.
+   - destruct n; discriminate.
+   - destruct n; try discriminate.
+     destruct (all0 a); discriminate.
+   - destruct n0; try discriminate.
+     * destruct n; try discriminate.
+       rewrite Nat.compare_refl in H.
+       pose proof (cmp_eq_all0 _ _ H).
+       apply eq_sym in H.
+       pose proof (cmp_eq_all0 _ _ H).
+       destruct (all0 a) eqn:?; discriminate.
+     * destruct n; try discriminate.
+   - destruct (all0 x) eqn:?; try discriminate.
+     * destruct a; try discriminate.
+       + simpl in H0.
+         rewrite Heqb in H0.
+         congruence.
+       + simpl in H.
+         destruct n; try discriminate.
+         simpl in H0.
+         destruct (all0 a) eqn:?; try discriminate.
+         pose proof (all0_all0_cmp _ _ Heqb0 Heqb).
+         congruence.
+     * reflexivity.
+   - destruct a; try discriminate.
+     * simpl in H, H0.
+       destruct n; try discriminate.
+       rewrite Nat.compare_refl.
+       destruct (all0 b) eqn:?; try discriminate.
+       destruct (all0 x) eqn:?; try discriminate.
+       apply all0_true_false_lt; auto.
+     * simpl in H, H0.
+       destruct (n0 ?= n) eqn:?; try discriminate.
+       apply Nat.compare_eq in Heqc.
+       subst.
+       destruct (n ?= 0) eqn:?; try reflexivity.
+       + apply (IHx _ _ H); auto.
+       + congruence.
+   - destruct a0; try discriminate.
+     * simpl in H, H0.
+       destruct n; try discriminate.
+       rewrite Nat.compare_antisym.
+       reflexivity.
+     * simpl in H, H0.
+       destruct (n0 ?= n) eqn:?; try discriminate.
+       apply Nat.compare_eq in Heqc.
+       subst.
+       destruct (n ?= S a); try reflexivity.
+       + apply (IHx _ _ H); auto.
+       + congruence.
+   Qed.
+
  Theorem lt_compat : Proper (eq ==> eq ==> iff) lt.
  Proof.
- Admitted.
+   intros x y Hxy a b Hab; split; intros Hlt.
+   - pose proof (eq_lt_lt_right a _ _ Hxy Hlt).
+     eapply eq_lt_lt_left; eauto.
+   - apply eq_sym in Hxy.
+     pose proof (eq_lt_lt_right b _ _ Hxy Hlt).
+     apply eq_sym in Hab.
+     eapply eq_lt_lt_left; eauto.
+  Qed.
 
- Definition compare_strong (x y : t) : { c : comparison | CompSpec eq lt x y c }.
- refine (match cmp x y as c0 return (cmp x y = c0 -> _) with
-| Eq => fun H0 : cmp x y = Eq => exist _ Eq (CompEq _ _ H0)
-| Lt => fun H0 : cmp x y = Lt => exist _ Lt (CompLt _ _ H0)
-| Gt => fun H0 : cmp x y = Gt => exist _ Gt (CompGt _ _ (proj1 (cmp_antisym1 _ _) H0))
-end (Logic.eq_refl _)).
-Defined.
+ Definition compare_strong (x y : t) : { c : comparison | CompSpec eq lt x y c } :=
+ match cmp x y as c0 return (cmp x y = c0 -> _) with
+ | Eq => fun H0 : cmp x y = Eq => exist _ Eq (CompEq _ _ H0)
+ | Lt => fun H0 : cmp x y = Lt => exist _ Lt (CompLt _ _ H0)
+ | Gt => fun H0 : cmp x y = Gt => exist _ Gt (CompGt _ _ (proj1 (cmp_antisym1 _ _) H0))
+ end (Logic.eq_refl _).
 
  Definition compare := fun x y => proj1_sig (compare_strong x y).
  Definition compare_spec := fun x y => proj2_sig (compare_strong x y).
@@ -2763,8 +2895,7 @@ rewrite fold_add_ignore.
     reflexivity.
 }
 set (u := Table.fold _ _ _); clearbody u. clear.
-(*
-rewrite (Table.find_1 (Table.add_1 tab j (Keys.eq_refl k))).
+rewrite Table.add_spec1.
 subst j.
 unfold lift at 1.
 rewrite cancel1_intable_correct.
@@ -2778,8 +2909,7 @@ fold (reflect_intable_simple k i zeroexpr).
 set (v := reflect_intable_simple _ _ _). clearbody v.
 intro; simpl; ring.
 intro; simpl; ring.
-*)
-Admitted.
+Qed.
 
 Definition reflect_intable_aux (al: intable_t) : expr :=
   fold_left Add0 (map reflect_coeff al) zeroexpr.
