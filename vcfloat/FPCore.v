@@ -1196,3 +1196,41 @@ Arguments ff_precond [ty].
 Arguments ff_realfunc [ty].
 Arguments ff_ff [ty].
 
+Lemma is_finite_Binary: forall {ty} `{STD: is_standard ty} (x: ftype ty),
+  is_finite x = Binary.is_finite (fprec ty) (femax ty) (float_of_ftype x).
+Proof.
+intros.
+destruct ty as [? ? ? ? ? [|]]; try contradiction.
+reflexivity.
+Qed.
+
+Lemma FT2R_ftype_of_float:
+  forall {ty} `{STD: is_standard ty} x,
+   FT2R (ftype_of_float x) = B2R _ _ x.
+Proof.
+intros.
+destruct ty as [? ? ? ? ? [|]]; try contradiction.
+reflexivity.
+Qed.
+
+
+Lemma compare'_correct
+     : forall ty (f1 f2 : ftype ty),
+       is_finite f1 = true ->
+       is_finite f2 = true ->
+       compare' f1 f2 =
+       Some (Rcompare (FT2R f1) (FT2R f2)).
+Proof.
+clear.
+intros.
+destruct ty as [? ? ? ? ? [|]].
+simpl.
+apply nonstd_compare_correct'; auto.
+apply Bcompare_correct; auto.
+Qed.
+
+Inductive option_rel [A B: Type] (R: A -> B -> Prop) : option A -> option B -> Prop :=
+  | option_rel_none: option_rel R None None
+  | option_rel_some: forall x y, R x y -> option_rel R (Some x) (Some y).
+
+

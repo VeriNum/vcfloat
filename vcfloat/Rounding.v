@@ -2403,21 +2403,6 @@ unfold F2R, B2F, B2R.
 destruct x; auto; lra.
 Qed.
 
-Lemma compare'_correct
-     : forall ty (f1 f2 : ftype ty),
-       is_finite f1 = true ->
-       is_finite f2 = true ->
-       compare' f1 f2 =
-       Some (Rcompare (FT2R f1) (FT2R f2)).
-Proof.
-clear.
-intros.
-destruct ty as [? ? ? ? ? [|]].
-simpl.
-apply nonstd_compare_correct'; auto.
-apply Bcompare_correct; auto.
-Qed.
-
 Lemma rndval_with_cond_correct_klist : 
    forall `{coll: collection} env (Henv: forall ty IN i, is_finite (env ty IN i) = true) 
         tys (args: klist expr tys)
@@ -2813,7 +2798,7 @@ Proof.
             rewrite <- B2R_float_of_ftype in V2.
             rewrite FT2R_ftype_of_float,
                    is_finite_Binary, float_of_ftype_of_float, BV.
-            intuition.
+            intuition auto with *.
           ++
             generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
             rewrite ZERO.

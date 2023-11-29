@@ -1,8 +1,8 @@
-From vcfloat Require Export FPCore RAux Rounding Float_notations.
+From vcfloat Require Export FPCore RAux (*Rounding*) Float_notations.
+
 Set Bullet Behavior "Strict Subproofs".
 Require Import Coq.Relations.Relations Coq.Classes.Morphisms Coq.Classes.RelationPairs Coq.Classes.RelationClasses.
 Require Import Coq.Lists.List.
-
 Definition BFMA {NAN: Nans} {t: type} {STD: is_standard t} (x y z: ftype t) : ftype t :=
   ftype_of_float
     (Binary.Bfma (fprec t) (femax t) (fprec_gt_0 t)
@@ -183,7 +183,7 @@ reflexivity.
 Abort.  (* no need to save this *)
 
 Add Parametric Morphism {T: Type} (rel: relation T): (@Some T)
-  with signature rel ==> Coqlib.option_rel rel
+  with signature rel ==> option_rel rel
   as Some_mor.
 Proof.
 intros. constructor; auto.

@@ -427,23 +427,6 @@ unfold Bconv.
 destruct x1; try discriminate; auto.
 Qed.
 
-Lemma is_finite_Binary: forall {ty} `{STD: is_standard ty} (x: ftype ty),
-  is_finite x = Binary.is_finite (fprec ty) (femax ty) (float_of_ftype x).
-Proof.
-intros.
-destruct ty as [? ? ? ? ? [|]]; try contradiction.
-reflexivity.
-Qed.
-
-Lemma FT2R_ftype_of_float:
-  forall {ty} `{STD: is_standard ty} x,
-   FT2R (ftype_of_float x) = B2R _ _ x.
-Proof.
-intros.
-destruct ty as [? ? ? ? ? [|]]; try contradiction.
-reflexivity.
-Qed.
-
 Lemma InvShift_accuracy: 
  forall (pow : positive) (ltr : bool) (ty : type) (STD: is_standard ty) x 
   (F1 : is_finite x = true),

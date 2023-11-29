@@ -1334,13 +1334,14 @@ Ltac cbv_reval :=
       rval_klist].
 
 Ltac abstract_env_variables := 
-repeat match goal with 
- | |- context [FT2R (env_ ?vm ?t ?H ?i)] =>
+repeat 
+match goal with 
+ | |- context [B2R ?prec ?emax (float_of_ftype (env_ ?vm ?t ?H ?i))] =>
     let j := fresh "v" i in
-    set (j := FT2R (env_ vm t H i)) in *; clearbody j
- | H0: context [FT2R (env_ ?vm ?t ?H ?i)] |- _ =>
+    set (j := B2R prec emax (float_of_ftype (env_ vm t H i))) in *; clearbody j
+ | H0: context [B2R ?prec ?emax (float_of_ftype  (env_ ?vm ?t ?H ?i))] |- _ =>
     let j := fresh "v" i in
-    set (j := FT2R (env_ vm t H i)) in *; clearbody j
+    set (j := B2R prec emax (float_of_ftype (env_ vm t H i))) in *; clearbody j
  end.
 
 Ltac test_vmap_concrete vm :=
@@ -1400,9 +1401,11 @@ end;
  cbv_reval;
  simpl ff_args;
   let j := fresh "j" in repeat (set (j := ff_realfunc _); simpl in j; subst j);
- repeat change (B2R (fprec ?t) _) with (@FT2R t);
 (* unfold  env_; *)
  process_boundsmap_denote;
+
+ repeat change (B2R (fprec ?t) _) with (@FT2R t);
+ rewrite <- ?B2R_float_of_ftype in * by auto with typeclass_instances; (* NEW *)
 
  repeat (let E := fresh "E" in 
             assert (E := Forall_inv H0); 

@@ -14,8 +14,10 @@ FPLang.vo FPLang.glob FPLang.v.beautified FPLang.required_vo: FPLang.v RAux.vo I
 FPLang.vio: FPLang.v RAux.vio IEEE754_extra.vio Fprop_absolute.vio Float_lemmas.vio FPCore.vio klist.vio
 FPLangOpt.vo FPLangOpt.glob FPLangOpt.v.beautified FPLangOpt.required_vo: FPLangOpt.v Float_lemmas.vo FPLang.vo klist.vo LibTac.vo BigRAux.vo
 FPLangOpt.vio: FPLangOpt.v Float_lemmas.vio FPLang.vio klist.vio LibTac.vio BigRAux.vio
-FPLib.vo FPLib.glob FPLib.v.beautified FPLib.required_vo: FPLib.v FPCore.vo RAux.vo Rounding.vo Float_notations.vo
-FPLib.vio: FPLib.v FPCore.vio RAux.vio Rounding.vio Float_notations.vio
+FPLib.vo FPLib.glob FPLib.v.beautified FPLib.required_vo: FPLib.v FPCore.vo RAux.vo Float_notations.vo
+FPLib.vio: FPLib.v FPCore.vio RAux.vio Float_notations.vio
+FPStdLib.vo FPStdLib.glob FPStdLib.v.beautified FPStdLib.required_vo: FPStdLib.v IEEE754_extra.vo klist.vo Float_notations.vo FPCore.vo RAux.vo FPLib.vo Rounding.vo
+FPStdLib.vio: FPStdLib.v IEEE754_extra.vio klist.vio Float_notations.vio FPCore.vio RAux.vio FPLib.vio Rounding.vio
 Float_lemmas.vo Float_lemmas.glob Float_lemmas.v.beautified Float_lemmas.required_vo: Float_lemmas.v RAux.vo IEEE754_extra.vo Fprop_absolute.vo FPCore.vo
 Float_lemmas.vio: Float_lemmas.v RAux.vio IEEE754_extra.vio Fprop_absolute.vio FPCore.vio
 Float_notations.vo Float_notations.glob Float_notations.v.beautified Float_notations.required_vo: Float_notations.v IEEE754_extra.vo
@@ -46,6 +48,8 @@ compute_tactics_ltac2.vo compute_tactics_ltac2.glob compute_tactics_ltac2.v.beau
 compute_tactics_ltac2.vio: compute_tactics_ltac2.v 
 klist.vo klist.glob klist.v.beautified klist.required_vo: klist.v 
 klist.vio: klist.v 
+../Test/Nonstd.vo ../Test/Nonstd.glob ../Test/Nonstd.v.beautified ../Test/Nonstd.required_vo: ../Test/Nonstd.v VCFloat.vo
+../Test/Nonstd.vio: ../Test/Nonstd.v VCFloat.vio
 ../Test/Test.vo ../Test/Test.glob ../Test/Test.v.beautified ../Test/Test.required_vo: ../Test/Test.v VCFloat.vo
 ../Test/Test.vio: ../Test/Test.v VCFloat.vio
 ../Test/Test2.vo ../Test/Test2.glob ../Test/Test2.v.beautified ../Test/Test2.required_vo: ../Test/Test2.v VCFloat.vo
