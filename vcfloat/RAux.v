@@ -1081,7 +1081,7 @@ forall u1 u2 v1 v2, (u1 + v1) - (u2 + v2) = (u1 - u2) + (v1 - v2).
 Proof. intros. nra. Qed.
 
 Lemma Rmult_rel_error: 
-forall a b c d, (a * b) - (c  * d) = (a - c)*d + (b - d)*c + (a-c) * (b-d).
+forall u1 v1 u v, (u1 * v1) - (u  * v) = (u1 - u)*v + (v1 - v)*u + (u1-u) * (v1-v).
 Proof. intros.  nra. Qed.
 
 
