@@ -1684,6 +1684,7 @@ repeat match goal with
  | |- Rabs((?u1 - ?v1) * ?D + ?E - ?U) <= _ => 
     (replace ((u1 - v1) * D + E - U) with 
       ((u1 * D - v1 * D) - U + E)  by nra) ; 
+(* main rewrite used here is Rminus_rel_error *)
         eapply Rle_trans; [apply Rabs_triang| idtac]; apply Rplus_le_compat;
         [rewrite Rminus_rel_error; eapply Rle_trans; [apply Rabs_triang| apply Rplus_le_compat];
           [ try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc
@@ -1692,6 +1693,7 @@ repeat match goal with
  | |- Rabs((?u1 + ?v1) * ?D + ?E - ?U) <= _ => 
     (replace ((u1 + v1) * D + E - U) with 
       ((u1 * D + v1 * D) - U + E)  by nra) ; 
+(* main rewrite used here is Rplus_rel_error *)
         eapply Rle_trans; [apply Rabs_triang| idtac]; apply Rplus_le_compat;
         [rewrite Rplus_rel_error ; eapply Rle_trans ;[apply Rabs_triang| idtac] ; apply Rplus_le_compat;
           [ try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc
@@ -1700,6 +1702,7 @@ repeat match goal with
  | |- Rabs((?u1 * ?v1) * ?D + ?E - ?U) <= _ => 
     (replace ((u1 * v1) * D + E - U ) with 
       ((u1 * D * v1) - U + E)  by nra);
+(* main rewrite used here is Rmult_rel_error *)
         eapply Rle_trans; [apply Rabs_triang | apply Rplus_le_compat; 
         [rewrite Rmult_rel_error; eapply Rle_trans; [apply Rabs_triang | apply Rplus_le_compat ;
               [eapply Rle_trans; [apply Rabs_triang | apply Rplus_le_compat; 
@@ -1710,6 +1713,7 @@ repeat match goal with
  | |- Rabs((?u1 / ?v1) * ?D + ?E -?U) <= _ => 
     (replace ((u1 / v1) * D + E - U ) with 
       ((u1 * D)/v1 -  U + E)  by nra);
+(* main rewrite used here is Rdiv_rel_error_no_u_div_reduced *)
         eapply Rle_trans; [apply Rabs_triang| idtac]; apply Rplus_le_compat;
         [eapply Rle_trans; 
           [ apply Rdiv_rel_error_no_u_div_reduced; interval (* will sometimes fail *)
