@@ -935,7 +935,7 @@ Ltac compute_fshift_div_special_reduce :=
      cbv_fcval).
 
 Ltac compute_fshift_div2 :=
-
+  (* don't use this one, it causes Qed blowup in (for example) the kepler1 benchmark *)
  match goal with |- context [fcval ?F] => 
    let g := eval hnf in F in change F with g end;
   let j := fresh "j" in let HIDE := fresh "HIDE" in 
@@ -948,7 +948,22 @@ Ltac compute_fshift_div2 :=
   cbv delta [fshift_div]; compute_fshift_div_special_reduce;
   subst HIDE; cbv beta.
 
-Ltac compute_fshift_div := compute_fshift_div2.
+Ltac compute_fshift_div3 :=
+  match goal with |- context [fcval ?F] => 
+     let g := eval hnf in F in change F with g end;
+  let j := fresh "j" in let HIDE := fresh "HIDE" in 
+  set (j := fshift_div _);
+  pattern j;
+  match goal with |- ?H _ => set (HIDE:=H) end;
+  subst j;
+  compute_fshift_div_special_reduce;
+  cbv delta [fshift]; compute_fshift_div_special_reduce;
+  cbv beta fix match zeta delta [fshift binop_eqb rounded_binop_eqb andb eqb];
+  cbv beta fix match zeta delta [fshift_div fcval_nonrec binop_eqb rounded_binop_eqb andb eqb];
+  compute_fshift_div_special_reduce;
+  subst HIDE; cbv beta.
+
+Ltac compute_fshift_div := compute_fshift_div3.
 
 Ltac prove_rndval :=
  (* if necessary, convert goal into a prove_rndval'   goal*)

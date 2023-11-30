@@ -10,7 +10,6 @@ Set Bullet Behavior "Strict Subproofs".
 Require Import Coq.Relations.Relations Coq.Classes.Morphisms Coq.Classes.RelationPairs Coq.Classes.RelationClasses.
 Require Import Coq.Lists.List.
 
-
 Local Definition ZLT a b: Prop := Bool.Is_true (Z.ltb a b).
 
 Local Lemma ZLT_intro a b:
@@ -149,16 +148,73 @@ Definition ftype ty := binary_float (fprec ty) (femax ty).
 Definition coretype_of_type (t: type) : FPCore.type :=
  FPCore.TYPE (fprecp t) (femax t) (FPCore.ZLT_intro _ _ (fprec_lt_femax t)) (fprecp_not_one_bool t).
 
-Lemma STDtype: forall (t: type), FPCore.is_standard (coretype_of_type t).
+#[export] Instance STDtype: forall (t: type), FPCore.is_standard (coretype_of_type t).
 Proof.
 intros. apply I.
 Qed.
+
+
+Definition Nans := FPCore.Nans.
+
+Definition conv_nan {NAN: FPCore.Nans} : forall ty1 ty2 : type, 
+                binary_float (fprec ty1) (femax ty1) ->
+                FPCore.nan_payload (fprec ty2) (femax ty2) 
+  := fun t1 t2 => FPCore.conv_nan (coretype_of_type t1) (coretype_of_type t2).
+
+Definition plus_nan {NAN: FPCore.Nans}:
+      forall ty: type,
+        binary_float (fprec ty) (femax ty) ->
+        binary_float (fprec ty) (femax ty) ->
+        FPCore.nan_payload (fprec ty) (femax ty) 
+ := fun t => FPCore.plus_nan (coretype_of_type t).
+
+Definition  mult_nan {NAN: FPCore.Nans}:
+      forall ty : type,
+        binary_float (fprec ty) (femax ty) ->
+        binary_float (fprec ty) (femax ty) ->
+        FPCore.nan_payload (fprec ty) (femax ty)
+ := fun t => FPCore.plus_nan (coretype_of_type t).
+
+
+Definition    div_nan {NAN: FPCore.Nans}:
+      forall ty : type,
+        binary_float (fprec ty) (femax ty) ->
+        binary_float (fprec ty) (femax ty) ->
+        FPCore.nan_payload (fprec ty) (femax ty)
+ := fun t => FPCore.div_nan (coretype_of_type t).
+
+Definition    abs_nan {NAN: FPCore.Nans}:
+      forall ty : type,
+        binary_float (fprec ty) (femax ty) -> (* guaranteed to be a nan, if this is not a nan then any result will do *)
+        FPCore.nan_payload (fprec ty) (femax ty)
+ := fun t => FPCore.abs_nan (coretype_of_type t).
+
+Definition    opp_nan {NAN: FPCore.Nans}:
+      forall ty : type,
+        binary_float (fprec ty) (femax ty) -> (* guaranteed to be a nan, if this is not a nan then any result will do *)
+        FPCore.nan_payload (fprec ty) (femax ty)
+ := fun t => FPCore.opp_nan (coretype_of_type t).
+
+Definition    sqrt_nan {NAN: FPCore.Nans}:
+      forall ty : type,
+        binary_float (fprec ty) (femax ty) ->
+        FPCore.nan_payload (fprec ty) (femax ty)
+ := fun t => FPCore.sqrt_nan (coretype_of_type t).
+
+Definition    fma_nan {NAN: FPCore.Nans}:
+      forall ty : type,
+        binary_float (fprec ty) (femax ty) ->
+        binary_float (fprec ty) (femax ty) ->
+        binary_float (fprec ty) (femax ty) ->
+        FPCore.nan_payload (fprec ty) (femax ty)
+ := fun t => FPCore.fma_nan (coretype_of_type t).
+
 
 Definition FT2R {t: type} : ftype t -> R := B2R (fprec t) (femax t).
 
 Definition BFMA {NAN: FPCore.Nans} {t: type} : forall (x y z: ftype t), ftype t :=
     Binary.Bfma (fprec t) (femax t) (fprec_gt_0 t)
-      (fprec_lt_femax t) (@FPCore.fma_nan _ (coretype_of_type t) (STDtype t)) BinarySingleNaN.mode_NE.
+      (fprec_lt_femax t) (fma_nan t) BinarySingleNaN.mode_NE.
 
 (* see https://coq.zulipchat.com/#narrow/stream/237977-Coq-users/topic/RelationPairs.20rewriting.20really.20slow *)
 Global Instance proper_pair1: forall A B RA1 RA2 RB1 RB2 (RA : relation A) (RB : relation B),
@@ -421,11 +477,6 @@ Definition BSQRT :=  UNOP Bsqrt FPCore.sqrt_nan.
 Arguments BSQRT {ty}.
 
 End WITHNANS.
-
-Definition conv_nan {NANS: FPCore.Nans} tfrom tto :
-  binary_float (fprec tfrom) (femax tfrom) ->
-  {x : binary_float (fprec tto) (femax tto) | is_nan (fprec tto) (femax tto) x = true} :=
- @FPCore.conv_nan NANS (coretype_of_type tfrom) (coretype_of_type tto) I I.
 
 Definition cast {NANS: FPCore.Nans} (tto: type) {tfrom: type} (f: ftype tfrom): ftype tto :=
   match type_eq_dec tfrom tto with
@@ -893,10 +944,6 @@ destruct (FPCore.type_eq_dec _ _ _ _).
   unfold coretype_of_type in *.
   simpl in *. clear H.
   f_equal. apply FPLib.proof_irr.
-  unfold conv_nan.
-  unfold coretype_of_type;
-  simpl.
-  f_equal; apply FPLib.proof_irr.
 Qed. 
 
 Module Test.

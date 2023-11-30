@@ -38,7 +38,7 @@ try (
 eapply Rle_trans;
 try apply H;
 try apply Rle_refl)).
-Qed.
+Time Qed.
 
 Lemma check_jetengine_bound: ltac:(CheckBound jetengine_b 1.4e02%F64).
 Proof. reflexivity. Qed.

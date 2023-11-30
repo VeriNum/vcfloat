@@ -51,7 +51,7 @@ try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (i_bisect v_u, 
 i_bisect v_t, i_depth 17) as H'; apply H'; apply Rle_refl
 end).
-Qed.
+Time Qed.
 
 Lemma check_doppler1_bound: ltac:(CheckBound doppler1_b 4.5e-13%F64).
 Proof. reflexivity. Qed.

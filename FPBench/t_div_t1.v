@@ -36,7 +36,7 @@ try (
 eapply Rle_trans;
 try apply H;
 try apply Rle_refl)).
-Qed.
+Time Qed.
 
 Lemma check_t_div_t1_bound: ltac:(CheckBound t_div_t1_b 4.4e-16%F64).
 Proof. reflexivity. Qed.

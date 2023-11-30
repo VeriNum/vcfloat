@@ -36,7 +36,7 @@ try (
 eapply Rle_trans;
 try apply H;
 try apply Rle_refl)).
-Qed.
+Time Qed.
 
 Lemma check_verhulst_bound: ltac:(CheckBound verhulst_b 2.33e-16%F64).
 Proof. reflexivity. Qed.

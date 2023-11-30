@@ -9,7 +9,7 @@ _CoqProject: Makefile
 	echo $(COQFLAGS) >_CoqProject
 
 target: doppler1.vo doppler2.vo doppler3.vo predatorprey.vo verhulst.vo carbongas.vo t_div_t1.vo\
-     kepler0.vo kepler1.vo kepler2.vo rigid_body1.v rigid_body2.v turbine1.vo turbine2.vo\
+     kepler0.vo kepler1.vo kepler2.vo rigid_body1.vo rigid_body2.vo turbine1.vo turbine2.vo\
      turbine3.vo himmilbeau.vo jetengine.vo
 
 %.vo: %.v 
