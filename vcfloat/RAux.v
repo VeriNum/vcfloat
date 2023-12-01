@@ -1057,7 +1057,6 @@ Qed.
 Lemma Rdiv_le_0_compat_Raux : forall r1 r2 : R, 0 <= r1 -> 0 < r2 -> 0 <= r1 / r2.
 Proof.
  intros.
- Search (0 <= _ * _).
  apply Rmult_le_pos; auto.
  apply Rinv_0_lt_compat in H0. lra.
 Qed.
@@ -1289,5 +1288,66 @@ rewrite <- Rabs_Ropp.
 rewrite Ropp_minus_distr.
 f_equal. nra. Qed.
 
+Require Flocq.Core.Raux.
+
+Lemma center_R_correct a b x:
+ 0 <= b - a - Rabs (2 * x - (a + b)) ->
+ a <= x <= b.
+Proof.
+  intros.
+  assert (Rabs (2 * x - (a + b)) <= (b - a) )%R by lra.
+  apply Raux.Rabs_le_inv in H0.
+  lra.
+Qed.
+
+Lemma center_R_complete a b x:
+ a <= x <= b ->
+ 0 <= b - a - Rabs (2 * x - (a + b)).
+Proof.
+  intros.
+  cut (Rabs (2 * x - (a + b)) <= (b - a)); [ lra | ].
+  apply Rabs_le.
+  lra.
+Qed.
+
+Definition center_Z a x b :=
+  (b - a - Z.abs (2 * x - (a + b)))%Z
+.
+
+Lemma center_Z_correct a b x:
+  (0 <= center_Z a x b)%Z ->
+  (a <= x <= b)%Z.
+Proof.
+  unfold center_Z.
+  intros.
+  apply IZR_le in H.
+  replace (IZR 0) with 0 in H by reflexivity.
+  repeat rewrite minus_IZR in H.
+  rewrite abs_IZR in H.
+  rewrite minus_IZR in H.
+  rewrite mult_IZR in H.
+  rewrite plus_IZR in H.
+  replace (IZR 2) with 2 in H by reflexivity.
+  apply center_R_correct in H.
+  intuition eauto using le_IZR.
+Qed.
+
+Lemma center_Z_complete a b x:
+  (a <= x <= b)%Z ->
+  (0 <= center_Z a x b)%Z.
+Proof.
+  unfold center_Z.
+  intros.
+  apply le_IZR.
+  replace (IZR 0) with 0 by reflexivity.
+  repeat rewrite minus_IZR.
+  rewrite abs_IZR.
+  rewrite minus_IZR.
+  rewrite mult_IZR.
+  rewrite plus_IZR.
+  replace (IZR 2) with 2 by reflexivity.
+  apply center_R_complete.  
+  intuition eauto using IZR_le.
+Qed.
 
 

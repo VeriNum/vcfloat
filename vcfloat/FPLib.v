@@ -262,20 +262,6 @@ Qed.
 
 Local Ltac inv H := inversion H; clear H; subst. 
 
-Axiom prop_ext: ClassicalFacts.prop_extensionality.
-
-Lemma proof_irr      : ClassicalFacts.proof_irrelevance.
-Proof. apply ClassicalFacts.ext_prop_dep_proof_irrel_cic. 
- apply prop_ext.
-Qed.
-Arguments proof_irr [A] a1 a2.
-
-Ltac proof_irr :=
-  match goal with
-  | H:?A, H':?A
-    |- _ => generalize (proof_irr H H'); intro; subst H'
-  end.
-
 #[export] Instance subrelation_strict_feq {t: type}: subrelation (@strict_feq t) (@feq t).
 Proof.
 unfold strict_feq, feq.

@@ -7,9 +7,6 @@ Global Unset Asymmetric Patterns.
 
 Import Bool.
 
-Require Import vcfloat.FPCore.
-Global Existing Instance fprec_gt_0. (* to override the Opaque one in Interval package *)
-
 Local Open Scope R_scope.
 
 (*
@@ -25,116 +22,16 @@ reflexivity.
 Qed.
 *)
 
-Lemma center_R_correct a b x:
- 0 <= b - a - Rabs (2 * x - (a + b)) ->
- a <= x <= b.
-Proof.
-  intros.
-  assert (Rabs (2 * x - (a + b)) <= (b - a) )%R by lra.
-  apply Raux.Rabs_le_inv in H0.
-  lra.
-Qed.
+Require Import vcfloat.FPCore.
 
-Lemma center_R_complete a b x:
- a <= x <= b ->
- 0 <= b - a - Rabs (2 * x - (a + b)).
-Proof.
-  intros.
-  cut (Rabs (2 * x - (a + b)) <= (b - a)); [ lra | ].
-  apply Rabs_le.
-  lra.
-Qed.
+Global Existing Instance fprec_gt_0. (* to override the Opaque one in Interval package *)
 
-Definition center_Z a x b :=
-  (b - a - Z.abs (2 * x - (a + b)))%Z
-.
-
-Lemma center_Z_correct a b x:
-  (0 <= center_Z a x b)%Z ->
-  (a <= x <= b)%Z.
-Proof.
-  unfold center_Z.
-  intros.
-  apply IZR_le in H.
-  replace (IZR 0) with 0 in H by reflexivity.
-  repeat rewrite minus_IZR in H.
-  rewrite abs_IZR in H.
-  rewrite minus_IZR in H.
-  rewrite mult_IZR in H.
-  rewrite plus_IZR in H.
-  replace (IZR 2) with 2 in H by reflexivity.
-  apply center_R_correct in H.
-  intuition eauto using le_IZR.
-Qed.
-
-Lemma center_Z_complete a b x:
-  (a <= x <= b)%Z ->
-  (0 <= center_Z a x b)%Z.
-Proof.
-  unfold center_Z.
-  intros.
-  apply le_IZR.
-  replace (IZR 0) with 0 by reflexivity.
-  repeat rewrite minus_IZR.
-  rewrite abs_IZR.
-  rewrite minus_IZR.
-  rewrite mult_IZR.
-  rewrite plus_IZR.
-  replace (IZR 2) with 2 by reflexivity.
-  apply center_R_complete.  
-  intuition eauto using IZR_le.
-Qed.
 
 Section WITHNANS.
 
 Context {NANS: Nans}.
 
 Definition Bsqrt ty {STD: is_standard ty}:= Bsqrt _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (sqrt_nan ty) BinarySingleNaN.mode_NE.
-
-Inductive FF2B_gen_spec (prec emax: Z) (x: full_float): binary_float prec emax -> Prop :=
-  | FF2B_gen_spec_invalid (Hx: valid_binary prec emax x = false):
-      FF2B_gen_spec prec emax x (B754_infinity _ _ (sign_FF x))
-  | FF2B_gen_spec_valid (Hx: valid_binary prec emax x = true)
-                        y (Hy: y = FF2B _ _ _ Hx):
-      FF2B_gen_spec _ _ x y
-.
-
-Lemma FF2B_gen_spec_unique prec emax x y1:
-  FF2B_gen_spec prec emax x y1 ->
-  forall y2,
-    FF2B_gen_spec prec emax x y2 ->
-    y1 = y2.
-Proof.
-  inversion 1; subst;
-  inversion 1; subst; try congruence.
-  f_equal.
-  apply Eqdep_dec.eq_proofs_unicity.
-  generalize bool_dec. clear. firstorder.
-Qed.
-
-Definition FF2B_gen prec emax x :=
-  match valid_binary prec emax x as y return valid_binary prec emax x = y -> _ with
-    | true => fun Hx => FF2B _ _ _ Hx
-    | false => fun _ => B754_infinity _ _ (sign_FF x)
-  end eq_refl.
-
-Lemma bool_true_elim {T} a  (f: _ -> T) g H:
-  match a as a' return a = a' -> _ with
-    | true => f
-    | false => g
-  end eq_refl = f H.
-Proof.
-  destruct a; try congruence.
-  f_equal.
-  apply Eqdep_dec.eq_proofs_unicity.
-  decide equality.
-Qed.
-
-Lemma FF2B_gen_correct prec emax x (Hx: valid_binary prec emax x = true):
-  FF2B_gen _ _ x = FF2B _ _ _ Hx.
-Proof.  
-  apply bool_true_elim.
-Qed.
 
 Definition F2 prec emax e  :=
 if Z_lt_le_dec (e+1) (3 - emax)
@@ -270,6 +167,7 @@ Definition fone: Defs.float Zaux.radix2 :=
     Defs.Fexp := 0
   |}.
 
+Open Scope R.
 
 Lemma F2R_fone: F2R _ fone = 1.
 Proof.
