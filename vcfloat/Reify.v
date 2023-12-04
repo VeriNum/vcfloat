@@ -1,4 +1,4 @@
-(* Copyright (c) 2022 Andrew W. Appel *)
+(*  LGPL licensed; see ../LICENSE and, for historical notes, see ../OLD_LICENSE *)
 
 From vcfloat Require Export RAux.
 From Flocq Require Import Binary Bits Core.

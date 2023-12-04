@@ -102,6 +102,7 @@ VCFloat2 provides
 \end{enumerate}
 
 \chapter{Floating-point functional models}
+\label{models}
 To use VCFloat you start with,
 \begin{lstlisting}
 Require Import vcfloat.VCFloat.
@@ -132,6 +133,7 @@ any number greater than the number of mantissa bits).
 and \lstinline{1<24}, and so on.
 
 \chapter{NaNs}
+\label{NaNs}
 In the IEEE-754 floating-point standard, one cannot
 simply \emph{add} two numbers, one must specify how the NaNs will
 be propagated.  That is, if $x$ and $y$ are double-precision floats,
@@ -164,6 +166,7 @@ structure whenever it produces a not-a-number, which you will prove
 is never.
 
 \chapter{Notation Scopes}
+\label{notation}
 These notation scopes (and their delimiters) come with VCFloat:
 \begin{lstlisting}
 Delimit Scope float32_scope with F32.
@@ -181,6 +184,7 @@ as .5) and operator \lstinline{+} are interpreted in single precision.
 The variable $h$ is a double-precision floating-point number.
 
 \chapter{Operators}
+\label{operators}\label{models-last}
 The following operators are available in each notation scope:
 \begin{lstlisting}
   + $~$ - $~$ * $~$ / $~$ < $~$ <= $~$ > $~$ >= 
@@ -198,6 +202,7 @@ their accuracy; see Section~\ref{userdefined}.
 
 
 \chapter{Example}
+\label{example}
 
 A mass on a spring---a harmonic oscillator---with position $x$ and
 velocity $v$ can be simulated over time-step $h=\frac{1}{32}$ using the
@@ -329,7 +334,7 @@ variable identifiers to floating-point values.
 Definition step_vmap_list ($x$ $v$ : ftype Tsingle) := [(_x, existT ftype _ $x$);(_v, existT ftype _ $v$)].
 
 Definition step_vmap (x v : ftype Tsingle) : valmap :=
- ltac:(let z := compute_PTree (valmap_of_list (step_vmap_list x v)) in exact z).
+ ltac:(let z := ltac:(make_valmap_of_list (step_vmap_list x v))).
 \end{lstlisting}
 The auxiliary definition \lstinline{step_vmap_list}
 (when applied to $x$ and $v$)
@@ -356,6 +361,7 @@ The lemma demonstrates that the round-trip---reify then reflect---is indeed
 the identity function.
 
 \chapter{Real-valued functional model}
+\label{realmodel}
 
 Suppose we take the float-valued functional model (the \lstinline{step}) 
 function) and interpret every constant and operator in the real numbers:
@@ -663,6 +669,7 @@ Rabs (-1/2048 * d0 * v_x + -1/2048 * d * v_x + 2047/2048 * d1 * v_x +
 \end{lstlisting}
 in which not as many terms have been neglected.  But either way,
 \lstinline{interval} solves the goal.
+
 \chapter{error\_rewrites} Suppose an expression for the absolute
 forward error does not expand into a nice multinomial
 that is tractable for the \lstinline{prune_terms} tactic;
@@ -962,19 +969,302 @@ VCFloat comes with several worked examples, in the Test and FPBench directories:
 \item[\href{../FPBench/}{FPBench/$*$.v}]  examples from the FPBench benchmark suite (fpbench.org)
 \end{description}
 
+\section{Nonstandard floating-point-like types}
+\label{nonstandard}
+
+Users may implement in software floating-point types that do not
+correspond exactly to any IEEE 754 format but that can be shown 
+to respect round-off error bounds. 
+VCFloat2 supports such user-defined types.
+
+Consider the example of double-double \cite{dekker71}.  A
+double-double number can be used to represent a
+floating-point number with at least 106 bits
+of mantissa using two double-precision floats whose 53-bit mantissas
+do not overlap (because their exponents differ by at least 53). One can add or multiply 
+numbers in this data type using just
+a few ordinary double-precision operations, especially on machines
+that support fused multiply-add (fma).
+
+The rounding behavior of double-double can be shown to be
+follow model with relative error $|\delta| \le 2^{-106}$ and
+absolute error $|\epsilon| \le 2^{-1022}$.
+If the user can prove such a property of an abstract number
+type (of which double-double is just one example), then they
+can build a \lstinline{nonstdtype} record in VCFloat2:
+
+\begin{lstlisting}
+Record nonstdtype 
+     (fprec: Z) (femax: Z) (prec_range: 1 < fprec < femax) := 
+ NONSTD 
+  { nonstd_rep: Type;
+    nonstd_to_F: nonstd_rep -> option (float radix2);
+    $\ldots$ (* some fields omitted *) $\ldots$
+    nonstd_bounds: forall x: nonstd_rep, 
+       ( - (bpow radix2 femax - bpow radix2 (femax - fprec)) <=
+        floatopt_to_real (nonstd_to_F x) <=
+        bpow radix2 femax - bpow radix2 (femax - fprec) )%R
+}.
+\end{lstlisting}
+Here, \lstinline{nonstd_bounds} is the user-supplied proof 
+of such a rounding theorem, \lstinline{nonstd_to_F}
+is the user-supplied definition of a function that maps 
+nonstandard types to a floating-point representation, and
+\lstinline{floatopt_to_real} is a function provided by
+VCFloat2 that maps  a floating-point representation to a real number. 
+
+After building a \lstinline{nonstdtype} record, the 
+ \lstinline{GTYPE} constructor can be used to build a new 
+VCFloat2 \lstinline{type}  (see Chapter~\ref{modeling}).
+Expressions in which some functions return
+values of this type and other functions take values of this type
+can now be reified, and VCFloat2 will automatically calculate
+and prove round-off error bounds.
+
+In order to write such expressions, users of VCFloat2 must first
+define operations on the newly defined \lstinline{type}. This
+is done by constructing a \lstinline{floatfunc} record
+(whose type was presented in Section~\ref{func}).
+
+\paragraph{Standard vs. nonstandard types.}  One might wonder what is
+special about a ``standard'' type, that it cannot be just an instance
+of the general notion of nonstandard type.  
+A standard type must support all the standard binary and unary operations
+(Zconst, BINOP, UNOP, PLUS, MINUS, $\ldots$ see Chapter~\ref{generic}).
+Nonstandard types support only whatever functions
+someone has supplied.  The notion of an arbitrary ``cast'' from
+any IEEE precision to any other cannot be generically supported,
+and (for example) some nonstandard types do not support Sterbenz
+subtraction, or constant literals.
+
+\chapter{Functional Modeling Languages}
+\label{modeling}
+
+VCFloat comes with (two variants of) a \emph{functional modeling language} for describing floating-point computations as functional programs.
+Chapters~\ref{models}--\ref{models-last} gave an informal introduction.   The modeling language(s) are useful not only for
+calling VCFloat's automated roundoff analysis but for other reasoning.
+
+The \emph{General} modeling language is VCFloat's default: it permits IEEE-754 floating-point types at any size of exponent and mantissa, as well as \emph{nonstandard} types such as flush-to-zero or double-double.  The \emph{Standard} modeling language permits only the IEEE-754 floating-point types at any size of exponent and mantissa; for some applications it is more convenient to use.
+
+\vfill
+\noindent\begin{tabular}{@{}l | p{2.4in}| p{2.4in} |@{}}
+\emph{Language} & \textbf{General} & \textbf{Standard} \\ \hline
+\emph{Purpose 1} & Ordinary use of VCFloat's automated roundoff calculations & (can be used, with conversion, for automated roundoff calculations) \\ \cline{2-3}
+\emph{Purpose 2} & Modeling computations that may involve nonstandard floats & Modeling computations using only IEEE floats \\ \cline{2-3}
+\emph{Advantage} & Generality & Easier conversion between \textsf{ftype(t)} and \textsf{binary\_float(fprec t)(femax t)} \\ \hline
+\emph{Semantics}
+& \begin{lstlisting}
+Record type: Type :=  
+    GTYPE {fprec: Z; femax: Z; $\ldots$; 
+        nonstd: option (nonstdtype $\ldots$)}.
+Definition TYPE fprecp femax $\ldots$ :=
+    GTYPE  fprecp femax $\ldots$ None.
+\end{lstlisting}
+& \begin{lstlisting}
+ Record type: Type :=
+    TYPE {fprec: Z; femax:Z, $\ldots$}
+\end{lstlisting} \\
+\hline
+\emph{Import} & \textsf{Require Import vcfloat.VCFloat.} & \textsf{From vcfloat\newline Require vcfloat.VCFloat.\newline Require Import vcfloat.FPStdLib.} \\ \hline
+\emph{Alt. Import} & \textsf{Require Import vcFloat.FPLib.} & \textsf{From vcfloat Require RAux FPStdLib.} \\
+& \multicolumn{2}{c|}{\emph{import this way when you don't need automatic roundoff calculation }} \\  \hline
+Alt. Import & & \textsf{Require Import vcfloat.FPStdLib.} \\
+&  & \emph{when you don't need much reasoning about how floats represent reals} \\
+\hline
+\end{tabular}
+\vfill
+
+\emph{Aside from} automatic roundoff calculations, both modeling languages come with several useful libraries for reasoning about floating-point:
+\begin{description}
+\item[Chapter~\ref{generic}:] Floating-point expressions that are generic over their precision, in an easier way than basic Flocq provides.
+\item[Chapter~\ref{notation}:] Notation systems for floating-point literals and expressions.
+\item[Chapter~\ref{morphisms}:] Equivalence relations on floating-point numbers, with Coq \emph{Morphisms} for automatic rewriting.
+\item[Chapter~\ref{conversions}:] Automatic generation of real-valued functional models from float-valued models.
+\end{description}
+
+\pagebreak
+
+\chapter{\emph{General} Modeling Language}
+
+The default functional modeling language in VCFloat is based on the notion of a floating-point format, called a \lstinline{type}:
+\begin{lstlisting}
+Record type: Type := GTYPE
+  { fprecp: positive;
+    femax: Z;
+    fprec := Z.pos fprecp;
+    fprec_lt_femax_bool: ZLT fprec femax;
+    fprecp_not_one_bool: Bool.Is_true (negb (Pos.eqb fprecp xH));
+    nonstd: option (nonstdtype fprecp femax fprec_lt_femax_bool fprecp_not_one_bool)
+  }.
+\end{lstlisting}
+The number \lstinline{fprec} is the number of bits in the matissa, \lstinline{femax} is the largest possible binary exponent.
+Propositions \lstinline{fprec_lt_femax_bool} and \lstinline{fprecp_not_one_bool} guarantee that $1 < \mathsf{fprec} < \mathsf{femax}$.
+Finally, \lstinline{nonstd} is None for an ordinary IEEE type (even of a nonstandard mantissa size or exponent size),
+and \lstinline{Some} for truly weird formats such as flush-to-zero\footnote{Some GPUs lack subnormal numbers, so instead of gradual underflow when one reaches the minimum (most negative) exponent, they round directly to zero.} or double-double.
+
+The constructor \lstinline{GTYPE} builds a \lstinline{type}, and the derived function \lstinline{TYPE} builds a standard type:
+
+\begin{lstlisting}
+Definition TYPE fprecp femax fprec_lt_femax fprecp_not_one :=
+    GTYPE  fprecp femax fprec_lt_femax fprecp_not_one None.
+
+Definition Tsingle := TYPE 24 128 I I.  (* IEEE 32-bit *)
+Definition Tdouble := TYPE 53 1024 I I. (* IEEE 64-bit *)
+\end{lstlisting}
+  
+Floating point numbers in format $t$ belong to (in Coq's type system) to \lstinline{ftype($t$)}.  One
+can convert between \lstinline{ftype($t$)} and the Flocq representation of IEEE types by using
+rewriting:
+
+\begin{lstlisting}
+Definition ftype: type -> Type := $\ldots$  
+
+Class is_standard ($t$: type) := 
+   Is_standard: match nonstd $t$ with None => True | _ => False end. 
+
+Definition ftype_of_float {$t$: type} {STD: is_standard $t$}:
+          binary_float (fprec $t$) (femax $t$) -> ftype $t$.
+
+Definition float_of_ftype {$t$: type} {STD: is_standard $t$}:
+          ftype $t$ -> binary_float (fprec $t$) (femax $t$).
+
+Lemma float_of_ftype_of_float {$t$: type} (STD1 STD2: is_standard $t$):
+  forall $x$, @float_of_ftype $t$ STD1 (@ftype_of_float $t$ STD2 $x$) = $x$.
+
+Lemma ftype_of_float_of_ftype {t: type} (STD1 STD2: is_standard t):
+  forall $x$, @ftype_of_float $t$ STD1 (@float_of_ftype $t$ STD2 $x$) = $x$.
+\end{lstlisting}
+
+In contrast, in the \emph{Standard} modeling language (described in the next chapter), 
+\lstinline{ftype $t$} is convertible with \lstinline{binary_float (fprec $t$) (femax $t$)}
+by \emph{unification}, without needing rewriting; this convenience is the main
+reason for having the Standard language.
+
+\chapter{\emph{Standard} Modeling Language}
+
+The nondefault ``Standard'' modeling language based on the notion of a floating-point format, called a \lstinline{type},
+but \emph{without a nonstd option}.
+
+The default functional modeling language in VCFloat is based on the notion of a floating-point format, called a \lstinline{type}:
+\begin{lstlisting}
+Record type: Type := TYPE
+  { fprecp: positive;
+    femax: Z;
+    fprec := Z.pos fprecp;
+    fprec_lt_femax_bool: ZLT fprec femax;
+    fprecp_not_one_bool: Bool.Is_true (negb (Pos.eqb fprecp xH))
+  }.
+
+Definition ftype ty := binary_float (fprec ty) (femax ty).
+
+Definition Tsingle := TYPE 24 128 I I.  (* IEEE 32-bit *)
+Definition Tdouble := TYPE 53 1024 I I. (* IEEE 64-bit *)
+\end{lstlisting}
+The number \lstinline{fprec} is the number of bits in the matissa, \lstinline{femax} is the largest possible binary exponent.  
+Clearly, \lstinline{ftype($t$)} is definitionally equal (hence unifiable) with 
+Flocq's  \lstinline{binary_float (fprec $t$) (femax $t$)}.
+
+One can \lstinline{Require} both modeling languages at once, but it is recommended not to \lstinline{Import} both at once,
+since they disagree about the meaning of \lstinline{type, ftype, Tsingle,} \emph{et cetera}.
+
+\chapter{Generic expressions}
+\label{generic}
+
+Consider the harmonic oscillator example shown in Chapter~\ref{example}.  That was given in single-precision floating point, but
+one could model the algorithm at arbitrary precision, and do proofs about it.  We would write,
+
+\begin{lstlisting}
+Require Import vcfloat.FPLib.
+Section WITHNANS.
+Context {NANS: Nans}.
+Definition h {t: type} `{STD: is_standard t} := BDIV (Zconst t 1) (Zconst t 32).
+Definition F {t: type} (x: ftype t)  `{STD: is_standard t} : ftype t := BMINUS (Zconst t 3) x.
+Definition step {t: type} `{STD: is_standard t}  (x v: ftype t) :=
+    BPLUS x (BMULT h (BPLUS v (BMULT (BDIV h (Zconst t 2)) (F x)))).
+End WITHNANS.
+\end{lstlisting}
+  
+Instead of importing FPLib (which gives access only to the ``General'' modeling language and morphisms)
+one could import all of vcfloat.VCFloat (which gives access in addition to the roundoff-error automation).
+However, roundoff-error automation works only at specific precisions; so after defining \lstinline{step}
+in this way, one could specialize it to \lstinline{@step Tsingle _} or \lstinline{@step Tdouble _}
+and call the automation.  However, there are many uses of VCFloat's supporting libraries
+even when its roundoff-error automation is not used.\footnote{Here are two examples.
+LAProof: a library of formal accuracy and correctness proofs for sparse linear algebra programs, by Ariel E. Kellison, Andrew W. Appel, Mohit Tekriwal, and David Bindel, 30th IEEE International Symposium on Computer Arithmetic, September 2023 (github.com/VeriNum/iterative\_methods).
+Verified correctness, accuracy, and convergence of a stationary iterative linear solver: Jacobi method, by Mohit Tekriwal, Andrew W. Appel, Ariel E. Kellison, David Bindel, and Jean-Baptiste Jeannin, 16th Conference on Intelligent Computer Mathematics, September 2023 (github.com/VeriNum/LAProof).}
+
+If using FPStdLib instead of FPLib, to use the ``Standard'' modeling language,
+then omit the \lstinline{STD} arguments from the functions.
+
+\noindent\begin{tabular}{@{}l | p{2.9in}| p{2.0in} |@{}}
+  & \textbf{General} & \textbf{Standard} \\ \hline
+3 & \small \textsf{Zconst (t: type) `\{STD: is\_standard t\} (i: Z) : ftype t}
+  & \small \textsf{Zconst (t: type) (i: Z) : ftype t} \\ \hline
+  & \small \textsf{BINOP (op) (nan) \{t: type\} `\{STD: is\_standard t\}:\newline\hspace*{.4in} ftype t$\rightarrow$ftype t$\rightarrow$ftype t}
+  & \small \textsf{BINOP (op) (nan) \{t: type\}:\newline\hspace*{.4in}ftype t$\rightarrow$ftype t$\rightarrow$ftype t} \\
+$+$ & \small \textsf{BPLUS := BINOP Bplus plus\_nan} & \small \textsf{BPLUS := BINOP Bplus plus\_nan} \\
+$-$ & \small \textsf{BMINUS := BINOP Bminus minus\_nan} & \small \textsf{BMINUS := BINOP Bminus minus\_nan} \\ \hline
+  & \small \textsf{UNOP (op) (nan) \{t: type\} `\{STD: is\_standard t\}:\newline\hspace*{.4in} ftype t$\rightarrow$ftype t}
+  & \small \textsf{UNOP (op) (nan) \{t: type\}:\newline\hspace*{.4in} ftype t$\rightarrow$ftype t} \\
+
+$|\cdot |$ & \small \textsf{BABS \{t: type\} `\{STD: is\_standard t\}} & \small \textsf{BABS \{t: type\}} \\
+-  & \small \textsf{BOPP \{t: type\} `\{STD: is\_standard t\}} & \small \textsf{BOPP \{t: type\}} \\
+$\sqrt{~}$ & \small \textsf{BSQRT := UNOP Bsqrt sqrt\_nan} & \small \textsf{BSQRT := UNOP Bsqrt sqrt\_nan} \\ \hline
+$\_ \cdot \_ + \_$ & \small \textsf{BFMA} \emph{(fused multiply-add)} & \small \textsf{BFMA} \\ \hline
+& \multicolumn{2}{p{4.9in}|}{\small The \textsf{nan} parameter gives instructions on forming a NaN payload.  \textsf{BOPP,BABS}
+  cannot produce NaNs from non-NaNs, so do not need this parameter.} \\
+\end{tabular}
+
+\chapter{Equivalence relations and rewriting morphisms}
+\label{morphisms}
+
+When is the expression $a\cdot 0 + b$ equal to $b$?  This is important, for example, in modeling sparse matrix operations,
+where a dense representation computes the $a\cdot 0 + b$ where the sparse representation has simply $b$.
+
+Well, if $b=3.5$ and $a=\infty$ or $a=\mathrm{NaN}$, then $a\cdot 0 + b=\mathrm{NaN}$.  So we might ask, if $a$ and $b$ are known to be finite, is $a\cdot 0 + b$ equal to $b$?   And unfortunately, if $a$ is \emph{negative zero} and $b$ is \emph{positive zero}, then the fused-multiply-add $a\cdot 0 + b = -0$ while $b=+0$.
+
+This may be of little consequence when reasoning in the reals, where $-0 = +0$.  But often,
+in proving that a low-level implementation (in C or some other language) correctly implements a floating-point functional model,
+we want to avoid reasoning about the real-valued \emph{meaning} of the terms, and just treat floating-point operations
+as uninterpreted functions.  But even in that reasoning we want to consider $-0 \cong +0$.
+
+For this purpose, vcfloat.FPLib and vcfloat.FPStdLib (choose one) provide these relations:
+
+\begin{description}
+\item[$\mathsf{feq}~x~y$]    means that either $x$ and $y$ are both nonfinite (infinities or NaNs), or they are both zeros (regardless of sign), or they are identical.
+\item[$\mathsf{strict\_feq}~x~y$]    means $x$ and $y$ are both finite, and either they are both zeros (regardless of sign) or they are identical.  This is a \emph{partial equivalence relation} (or ``setoid'').
+\end{description}
+These relations are theorized in Coq's Setoid Morphism system, so you can use them in rewriting.  (There is a third relation,
+$mathsf{float_equiv}~x~y$,  meaning that either $x$ and $y$ are both NaNs or they are identical, which VCFloat uses internally but
+which is less useful for general purposes and is not theorized as a setoid.)
+
+For example, if $\mathsf{feq}~x~x' \land \mathsf{feq}~y~y' \land \mathsf{feq}~z~z'$ then
+$\mathsf{feq}~(x\cdot y + z)~(x'\cdot y' + z')$, and one can prove this easily by rewriting.
+
+\chapter{Conversions between models}
+\label{conversions}
+
+Given a floating-point functional model, one can convert it into the corresponding real-valued functional model
+by reifying and then using the \lstinline{rval} function, as described in Chapter~\ref{realmodel}.
+
+Given a model in the \emph{Standard} modeling language, one can automatically
+convert it into the \emph{Generic} modeling language using the \lstinline{type_coretype}
+relation.  But this is experimental and rather ill-documented.
+
 \chapter{Bibliography}
 
 \quad VCFloat 1.0 was built in 2015 and described in,\newline
 \textbf{A unified Coq framework for verifying C programs with floating-point computations}, by Tahina Ramananandro, Paul Mountcastle, Beno\^{\i}t  Meister, and Richard Lethin, in \emph{Proceedings of the 5th ACM SIGPLAN Conference on Certified Programs and Proofs (CPP'16)}, pages 15--26, 2016 (https://doi.org/10.1145/2854065.2854066).
 \vspace\baselineskip
 
-VCFloat 2.0 was built 2021-2022 and described in,\newline
+VCFloat 2.2 was built 2021-2023 and described in,\newline
 \textbf{VCFloat2: Floating-point error analysis in Coq},
 by Andrew W. Appel and Ariel E. Kellison,
-October 2022  (distributed as doc/vcfloat2.pdf in the vcfloat repo).
+in \emph{CPP'24: Proceedings of the 13th ACM SIGPLAN International Conference on Certified Programs and Proofs},
+January 2024 (distributed as doc/vcfloat2.pdf in the vcfloat repo).
 \vspace\baselineskip
 
-VCFloat 2.0 is applied and demonstrated in,\newline
+VCFloat 2.0 was applied and demonstrated in,\newline
 \textbf{Verified numerical methods for ordinary differential equations},
 by Ariel E. Kellison and Andrew W. Appel,
 in \emph{15th International Workshop on Numerical Software Verification (NSV'22)}, August 2022.

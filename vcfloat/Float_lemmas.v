@@ -167,7 +167,7 @@ Definition fone: Defs.float Zaux.radix2 :=
     Defs.Fexp := 0
   |}.
 
-Open Scope R.
+Local Open Scope R_scope.
 
 Lemma F2R_fone: F2R _ fone = 1.
 Proof.

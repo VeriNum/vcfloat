@@ -1,6 +1,6 @@
-(** Automate.v:  proof automation for "ftype" usage-style of VCFloat.
- Copyright (C) 2021-2022 Andrew W. Appel.
-*)
+(*  LGPL licensed; see ../LICENSE and, for historical notes, see ../OLD_LICENSE *)
+
+(** Automate.v:  proof automation for "ftype" usage-style of VCFloat. *)
 
 Require Import Flocq.IEEE754.Binary.
 From vcfloat Require Import FPLang FPLangOpt RAux Rounding Reify Float_notations.

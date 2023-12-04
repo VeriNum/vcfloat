@@ -13,7 +13,7 @@ tests: ../Test/Test.vo ../Test/TestFunc.vo ../Test/TestPaper.vo ../Test/Test2.vo
 
 # the vcfloat2 target is the core VCFloat tool for VCFloat2 users who don't need
 # CompCert-based reification
-vcfloat2:  VCFloat.vo FPCompCert.vo Version.vo FPLib.vo FPStdLib.vo
+vcfloat2:  VCFloat.vo FPCompCert.vo Version.vo FPLib.vo FPStdLib.vo FPStdCompCert.vo
 
 %.vo: %.v
 	$(COQC) $(COQFLAGS) $*.v

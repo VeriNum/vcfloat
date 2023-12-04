@@ -1,44 +1,4 @@
-(** VCFloat: A Unified Coq Framework for Verifying C Programs with
- Floating-Point Computations. Application to SAR Backprojection.
- 
- Version 2.0 (2021-present)
- Copyright (C) 2023 Andrew W. Appel and Ariel E. Kellison
-
- Version 1.0 (2015-12-04) 
- Copyright (C) 2015 Reservoir Labs Inc.
- 
- Licensed by LGPL, see ../LICENSE
- 
- This file is distributed in the hope that it will be useful, but
- WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See LICENSE for
- more details about the use and redistribution of this file and the
- whole VCFloat library.
-
-    Version 2.0 is supported by the National Science Foundation
- grants 2219757 and 2219758.
-    Version 1.0 was sponsored in part by DARPA MTO as part of the Power
- Efficiency Revolution for Embedded Computing Technologies (PERFECT)
- program (issued by DARPA/CMO under Contract No: HR0011-12-C-0123). The
- views and conclusions contained in this work are those of the authors
- and should not be interpreted as representing the official policies,
- either expressly or implied, of the DARPA or the
- U.S. Government. Distribution Statement "A" (Approved for Public
- Release, Distribution Unlimited.)
- 
- 
- If you are using or modifying VCFloat in your work, please consider
- citing the following papers:
- 
- Tahina Ramananandro, Paul Mountcastle, Benoit Meister and Richard
- Lethin.  A Unified Coq Framework for Verifying C Programs with Floating-Point
- Computations. In CPP (5th ACM/SIGPLAN conference on Certified Programs and Proofs)
- 2016.
-
- Andrew W. Appel and Ariel E. Kellison. VCFloat2: Floating-point Error 
- Analysis in Coq. April 2022.
-
-*)
+(*  LGPL licensed; see ../LICENSE and, for historical notes, see ../OLD_LICENSE *)
 
 (** FPCore module.
   These definitions, which were previously part of FPLang.v, are 

@@ -6,7 +6,7 @@ Global Unset Asymmetric Patterns. (* because "Require compcert..." sets it *)
 
 Require vcfloat.FPCore.
 
-From vcfloat Require Export RAux.
+From vcfloat Require Import RAux.
 Set Bullet Behavior "Strict Subproofs".
 Require Import Coq.Relations.Relations Coq.Classes.Morphisms Coq.Classes.RelationPairs Coq.Classes.RelationClasses.
 Require Import Coq.Lists.List.
@@ -188,6 +188,32 @@ Definition    fma_nan {NAN: Nans}:
         binary_float (fprec ty) (femax ty) ->
         nan_payload (fprec ty) (femax ty)
  := fun t => @FPCore.fma_nan NAN (coretype_of_type t) _.
+
+Lemma fprec_gt_one ty:
+  (1 < fprec ty)%Z.
+Proof.
+  generalize (fprec_gt_0 ty).
+  unfold FLX.Prec_gt_0.
+  unfold fprec.
+  intros.
+  generalize (fprecp_not_one ty).
+  intros.
+  assert (Z.pos (fprecp ty) <> 1%Z) by congruence.
+  lia.
+Qed.
+
+
+Corollary any_nan ty: nan_payload (fprec ty) (femax ty).
+Proof.
+ red.
+  set (a:=1%positive).
+  assert (H: Binary.nan_pl (fprec ty) a = true).
+  unfold Binary.nan_pl.
+  subst a. 
+   pose proof (fprec_gt_one ty). simpl. lia.
+  exists (Binary.B754_nan (fprec ty) (femax ty) false 1 H).
+  reflexivity.
+Defined.
 
 
 Definition FT2R {t: type} : ftype t -> R := B2R (fprec t) (femax t).
@@ -433,19 +459,6 @@ Definition BINOP (op: ltac:( let t := type of Bplus in exact t ) )
     : ftype ty -> ftype ty -> ftype ty 
     := op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (op_nan ty)
       BinarySingleNaN.mode_NE.
-
-Lemma fprec_gt_one ty:
-  (1 < fprec ty)%Z.
-Proof.
-  generalize (fprec_gt_0 ty).
-  unfold FLX.Prec_gt_0.
-  unfold fprec.
-  intros.
-  generalize (fprecp_not_one ty).
-  intros.
-  assert (Z.pos (fprecp ty) <> 1%Z) by congruence.
-  lia.
-Qed.
 
 Section WITHNANS.
 Context {NANS: Nans}.

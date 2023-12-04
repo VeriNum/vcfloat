@@ -10,20 +10,19 @@ Lemma ZLT_intro a b:
   ZLT a b.
 Proof.
   intros.
-  apply Bool.Is_true_eq_left.
-  apply Z.ltb_lt.
-  assumption.
-Qed.
+  unfold ZLT, Bool.Is_true, Z.lt, Z.ltb in *.
+  rewrite H.
+  apply I.
+Defined.
 
 Lemma ZLT_elim a b:
   ZLT a b ->
   (a < b)%Z.
 Proof.
   intros.
-  apply Z.ltb_lt. 
-  apply Bool.Is_true_eq_true.
-  assumption.
-Qed.
+  unfold ZLT, Bool.Is_true, Z.lt, Z.ltb in *.
+  destruct (Z.compare a b); auto; contradiction.
+Defined.
 
 Lemma Is_true_eq a (h1 h2: Bool.Is_true a):
   h1 = h2.

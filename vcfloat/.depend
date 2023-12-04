@@ -18,6 +18,8 @@ FPLangOpt.vo FPLangOpt.glob FPLangOpt.v.beautified FPLangOpt.required_vo: FPLang
 FPLangOpt.vio: FPLangOpt.v Float_lemmas.vio FPLang.vio klist.vio LibTac.vio BigRAux.vio
 FPLib.vo FPLib.glob FPLib.v.beautified FPLib.required_vo: FPLib.v FPCore.vo RAux.vo Float_notations.vo
 FPLib.vio: FPLib.v FPCore.vio RAux.vio Float_notations.vio
+FPStdCompCert.vo FPStdCompCert.glob FPStdCompCert.v.beautified FPStdCompCert.required_vo: FPStdCompCert.v FPStdLib.vo FPCompCert.vo
+FPStdCompCert.vio: FPStdCompCert.v FPStdLib.vio FPCompCert.vio
 FPStdLib.vo FPStdLib.glob FPStdLib.v.beautified FPStdLib.required_vo: FPStdLib.v IEEE754_extra.vo klist.vo Float_notations.vo Base.vo FPCore.vo RAux.vo Rounding.vo
 FPStdLib.vio: FPStdLib.v IEEE754_extra.vio klist.vio Float_notations.vio Base.vio FPCore.vio RAux.vio Rounding.vio
 Float_lemmas.vo Float_lemmas.glob Float_lemmas.v.beautified Float_lemmas.required_vo: Float_lemmas.v RAux.vo IEEE754_extra.vo Fprop_absolute.vo FPCore.vo

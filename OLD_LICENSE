@@ -2,7 +2,7 @@ How VCFloat became LGPL licensed instead of GPL licensed: a History
 
 VCFloat, a Coq Framework for verifying floating-point computations,
 was originally developed by researchers at Reservoir Labs Inc.
-It was copyright (C) 2015 Reservoir Labs Inc., made open-source
+It was copyright (c) 2015 Reservoir Labs Inc., made open-source
 under the Gnu Public License (GPL), and published in a github repo.
 
 In 2021 and 2022, Andrew Appel and Ariel Kellison made contributions

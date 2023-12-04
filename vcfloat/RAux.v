@@ -1,36 +1,5 @@
-(** R-CoqLib: general-purpose Coq libraries and tactics.
- 
- Version 1.0 (2015-12-04)
- 
- Copyright (C) 2015 Reservoir Labs Inc.
- All rights reserved.
- 
- This file, which is part of R-CoqLib, is free software. You can
- redistribute it and/or modify it under the terms of the GNU General
- Public License as published by the Free Software Foundation, either
- version 3 of the License (GNU GPL v3), or (at your option) any later
- version.
- 
- This file is distributed in the hope that it will be useful, but
- WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See LICENSE for
- more details about the use and redistribution of this file and the
- whole R-CoqLib library.
- 
- This work is sponsored in part by DARPA MTO as part of the Power
- Efficiency Revolution for Embedded Computing Technologies (PERFECT)
- program (issued by DARPA/CMO under Contract No: HR0011-12-C-0123). The
- views and conclusions contained in this work are those of the authors
- and should not be interpreted as representing the official policies,
- either expressly or implied, of the DARPA or the
- U.S. Government. Distribution Statement "A" (Approved for Public
- Release, Distribution Unlimited.)
-*)
-(**
-Author: Tahina Ramananandro <ramananandro@reservoir.com>
-
-More properties about real numbers.
-*)
+(*  LGPL licensed; see ../LICENSE and, for historical notes, see ../OLD_LICENSE *)
+(** More properties about real numbers. *)
 
 Require Export Reals Psatz.
 Require Export Lia.
