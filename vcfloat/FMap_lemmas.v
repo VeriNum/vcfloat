@@ -74,7 +74,7 @@ split; intro H0; inversion H0; clear H0; subst.
 - apply Table.Raw.InRight; rewrite IHt2; auto.
 Qed.
 
-Lemma relate_fold_add:
+Lemma relate_fold_add':
  forall [elt A: Type]
      [eqv: A -> A -> Prop] 
      (eqv_rel: Equivalence eqv)
@@ -199,6 +199,53 @@ rewrite u_unit.
 reflexivity.
 Qed.
 
+
+Lemma relate_fold_add:
+ forall [elt A: Type]
+     [eqv: A -> A -> Prop] 
+     (eqv_rel: Equivalence eqv)
+     (lift: Table.key -> elt -> A)
+     (lift_prop: forall k k' x, Keys.eq k k' -> eqv (lift k x) (lift k' x))
+    (f:  A -> A -> A)
+    (f_mor: forall x1 y1, eqv x1 y1 ->
+              forall x2 y2, eqv x2 y2 ->
+              eqv (f x1 x2) (f y1 y2))
+    (f_assoc: forall x y z : A, eqv (f x (f y z)) (f (f x y) z))
+    (f_commut: forall x y : A, eqv (f x y) (f y x))
+    (u: A)
+    (u_unit: forall x, eqv (f u x) x)
+    (g: Table.key -> elt -> A -> A)
+    (g_eqv: forall k x a, eqv (g k x a) (f (lift k x) a))
+    (tab: Table.t elt)
+    (k: Table.key),
+    eqv (Table.fold g tab u)
+      (f (match Table.find k tab with Some x => lift k x | None => u end)
+       (Table.fold (fun k' x a => if Keys.eq_dec k k' then a else g k' x a) tab u)).
+Proof.
+intros.
+rewrite (relate_fold_add' eqv_rel lift lift_prop f f_mor f_assoc f_commut u u_unit g g_eqv tab k).
+apply f_mor.
+reflexivity.
+rewrite !Table.fold_1.
+clear u_unit.
+revert u.
+induction (Table.elements (elt:=elt) tab); intro.
+simpl. reflexivity.
+simpl.
+rewrite IHl.
+set (ff := fold_left _).
+clearbody ff.
+match goal with |- eqv ?A ?B => replace B with A end.
+reflexivity.
+f_equal.
+set (j := fst a). clearbody j.
+clear.
+destruct (Keys.compare k j); try apply Keys.lt_not_eq in l;
+destruct (Keys.eq_dec k j); try contradiction; auto.
+symmetry in e. contradiction.
+Qed.
+
+
 Lemma fold_add_ignore:
   forall [elt A]
    (f: Table.key -> elt -> A -> A)
@@ -222,6 +269,51 @@ simpl.
 f_equal.
 rewrite ?H; auto.
 rewrite IHis_bst2. auto.
+Qed.
+
+
+
+Lemma relate_fold_add_alt:
+ forall [elt A: Type]
+     [eqv: A -> A -> Prop] 
+     (eqv_rel: Equivalence eqv)
+     (lift: Table.key -> elt -> A)
+     (lift_prop: forall k k' x, Keys.eq k k' -> eqv (lift k x) (lift k' x))
+    (f:  A -> A -> A)
+    (f_mor: forall x1 y1, eqv x1 y1 ->
+              forall x2 y2, eqv x2 y2 ->
+              eqv (f x1 x2) (f y1 y2))
+    (f_assoc: forall x y z : A, eqv (f x (f y z)) (f (f x y) z))
+    (f_commut: forall x y : A, eqv (f x y) (f y x))
+    (u: A)
+    (u_unit: forall x, eqv (f u x) x)
+    (g: Table.key -> elt -> A -> A)
+    (g_eqv: forall k x a, eqv (g k x a) (f (lift k x) a))
+    (tab: Table.t elt)
+    (k: Table.key) (new oldnew : elt),
+    eqv (f (lift k new) (match Table.find k tab with Some x => lift k x | None => u end)) (lift k oldnew) ->
+    eqv (f (lift k new) (Table.fold g tab u)) (Table.fold g (Table.add k oldnew tab) u).
+Proof.
+intros.
+pose proof relate_fold_add eqv_rel lift lift_prop f f_mor f_assoc f_commut u u_unit g g_eqv.
+etransitivity.
+apply f_mor.
+reflexivity.
+apply H0 with (k:=k).
+rewrite f_assoc.
+etransitivity.
+apply f_mor.
+apply H.
+reflexivity.
+rewrite H0 with (k:=k).
+apply f_mor.
+erewrite Table.find_1 by (apply Table.add_1; reflexivity).
+reflexivity.
+rewrite fold_add_ignore.
+reflexivity.
+intros.
+destruct (Keys.eq_dec k k'); try contradiction.
+auto.
 Qed.
 
 End FMapAVL_extra.
@@ -276,34 +368,39 @@ Lemma add_to_table_correct:
 Proof.
 intros.
 pose (lift (k: Table.key) p := Z.pos p).
-pose proof relate_fold_add Z.eq_equiv lift
+pose (oldnew := Z.to_pos (lift k p + match Table.find (elt:=positive) k tab with
+                | Some x => lift k x
+                | None => 0
+                end)).
+pose proof relate_fold_add_alt Z.eq_equiv lift
    ltac:(intros; rewrite H; auto)
    Z.add
    ltac:(intros; subst; auto)
    Z.add_assoc Z.add_comm
    Z0
    Z.add_0_l
-   (fun k p x => Z.add (Z.pos p) x)
-   ltac:(intros; subst; reflexivity).
-unfold addup_table.
-rewrite (H (add_to_table k p tab) k).
-rewrite (H tab k).
-clear H.
-unfold add_to_table.
-destruct (Table.find k tab) eqn:?H;
-rewrite (Table.find_1 (Table.add_1 tab _ (eq_refl k)));
-rewrite fold_add_ignore 
- by (intros; rewrite <- H0;
-     destruct (Keys.compare k k); auto; contradiction (Z.lt_irrefl k l));
+   (fun k p x => Z.add (lift k p) x)
+   ltac:(intros; subst; reflexivity)
+   tab k p oldnew.
+unfold addup_table, add_to_table. 
+set (f := fun (k : Table.key) (p : positive) (x : Z) => (lift k p + x)%Z) in *.
+change (fun (_ : Table.key) (p1 : positive) (i : Z) => (Z.pos p1 + i)%Z) with f in *.
+rewrite Z.add_comm.
+change (Z.pos p) with (lift k p).
+rewrite H; clear H.
+f_equal.
+destruct (Table.find k tab) eqn:?H; auto.
+unfold oldnew.
+set (b := match Table.find (elt:=positive) k tab with
+                        | Some x => lift k x
+                        | None => 0%Z
+                        end).
+assert (0 <= b)%Z.
+subst b.
 unfold lift.
-rewrite Pos.add_comm.
-rewrite Pos2Z.inj_add.
-rewrite <- !Z.add_assoc.
-rewrite (Z.add_comm (Z.pos p)).
-auto.
-set (u := Table.fold _ _ _).
-rewrite Z.add_0_l.
-apply Z.add_comm.
+destruct (Table.find (elt:=positive) k tab); simpl; Lia.lia.
+unfold lift.
+Lia.lia.
 Qed.
 
 End Demonstration.
