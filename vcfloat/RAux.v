@@ -1,36 +1,5 @@
-(** R-CoqLib: general-purpose Coq libraries and tactics.
- 
- Version 1.0 (2015-12-04)
- 
- Copyright (C) 2015 Reservoir Labs Inc.
- All rights reserved.
- 
- This file, which is part of R-CoqLib, is free software. You can
- redistribute it and/or modify it under the terms of the GNU General
- Public License as published by the Free Software Foundation, either
- version 3 of the License (GNU GPL v3), or (at your option) any later
- version.
- 
- This file is distributed in the hope that it will be useful, but
- WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See LICENSE for
- more details about the use and redistribution of this file and the
- whole R-CoqLib library.
- 
- This work is sponsored in part by DARPA MTO as part of the Power
- Efficiency Revolution for Embedded Computing Technologies (PERFECT)
- program (issued by DARPA/CMO under Contract No: HR0011-12-C-0123). The
- views and conclusions contained in this work are those of the authors
- and should not be interpreted as representing the official policies,
- either expressly or implied, of the DARPA or the
- U.S. Government. Distribution Statement "A" (Approved for Public
- Release, Distribution Unlimited.)
-*)
-(**
-Author: Tahina Ramananandro <ramananandro@reservoir.com>
-
-More properties about real numbers.
-*)
+(*  LGPL licensed; see ../LICENSE and, for historical notes, see ../OLD_LICENSE *)
+(** More properties about real numbers. *)
 
 Require Export Reals Psatz.
 Require Export Lia.
@@ -1057,7 +1026,6 @@ Qed.
 Lemma Rdiv_le_0_compat_Raux : forall r1 r2 : R, 0 <= r1 -> 0 < r2 -> 0 <= r1 / r2.
 Proof.
  intros.
- Search (0 <= _ * _).
  apply Rmult_le_pos; auto.
  apply Rinv_0_lt_compat in H0. lra.
 Qed.
@@ -1081,7 +1049,7 @@ forall u1 u2 v1 v2, (u1 + v1) - (u2 + v2) = (u1 - u2) + (v1 - v2).
 Proof. intros. nra. Qed.
 
 Lemma Rmult_rel_error: 
-forall a b c d, (a * b) - (c  * d) = (a - c)*d + (b - d)*c + (a-c) * (b-d).
+forall u1 v1 u v, (u1 * v1) - (u  * v) = (u1 - u)*v + (v1 - v)*u + (u1-u) * (v1-v).
 Proof. intros.  nra. Qed.
 
 
@@ -1289,5 +1257,66 @@ rewrite <- Rabs_Ropp.
 rewrite Ropp_minus_distr.
 f_equal. nra. Qed.
 
+Require Flocq.Core.Raux.
+
+Lemma center_R_correct a b x:
+ 0 <= b - a - Rabs (2 * x - (a + b)) ->
+ a <= x <= b.
+Proof.
+  intros.
+  assert (Rabs (2 * x - (a + b)) <= (b - a) )%R by lra.
+  apply Raux.Rabs_le_inv in H0.
+  lra.
+Qed.
+
+Lemma center_R_complete a b x:
+ a <= x <= b ->
+ 0 <= b - a - Rabs (2 * x - (a + b)).
+Proof.
+  intros.
+  cut (Rabs (2 * x - (a + b)) <= (b - a)); [ lra | ].
+  apply Rabs_le.
+  lra.
+Qed.
+
+Definition center_Z a x b :=
+  (b - a - Z.abs (2 * x - (a + b)))%Z
+.
+
+Lemma center_Z_correct a b x:
+  (0 <= center_Z a x b)%Z ->
+  (a <= x <= b)%Z.
+Proof.
+  unfold center_Z.
+  intros.
+  apply IZR_le in H.
+  replace (IZR 0) with 0 in H by reflexivity.
+  repeat rewrite minus_IZR in H.
+  rewrite abs_IZR in H.
+  rewrite minus_IZR in H.
+  rewrite mult_IZR in H.
+  rewrite plus_IZR in H.
+  replace (IZR 2) with 2 in H by reflexivity.
+  apply center_R_correct in H.
+  intuition eauto using le_IZR.
+Qed.
+
+Lemma center_Z_complete a b x:
+  (a <= x <= b)%Z ->
+  (0 <= center_Z a x b)%Z.
+Proof.
+  unfold center_Z.
+  intros.
+  apply le_IZR.
+  replace (IZR 0) with 0 by reflexivity.
+  repeat rewrite minus_IZR.
+  rewrite abs_IZR.
+  rewrite minus_IZR.
+  rewrite mult_IZR.
+  rewrite plus_IZR.
+  replace (IZR 2) with 2 by reflexivity.
+  apply center_R_complete.  
+  intuition eauto using IZR_le.
+Qed.
 
 

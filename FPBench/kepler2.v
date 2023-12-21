@@ -24,12 +24,11 @@ Proof.
 idtac "Starting kepler2".
 time "kepler2" (
 try (subst kepler2_b; intro; prove_roundoff_bound);
-try (prove_rndval; interval));
-try (prove_roundoff_bound2; error_rewrites;
-try (field_simplify_Rabs);
+try (prove_rndval; interval);
+try (prove_roundoff_bound2;
 try ((prune_terms (cutoff 60));
- do_interval)).
-Qed.
+ do_interval))).
+Time Qed.
 
 Lemma check_kepler2_bound: ltac:(CheckBound kepler2_b 6.2e-12%F64).
 Proof. reflexivity. Qed.

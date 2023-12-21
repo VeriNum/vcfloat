@@ -49,7 +49,7 @@ try match goal with |-Rabs ?a <= _ =>
 interval_intro (Rabs a) upper with 
 (i_bisect vxH, i_depth 17) as H'
 end; apply H')).
-Qed.
+Time Qed.
 
 Lemma check_predatorprey_bound: ltac:(CheckBound predatorprey_b 3.1e-16%F64).
 Proof. reflexivity. Qed.

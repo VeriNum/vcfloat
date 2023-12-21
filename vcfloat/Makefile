@@ -10,25 +10,21 @@ COQEXTRAFLAGS?=
 
 target:  vcfloat2 tests
 
-tests: ../Test/Test.vo ../Test/TestFunc.vo ../Test/TestPaper.vo ../Test/Test2.vo ../Test/summation.vo ../Test/autobisect.vo
+tests: ../Test/Test.vo ../Test/TestFunc.vo ../Test/TestPaper.vo ../Test/Test2.vo ../Test/summation.vo ../Test/autobisect.vo ../Test/Nonstd.vo
 
 # the vcfloat2 target is the core VCFloat tool for VCFloat2 users who don't need
 # CompCert-based reification
-vcfloat2:  VCFloat.vo FPCompCert.vo Version.vo FPLib.vo
+vcfloat2:  VCFloat.vo FPCompCert.vo Version.vo FPLib.vo FPStdLib.vo FPStdCompCert.vo
 
 %.vo: %.v
 	$(COQC) $(COQFLAGS) $(COQEXTRAFLAGS) $*.v
 
-ifdef INSTALLDIR
-INSTALLFILES=$(shell make -Bn vcfloat2 2>/dev/null | awk '/^coqc.*v$$/{print $$NF"o"}')
-endif
+INSTALLFILES ?= $(shell make -Bn vcfloat2 2>/dev/null | awk '/^coqc.*v$$/{print $$NF"o"}')
+
+# all the "realpath" complexity in the next line is to make it work on cygwin as well as regular unix
+INSTALLDIR ?= $(shell realpath `coqc -where` | tr -d [:space:])/user-contrib/vcfloat
 
 install: vcfloat2
-ifndef INSTALLDIR
-# all the "realpath" complexity in the next line is to make it work on cygwin as well as regular unix
-	$(info Perhaps you mean: make install INSTALLDIR=$(shell realpath `coqc -where` | tr -d [:space:])/user-contrib/vcfloat)
-	$(error INSTALLDIR must be set, for make install)
-endif
 	install -d $(INSTALLDIR)
 	install -m 0644 $(INSTALLFILES) $(INSTALLDIR)
 

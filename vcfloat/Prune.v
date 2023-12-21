@@ -2694,41 +2694,51 @@ unfold add_to_table.
 destruct nt as [k it].
 set (j := cancel1_intable (find_default [] k tab) it).
 pose (lift k x := reflect_intable_simple k x zeroexpr).
-pose proof relate_fold_add expr_equiv_rel lift
+set (f := Ebinary Add).
+set (u := zeroexpr).
+(*
+pose (oldnew := 
+   Ebinary Add (lift k j) match Table.find (elt:=intable_t) k tab with
+      | Some x => lift k x
+      | None => zeroexpr
+      end).
+*)
+pose proof relate_fold_add_alt expr_equiv_rel lift
       ltac:(intros; apply reflect_intable_simple_mor; auto; reflexivity)
      (Ebinary Add) 
     (Ebinary_mor Add Add (eq_refl _))
     ltac:(intros; intro; simpl; ring)
     ltac:(intros; intro; simpl; ring)
-    zeroexpr
+    u
     ltac:(intros; intro; simpl; ring)
     reflect_intable_simple
-     reflect_intable_simple_untangle.
-etransitivity.
-apply (H (Table.add k j tab) k).
-change (lift k []) with zeroexpr.
-pose proof  (H tab k).
-change (lift k []) with zeroexpr in H0.
-rewrite H0; clear H H0.
-rewrite fold_add_ignore.
-2:{ intros. rewrite cmp_compare in H.
-   destruct (Keys.compare k k'); auto; discriminate.
-}
-set (u := Table.fold _ _ _); clearbody u. clear.
-rewrite (Table.find_1 (Table.add_1 tab j (Keys.eq_refl k))).
-subst j.
+     reflect_intable_simple_untangle 
+   tab k [it] j.
+rewrite <- H; clear H.
+-
 unfold lift at 1.
+unfold f.
+intro; simpl.
+rewrite Rplus_comm.
+f_equal.
+symmetry.
+rewrite reflect_powers_untangle.
+simpl.
+rewrite Rplus_0_r.
+f_equal.
+apply reflect_coeff_spec.
+-
+unfold lift.
+subst j.
 rewrite cancel1_intable_correct.
-unfold reflect_intable_simple at 1.
-simpl fold_right.
+rewrite !reflect_intable_cons.
+intro.
+simpl.
+f_equal.
+apply Rplus_0_r.
 unfold find_default.
 fold intable_t.
-rewrite reflect_normterm_spec.
-destruct (Table.find k tab); subst lift; cbv beta.
-fold (reflect_intable_simple k i zeroexpr).
-set (v := reflect_intable_simple _ _ _). clearbody v.
-intro; simpl; ring.
-intro; simpl; ring.
+destruct (Table.find (elt:=intable_t) k tab); simpl; auto.
 Qed.
 
 Definition reflect_intable_aux (al: intable_t) : expr :=

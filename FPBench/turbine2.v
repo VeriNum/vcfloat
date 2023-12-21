@@ -27,7 +27,7 @@ try (subst turbine2_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try prove_roundoff_bound2;
 try error_rewrites;
-try ((prune_terms (cutoff 70);
+try ((prune_terms (cutoff 50);
 try match goal with |- (Rabs ?e <= ?a - 0)%R =>
   rewrite Rminus_0_r (* case prune terms will fail to produce reasonable bound on goal*)
 end;
@@ -41,29 +41,29 @@ try field_simplify_Rabs;
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with ( i_bisect vxH,
 i_bisect v, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+i_bisect v0, i_depth 16) as H'; apply H'; apply Rle_refl
 end;
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (
 i_bisect v, 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+i_bisect v0, i_depth 16) as H'; apply H'; apply Rle_refl
 end;
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with ( 
-i_bisect v0, i_depth 20) as H'; apply H'; apply Rle_refl
+i_bisect v0, i_depth 16) as H'; apply H'; apply Rle_refl
 end;
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with ( 
-i_bisect v, i_depth 20) as H'; apply H'; apply Rle_refl
+i_bisect v, i_depth 16) as H'; apply H'; apply Rle_refl
 end;
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with ( 
-i_bisect vxH, i_depth 20) as H'; apply H'; apply Rle_refl
+i_bisect vxH, i_depth 16) as H'; apply H'; apply Rle_refl
 end;
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) as H'; apply H'; apply Rle_refl
 end).
-Qed.
+Time Qed.
 
 Lemma check_turbine2_bound: ltac:(CheckBound turbine2_b 1.2e-13%F64).
 Proof. reflexivity. Qed.

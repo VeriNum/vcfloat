@@ -26,7 +26,7 @@ time "rigidbody1" (
 try (subst rigidbody1_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try (prove_roundoff_bound2; prune_terms (cutoff 30); do_interval)).
-Qed.
+Time Qed.
 
 Lemma check_rigidbody1_bound: ltac:(CheckBound rigidbody1_b 3.1e-13%F64).
 Proof. reflexivity. Qed.

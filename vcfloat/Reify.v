@@ -1,4 +1,4 @@
-(* Copyright (c) 2022 Andrew W. Appel *)
+(*  LGPL licensed; see ../LICENSE and, for historical notes, see ../OLD_LICENSE *)
 
 From vcfloat Require Export RAux.
 From Flocq Require Import Binary Bits Core.
@@ -19,7 +19,18 @@ Definition ident := positive.
 
 Definition placeholder32: ident -> ftype Tsingle. intro. apply 0%F32. Qed.
 
-Definition placeholder ty: ident -> ftype ty. intro. apply (B754_zero _ _ false). Qed.
+Definition placeholderx ty: ident -> {x: ftype ty | is_finite x = true}.
+intros.
+destruct ty as [? ? ? ? ? [|]].
+exists (nonstd_nonempty n).
+simpl.
+pose proof (nonstd_nonempty_finite n).
+destruct (nonstd_to_F _); auto; contradiction.
+exists (ftype_of_float (B754_zero _ _ false)).
+reflexivity.
+Qed.
+
+Definition placeholder ty i : ftype ty := proj1_sig (placeholderx ty i).
 
 Definition func {ty} (f: floatfunc_package ty) := ff_func (ff_ff f).
 Ltac apply_func ff := 
@@ -49,11 +60,18 @@ Ltac find_type prec emax :=
      constr:(TYPE precp emax Logic.I Logic.I)
  end.
 
+Ltac prove_incollection :=
+ lazymatch goal with |- @incollection ?coll ?ty =>
+ auto with typeclass_instances; red; try apply I;
+ repeat (try (left; reflexivity); right);
+ fail "Failed to prove incollection" coll ty "; that is, the type is a nonstandard type that does not appear to be declared in your collection"
+ end.
+
 Ltac reify_float_expr E :=
  match E with
- | placeholder32 ?i => constr:(Var Tsingle i)
- | placeholder ?ty ?i => constr:(Var ty i)
- | Zconst ?t ?z => constr:(Const t (Zconst t z))
+ | placeholder32 ?i => constr:(Var Tsingle ltac:(prove_incollection) i)
+ | placeholder ?ty ?i => constr:(@Var ltac:(auto with typeclass_instances) ty ltac:(prove_incollection) i)
+ | Zconst ?t ?z => constr:(Const t I (Zconst t z))
  | BPLUS ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(Binop (Rounded2 PLUS None) a' b')
  | Norm (BPLUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
@@ -92,11 +110,11 @@ Ltac reify_float_expr E :=
                                       constr:(f')
  | @cast _ Tdouble Tdouble ?f => let f':= reify_float_expr f in 
                                       constr:(f')
- | b32_B754_zero _ => constr:(Const Tsingle E)
- | b64_B754_zero _ => constr:(Const Tdouble E)
- | b64_B754_finite _ _ _ _ => constr:(Const Tdouble E)
- | b32_B754_finite _ _ _ _ => constr:(Const Tsingle E)
- | b64_B754_finite _ _ _ _ => constr:(Const Tdouble E)
+ | b32_B754_zero _ => constr:(Const Tsingle I E)
+ | b64_B754_zero _ => constr:(Const Tdouble I E)
+ | b64_B754_finite _ _ _ _ => constr:(Const Tdouble I E)
+ | b32_B754_finite _ _ _ _ => constr:(Const Tsingle I E)
+ | b64_B754_finite _ _ _ _ => constr:(Const Tdouble I E)
  | Sterbenz (BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
                                       constr:(Binop SterbenzMinus a' b')
  | @func ?ty ?ff ?a1 => let a1' := reify_float_expr a1 in 
@@ -109,7 +127,7 @@ Ltac reify_float_expr E :=
                                             let a3' := reify_float_expr a3 in 
                                             constr:(Func ty ff (Kcons a1' (Kcons a2' (Kcons a3' Knil))))
  | _ => let E' := eval red in E in reify_float_expr E'
- | _ => fail 100 "could not reify bot" E
+ | _ => fail 100 "could not reify" E
  end.
 
 Ltac HO_reify_float_expr names E :=

@@ -28,9 +28,14 @@ Definition Sterbenz_expr64:= ltac:(let e' :=
 
 Definition vmap' {ty} (a b : ftype ty) := 
    [(_a, existT ftype _ a);(_b, existT ftype _ b)].
+(*  this should be made to work more generally . . .
 Definition vmap (ty: type) (a b : ftype ty) : valmap :=
- ltac:(let z := compute_PTree (valmap_of_list (vmap' a b)) in exact z).
+ ltac:(make_valmap_of_list (vmap' a b)).
+*)
 
+
+Definition vmap (a b : ftype Tsingle) : valmap :=
+ ltac:(make_valmap_of_list (vmap' a b)).
 
 Definition bmap' (ty : type) : list varinfo := 
   [ Build_varinfo ty _a 1 2 ;  Build_varinfo ty _b 1  2 ].
@@ -39,7 +44,7 @@ Definition bmap (ty : type) : boundsmap :=
 
 Lemma prove_roundoff_bound32:
   forall a b : ftype Tsingle,
-  prove_roundoff_bound (bmap Tsingle) (vmap Tsingle a b) Sterbenz_expr32 0%R.
+  prove_roundoff_bound (bmap Tsingle) (vmap (*Tsingle*) a b) Sterbenz_expr32 0%R.
 Proof.
 intros.
 prove_roundoff_bound.

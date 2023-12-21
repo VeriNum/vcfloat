@@ -29,7 +29,7 @@ time "prove_rndval" prove_rndval; time "interval" interval.
 time "prove_roundoff_bound2" prove_roundoff_bound2;
 time "prune_terms" (prune_terms (cutoff 30)).
 time "do_interval" do_interval.
-Qed.
+Time Qed.
 
 Lemma check_delta4_bound: ltac:(CheckBound delta4_b 2.51e-13%F64).
 Proof. reflexivity. Qed.
@@ -57,7 +57,7 @@ time "prove_rndval" prove_rndval; time "interval" interval.
 time "prove_roundoff_bound2" prove_roundoff_bound2;
 time "prune_terms" (prune_terms (cutoff 30)).
 time "do_interval" do_interval.
-Qed.
+Time Qed.
 
 Lemma check_delta_bound: ltac:(CheckBound delta_b 6.2e-12%F64).
 Proof. reflexivity. Qed.

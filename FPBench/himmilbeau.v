@@ -28,7 +28,7 @@ time "himmilbeau" (
 try (subst himmilbeau_b; intro; prove_roundoff_bound);
 try (prove_rndval; interval);
 try (prove_roundoff_bound2; prune_terms (cutoff 30); do_interval)).
-Qed.
+Time Qed.
 
 Lemma check_himmilbeau_bound: ltac:(CheckBound himmilbeau_b 2.31e-12%F64).
 Proof. reflexivity. Qed.

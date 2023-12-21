@@ -21,7 +21,7 @@ Inductive sum_rel {A : Type} (default: A) (sum_op : A -> A -> A) : list A -> A -
     sum_rel default sum_op l s ->
     sum_rel default sum_op (a::l) (sum sum_op a s).
 
-Definition sum_rel_F := @sum_rel (ftype Tsingle) (-0)%F32 (@BPLUS _ Tsingle).
+Definition sum_rel_F := @sum_rel (ftype Tsingle) (-0)%F32 (@BPLUS _ Tsingle _).
 Definition sum_rel_R := @sum_rel R 0%R Rplus.
 
 
@@ -117,7 +117,7 @@ eapply sum_rel_R_Rabs_eq; apply H3.
 Qed.
 
 Lemma plus_zero a:
-is_finite _ _ a = true -> 
+is_finite a = true -> 
 (a + -0)%F32 = a.
 Proof.
 destruct a; simpl; auto;
@@ -128,7 +128,7 @@ Qed.
 
 Lemma sum_rel_F_single :
 forall (a : ftype Tsingle) (fs : ftype Tsingle)
-  (HFIN: is_finite _ _ a = true),
+  (HFIN: is_finite a = true),
   sum_rel_F [a] fs -> fs = a.
 Proof.
 intros.
@@ -154,8 +154,8 @@ Definition _b := 2%positive. (* accumulator *)
 Definition vmap_list ty (a b : ftype ty) := 
    [(_a, existT ftype _ a); (_b, existT ftype _ b)].
 
-Definition vmap {ty} (a b : ftype ty) : valmap :=
- ltac:(let z := compute_PTree (valmap_of_list (vmap_list ty a b)) in exact z).
+Definition vmap {ty} `{IN: incollection ty} (a b : ftype ty) : valmap :=
+ ltac:(make_valmap_of_list (vmap_list ty a b)).
 
 Definition bmap_list : list varinfo := 
   [ trivbound_varinfo Tsingle _a;
@@ -164,14 +164,24 @@ Definition bmap_list : list varinfo :=
 Definition bmap : boundsmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list bmap_list) in exact z).
 
-Definition sum_expr {ty} (a b : ftype ty) := ltac :( let e' :=
-  HO_reify_float_expr constr:([_a; _b]) (@BPLUS _ ty) in exact e').
+Lemma standard_incollection: forall `{coll: collection} ty, 
+  is_standard ty -> incollection ty.
+Proof.
+intros.
+destruct ty as [? ? ? ? ? [|]]; try contradiction.
+red; simpl; auto.
+Qed.
+
+Hint Resolve standard_incollection : typeclass_instances.
+
+Definition sum_expr {ty} {STD: is_standard ty} (a b : ftype ty) := 
+  ltac :( let e' :=
+  HO_reify_float_expr constr:([_a; _b]) (@BPLUS _ ty _) in exact e').
 
 Lemma real_lt_1 :
 forall a b c,
 a <= b -> b < c -> a < c.
 Proof. intros; apply Rle_lt_trans with b; auto. Qed.
-
 
 Lemma prove_rndoff' :
   forall (a b : ftype Tsingle) ,
@@ -179,7 +189,7 @@ Lemma prove_rndoff' :
   let d := / IZR (2 ^ 24) in 
       let ov := powerRZ 2 (femax Tsingle) in
   Rabs (FT2R a + FT2R b) <= (ov - 2 * e) / (1 + d) -> 
-  prove_roundoff_bound bmap (vmap a b) (@sum_expr Tsingle a b) 
+  prove_roundoff_bound bmap (vmap a b) (@sum_expr Tsingle _ a b) 
      (Rabs ( FT2R a + FT2R b) * d + e).
 Proof.
 intros ? ? ? ?  ? bnd.
@@ -236,7 +246,8 @@ assert (He0: Rabs e1 <= e).
 rename e2 into d0.
 assert (Hd: Rabs d0 <= d).
 { eapply Rle_trans. apply E0. subst d; simpl; nra. }
-replace (a * d0 + b * d0 + e1) with ((a + b) * d0 + e1) by nra.
+compute_every fprec.
+replace (B2R 24 128 a * d0 + B2R 24 128 b * d0 + e1) with ((B2R 24 128 a + B2R 24 128 b) * d0 + e1) by nra.
 eapply Rle_trans; [
 apply Rabs_triang | eapply Rle_trans; [apply Rplus_le_compat; [rewrite Rabs_mult; eapply Rle_trans;
   [apply Rmult_le_compat; 
@@ -246,13 +257,13 @@ nra.
 Qed.
 
 Lemma reflect_reify_sumF : 
-  forall a b,
-  fval (env_ (vmap a b)) (@sum_expr Tsingle a b) = sum (@BPLUS _ Tsingle)  a b .
+  forall a b : ftype Tsingle,
+  fval (env_ (vmap a b)) (sum_expr a b) = sum (@BPLUS _ Tsingle _)  a b .
 Proof. reflexivity. Qed.
 
 Lemma reflect_reify_sumR : 
-  forall a b,
-  rval (env_ (vmap a b)) (@sum_expr Tsingle a b) = FT2R a + FT2R b .
+  forall a b: ftype Tsingle,
+  rval (env_ (vmap a b)) (sum_expr a b) = FT2R a + FT2R b .
 Proof. reflexivity. Qed.
 
 Lemma prove_rndoff:
@@ -399,9 +410,9 @@ Lemma prove_rndoff_n :
   let n := length l in 
   let A := (1 + d)^(n-1) - 1 in
   (forall a0, In a0 l -> 
-  is_finite (fprec Tsingle) 128 a0 = true /\
+  is_finite a0 = true /\
   Rabs (FT2R a0) <= (ov - 2 * e - A * e/d * (1 + d)) / ((1 + (A + 1) * INR n) * (1 + d))) -> 
-  is_finite (fprec Tsingle) (femax Tsingle) fs = true /\
+  is_finite fs = true /\
   Rabs (rs - FT2R fs) <= error_rel (length l)  rs_abs.
 Proof.
 induction l.
@@ -424,7 +435,7 @@ destruct Hl.
 (* case empty l *)
 +
 subst; simpl.
-assert (HFIN: is_finite (fprec Tsingle) 128 a = true).
+assert (HFIN: is_finite a = true).
 {
 apply H2; simpl; auto.
 }
@@ -603,7 +614,7 @@ fold sum_rel_R in H7.
 assert (IHLp:
 forall a0 : ftype Tsingle,
 In a0 l ->
-is_finite (fprec Tsingle) 128 a0 = true /\
+is_finite a0 = true /\
 Rabs (FT2R a0) <=
 (ov - 2 * e - ((1 + d) ^ (length l - 1) - 1) * e / d * (1 + d)) /
 ((1 + ((1 + d) ^ (length l - 1) - 1 + 1) * INR (length l)) * (1 + d))).
@@ -755,7 +766,7 @@ rewrite map_length; auto.
 
 assert (HBMD: boundsmap_denote bmap (vmap a s1)).
 {
-assert (is_finite (fprec Tsingle) (femax Tsingle) s1 = true). {
+assert (is_finite s1 = true). {
   eapply IHl.
   apply H5.
   apply H6.

@@ -6,8 +6,14 @@ Section WITHNANS.
 Context {NANS:Nans}.
 Open Scope R_scope.
 
+Definition _u : ident := 1%positive.
+Definition _v : ident := 2%positive.
+Definition _t : ident := 3%positive.
 
-Definition doppler1_bmap_list := [Build_varinfo Tdouble 1%positive (-100) (100);Build_varinfo Tdouble 2%positive (20) (2e4);Build_varinfo Tdouble 3%positive (-30) (50)].
+Definition doppler1_bmap_list := [
+     Build_varinfo Tdouble _u (-100) (100);
+     Build_varinfo Tdouble _v (20) (2e4);
+     Build_varinfo Tdouble _t (-30) (50)].
 
 Definition doppler1_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list doppler1_bmap_list) in exact z).
@@ -17,7 +23,7 @@ Definition doppler1 (u : ftype Tdouble) (v : ftype Tdouble) (t : ftype Tdouble) 
   (((-t1) * v)%F64 / ((t1 + u)%F64 * (t1 + u)%F64)%F64)%F64.
 
 Definition doppler1_expr := 
- ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) doppler1 in exact e').
+ ltac:(let e' :=  HO_reify_float_expr constr:([_u;_v;_t]) doppler1 in exact e').
 
 Derive doppler1_b 
 SuchThat (forall vmap, prove_roundoff_bound doppler1_bmap vmap doppler1_expr doppler1_b)
@@ -38,14 +44,14 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
                       eapply Rle_trans;
                       [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)));
 try match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect v, 
+interval_intro (Rabs a) with (i_bisect v_v, 
  i_depth 17) as H'; apply H'; apply Rle_refl
 end;
 try match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect vxH, 
-i_bisect v0, i_depth 17) as H'; apply H'; apply Rle_refl
+interval_intro (Rabs a) with (i_bisect v_u, 
+i_bisect v_t, i_depth 17) as H'; apply H'; apply Rle_refl
 end).
-Qed.
+Time Qed.
 
 Lemma check_doppler1_bound: ltac:(CheckBound doppler1_b 4.5e-13%F64).
 Proof. reflexivity. Qed.

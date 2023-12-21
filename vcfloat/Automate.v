@@ -1,14 +1,20 @@
-(** Automate.v:  proof automation for "ftype" usage-style of VCFloat.
- Copyright (C) 2021-2022 Andrew W. Appel.
-*)
+(*  LGPL licensed; see ../LICENSE and, for historical notes, see ../OLD_LICENSE *)
 
+(** Automate.v:  proof automation for "ftype" usage-style of VCFloat. *)
+
+Require Import Flocq.IEEE754.Binary.
 From vcfloat Require Import FPLang FPLangOpt RAux Rounding Reify Float_notations.
 Require Import Interval.Tactic.
-Import Binary.
 Import Coq.Lists.List ListNotations.
 Set Bullet Behavior "Strict Subproofs".
 
 Open Scope R_scope.
+
+Definition empty_collection: collection. 
+  (* don't make this an Instance unless the user explicitly chooses to *)
+exists nil. hnf; intros. inversion H.
+Defined.
+
 
 (* The tactic  compute_every has a fast implementation,
   using Ltac2, and a slower implementation, just using Ltac.
@@ -62,7 +68,11 @@ Ltac compute_B2R :=
 
 Record varinfo := {var_type: type; var_name: ident; var_lobound: R; var_hibound: R}.
 Definition boundsmap := Maps.PTree.t varinfo.
-Definition valmap := Maps.PTree.t (sigT ftype).
+
+Definition valmap_valid `{coll: collection} (vm: Maps.PTree.t (sigT ftype)) :=
+ forall id ty, Maps.PTree.get id vm = Some ty -> incollection (projT1 ty).
+
+Definition valmap `{coll: collection} := sig valmap_valid.
 
 Definition ftype_of_val (v: sigT ftype) : type := projT1 v.
 Definition fval_of_val (v: sigT ftype): ftype (ftype_of_val v) := projT2 v.
@@ -95,10 +105,16 @@ assert (0 < type_hibound t). {
   pose proof (Rlt_pow 2 b a) H2 H1.
   lra.
 }
+unfold FT2R.
+destruct t as [? ? ? ? ? [|]]; simpl in *.
+-
+unfold type_hibound, FPCore.fprec in *; simpl in *.
+apply nonstd_bounds.
+-
 destruct x; simpl; try lra.
-pose proof (bounded_le_emax_minus_prec _ _ (fprec_gt_0 t) _ _ e0).
-fold (type_hibound t) in H0.
+pose proof (bounded_le_emax_minus_prec _ _ (fprec_gt_0 _) _ _ e0).
 simpl.
+change (bpow radix2 (FPCore.femax ?t) - _) with (type_hibound t) in H0.
 pose proof (Float_prop.F2R_gt_0 Zaux.radix2 {| Defs.Fnum := Z.pos m; Defs.Fexp := e |})
    ltac:(simpl; lia).
 destruct s; unfold SpecFloat.cond_Zopp.
@@ -107,27 +123,28 @@ lra.
 lra.
 Qed.
 
-Definition boundsmap_denote (bm: boundsmap) (vm: valmap) : Prop :=
+Definition boundsmap_denote `{coll: collection} (bm: boundsmap) (vm: valmap) : Prop :=
    forall i, 
-   match Maps.PTree.get i bm, Maps.PTree.get i vm with
+   match Maps.PTree.get i bm, Maps.PTree.get i (proj1_sig vm) with
    | Some {|var_type:=t; var_name:=i'; var_lobound:=lo; var_hibound:=hi|}, Some v => 
               i=i' /\ t = projT1 v /\ 
-              is_finite (fprec _) (femax _) (projT2 v) = true /\ lo <= FT2R (projT2 v) <= hi
+              is_finite (projT2 v) = true 
+               /\ lo <= FT2R (projT2 v) <= hi
    | None, None => True
    | _, _ => False
    end.
 
-Definition boundsmap_denote_pred (vm: valmap) (ib: ident*varinfo) := 
+Definition boundsmap_denote_pred `{coll: collection} (vm: valmap) (ib: ident*varinfo) := 
  match ib with
-                  (i, {|var_type:=t; var_name:=i'; var_lobound:=lo; var_hibound:=hi|}) =>
-                  exists v,
-                    i=i' /\
-                    Maps.PTree.get i vm = Some (existT ftype t v) /\
-              is_finite (fprec _) (femax _) v = true /\ lo <= FT2R v <= hi
-                   end.
+  (i, {|var_type:=t; var_name:=i'; var_lobound:=lo; var_hibound:=hi|}) =>
+         exists v,
+         i=i' /\
+         Maps.PTree.get i (proj1_sig vm) = Some (existT ftype t v) /\
+         is_finite v = true /\ lo <= FT2R v <= hi
+  end.
 
 Lemma boundsmap_denote_e:
-  forall bm vm, boundsmap_denote bm vm -> 
+  forall `{coll: collection} bm vm, boundsmap_denote bm vm -> 
  list_forall (boundsmap_denote_pred vm) (Maps.PTree.elements bm).
 Proof.
 intros.
@@ -137,7 +154,7 @@ apply list_forall_spec.
 intros [i [t i' lo hi]] ?.
 apply Maps.PTree.elements_complete in H0.
 specialize (H i). rewrite H0 in H.
-destruct (Maps.PTree.get i vm) as [ [t' v] | ]; try contradiction.
+destruct (Maps.PTree.get i (proj1_sig vm)) as [ [t' v] | ]; try contradiction.
 simpl in *.
 destruct H as [? [? [? ?]]].
 subst.
@@ -145,10 +162,10 @@ exists v. auto.
 Qed.
 
 Lemma boundsmap_denote_i:
-  forall bm vm, 
+  forall `{coll: collection} bm vm, 
  list_forall (boundsmap_denote_pred vm) (Maps.PTree.elements bm) ->
  list_forall (fun iv => match Maps.PTree.get (fst iv) bm with Some _ => True | _ => False end)
-                   (Maps.PTree.elements vm) ->
+                   (Maps.PTree.elements (proj1_sig vm)) ->
  boundsmap_denote bm vm.
 Proof.
 intros.
@@ -162,7 +179,7 @@ destruct H1 as [? [? [? [? ?]]]].
 subst i'.
 rewrite H2.
 split; auto.
-destruct (Maps.PTree.get i vm) eqn:?H; auto.
+destruct (Maps.PTree.get i (proj1_sig vm)) eqn:?H; auto.
 apply Maps.PTree.elements_correct in H2.
 apply H0 in H2.
 simpl in H2.
@@ -190,35 +207,254 @@ Ltac compute_PTree x :=
 Definition boundsmap_of_list (vl: list varinfo) : boundsmap :=
   fold_left (fun m v => Maps.PTree.set (var_name v) v m) vl (Maps.PTree.empty _).
 
-Definition valmap_of_list (vl: list (ident * sigT ftype)) : valmap :=
+
+Definition valmap_of_list' (vl: list (ident * sigT ftype)) :=
   fold_left (fun m iv => let '(i,v) := iv in Maps.PTree.set i v m) vl (Maps.PTree.empty _).
+
+Definition make_valmap `{coll: collection} (vm: Maps.PTree.t (sigT ftype))
+      (VAL: valmap_valid vm) :=
+ exist _ vm VAL.
+
+Definition valmap_of_list `{coll: collection} (* obsolete? *)
+     (vl: list (ident * sigT ftype)) VALID : valmap :=
+  make_valmap (valmap_of_list' vl) VALID.
+
+Fixpoint test_ptree' {T: Type} (P: T -> Prop) (t: Maps.PTree.tree' T) :=
+ match t with
+ | Maps.PTree.Node001 r => test_ptree' P r
+ | Maps.PTree.Node010 x => P x
+ | Maps.PTree.Node011 x r => P x /\ test_ptree' P r
+ | Maps.PTree.Node100 l => test_ptree' P l
+ | Maps.PTree.Node101 l r => test_ptree' P l /\ test_ptree' P r
+ | Maps.PTree.Node110 l x => test_ptree' P l /\ P x
+ | Maps.PTree.Node111 l x r => test_ptree' P l /\ P x /\ test_ptree' P r
+ end.
+
+Definition test_ptree {T: Type} (P: T -> Prop) (t: Maps.PTree.t T) :=
+ match t with
+ | Maps.PTree.Nodes t' => test_ptree' P t'
+ | Maps.PTree.Empty => True
+ end.
+
+Lemma test_ptree_correct: forall (T: Type) (P: T -> Prop) (t: Maps.PTree.t T),
+  test_ptree P t ->
+   forall i x, Maps.PTree.get i t = Some x -> P x.
+Proof.
+intros ? ? ?.
+unfold Maps.PTree.get.
+destruct t; simpl in *.
+discriminate.
+induction t; simpl; intros; destruct i; simpl in *; eauto; try discriminate;
+repeat match goal with H: _ /\ _ |- _ => destruct H end;
+eauto;
+try solve [injection H0; intro; subst; auto].
+Defined.
+
+
+Lemma compute_valmap_valid `{coll: collection}:
+ forall (vm: Maps.PTree.t (sigT ftype)),
+ test_ptree (fun x => incollection (projT1 x)) vm ->
+ valmap_valid vm.
+Proof.
+hnf; intros.
+exact (test_ptree_correct _ _ _ H).
+Defined.
+
+(*
+
+Lemma compute_valmap_valid `{coll: collection}:
+ forall (vm: Maps.PTree.t (sigT ftype)),
+ Forall (fun ix => incollection (projT1 (snd ix))) (Maps.PTree.elements vm) ->
+ valmap_valid vm.
+Proof.
+intros.
+red.
+intros.
+apply Maps.PTree.elements_correct in H0.
+rewrite Forall_forall in H.
+apply H in H0.
+auto.
+Qed.
+*)
+
+Ltac make_valmap_of_list vml :=
+   lazymatch goal with |- valmap => idtac end;
+   let z := compute_PTree (valmap_of_list' vml) in 
+   exists z;
+   apply compute_valmap_valid;
+   repeat apply conj; try apply I; 
+   cbv [test_ptree test_ptree']; prove_incollection.
 
 Definition shiftmap := MSHIFT.
 
-Definition env_ (tenv: valmap) ty (v: ident): ftype ty :=
-  match Maps.PTree.get v tenv with Some (existT _ t x) =>
-      match type_eq_dec ty t with
-        | left K => eq_rect_r _ x K
-        | _ => B754_zero _ _ true
-      end
-    | _ => B754_zero _ _ true
-  end.
+Definition is_standardb (t: type) : bool :=
+ match nonstd t with Some _ => false | None => true end.
 
-Lemma finite_env (bmap: boundsmap) (vmap: valmap):
+Definition typesize_eq_dec (t1 t2: type) :
+   {(is_standardb t1, fprecp t1, femax t1)=(is_standardb t2, fprecp t2, femax t2)} +
+   {(is_standardb t1, fprecp t1, femax t1)<>(is_standardb t2, fprecp t2, femax t2)}.
+destruct (is_standardb t1), (is_standardb t2).
+1,4: destruct (Pos.eq_dec (fprecp t1) (fprecp t2));
+  [ destruct (Z.eq_dec (femax t1) (femax t2)) |];
+  try (left; f_equal; [f_equal |]; assumption).
+all: try (right; contradict n; injection n; auto).
+all: right; intro; discriminate.
+Defined.
+
+
+Lemma incollection_eq: forall `{coll: collection} t1 t2,
+  incollection t1 ->
+  incollection t2 ->
+  (is_standardb t1, fprecp t1, femax t1) = (is_standardb t2, fprecp t2, femax t2) ->
+  t1=t2.
+Proof.
+intros.
+destruct t1 as [? ? ? ? ? [|]], t2 as [? ? ? ? ? [|]];
+simpl in *; try discriminate.
+-
+inversion H1; subst; auto.
+destruct coll as [tl OK].
+apply OK; auto.
+-
+inversion H1; clear H1; subst; auto.
+clear H H0.
+rewrite (Is_true_eq _ fprecp_not_one_bool0 fprecp_not_one_bool).
+rewrite (Is_true_eq _ fprec_lt_femax_bool0 fprec_lt_femax_bool).
+reflexivity.
+Defined.
+
+Definition env_ `{coll: collection} (tenv: valmap) 
+      ty (IN: incollection ty) (v: ident): ftype ty :=
+  match
+   Maps.PTree.get v (proj1_sig tenv) as o0
+   return
+     ((forall ty0 : {x : type & ftype x},
+       o0 = Some ty0 -> incollection (projT1 ty0)) -> 
+      ftype ty)
+ with
+ | Some (existT _ x1 f) =>
+      fun 
+         (v2 : forall ty0 : {x : type & ftype x},
+               Some (existT ftype x1 f) = Some ty0 ->
+               incollection (projT1 ty0)) =>
+       match typesize_eq_dec ty x1 with
+       | left e =>
+            eq_rect ty
+              (fun x2 : type => ftype x2 -> incollection x2 -> ftype ty)
+              (fun (f0 : ftype ty) (_ : incollection ty) => f0) 
+              x1 
+              (incollection_eq ty x1 IN (v2 (existT ftype x1 f) eq_refl) e) f 
+              (v2 (existT ftype x1 f) eq_refl)
+       | right _ => placeholder ty v
+       end
+ | None => fun _ => placeholder ty v
+ end (proj2_sig tenv v).
+
+(*
+destruct tenv as [vm ?].
+red in v0.
+specialize (v0 v).
+destruct (Maps.PTree.get v vm) as [[? ?] |].
+specialize (v0 _ (eq_refl _)).
+simpl in v0.
+destruct (typesize_eq_dec ty x).
+apply incollection_eq in e; auto.
+subst x; apply f.
+all: apply (placeholder ty v).
+Defined.
+*)
+(*
+Lemma env_get_type `{coll: collection}:
+  forall (vm: valmap) ty i t v,
+  incollection ty -> 
+  Maps.PTree.get i (proj1_sig vm) = Some (existT ftype t v) ->
+  t=ty.
+Proof.
+intros.
+destruct vm as [vm OK]; simpl in *.
+destruct coll as [tl ?].
+red in c.
+red in OK.
+specialize (OK _ _ H0).
+simpl in OK.
+
+red in OL
+*)
+
+
+(*
+
+Lemma env_get `{coll: collection}:
+  forall vm ty IN i,
+  Maps.PTree.get i (proj1_sig vm) = Some (existT ftype ty (env_ vm ty IN i)).
+Proof.
+intros.
+unfold env_.
+destruct vm as [vm H].
+simpl in *.
+set (Hi := H i).
+clearbody Hi.
+clear H.
+destruct (Maps.PTree.get _ _).
+f_equal.
+destruct s as [t v].
+pose proof (Hi _ (eq_refl _)).
+simpl in H.
+destruct (typesize_eq_dec _ _).
+unfold eq_rect.
+destruct (incollection_eq _ _ _ _ _).
+auto.
+*)
+(*
+Lemma env_get `{coll: collection}:
+  forall vm ty IN i t v,
+  Maps.PTree.get i (proj1_sig vm) = Some (existT ftype t v) ->
+  JMeq.JMeq (env_ vm ty IN i) v.
+Proof.
+intros.
+unfold env_.
+set (H2 := @proj2_sig (Maps.PTree.t {x : type & ftype x}) 
+        (@valmap_valid coll) vm i).
+clearbody H2.
+destruct (Maps.PTree.get _ _).
+inversion H; clear H; subst.
+destruct (typesize_eq_dec _ _).
+destruct (incollection_eq _ _ _ _ _).
+simpl.
+auto.
+*)
+
+Lemma placeholder_finite: forall ty i,
+  is_finite (placeholder ty i) = true.
+Proof.
+intros.
+ unfold placeholder. apply proj2_sig.
+Qed.
+
+Lemma finite_env `{coll: collection} (bmap: boundsmap) (vmap: valmap):
       boundsmap_denote bmap vmap ->
-forall ty i, is_finite (fprec ty) (femax ty) ((env_ vmap) ty i) = true.
+forall ty (IN: incollection ty) i, is_finite ((env_ vmap) ty IN i) = true.
 Proof. 
 intros.
- unfold  env_.
  specialize (H i).
+ unfold env_.
+ match goal with |- is_finite ((_ ?P)) = true =>
+   set (H2 := P)
+ end.
+clearbody H2.
  destruct (Maps.PTree.get i bmap) as [[t i' lo hi]|],
-    (Maps.PTree.get i vmap) as [[t' v]|]; auto.
+    (Maps.PTree.get i (proj1_sig vmap)) as [[t' v]|] eqn:?; auto.
+-
  destruct H as [? [? [??]]].
-simpl in H0, H1, H2.
-subst i' t'.
-destruct (type_eq_dec ty t); auto.
-subst ty.
-auto.
+ simpl in H0, H1, H2.
+ subst i' t'.
+ destruct (typesize_eq_dec _ _).
+ destruct (incollection_eq _ _ _ _ _).
+ simpl.
+ auto.
+ apply placeholder_finite.
+-
+ apply placeholder_finite.
 Qed.
 
 Ltac unfold_fval :=
@@ -243,21 +479,21 @@ Ltac unfold_fval :=
    cbv beta iota zeta;
    repeat change (cast ?a _ ?x) with x.
 
-Definition rndval_with_cond_result1 {NANS: Nans} 
+Definition rndval_with_cond_result1 {NANS: Nans} `{coll: collection} 
           env {ty} (e: expr ty) (r: rexpr) (s: MSHIFT) :=
     exists errors,
         (errors_bounded s errors)
         /\
         let fv := fval env e in
-        is_finite _ _ fv = true
+        is_finite fv = true
         /\
-        reval r env errors = B2R _ _ fv.
+        reval r env errors = FT2R fv.
 
-Lemma boundsmap_denote_pred_e:
+Lemma boundsmap_denote_pred_e_old `{coll: collection}:
   forall vm i' t i lo hi,
     boundsmap_denote_pred vm (i',
      {| var_type := t; var_name := i; var_lobound := lo; var_hibound := hi |}) ->
-    match Maps.PTree.get i vm with
+    match Maps.PTree.get i (proj1_sig vm) with
      | Some (existT _ t' v) => t' = t /\ (lo <= @FT2R t' v <= hi)%R                         
      | None => False
     end.
@@ -269,16 +505,45 @@ subst.
 simpl in *. rewrite H0. auto.
 Qed.
 
-Definition eval_cond' (s : shiftmap) (c: cond) (env: environ) : Prop :=
+Axiom prop_ext: ClassicalFacts.prop_extensionality.
+
+Lemma proof_irr      : ClassicalFacts.proof_irrelevance.
+Proof. apply ClassicalFacts.ext_prop_dep_proof_irrel_cic. 
+ apply prop_ext.
+Qed.
+Arguments proof_irr [A] a1 a2.
+
+Lemma boundsmap_denote_pred_e `{coll: collection}:
+  forall vm i' t i lo hi
+  (IN: incollection t),
+  boundsmap_denote_pred vm (i', 
+   {| var_type:=t; var_name := i; var_lobound := lo; var_hibound := hi |}) ->
+   (lo <= FT2R (env_ vm t IN i) <= hi)%R.
+Proof.
+intros.
+destruct H as [v [? [? [? ?]]]]; subst.
+unfold env_.
+destruct vm as [vm Hvm]; simpl in *.
+set (H := Hvm i); clearbody H.
+destruct (Maps.PTree.get i vm); [ | discriminate].
+inversion H0; clear H0; subst.
+destruct (typesize_eq_dec t t); [ | congruence].
+unfold eq_rect.
+replace (incollection_eq t t IN (H (existT ftype t v) eq_refl) e)
+  with (eq_refl t); auto.
+apply proof_irr.
+Qed.
+
+Definition eval_cond' `{coll: collection} (s : shiftmap) (c: cond) (env: environ) : Prop :=
   eval_cond2 env s c.
 
-Definition rndval_with_cond2 {ty} (e: expr ty) : rexpr * shiftmap * list (environ -> Prop) :=
+Definition rndval_with_cond2 `{coll: collection} {ty} (e: expr ty) : rexpr * shiftmap * list (environ -> Prop) :=
  let '((r,(si,s)),p) := rndval_with_cond' 1 empty_shiftmap e
   in (r, s, map (eval_cond' s) p).
 
-Lemma rndval_with_cond_correct2 {NANS: Nans}:
+Lemma rndval_with_cond_correct2 {NANS: Nans} `{coll: collection}:
  forall 
-  ty (e: expr ty) (VALID: expr_valid e = true)
+  ty (e: expr ty) (VALID: expr_valid e)
   (bm: boundsmap) (vm: valmap),
   boundsmap_denote bm vm ->
   let '(r,s,p) := rndval_with_cond2 e in 
@@ -286,8 +551,8 @@ Lemma rndval_with_cond_correct2 {NANS: Nans}:
   exists errors,
       (errors_bounded s errors) /\
         let fv := fval (env_ vm) e in
-        is_finite _ _ fv = true
-        /\ reval r (env_ vm) errors = B2R _ _ fv.
+        is_finite fv = true
+        /\ reval r (env_ vm) errors = FT2R fv.
 Proof.
 intros.
 assert (env_all_finite (env_ vm)) by (intros ? ? ; eapply finite_env; eauto).
@@ -310,7 +575,7 @@ exists errors.
 auto.
 Qed.
 
-Lemma invert_quad:
+Lemma invert_quad `{coll: collection} :
   forall (a a': rexpr) (b b': nat) (c c': shiftmap) (d d': list cond) (G: Prop),
   (a=a' -> b=b' -> c=c' -> d=d' -> G) ->
   (a,(b,c),d) = (a',(b',c'),d') -> G.
@@ -348,6 +613,7 @@ Ltac invert_rndval_with_cond' :=
  | _ => fail "invert_rndval_with_cond' at inappropriate goal"
  end.
 
+(*
 Ltac process_one_bound B := 
    apply boundsmap_denote_pred_e in B; 
    lazymatch type of B
@@ -371,6 +637,23 @@ Ltac process_one_bound B :=
        destruct B as [B' B]; try subst t;
        try match type of B' with ?x = ?y => constr_eq x y; clear B' end
    end.
+*)
+
+Ltac process_one_bound B :=
+ lazymatch type of B with
+ | boundsmap_denote_pred ?vm (_, 
+   {| var_type := ?t; var_name := _; var_lobound := _; var_hibound := _ |}) =>
+  first [apply boundsmap_denote_pred_e with (IN:=I) in B
+        | lazymatch goal with |- context [env_ vm t ?H _] => 
+          apply boundsmap_denote_pred_e with (IN:=H) in B
+          end
+        | let H := fresh "IN" in assert (H: incollection t) 
+              by prove_incollection;
+           apply boundsmap_denote_pred_e with (IN:=H) in B
+        ]
+  | boundsmap_denote_pred _ (_,?x) =>
+     progress (let y := eval hnf in x in change x with y in B); process_one_bound B
+ end.
 
 Ltac process_boundsmap_denote := 
  lazymatch goal with
@@ -398,18 +681,18 @@ Ltac process_boundsmap_denote :=
   cbv iota;
   repeat change (eq_rect_r ftype ?v eq_refl) with v in *.
 
-Definition prove_rndval' {NANS: Nans} bm vm {ty} (e: expr ty) :=
+Definition prove_rndval' {NANS: Nans} `{coll: collection} bm vm {ty} (e: expr ty) :=
  boundsmap_denote bm vm ->
   let
    '(r, s, _) := rndval_with_cond2 (fshift_div (fshift (fcval e))) in
     rndval_with_cond_result1 (env_ vm) e r s.
 
-Definition prove_rndval {NANS: Nans} bm vm {ty} (e: expr ty) :=
+Definition prove_rndval {NANS: Nans} `{coll: collection} bm vm {ty} (e: expr ty) :=
   {rs | fst (rndval_with_cond2 (fshift_div (fshift (fcval e)))) = rs /\  
          (boundsmap_denote bm vm ->
           let '(r,s) := rs in rndval_with_cond_result1 (env_ vm) e r s)}.
 
-Lemma prove_rndval'_e {NANS: Nans}:
+Lemma prove_rndval'_e {NANS: Nans} `{coll: collection} :
   forall bm vm {ty} (e: expr ty), prove_rndval' bm vm e -> prove_rndval bm vm e.
 Proof.
 unfold prove_rndval', prove_rndval; intros.
@@ -417,10 +700,9 @@ destruct (rndval_with_cond2 _) as [[r s] p]; simpl in *.
 exists (r,s); auto.
 Qed.
 
-Lemma prove_rndval'_i1 {NANS: Nans} bm vm ty (e: expr ty) :
+Lemma prove_rndval'_i1 {NANS: Nans} `{coll: collection} bm vm ty (e: expr ty) :
  (boundsmap_denote bm vm ->
-  is_finite (fprec ty) (femax ty)
-       (fval (env_ vm) (fshift_div (fcval e))) = true ->
+  is_finite (fval (env_ vm) (fshift_div (fcval e))) = true ->
   let
    '(r, s, _) := rndval_with_cond2 (fshift_div (fcval e)) in
     rndval_with_cond_result1 (env_ vm) e r s)
@@ -471,21 +753,21 @@ Ltac process_conds :=
       radix_val Pos.iter Pos.add Pos.succ Pos.mul]  in H;
       (eapply adjust_bound in H; [ | compute; reflexivity]))).
 
-Lemma fshift_div_fshift_fcval_correct {NANS: Nans}:
-  forall (env : forall ty : type, FPLang.V -> ftype ty) ty (e : expr ty),
-  binary_float_equiv (fval env (fshift_div (fshift (fcval e)))) 
+Lemma fshift_div_fshift_fcval_correct {NANS: Nans} `{coll: collection} :
+  forall (env : environ) ty (e : expr ty),
+  float_equiv (fval env (fshift_div (fshift (fcval e)))) 
                 (fval env e).
 Proof.
 intros.
-eapply binary_float_equiv_trans.
+eapply float_equiv_trans.
 apply fshift_div_correct'.
 rewrite fshift_correct.
 rewrite fcval_correct.
-apply binary_float_equiv_refl.
+apply float_equiv_refl.
 Qed.
 
-Lemma fshift_fcval_correct {NANS: Nans}:
-  forall (env : forall ty : type, FPLang.V -> ftype ty) ty (e : expr ty),
+Lemma fshift_fcval_correct {NANS: Nans} `{coll: collection} :
+  forall (env : environ) ty (e : expr ty),
   fval env (fshift (fcval e)) = fval env e.
 Proof.
 intros.
@@ -494,40 +776,28 @@ rewrite fcval_correct.
 f_equal.
 Qed.
 
-Lemma rndval_with_cond_result1_fvals_eq {NANS: Nans}:
+Lemma rndval_with_cond_result1_fvals_eq {NANS: Nans} `{coll: collection} :
   forall env ty (e1 e2: expr ty) r s,
-  binary_float_equiv (fval env e1) (fval env e2) -> 
+  float_equiv (fval env e1) (fval env e2) -> 
   rndval_with_cond_result1 env e1 r s ->
   rndval_with_cond_result1 env e2 r s.
 Proof.
 intros.
 destruct H0 as [errors [? [? ?]]].
 exists errors. split; auto.
-assert (FIN: is_finite (fprec ty) (femax ty) (fval env e2) =
-true). {
-  rewrite <- H1; clear H1.
-  clear - H.
-  destruct (fval env e1), (fval env e2); try reflexivity; try contradiction.
-}
-split; auto.
-rewrite H2.
-clear - H1 FIN H.
-destruct (fval env e1), (fval env e2); try discriminate; clear H1 FIN;
-simpl in H; decompose [and] H; subst;
- try contradiction;
-simpl; auto.
+rewrite <- (float_equiv_eq _ (fval env e1) (fval env e2) H1); auto.
 Qed.
 
-Lemma rndval_with_cond_correct2_opt {NANS: Nans}:
+Lemma rndval_with_cond_correct2_opt {NANS: Nans} `{coll: collection} :
       forall ty (e0 e1 e: expr ty) (EQ1: e1 = e),
-       expr_valid e = true ->
+       expr_valid e ->
        forall (bm : boundsmap) (vm : valmap),
        boundsmap_denote bm vm ->
-       @binary_float_equiv (fprec ty) (femax ty)
+       @float_equiv ty
             (fval (env_ vm) e1)
             (fval (env_ vm) e0) ->
        let  '(r, s, p) := rndval_with_cond2 e in
-        Forall (fun c : (forall ty : type, positive -> ftype ty) -> Prop => c (env_ vm)) p ->
+        Forall (fun c : environ -> Prop => c (env_ vm)) p ->
         rndval_with_cond_result1 (env_ vm) e0 r s.
 Proof.
 intros.
@@ -542,13 +812,13 @@ eapply rndval_with_cond_result1_fvals_eq.
 assumption.
 Qed.
 
-Lemma fast_apply_rndval_with_cond_correct2  {NANS: Nans}:
+Lemma fast_apply_rndval_with_cond_correct2  {NANS: Nans} `{coll: collection}:
 forall ty (e0 e1 e: expr ty) (EQ: e1 = e),
-  expr_valid e = true ->
+  expr_valid e ->
   forall (bm : boundsmap) (vm : valmap),
   boundsmap_denote bm vm ->
-  binary_float_equiv (fval (env_ vm) e1) (fval (env_ vm) e0) ->
-  Forall (fun c : (forall ty, positive -> ftype ty) -> Prop => c (env_ vm)) 
+  float_equiv (fval (env_ vm) e1) (fval (env_ vm) e0) ->
+  Forall (fun c : environ -> Prop => c (env_ vm)) 
         (snd (rndval_with_cond2 e)) ->
   let '(r, s, _) := rndval_with_cond2 e in
     rndval_with_cond_result1 (env_ vm) e0 r s.
@@ -593,12 +863,12 @@ destruct H.
 constructor; auto.
 Qed.
 
-Lemma fast_apply_rndval_with_cond_correct3 {NANS: Nans}:
+Lemma fast_apply_rndval_with_cond_correct3 {NANS: Nans}  `{coll: collection}:
 forall ty (e0: expr ty)  (bm : boundsmap) (vm : valmap),
    let e := fshift_div (fshift (fcval e0)) in  
-  expr_valid e = true ->
+  expr_valid e ->
   (boundsmap_denote bm vm ->
-   Forall (fun c : (forall ty, positive -> ftype ty) -> Prop => c (env_ vm)) 
+   Forall (fun c : environ->Prop => c (env_ vm)) 
         (snd (rndval_with_cond2 e))) ->
      prove_rndval' bm vm e0.
 Proof.
@@ -648,7 +918,9 @@ cbv [fcval fcval_nonrec option_pair_of_options
          rounding_cond_ast no_overflow app
          rnd_of_func_with_cond rnd_of_func rnd_of_func' abs_error rel_error
   Bsign N.of_nat b64_B754_finite b32_B754_finite
-].
+];
+  repeat change (ftype_of_float ?x) with x;
+  repeat change (float_of_ftype ?x) with x.
 
 Ltac compute_fshift_div_special_reduce :=
  cbv_fcval;
@@ -663,7 +935,7 @@ Ltac compute_fshift_div_special_reduce :=
      cbv_fcval).
 
 Ltac compute_fshift_div2 :=
-
+  (* don't use this one, it causes Qed blowup in (for example) the kepler1 benchmark *)
  match goal with |- context [fcval ?F] => 
    let g := eval hnf in F in change F with g end;
   let j := fresh "j" in let HIDE := fresh "HIDE" in 
@@ -676,7 +948,22 @@ Ltac compute_fshift_div2 :=
   cbv delta [fshift_div]; compute_fshift_div_special_reduce;
   subst HIDE; cbv beta.
 
-Ltac compute_fshift_div := compute_fshift_div2.
+Ltac compute_fshift_div3 :=
+  match goal with |- context [fcval ?F] => 
+     let g := eval hnf in F in change F with g end;
+  let j := fresh "j" in let HIDE := fresh "HIDE" in 
+  set (j := fshift_div _);
+  pattern j;
+  match goal with |- ?H _ => set (HIDE:=H) end;
+  subst j;
+  compute_fshift_div_special_reduce;
+  cbv delta [fshift]; compute_fshift_div_special_reduce;
+  cbv beta fix match zeta delta [fshift binop_eqb rounded_binop_eqb andb eqb];
+  cbv beta fix match zeta delta [fshift_div fcval_nonrec binop_eqb rounded_binop_eqb andb eqb];
+  compute_fshift_div_special_reduce;
+  subst HIDE; cbv beta.
+
+Ltac compute_fshift_div := compute_fshift_div3.
 
 Ltac prove_rndval :=
  (* if necessary, convert goal into a prove_rndval'   goal*)
@@ -686,7 +973,7 @@ Ltac prove_rndval :=
  end;
 
 (*time "1"*) (
- eapply fast_apply_rndval_with_cond_correct3; [reflexivity | intro ]);
+ eapply fast_apply_rndval_with_cond_correct3; [compute; repeat split; auto | intro ]);
 
 (*time "2a"*) compute_fshift_div;  (*(compute_every @fshift_div);*)
 
@@ -705,9 +992,14 @@ Ltac prove_rndval :=
          rounding_cond_ast no_overflow app
          rnd_of_func_with_cond rnd_of_func rnd_of_func'  abs_error rel_error
          func_no_overflow type_hibound'];
-
+(* OLD
     repeat match goal with |- context [bounds_to_conds ?bnds ?es] =>
        let h := fresh "h" in set (h := bounds_to_conds bnds es); compute in h; subst h
+      end;
+  NEW: *)
+    repeat match goal with |- context [bounds_to_conds ?bnds ?es] =>
+       let h := fresh "h" in set (h := bounds_to_conds bnds es); 
+         simpl in h; unfold eq_rect_r, eq_rect in h; simpl in h; subst h
       end;
    simpl ff_rel; simpl ff_abs;
    compute_every type_leb; 
@@ -735,8 +1027,7 @@ Ltac prove_rndval :=
          Prog.binary Prog.unary Prog.real_operations
          Tree.binary_real Tree.unary_real ];
   repeat change (B2R (fprec ?t) _ ?x) with (@FT2R t x);
-  simpl F2R;
-  cbv [env_]);
+  simpl F2R);
 
   (* now process the boundsmap above the line, and the conds below the line *)
 (*time "5"*)  process_boundsmap_denote;
@@ -758,10 +1049,10 @@ specialize (H i).
 unfold mget, Maps.PMap.get in H. simpl in H. rewrite H0 in H. auto.
 Qed.
 
-Definition rndval_without_cond {ty} (e: expr ty) : rexpr * shiftmap :=
+Definition rndval_without_cond  `{coll: collection} {ty} (e: expr ty) : rexpr * shiftmap :=
  let '(r,s,p) := rndval_with_cond2 e in (r,s).
 
-Lemma rndval_with_cond_result1_e {NANS: Nans}:
+Lemma rndval_with_cond_result1_e {NANS: Nans}  `{coll: collection}:
   forall vm ty (e: expr ty) r s, 
    rndval_with_cond_result1 (env_ vm) e r s ->
   let '(_, m) := s in 
@@ -770,9 +1061,9 @@ Lemma rndval_with_cond_result1_e {NANS: Nans}:
                    Rle (Rabs (errors i)) (error_bound bound))
       (Maps.PTree.elements m) /\
   (let fv := fval (env_ vm) e in
-   is_finite (fprec ty) (femax ty) fv = true /\
+   is_finite fv = true /\
    reval r (env_ vm) errors =
-   B2R (fprec ty) (femax ty) fv).
+   FT2R fv).
 Proof.
 intros.
 destruct s as [bound m].
@@ -780,7 +1071,7 @@ destruct H as [errors [? [? ?]]]; exists errors; split; auto.
 apply (errors_bounded_e _ bound); auto.
 Qed.
 
-Definition rndval_result  {NANS: Nans}
+Definition rndval_result  {NANS: Nans} `{coll: collection}
    (bm : boundsmap) (vm : valmap) {ty} (e : expr ty) r s 
   (H:  rndval_without_cond (fshift (fcval e)) = (r,s)) :=
    boundsmap_denote bm vm ->
@@ -790,9 +1081,9 @@ Definition rndval_result  {NANS: Nans}
                    Rle (Rabs (errors i)) (error_bound bound))
       (Maps.PTree.elements m) /\
   (let fv := fval (env_ vm) e in
-   is_finite (fprec ty) (femax ty) fv = true /\
+   is_finite fv = true /\
    reval r (env_ vm) errors =
-   B2R (fprec ty) (femax ty) fv).
+   FT2R fv).
 
 Fixpoint evenlog' (p: positive)  : Z * Z :=
  match p with 
@@ -886,11 +1177,11 @@ rewrite bpow_opp.
 reflexivity.
 Qed.
 
-Definition roundoff_error_bound {NANS: Nans} (vm: valmap) {ty} (e: expr ty) (err: R):=
-  is_finite (fprec _) (femax _) (fval (env_ vm) e) = true /\ 
+Definition roundoff_error_bound {NANS: Nans} `{coll: collection} (vm: valmap) {ty} (e: expr ty) (err: R):=
+  is_finite (fval (env_ vm) e) = true /\ 
  Rle (Rabs (@FT2R ty (fval (env_ vm) e) - rval (env_ vm) e)) err.
 
-Definition prove_roundoff_bound {NANS: Nans}
+Definition prove_roundoff_bound {NANS: Nans} `{coll: collection}
     (bm: boundsmap) (vm: valmap) {ty} (e: expr ty) 
    (err: R): Prop := 
    boundsmap_denote bm vm ->
@@ -1037,9 +1328,9 @@ Ltac unfold_rval :=
   change x with y
  end.
 
-Lemma prove_rndval_is_finite {NANS} : forall bm vm ty (e: expr ty),
+Lemma prove_rndval_is_finite {NANS} `{coll: collection} : forall bm vm ty (e: expr ty),
  boundsmap_denote bm vm ->
- @prove_rndval NANS bm vm ty e -> is_finite _ _ (fval (env_ vm) e) = true.
+ @prove_rndval NANS _ bm vm ty e -> is_finite (fval (env_ vm) e) = true.
 Proof.
 intros.
 destruct X as [[??]  [? ?]].
@@ -1056,6 +1347,33 @@ Ltac cbv_reval :=
             Rop_of_rounded_binop Rop_of_exact_unop 
              Rop_of_rounded_unop
       rval_klist].
+
+Ltac abstract_env_variables := 
+repeat 
+match goal with 
+ | |- context [B2R ?prec ?emax (float_of_ftype (env_ ?vm ?t ?H ?i))] =>
+    let j := fresh "v" i in
+    set (j := B2R prec emax (float_of_ftype (env_ vm t H i))) in *; clearbody j
+ | H0: context [B2R ?prec ?emax (float_of_ftype  (env_ ?vm ?t ?H ?i))] |- _ =>
+    let j := fresh "v" i in
+    set (j := B2R prec emax (float_of_ftype (env_ vm t H i))) in *; clearbody j
+ end.
+
+Ltac test_vmap_concrete vm :=
+ let x := constr:(proj1_sig vm) in
+ let x := eval hnf in x in
+ lazymatch x with
+ | Maps.PTree.Nodes _ => idtac
+ | Maps.PTree.Empty => idtac
+ end.
+
+Ltac concrete_env_variables :=
+ try
+  lazymatch goal with |- context [env_ ?vm _ _ _] => 
+    test_vmap_concrete vm;
+    let h := fresh "h" in 
+    repeat (set (h := env_ vm _ _ _) in *; hnf in h; subst h)
+   end.
 
 Ltac prove_roundoff_bound2 := 
 
@@ -1086,7 +1404,7 @@ end;
  destruct H2 as [FIN H2]; split; [assumption  | ]; clear FIN;
  clearbody e;
  simpl in e;
- change (B2R _ _ e) with (FT2R e) in H2;
+ try change (B2R _ _ e) with (FT2R e) in H2;
  match goal with H2 : _ = @FT2R ?t1 e |- context [@FT2R ?t2 e] =>
   change t2 with t1
  end;
@@ -1098,9 +1416,11 @@ end;
  cbv_reval;
  simpl ff_args;
   let j := fresh "j" in repeat (set (j := ff_realfunc _); simpl in j; subst j);
- repeat change (B2R (fprec ?t) _) with (@FT2R t);
- unfold  env_;
+(* unfold  env_; *)
  process_boundsmap_denote;
+
+ repeat change (B2R (fprec ?t) _) with (@FT2R t);
+ rewrite <- ?B2R_float_of_ftype in * by auto with typeclass_instances; (* NEW *)
 
  repeat (let E := fresh "E" in 
             assert (E := Forall_inv H0); 
@@ -1127,7 +1447,13 @@ end;
   clearbody u; clear v; rename u into v
  end;
 
+ concrete_env_variables;
+ abstract_env_variables; 
+
  (* Clean up all FT2R constants *)
+ repeat (change (FT2R ?x) with (B2R _ _ x) in *);
+ simpl B2R in *;
+(*
  repeat match goal with
  | |- context [@FT2R ?t (b32_B754_finite ?s ?m ?e ?H)] =>
  let j := fresh "j" in 
@@ -1138,7 +1464,8 @@ end;
   set (j :=  @FT2R t (b64_B754_finite s m e H));
   simpl in j; subst j
  end;
- rewrite <- ?(F2R_eq radix2);
+*)
+ rewrite <- ?(F2R_eq Zaux.radix2);
  repeat match goal with |- context [F2R _ ?x] => unfold x end;
  (* clean up all   F2R radix2 {| Defs.Fnum := _; Defs.Fexp := _ |}   *)
  rewrite ?cleanup_Fnum;
@@ -1220,7 +1547,7 @@ Definition boundsmap_contains bm1 bm2 :=
   Forall2 bound_contains (Maps.PTree.elements bm1)
       (Maps.PTree.elements bm2).
 
-Lemma boundsmap_denote_relax {NANS: Nans}:
+Lemma boundsmap_denote_relax {NANS: Nans} `{coll: collection}:
  forall (bm1 bm2 : Maps.PTree.t varinfo)
           (vm : valmap),
   boundsmap_contains bm1 bm2 ->
@@ -1235,7 +1562,7 @@ destruct (Forall2_e1 _ _ _ H _ (Maps.PTree.elements_correct _ _ H1))
  as [[i' [t2 n2 lo2 hi2]] [? [[? [? ?]] [? [? ?]]]]]; simpl in *; subst.
 apply Maps.PTree.elements_complete in H2.
 rewrite H2 in H0.
-destruct (Maps.PTree.get n2 vm); try contradiction; auto.
+destruct (Maps.PTree.get n2 (proj1_sig vm)); try contradiction; auto.
 destruct H0 as [? [? [? ?]]]; subst.
 split; [ | split; [ | split]]; auto.
 lra.
@@ -1248,7 +1575,7 @@ apply Maps.PTree.elements_complete in H3.
 congruence.
 Qed.
 
-Lemma prove_roundoff_bound_relax {NANS: Nans}:
+Lemma prove_roundoff_bound_relax {NANS: Nans} `{coll: collection}:
   forall bm1 bm2 vm ty (e: expr ty) R,
     boundsmap_contains bm1 bm2 ->
  prove_roundoff_bound bm1 vm e R ->
@@ -1261,10 +1588,10 @@ apply boundsmap_denote_relax; auto.
 Qed.
 
 
-Definition val_bound {NANS: Nans} (vm: valmap) {ty} (e: expr ty) (b: R):=
+Definition val_bound {NANS: Nans}  `{coll: collection} (vm: valmap) {ty} (e: expr ty) (b: R):=
  Rle (Rabs (@FT2R ty (fval (env_ vm) e))) b.
 
-Definition prove_val_bound {NANS: Nans}
+Definition prove_val_bound {NANS: Nans} `{coll: collection}
     (bm: boundsmap) (vm: valmap) {ty} (e: expr ty) 
    (b: R): Prop := 
    boundsmap_denote bm vm ->
@@ -1348,8 +1675,8 @@ lazymatch goal with
      try solve [compute; lra])
 end.
 
-Definition find_and_prove_roundoff_bound {NANS} (bmap: boundsmap) {ty} (e: expr ty) :=
-  {bound: R | forall vmap, @prove_roundoff_bound NANS bmap vmap ty e bound}.
+Definition find_and_prove_roundoff_bound {NANS}  `{coll: collection}(bmap: boundsmap) {ty} (e: expr ty) :=
+  {bound: R | forall vmap, @prove_roundoff_bound NANS _ bmap vmap ty e bound}.
 
 
 Ltac mult_le_compat_tac :=
@@ -1372,6 +1699,7 @@ repeat match goal with
  | |- Rabs((?u1 - ?v1) * ?D + ?E - ?U) <= _ => 
     (replace ((u1 - v1) * D + E - U) with 
       ((u1 * D - v1 * D) - U + E)  by nra) ; 
+(* main rewrite used here is Rminus_rel_error *)
         eapply Rle_trans; [apply Rabs_triang| idtac]; apply Rplus_le_compat;
         [rewrite Rminus_rel_error; eapply Rle_trans; [apply Rabs_triang| apply Rplus_le_compat];
           [ try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc
@@ -1380,6 +1708,7 @@ repeat match goal with
  | |- Rabs((?u1 + ?v1) * ?D + ?E - ?U) <= _ => 
     (replace ((u1 + v1) * D + E - U) with 
       ((u1 * D + v1 * D) - U + E)  by nra) ; 
+(* main rewrite used here is Rplus_rel_error *)
         eapply Rle_trans; [apply Rabs_triang| idtac]; apply Rplus_le_compat;
         [rewrite Rplus_rel_error ; eapply Rle_trans ;[apply Rabs_triang| idtac] ; apply Rplus_le_compat;
           [ try rewrite Rmult_plus_distr_r; try rewrite Rmult_assoc
@@ -1388,6 +1717,7 @@ repeat match goal with
  | |- Rabs((?u1 * ?v1) * ?D + ?E - ?U) <= _ => 
     (replace ((u1 * v1) * D + E - U ) with 
       ((u1 * D * v1) - U + E)  by nra);
+(* main rewrite used here is Rmult_rel_error *)
         eapply Rle_trans; [apply Rabs_triang | apply Rplus_le_compat; 
         [rewrite Rmult_rel_error; eapply Rle_trans; [apply Rabs_triang | apply Rplus_le_compat ;
               [eapply Rle_trans; [apply Rabs_triang | apply Rplus_le_compat; 
@@ -1398,6 +1728,7 @@ repeat match goal with
  | |- Rabs((?u1 / ?v1) * ?D + ?E -?U) <= _ => 
     (replace ((u1 / v1) * D + E - U ) with 
       ((u1 * D)/v1 -  U + E)  by nra);
+(* main rewrite used here is Rdiv_rel_error_no_u_div_reduced *)
         eapply Rle_trans; [apply Rabs_triang| idtac]; apply Rplus_le_compat;
         [eapply Rle_trans; 
           [ apply Rdiv_rel_error_no_u_div_reduced; interval (* will sometimes fail *)
@@ -1433,4 +1764,5 @@ Ltac bisect_all_vars t params :=
              Private.do_interval_intro t Interval_helper.ie_none params
   end.
 
-
+#[export] Existing Instance empty_collection.  (* By default, we don't have any
+   nonstandard types. *)

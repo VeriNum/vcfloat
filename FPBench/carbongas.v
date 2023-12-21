@@ -49,7 +49,7 @@ try match goal with |-Rabs ?a <= _ =>
   (i_taylor vxH, i_bisect vxH, i_depth 15) as H' ; apply H');
   try (interval_intro (Rabs a) upper as H' ; apply H') end;
   apply Rle_refl)).
-Qed.
+Time Qed.
 
 Lemma check_carbongas_bound: ltac:(CheckBound carbongas_b 2.5e-08%F64).
 Proof. reflexivity. Qed.

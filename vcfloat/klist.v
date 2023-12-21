@@ -160,6 +160,43 @@ induction l; simpl; auto.
 f_equal; auto.
 Qed.
 
+Definition applyk_aux {type: Type} {k: type -> Type}  (typemapper : type -> Type)
+         (arg1: type) (args : list type) (res : type)
+         (applyk : function_type (map typemapper args) (typemapper res) ->
+              (forall ty : type, k ty -> typemapper ty) ->
+             klist k args -> typemapper res)
+         (f: function_type (map typemapper (arg1:: args)) (typemapper res))
+         (valmapper: forall ty : type, k ty -> typemapper ty)
+         (es: klist k (arg1::args)):
+         typemapper res.
+remember (arg1::args) as args0.
+destruct es  as [ | arg1' args' e1 er] eqn:?H.
+discriminate.
+inversion Heqargs0; clear Heqargs0; subst.
+apply (applyk (f (valmapper _ e1)) valmapper er).
+Defined.
+
+Fixpoint applyk {type: Type} {k: type -> Type}  
+    (typemapper: type -> Type)
+    (args: list type)
+    (res: type)
+    {struct args}
+    : function_type (map typemapper args) (typemapper res) ->
+     (forall ty: type, k ty -> typemapper ty) ->
+       klist k args -> typemapper res :=
+match
+     args as l
+     return
+       (function_type (map typemapper l) (typemapper res) ->
+         (forall ty: type, k ty -> typemapper ty) ->
+        klist k l -> typemapper res)
+   with
+   | [] =>fun f _ _ => f
+   | arg1 :: args0 =>
+    applyk_aux typemapper arg1 args0 res
+          (applyk typemapper args0 res)
+   end.
+
 Module StuffNotNeeded.
 Require Import Recdef.
 
@@ -201,43 +238,6 @@ simpl. apply PeanoNat.Nat.lt_succ_diag_r.
 Defined.
 
 Definition mapk {A} f {tys} l := mapk_aux1 A f tys l.
-
-Definition applyk_aux {k: type -> Type}  (typemapper : type -> Type)
-         (arg1: type) (args : list type) (res : type)
-         (applyk : function_type (map typemapper args) (typemapper res) ->
-              (forall ty : type, k ty -> typemapper ty) ->
-             klist k args -> typemapper res)
-         (f: function_type (map typemapper (arg1:: args)) (typemapper res))
-         (valmapper: forall ty : type, k ty -> typemapper ty)
-         (es: klist k (arg1::args)):
-         typemapper res.
-remember (arg1::args) as args0.
-destruct es  as [ | arg1' args' e1 er] eqn:?H.
-discriminate.
-inversion Heqargs0; clear Heqargs0; subst.
-apply (applyk (f (valmapper _ e1)) valmapper er).
-Defined.
-
-Fixpoint applyk {k: type -> Type}  
-    (typemapper: type -> Type)
-    (args: list type)
-    (res: type)
-    {struct args}
-    : function_type (map typemapper args) (typemapper res) ->
-     (forall ty: type, k ty -> typemapper ty) ->
-       klist k args -> typemapper res :=
-match
-     args as l
-     return
-       (function_type (map typemapper l) (typemapper res) ->
-         (forall ty: type, k ty -> typemapper ty) ->
-        klist k l -> typemapper res)
-   with
-   | [] =>fun f _ _ => f
-   | arg1 :: args0 =>
-    applyk_aux typemapper arg1 args0 res
-          (applyk typemapper args0 res)
-   end.
 
 End KLIST.
 End StuffNotNeeded.
