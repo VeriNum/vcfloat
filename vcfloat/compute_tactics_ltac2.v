@@ -76,7 +76,9 @@ Ltac2 redflags_full () :=
   (* zeta: expand let expressions by substitution *)
   Std.rZeta := true;
   (* Symbols to expand or not to expand (depending on rDelta) *)
-  Std.rConst := []
+  Std.rConst := [];
+  (* Just guessing that Norm is the right thing here: *)
+  Std.rStrength := Std.Norm
 }.
 
 (** ** Ltac2 functions for evaluation restricted reductions on a term *)
@@ -131,11 +133,13 @@ Ltac2 rec eval_cbv_uao_lr (head : constr) (rf : Std.red_flags) (term : constr) :
       then (Constr.Unsafe.make (Constr.Unsafe.Cast value_r cast type), true)
       else (term, false)
 
+(*  Commented this out for Coq 8.19
   | Constr.Unsafe.Proj projection value =>
       let (value_r, value_m) := eval_cbv_uao_lr head rf value in
       if value_m
       then  (Constr.Unsafe.make (Constr.Unsafe.Proj projection value_r), true)
       else (term, false)
+*)
 
   | Constr.Unsafe.Case case_a constr_return case_b constr_match case_funcs =>
       let (match_r, match_m) := eval_cbv_uao_lr head rf constr_match in
@@ -190,18 +194,21 @@ Ltac2 rec eval_cbv_uao_afr (head : constr) (rf : Std.red_flags) (term : constr) 
       then (Constr.Unsafe.make (Constr.Unsafe.Cast value_r cast type_r), true)
       else (term, false)
 
+
+(*  Commented this out for Coq 8.19
   | Constr.Unsafe.Proj projection value =>
       let (value_r, value_m) := eval_cbv_uao_afr head rf value in
       if value_m
       then  (Constr.Unsafe.make (Constr.Unsafe.Proj projection value_r), true)
       else (term, false)
-
-  | Constr.Unsafe.Case case_a constr_return case_b constr_match case_funcs =>
+*)
+  | Constr.Unsafe.Case case_a constr_return_rel case_b constr_match case_funcs =>
+      let (constr_return, relev) := constr_return_rel in 
       let (return_r, return_m) := eval_cbv_uao_afr head rf constr_return in
       let (match_r, match_m) := eval_cbv_uao_afr head rf constr_match in
       let case_funcs_e := Array.map (eval_cbv_uao_afr head rf) case_funcs in
       if return_m || match_m || (Array.exist pair_second case_funcs_e)
-      then (Constr.Unsafe.make (Constr.Unsafe.Case case_a return_r case_b match_r (Array.map pair_first case_funcs_e)), true)
+      then (Constr.Unsafe.make (Constr.Unsafe.Case case_a (return_r,relev) case_b match_r (Array.map pair_first case_funcs_e)), true)
       else (term, false)
 
   | Constr.Unsafe.Fix int_arr int binder_arr constr_arr =>
