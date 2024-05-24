@@ -6,7 +6,7 @@
 COQC=coqc
 COQDEP=coqdep
 COQFLAGS := $(shell cat _CoqProject)
-COQEXTRAFLAGS?= -w
+COQEXTRAFLAGS?= 
 
 target:  vcfloat2 tests
 
