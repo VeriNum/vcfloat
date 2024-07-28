@@ -1172,12 +1172,14 @@ apply (bconstexpr_correct' _ _ _ x vars Heqf H0).
      apply Rabs_pos. eassumption. eassumption.
      destruct (F.mul_UP_correct p52 t t0).
      left. split.
-     split. apply F'.valid_ub_real; auto.
-     unfold F.toR in H5. rewrite F.real_correct in H4. destruct (F.toX t); try discriminate.
-     simpl in H5. pose proof (Rabs_pos (eval e1 vars)); lra.
-     split. apply F'.valid_ub_real; auto.
-     unfold F.toR in H7. rewrite F.real_correct in H6. destruct (F.toX t0); try discriminate.
-     simpl in H7. pose proof (Rabs_pos (eval e2 vars)); lra.
+     clear - H4 H5.
+     rewrite F.real_correct in H4. unfold F.is_non_neg'. unfold F.toR in H5.
+     destruct (F.toX t); try discriminate. simpl in H5.
+     pose proof (Rabs_pos (eval e1 vars)). lra.
+     clear - H6 H7.
+     rewrite F.real_correct in H6. unfold F.is_non_neg'. unfold F.toR in H7.
+     destruct (F.toX t0); try discriminate. simpl in H7.
+     pose proof (Rabs_pos (eval e2 vars)). lra.
      unfold Xbind2 in H1.
      red in H1. unfold F.toR. rewrite F.real_correct in H8.
      destruct (F.toX (F.mul_UP p52 t t0)); try discriminate.
