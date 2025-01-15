@@ -6,7 +6,7 @@ Require Import Coq.Lists.List.
 Definition BFMA {NAN: Nans} {t: type} {STD: is_standard t} (x y z: ftype t) : ftype t :=
   ftype_of_float
     (Binary.Bfma (fprec t) (femax t) (fprec_gt_0 t)
-      (fprec_lt_femax t) (fma_nan t) BinarySingleNaN.mode_NE
+      (fprec_lt_femax t) (fma_nan (fprec t) (femax t) (fprec_gt_one _)) BinarySingleNaN.mode_NE
      (float_of_ftype x) (float_of_ftype y) (float_of_ftype z)).
 
 (* see https://coq.zulipchat.com/#narrow/stream/237977-Coq-users/topic/RelationPairs.20rewriting.20really.20slow *)

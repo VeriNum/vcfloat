@@ -412,7 +412,7 @@ destruct ltr.
     destruct x; try discriminate; simpl;
      rewrite ?Rmult_0_l, Rminus_0_r, Rabs_R0; lra.     
   +
-    assert (H2 := Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) x).
+    assert (H2 := Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) x).
     rewrite Rmult_comm in H2. 
     unfold BMULT, BINOP.
      rewrite !float_of_ftype_of_float.
@@ -438,7 +438,7 @@ destruct ltr.
     set (j := bpow radix2 _) in *. clearbody j.
     destruct x; try discriminate; simpl; rewrite ?Rmult_0_l, Rminus_0_r, Rabs_R0; lra.     
   +
-    assert (H2 := Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) x).
+    assert (H2 := Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) x).
     rewrite Rmult_comm in H2. 
     unfold BMULT, BINOP.
      rewrite !float_of_ftype_of_float.
@@ -473,7 +473,7 @@ destruct ltr; destruct  (Z_lt_le_dec ((Z.neg pow) + 1) (3 - femax ty));
   rewrite is_finite_Binary, !float_of_ftype_of_float.
 - rewrite (B2_zero _ _ l); unfold Bmult. destruct (float_of_ftype x); auto.
 - 
-    pose proof (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) (float_of_ftype x)).
+    pose proof (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) (float_of_ftype x)).
     rewrite Rmult_comm in H2. 
     pose proof (B2_correct ty (Z.neg pow) ltac:(lia)).
    rewrite H3 in H2.
@@ -485,7 +485,7 @@ destruct ltr; destruct  (Z_lt_le_dec ((Z.neg pow) + 1) (3 - femax ty));
    apply  InvShift_finite_aux; auto.
 - rewrite (B2_zero _ _ l); unfold Bmult. destruct (float_of_ftype x); auto.
 - 
-    pose proof (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) (float_of_ftype x)).
+    pose proof (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) (float_of_ftype x)).
     rewrite Rmult_comm in H2. 
     pose proof (B2_correct ty (Z.neg pow) ltac:(lia)).
    rewrite H3 in H2.

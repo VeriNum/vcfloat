@@ -29,7 +29,7 @@ Qed.
 
 Require vcfloat.FPCompCert.
 
-#[export] Instance nans: Nans := FPCompCert.nans.
+#[export] Instance nans: FPCore.Nans := FPCompCert.nans.
 
 Lemma val_inject_eq_rect_r v ty1 e:
   val_inject v ty1 e ->

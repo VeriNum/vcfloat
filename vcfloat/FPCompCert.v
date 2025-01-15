@@ -29,15 +29,18 @@ Proof.
   apply ProofIrrelevance.ProofIrrelevanceTheory.EqdepTheory.inj_pair2 in H2; auto.
 Qed.
 
+Require Import Coq.Classes.EquivDec.
+Require Import ZArith.
 
 Lemma conv_nan_ex:
-  { conv_nan: forall ty1 ty2 (STD1: is_standard ty1) (STD2: is_standard ty2),
-                binary_float (fprec ty1) (femax ty1) -> (* guaranteed to be a nan, if this is not a nan then any result will do *)
-                nan_payload (fprec ty2) (femax ty2)
-  |
-  conv_nan Tsingle Tdouble _ _ = Floats.Float.of_single_nan
+  { conv_nan: forall (prec1 emax1 prec2 emax2 : Z),
+                (1< prec2)%Z ->
+                binary_float prec1 emax1 -> (* guaranteed to be a nan, if this is not a nan then any result will do *)
+                nan_payload prec2 emax2
+  | 
+  conv_nan (fprec Tsingle) (femax Tsingle) (fprec Tdouble) (femax Tdouble) (fprec_gt_one _) = Floats.Float.of_single_nan
   /\
-  conv_nan Tdouble Tsingle _ _ = Floats.Float.to_single_nan
+  conv_nan (fprec Tdouble) (femax Tdouble) (fprec Tsingle) (femax Tsingle) (fprec_gt_one _) =  Floats.Float.to_single_nan
   }.
 Proof.
   eapply exist.
@@ -45,27 +48,19 @@ Proof.
   {
     shelve.
   }
-  intros ty1 ty2 ? ?.
-  destruct (type_eq_dec ty1 Tsingle _ _).
-  {
-    subst.
-    destruct (type_eq_dec ty2 Tdouble _ _).
-    {
-      subst.
-      exact Floats.Float.of_single_nan.
-    }
-    auto using any_nan.
+  intros ? ? ? ? ?.
+(*  destruct (eq_dec (prec1, fprec Tsingle) (emax1, femax Tsingle)). *)
+  destruct (BinInt.Z.eq_dec prec1 (fprec Tsingle)). {
+    destruct (BinInt.Z.eq_dec emax1 (femax Tsingle)); [ | intros; auto using any_nan].
+    destruct (BinInt.Z.eq_dec prec2 (fprec Tdouble)); [ | intros; auto using any_nan].
+    destruct (BinInt.Z.eq_dec emax2 (femax Tdouble)); [ | intros; auto using any_nan].
+    subst; exact Floats.Float.of_single_nan.
   }
-  destruct (type_eq_dec ty1 Tdouble _ _).
-  {
-    subst.
-    destruct (type_eq_dec ty2 Tsingle _ _).
-    {
-      subst.
-      exact Floats.Float.to_single_nan.
-    }
-    intros.
-    auto using any_nan.
+  destruct (BinInt.Z.eq_dec prec1 (fprec Tdouble)). {
+    destruct (BinInt.Z.eq_dec emax1 (femax Tdouble)); [ | intros; auto using any_nan].
+    destruct (BinInt.Z.eq_dec prec2 (fprec Tsingle)); [ | intros; auto using any_nan].
+    destruct (BinInt.Z.eq_dec emax2 (femax Tsingle)); [ | intros; auto using any_nan].
+    subst; exact Floats.Float.to_single_nan.
   }
   intros.
   auto using any_nan.
@@ -75,14 +70,14 @@ Defined.
 
 Definition conv_nan := let (c, _) := conv_nan_ex in c.
 
-Lemma single_double_ex (U: _ -> Type):
-  (forall ty, U ty) ->
-  forall s: U Tsingle,
-  forall d: U Tdouble,
+Lemma single_double_ex (U: forall prec emax, (1<prec)%Z -> Type):
+  (forall prec emax H, U prec emax H) ->
+  forall (s: forall H, U (fprec Tsingle) (femax Tsingle) H)
+         (d: forall H, U (fprec Tdouble) (femax Tdouble) H),
     {
-      f: forall ty {STD: is_standard ty}, U ty |
-      f Tsingle _ = s /\
-      f Tdouble _ = d
+      f: forall prec emax H, U prec emax H |
+      f (fprec Tsingle) (femax Tsingle) = s /\
+      f (fprec Tdouble) (femax Tdouble) = d
     }.
 Proof.
   intro ref.
@@ -90,60 +85,59 @@ Proof.
   esplit.
   Unshelve.
   shelve.
-  intros ty ?.
-  destruct (type_eq_dec ty Tsingle _ _).
-  {
-    subst.
-    exact s.
+  intros prec emax H.
+  destruct (Z.eq_dec prec (fprec Tsingle)). {
+     destruct (Z.eq_dec emax (femax Tsingle)); [ | apply ref].
+     subst. apply s.
   }
-  destruct (type_eq_dec ty Tdouble _ _).
-  {
-    subst.
-    exact d.
+  destruct (Z.eq_dec prec (fprec Tdouble)). {
+     destruct (Z.eq_dec emax (femax Tdouble)); [ | apply ref].
+     subst. apply d.
   }
   apply ref.
   Unshelve.
   split; reflexivity.
 Defined.
 
-Definition single_double (U: _ -> Type)
-           (f_: forall ty, U ty)
-           (s: U Tsingle)
-           (d: U Tdouble)
+Definition single_double (U: forall prec emax, (1<prec)%Z -> Type)
+           (f_: forall prec emax H, U prec emax H)
+           (s: forall H, U (fprec Tsingle) (femax Tsingle) H)
+           (d: forall H, U (fprec Tdouble) (femax Tdouble) H)
 :
-  forall ty {STD: is_standard ty}, U ty :=
+  forall prec emax H, U prec emax H :=
   let (f, _) := single_double_ex U f_ s d in f.
 
-Definition binop_nan :  forall ty {STD: is_standard ty}, binary_float (fprec ty) (femax ty) ->
-       binary_float (fprec ty) (femax ty) ->
-       nan_payload (fprec ty) (femax ty) :=
+Definition binop_nan :  forall prec emax,
+       (1<prec)%Z ->
+       binary_float prec emax ->
+       binary_float prec emax ->
+       nan_payload prec emax :=
   single_double
-    (fun ty =>
-       binary_float (fprec ty) (femax ty) ->
-       binary_float (fprec ty) (femax ty) ->
-       nan_payload (fprec ty) (femax ty)) 
-     (fun ty  _ _ => any_nan ty)
-     Floats.Float32.binop_nan
-     Floats.Float.binop_nan.
+    (fun prec emax H =>
+       binary_float prec emax ->
+       binary_float prec emax ->
+       nan_payload prec emax) 
+     (fun prec emax H _ _ => any_nan prec emax H)
+     (fun _ => Floats.Float32.binop_nan)
+     (fun _ => Floats.Float.binop_nan).
 
 Definition abs_nan :=
   single_double
-    (fun ty =>
-       binary_float (fprec ty) (femax ty) ->
-       nan_payload (fprec ty) (femax ty)) 
-     (fun ty  _ => any_nan ty)
-     Floats.Float32.abs_nan
-     Floats.Float.abs_nan.
+    (fun prec emax H =>
+       binary_float prec emax ->
+       nan_payload prec emax) 
+     (fun prec emax H  _ => any_nan prec emax H)
+     (fun _ => Floats.Float32.abs_nan)
+     (fun _ => Floats.Float.abs_nan).
 
 Definition opp_nan :=
   single_double
-    (fun ty =>
-       binary_float (fprec ty) (femax ty) ->
-       nan_payload (fprec ty) (femax ty)) 
-     (fun ty  _ => any_nan ty)
-     Floats.Float32.neg_nan
-     Floats.Float.neg_nan.
-
+    (fun prec emax H =>
+       binary_float prec emax ->
+       nan_payload prec emax) 
+     (fun prec emax H  _ => any_nan prec emax H)
+     (fun _ => Floats.Float32.neg_nan)
+     (fun _ => Floats.Float.neg_nan).
 
 Module FMA_NAN. 
 (* some of these definitions adapted from [the open-source part of] CompCert  *)
@@ -151,24 +145,23 @@ Import ZArith. Import Coq.Lists.List.
 
 (** Transform a Nan payload to a quiet Nan payload. *)
 
-Definition quiet_nan_payload (t: type) (p: positive) :=
-  Z.to_pos (Zbits.P_mod_two_p (Pos.lor p ((Zaux.iter_nat xO (Z.to_nat (fprec t - 2)) 1%positive))) (Z.to_nat (fprec t - 1))).
+Definition quiet_nan_payload (prec: Z) (p: positive) :=
+  Z.to_pos (Zbits.P_mod_two_p (Pos.lor p ((Zaux.iter_nat xO (Z.to_nat (prec - 2)) 1%positive))) (Z.to_nat (prec - 1))).
 
-Lemma quiet_nan_proof (t: type): 
-   forall p, Binary.nan_pl (fprec t) (quiet_nan_payload t p) = true.
+Lemma quiet_nan_proof (prec: Z): (1<prec)%Z -> 
+   forall p, Binary.nan_pl prec (quiet_nan_payload prec p) = true.
 Proof. 
 intros.
-pose proof (fprec_gt_one t).
  apply normalized_nan; auto; lia.
 Qed.
 
-Definition quiet_nan (t: type) {STD: is_standard t} (sp: bool * positive) :
-         {x : binary_float (fprec t) (femax t) | Binary.is_nan _ _ x = true} :=
+Definition quiet_nan prec emax (H: (1<prec)%Z) (sp: bool * positive) :
+         {x : binary_float prec emax | Binary.is_nan _ _ x = true} :=
   let (s, p) := sp in
-  exist _ (Binary.B754_nan (fprec t) (femax t) s (quiet_nan_payload t p) 
-              (quiet_nan_proof t p)) (eq_refl _).
+  exist _ (Binary.B754_nan prec emax s (quiet_nan_payload prec p) 
+              (quiet_nan_proof prec H p)) (eq_refl _).
 
-Definition default_nan (t: type) := (fst Archi.default_nan_64, iter_nat (Z.to_nat (fprec t - 2)) _ xO xH).
+Definition default_nan (prec: Z) := (fst Archi.default_nan_64, iter_nat (Z.to_nat (prec - 2)) _ xO xH).
 
 Inductive NAN_SCHEME := NAN_SCHEME_ARM | NAN_SCHEME_X86 | NAN_SCHEME_RISCV.
 
@@ -196,33 +189,33 @@ Definition ARMchoose_nan (is_signaling: positive -> bool)
     end
   in choose_snan l0.
 
-Definition choose_nan (t: type) : list (bool * positive) -> bool * positive :=
+Definition choose_nan (prec: Z) : list (bool * positive) -> bool * positive :=
  match the_nan_scheme with
- | NAN_SCHEME_RISCV => fun _ => default_nan t
- | NAN_SCHEME_X86 => fun l => match l with nil => default_nan t | n :: _ => n end
- | NAN_SCHEME_ARM => ARMchoose_nan (fun p => negb (Pos.testbit p (Z.to_N (fprec t - 2))))
-                                          (default_nan t)
+ | NAN_SCHEME_RISCV => fun _ => default_nan prec
+ | NAN_SCHEME_X86 => fun l => match l with nil => default_nan prec | n :: _ => n end
+ | NAN_SCHEME_ARM => ARMchoose_nan (fun p => negb (Pos.testbit p (Z.to_N (prec - 2))))
+                                          (default_nan prec)
  end.
 
-Definition cons_pl {t: type} {STD: is_standard t} (x : binary_float (fprec t) (femax t)) (l : list (bool * positive)) :=
+Definition cons_pl {prec emax} (x : binary_float prec emax) (l : list (bool * positive)) :=
 match x with
 | Binary.B754_nan _ _ s p _ => (s, p) :: l
 | _ => l
 end.
 
-Definition fma_nan_1 (t: type) {STD: is_standard t} 
-    (x y z: binary_float (fprec t) (femax t)) : nan_payload (fprec t) (femax t) :=
+Definition fma_nan_1 prec emax H
+    (x y z: binary_float prec emax) : nan_payload prec emax :=
   let '(a, b, c) := Archi.fma_order x y z in
-  quiet_nan t (choose_nan t (cons_pl a (cons_pl b (cons_pl c nil)))).
+  quiet_nan prec emax H (choose_nan prec (cons_pl a (cons_pl b (cons_pl c nil)))).
 
-Definition fma_nan_pl (t: type) {STD: is_standard t} (x y z: binary_float (fprec t) (femax t)) : {x : binary_float (fprec t) (femax t) | Binary.is_nan _ _ x = true} :=
+Definition fma_nan_pl prec emax H (x y z: binary_float prec emax) : {x : binary_float prec emax | Binary.is_nan _ _ x = true} :=
   match x, y with
   | Binary.B754_infinity _ _ _, Binary.B754_zero _ _ _ | Binary.B754_zero _ _ _, Binary.B754_infinity _ _ _ =>
       if Archi.fma_invalid_mul_is_nan
-      then quiet_nan t (choose_nan t (default_nan t :: cons_pl z nil))
-      else fma_nan_1 t x y z
+      then quiet_nan prec emax H (choose_nan prec (default_nan prec :: cons_pl z nil))
+      else fma_nan_1 prec emax H x y z
   | _, _ =>
-      fma_nan_1 t x y z
+      fma_nan_1 prec emax H x y z
   end.
 
 End FMA_NAN.
@@ -235,7 +228,7 @@ End FMA_NAN.
     div_nan := binop_nan;
     abs_nan := abs_nan;
     opp_nan := opp_nan;
-    sqrt_nan := (fun ty _ _ => any_nan ty);
+    sqrt_nan := (fun prec emax H _ => any_nan prec emax H);
     fma_nan := FMA_NAN.fma_nan_pl
   }.
 

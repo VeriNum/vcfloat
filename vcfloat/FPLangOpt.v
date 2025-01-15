@@ -682,8 +682,8 @@ Local Lemma Bmult_div_inverse_equiv ty {STD: is_standard ty}:
   Binary.is_finite _ _ z = true ->
   Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
   binary_float_equiv
-  (Binary.Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) BinarySingleNaN.mode_NE x z) 
-  (Binary.Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) BinarySingleNaN.mode_NE x y) .
+  (Binary.Bmult _ _ _ (fprec_lt_femax ty) (mult_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x z) 
+  (Binary.Bdiv _ _ _ (fprec_lt_femax ty) (div_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x y) .
 Proof. intros. apply binary_float_equiv_sym; apply Bdiv_mult_inverse_equiv; auto. Qed.
 
 Theorem Bmult_div_inverse_equiv2 ty {STD: is_standard ty}:
@@ -693,8 +693,8 @@ Theorem Bmult_div_inverse_equiv2 ty {STD: is_standard ty}:
   Binary.is_finite _ _ z = true ->
   Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
   binary_float_equiv
-  (Binary.Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) BinarySingleNaN.mode_NE x2 z)
-  (Binary.Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) BinarySingleNaN.mode_NE x1 y) .
+  (Binary.Bmult _ _ _ (fprec_lt_femax ty) (mult_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x2 z)
+  (Binary.Bdiv _ _ _ (fprec_lt_femax ty) (div_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x1 y) .
 Proof. intros. apply binary_float_equiv_sym; apply Bdiv_mult_inverse_equiv2; auto. Qed.
 
 Lemma uncast_finite_strict:
