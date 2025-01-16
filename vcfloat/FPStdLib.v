@@ -132,54 +132,71 @@ Proof.
 intros. apply I.
 Qed.
 
-
+(*
 Definition Nans := FPCore.Nans.
+*)
+(*
 Existing Class Nans.
 
 Definition conv_nan {NAN: Nans} : forall ty1 ty2 : type, 
                 binary_float (fprec ty1) (femax ty1) ->
                 nan_payload (fprec ty2) (femax ty2) 
-  := fun t1 t2 => @FPCore.conv_nan NAN (coretype_of_type t1) (coretype_of_type t2) _ _.
+  := fun t1 t2 => @FPCore.conv_nan NAN 
+        (FPCore.fprec (coretype_of_type t1))
+        (FPCore.femax (coretype_of_type t1))
+        (FPCore.fprec (coretype_of_type t2))
+        (FPCore.femax (coretype_of_type t2)) (FPCore.fprec_gt_one (coretype_of_type t2)).
 
 Definition plus_nan {NAN: Nans}:
       forall ty: type,
         binary_float (fprec ty) (femax ty) ->
         binary_float (fprec ty) (femax ty) ->
         nan_payload (fprec ty) (femax ty) 
- := fun t => @FPCore.plus_nan NAN (coretype_of_type t) _.
+ := fun t => @FPCore.plus_nan NAN 
+        (FPCore.fprec (coretype_of_type t))
+        (FPCore.femax (coretype_of_type t)) (FPCore.fprec_gt_one (coretype_of_type t)).
 
 Definition  mult_nan {NAN: Nans}:
       forall ty : type,
         binary_float (fprec ty) (femax ty) ->
         binary_float (fprec ty) (femax ty) ->
         nan_payload (fprec ty) (femax ty)
- := fun t => @FPCore.plus_nan NAN (coretype_of_type t) _.
-
+ := fun t => @FPCore.plus_nan NAN 
+        (FPCore.fprec (coretype_of_type t))
+        (FPCore.femax (coretype_of_type t)) (FPCore.fprec_gt_one (coretype_of_type t)).
 
 Definition    div_nan {NAN: Nans}:
       forall ty : type,
         binary_float (fprec ty) (femax ty) ->
         binary_float (fprec ty) (femax ty) ->
         nan_payload (fprec ty) (femax ty)
- := fun t => @FPCore.div_nan NAN (coretype_of_type t) _.
+ := fun t => @FPCore.div_nan NAN 
+        (FPCore.fprec (coretype_of_type t))
+        (FPCore.femax (coretype_of_type t)) (FPCore.fprec_gt_one (coretype_of_type t)).
 
 Definition    abs_nan {NAN: Nans}:
       forall ty : type,
         binary_float (fprec ty) (femax ty) -> (* guaranteed to be a nan, if this is not a nan then any result will do *)
         nan_payload (fprec ty) (femax ty)
- := fun t => @FPCore.abs_nan NAN (coretype_of_type t) _.
+ := fun t => @FPCore.abs_nan NAN 
+        (FPCore.fprec (coretype_of_type t))
+        (FPCore.femax (coretype_of_type t)) (FPCore.fprec_gt_one (coretype_of_type t)).
 
 Definition    opp_nan {NAN: Nans}:
       forall ty : type,
         binary_float (fprec ty) (femax ty) -> (* guaranteed to be a nan, if this is not a nan then any result will do *)
         nan_payload (fprec ty) (femax ty)
- := fun t => @FPCore.opp_nan NAN (coretype_of_type t) _.
+ := fun t => @FPCore.opp_nan NAN 
+        (FPCore.fprec (coretype_of_type t))
+        (FPCore.femax (coretype_of_type t)) (FPCore.fprec_gt_one (coretype_of_type t)).
 
 Definition    sqrt_nan {NAN: Nans}:
       forall ty : type,
         binary_float (fprec ty) (femax ty) ->
         nan_payload (fprec ty) (femax ty)
- := fun t => @FPCore.sqrt_nan NAN (coretype_of_type t) _.
+ := fun t => @FPCore.sqrt_nan NAN 
+        (FPCore.fprec (coretype_of_type t))
+        (FPCore.femax (coretype_of_type t)) (FPCore.fprec_gt_one (coretype_of_type t)).
 
 Definition    fma_nan {NAN: Nans}:
       forall ty : type,
@@ -187,7 +204,11 @@ Definition    fma_nan {NAN: Nans}:
         binary_float (fprec ty) (femax ty) ->
         binary_float (fprec ty) (femax ty) ->
         nan_payload (fprec ty) (femax ty)
- := fun t => @FPCore.fma_nan NAN (coretype_of_type t) _.
+ := fun t => @FPCore.fma_nan NAN 
+        (FPCore.fprec (coretype_of_type t))
+        (FPCore.femax (coretype_of_type t)) (FPCore.fprec_gt_one (coretype_of_type t)).
+
+*)
 
 Lemma fprec_gt_one ty:
   (1 < fprec ty)%Z.
@@ -202,6 +223,7 @@ Proof.
   lia.
 Qed.
 
+(*
 
 Corollary any_nan ty: nan_payload (fprec ty) (femax ty).
 Proof.
@@ -214,13 +236,13 @@ Proof.
   exists (Binary.B754_nan (fprec ty) (femax ty) false 1 H).
   reflexivity.
 Defined.
-
+*)
 
 Definition FT2R {t: type} : ftype t -> R := B2R (fprec t) (femax t).
 
-Definition BFMA {NAN: Nans} {t: type} : forall (x y z: ftype t), ftype t :=
+Definition BFMA {NAN: FPCore.Nans} {t: type} : forall (x y z: ftype t), ftype t :=
     Binary.Bfma (fprec t) (femax t) (fprec_gt_0 t)
-      (fprec_lt_femax t) (fma_nan t) BinarySingleNaN.mode_NE.
+      (fprec_lt_femax t) (FPCore.fma_nan (fprec t) (femax t) (fprec_gt_one t)) BinarySingleNaN.mode_NE.
 
 (* see https://coq.zulipchat.com/#narrow/stream/237977-Coq-users/topic/RelationPairs.20rewriting.20really.20slow *)
 Global Instance proper_pair1: forall A B RA1 RA2 RB1 RB2 (RA : relation A) (RB : relation B),
@@ -387,7 +409,7 @@ Add Parametric Relation {t: type}: (ftype t) (@strict_feq t)
  (* See https://coq.zulipchat.com/#narrow/stream/237977-Coq-users/topic/rewriting.20with.20PERs *)
     (lazymatch R with respectful _ _ => fail | _ => red; auto with nocore typeclass_instances end)    : typeclass_instances.
 
-Add Parametric Morphism {NAN: Nans}{t: type} : BFMA
+Add Parametric Morphism {NAN: FPCore.Nans}{t: type} : BFMA
  with signature (@feq t) ==> feq ==> feq ==> feq
   as BFMA_mor.
 Proof.
@@ -451,37 +473,46 @@ Definition adapt_unop_nan
 *)
   
 Definition BINOP (op: ltac:( let t := type of Bplus in exact t ) ) 
-   (op_nan: forall ty : type,
-       binary_float (fprec ty) (femax ty) ->
-       binary_float (fprec ty) (femax ty) ->
-       nan_payload (fprec ty) (femax ty))
+   (op_nan: forall prec emax,
+       (1<prec)%Z ->
+       binary_float prec emax ->
+       binary_float prec emax ->
+       nan_payload prec emax)
     ty 
     : ftype ty -> ftype ty -> ftype ty 
-    := op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (op_nan ty)
+    := op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (op_nan (fprec ty) (femax ty) (fprec_gt_one ty))
       BinarySingleNaN.mode_NE.
 
 Section WITHNANS.
-Context {NANS: Nans}.
+Context {NANS: FPCore.Nans}.
 
-Definition BPLUS := BINOP Bplus plus_nan.
-Definition BMINUS := BINOP Bminus plus_nan. (* NOTE: must be same as the one used for plus *)
+Definition BPLUS := BINOP Bplus FPCore.plus_nan.
+Definition BMINUS := BINOP Bminus FPCore.plus_nan. (* NOTE: must be same as the one used for plus *)
 
-Definition BMULT := BINOP Bmult mult_nan.
-Definition BDIV := BINOP Bdiv div_nan.
-Definition BABS {ty} := Babs _ (femax ty) (abs_nan ty).
-Definition BOPP {ty} := Bopp _ (femax ty) (opp_nan ty).
+Definition BMULT := BINOP Bmult FPCore.mult_nan.
+Definition BABS {ty} := Babs _ (femax ty) (FPCore.abs_nan (fprec ty) (femax ty) (fprec_gt_one ty)).
+Definition BDIV := BINOP Bdiv FPCore.div_nan.
+Definition BOPP {ty} := Bopp _ (femax ty) (FPCore.opp_nan (fprec ty) (femax ty) (fprec_gt_one ty)).
 
-Definition UNOP (op: ltac:( let t := type of Bsqrt in exact t ) ) op_nan ty 
+Definition UNOP (op: ltac:( let t := type of Bsqrt in exact t ) ) 
+
+   (op_nan: forall prec emax,
+       (1<prec)%Z ->
+       binary_float prec emax ->
+       nan_payload prec emax)
+      ty 
     : ftype ty -> ftype ty
-    := op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (op_nan ty) BinarySingleNaN.mode_NE.
+    := op (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) (op_nan (fprec ty) (femax ty) (fprec_gt_one ty)) 
+                BinarySingleNaN.mode_NE.
 
-Definition BSQRT :=  UNOP Bsqrt sqrt_nan.
+Definition BSQRT :=  UNOP Bsqrt FPCore.sqrt_nan.
 
 Definition cast (tto: type) {tfrom: type} (f: ftype tfrom): ftype tto :=
   match type_eq_dec tfrom tto with
     | left r => eq_rect _ _ f _ r
     | _ => Bconv (fprec tfrom) (femax tfrom) (fprec tto) (femax tto)
-                        (fprec_gt_0 _) (fprec_lt_femax _) (conv_nan _ _) BinarySingleNaN.mode_NE f
+                        (fprec_gt_0 _) (fprec_lt_femax _) 
+                 (FPCore.conv_nan  (fprec tfrom) (femax tfrom) (fprec tto) (femax tto) (fprec_gt_one tto)) BinarySingleNaN.mode_NE f
   end.
 
 End WITHNANS.
@@ -534,7 +565,7 @@ Definition Zconst (t: type) (i: Z) : ftype t :=
     BofZ (fprec t) (femax t) (Pos2Z.is_pos (fprecp t)) (fprec_lt_femax t) i.
 
 Lemma BPLUS_BOPP_diag: 
-  forall {NAN: Nans} {t} (x: ftype t), finite x -> BPLUS x (BOPP x) = Zconst t 0.
+  forall {NAN: FPCore.Nans} {t} (x: ftype t), finite x -> BPLUS x (BOPP x) = Zconst t 0.
 Proof.
 intros.
 destruct x,s; inv H; try reflexivity;
@@ -557,7 +588,7 @@ inv H.
 constructor; auto.
 Qed.
 
-Lemma BFMA_zero1: forall {NAN: Nans} {t} y s, 
+Lemma BFMA_zero1: forall {NAN: FPCore.Nans} {t} y s, 
   strict_feq y y ->
   feq (BFMA (Zconst t 0) y s) s.
 Proof.
@@ -569,7 +600,7 @@ unfold BFMA, BPLUS, BINOP in *.
 destruct y, s; try discriminate; simpl; auto.
 Qed.
 
-Lemma BFMA_zero2: forall  {NAN: Nans}{t} x s, 
+Lemma BFMA_zero2: forall  {NAN: FPCore.Nans}{t} x s, 
   strict_feq x x ->
   feq (BFMA x (Zconst t 0) s) s.
 Proof.
@@ -581,14 +612,14 @@ unfold BFMA, BPLUS, BINOP in *.
 destruct x, s; try discriminate; simpl; auto.
 Qed.
 
-Lemma BPLUS_0_l: forall  {NAN: Nans} {t} x, finite x -> 
+Lemma BPLUS_0_l: forall  {NAN: FPCore.Nans} {t} x, finite x -> 
       feq (BPLUS (Zconst t 0) x) x.
 Proof.
   intros. destruct x; try contradiction;
  destruct s; simpl; auto.
 Qed.
 
-Lemma BPLUS_0_r: forall {NAN: Nans} {t} x, finite x -> 
+Lemma BPLUS_0_r: forall {NAN: FPCore.Nans} {t} x, finite x -> 
       feq (BPLUS x (Zconst t 0)) x.
 Proof.
   intros. destruct x; try contradiction;
@@ -601,7 +632,7 @@ intros; apply I.
 Qed.
 
 Lemma BMULT_congr:
- forall  {NAN: Nans}{t} (x x' y y': ftype t), feq x x' -> feq y y' -> 
+ forall  {NAN: FPCore.Nans}{t} (x x' y y': ftype t), feq x x' -> feq y y' -> 
    feq (BMULT x y) (BMULT x' y').
 Proof.
 intros.
@@ -612,7 +643,7 @@ apply feq_refl.
 Qed.
 
 Lemma BMINUS_congr:
- forall  {NAN: Nans}{t} (x x' y y': ftype t), feq x x' -> feq y y' -> 
+ forall  {NAN: FPCore.Nans}{t} (x x' y y': ftype t), feq x x' -> feq y y' -> 
    feq (BMINUS x y) (BMINUS x' y').
 Proof.
 intros.
@@ -652,7 +683,7 @@ Qed.
 #[export] Hint Resolve Forall2_subrelation: core.
 
 Lemma BFMA_xx_mor:
- forall  {NAN: Nans}{t} (x x' s s': ftype t), 
+ forall  {NAN: FPCore.Nans}{t} (x x' s s': ftype t), 
   feq x x' -> 
   feq s s' ->
   feq (BFMA x x s) (BFMA x' x' s').
@@ -686,7 +717,7 @@ Proof.
  destruct y; inv H0. constructor. constructor; auto.
 Qed.
 
-Lemma FMA_one: forall {NAN: Nans}{t} (x y: ftype t),
+Lemma FMA_one: forall {NAN: FPCore.Nans}{t} (x y: ftype t),
   feq (BFMA x y (Zconst t 0)) (BMULT x y).
 Proof.
 unfold BFMA, BMULT, BINOP.
@@ -739,7 +770,7 @@ intros.
 destruct x,y; inv H; constructor; auto.
 Qed.
 
-Lemma BFMA_finite_e {NAN: Nans} {t: type}:
+Lemma BFMA_finite_e {NAN: FPCore.Nans} {t: type}:
  forall x y z : ftype t,
  finite (BFMA x y z) ->
  finite x /\ finite y /\ finite z.
@@ -777,7 +808,7 @@ rewrite <- H; auto. apply IHForall2; auto. rewrite H; auto.
 apply IHForall2; auto.
 Qed.
 
-Add Parametric Morphism {NAN: Nans}{t}: (@BPLUS NAN t)
+Add Parametric Morphism {NAN: FPCore.Nans}{t}: (@BPLUS NAN t)
  with signature feq ==> feq ==> feq
  as BPLUS_mor.
 Proof.
@@ -790,7 +821,7 @@ repeat proof_irr;
 try constructor; auto.
 Qed.
 
-Add Parametric Morphism {NAN: Nans}{t}: (@BMINUS NAN t)
+Add Parametric Morphism {NAN: FPCore.Nans}{t}: (@BMINUS NAN t)
  with signature feq ==> feq ==> feq
  as BMINUS_mor.
 Proof.
@@ -803,7 +834,7 @@ repeat proof_irr;
 try constructor; auto.
 Qed.
 
-Add Parametric Morphism {NAN: Nans}{t}: (@BMULT NAN t)
+Add Parametric Morphism {NAN: FPCore.Nans}{t}: (@BMULT NAN t)
  with signature feq ==> feq ==> feq
  as BMULT_mor.
 Proof.
@@ -816,7 +847,7 @@ repeat proof_irr;
 try constructor; auto.
 Qed.
 
-Add Parametric Morphism {NAN: Nans}{t}: (@BDIV NAN t)
+Add Parametric Morphism {NAN: FPCore.Nans}{t}: (@BDIV NAN t)
  with signature feq ==> strict_feq ==> feq
  as BDIV_mor.
 Proof.
@@ -884,10 +915,10 @@ Inductive type_coretype: forall [t: type], ftype t -> FPCore.ftype (coretype_of_
       type_coretype (@Zconst t z) (@FPCore.Zconst (coretype_of_type t) (STDtype t) z)
 | TC_BINOP: forall op NAN t 
         x x' (TCx: type_coretype x x') y y' (TCy: type_coretype y y'),
-        type_coretype (@BINOP op NAN t x y) (@FPCore.BINOP op (coreNAN2 NAN) (coretype_of_type t) (STDtype t) x' y')
+        type_coretype (@BINOP op NAN t x y) (@FPCore.BINOP op NAN (coretype_of_type t) (STDtype t) x' y')
 | TC_UNOP: forall op NAN t x x',
         type_coretype x x' ->
-        type_coretype (@UNOP op NAN t x) (@FPCore.UNOP op (coreNAN1 NAN) (coretype_of_type t) (STDtype t) x')
+        type_coretype (@UNOP op NAN t x) (@FPCore.UNOP op NAN (coretype_of_type t) (STDtype t) x')
 | TC_cast: forall NAN t1 t2  x x',
       type_coretype  x x' ->
       type_coretype (@cast NAN t1 t2 x) 
@@ -939,6 +970,7 @@ unfold coretype_of_type, type_of_coretype;
 destruct t; simpl.
 replace (ZLT_intro _ _ _) with (fprec_lt_femax_bool0) by apply proof_irr.
 auto.
+f_equal. apply proof_irr.
 apply JMeq_eq; auto.
 apply JMeq_eq; auto.
 -
@@ -951,6 +983,7 @@ unfold coretype_of_type, type_of_coretype;
 destruct t; simpl.
 replace (ZLT_intro _ _ _) with (fprec_lt_femax_bool0) by apply proof_irr.
 auto.
+f_equal. apply proof_irr.
 apply JMeq_eq; auto.
 -
 unfold cast, FPCore.cast.
@@ -983,14 +1016,16 @@ destruct (FPCore.type_eq_dec _ _ _ _).
   unfold coretype_of_type in *.
   simpl in *. clear H.
   f_equal. apply proof_irr.
+  simpl.
+  f_equal. apply proof_irr.
 Qed. 
 
 Module Test.
 
-Definition foo {Nans: Nans} (x: ftype Tsingle) :=
+Definition foo {Nans: FPCore.Nans} (x: ftype Tsingle) :=
    BPLUS (cast Tdouble x) (Zconst Tdouble 8).
 
-Definition foo' {Nans: Nans} (x: FPCore.ftype FPCore.Tsingle) :=
+Definition foo' {Nans: FPCore.Nans} (x: FPCore.ftype FPCore.Tsingle) :=
    @FPCore.BPLUS Nans _ FPCore.is_standard_Tdouble 
       (@FPCore.cast Nans _ _ FPCore.is_standard_Tdouble FPCore.is_standard_Tsingle x)
       (@FPCore.Zconst FPCore.Tdouble FPCore.is_standard_Tdouble 8).
@@ -1004,7 +1039,7 @@ Proof.
 Qed.
 
 
-Definition corify {NAN: Nans} (x: ftype Tsingle) (x': FPCore.ftype FPCore.Tsingle):
+Definition corify {NAN: FPCore.Nans} (x: ftype Tsingle) (x': FPCore.ftype FPCore.Tsingle):
    type_coretype x x' ->
    {e' : FPCore.ftype FPCore.Tdouble | JMeq (foo x) e'}.
 Proof.

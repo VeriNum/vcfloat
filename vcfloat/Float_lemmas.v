@@ -31,7 +31,7 @@ Section WITHNANS.
 
 Context {NANS: Nans}.
 
-Definition Bsqrt ty {STD: is_standard ty}:= Bsqrt _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (sqrt_nan ty) BinarySingleNaN.mode_NE.
+Definition Bsqrt ty {STD: is_standard ty}:= Bsqrt _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) (sqrt_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE.
 
 Definition F2 prec emax e  :=
 if Z_lt_le_dec (e+1) (3 - emax)
@@ -368,15 +368,15 @@ Theorem Bdiv_mult_inverse_finite ty {STD: is_standard ty} :
   Binary.is_finite _ _ y = true ->
   Binary.is_finite _ _ z = true ->
   Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
-  Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) BinarySingleNaN.mode_NE x y =
-  Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) BinarySingleNaN.mode_NE x z .
+  Bdiv _ _ _ (fprec_lt_femax ty) (div_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x y =
+  Bmult _ _ _ (fprec_lt_femax ty) (mult_nan  (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x z .
 Proof.
   intros.
   destruct (Bexact_inverse_correct _ _ _ _ _ _ H2) as (A & B & C & D & E).
   assert (HMUL :=Binary.Bmult_correct (fprec ty)  (femax ty) 
-                     (fprec_gt_0 ty) (fprec_lt_femax ty) (mult_nan ty) BinarySingleNaN.mode_NE x z).
+                     (fprec_gt_0 ty) (fprec_lt_femax ty) (mult_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x z).
   assert (HDIV := Binary.Bdiv_correct  (fprec ty)  (femax ty)  
-                    (fprec_gt_0 ty) (fprec_lt_femax ty) (div_nan ty) BinarySingleNaN.mode_NE x y D).
+                    (fprec_gt_0 ty) (fprec_lt_femax ty) (div_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x y D).
  unfold Rdiv in HDIV.
  rewrite <- C in HDIV.
  destruct Rlt_bool.
@@ -385,20 +385,20 @@ Proof.
   destruct HDIV as (S & T & U).
   assert (Binary.is_finite  (fprec ty) (femax ty)
                (Binary.Bmult (fprec ty) (femax ty)  (fprec_gt_0 ty) (fprec_lt_femax ty) 
-                   (mult_nan ty) BinarySingleNaN.mode_NE x z) = true) 
+                   (mult_nan  (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x z) = true) 
    by  (rewrite Q; auto;  rewrite ?andb_true_iff; auto).
   assert (Binary.is_finite (fprec ty) (femax ty)
               (Binary.Bdiv (fprec ty) (femax ty)  (fprec_gt_0 ty) (fprec_lt_femax ty) 
-                   (div_nan ty) BinarySingleNaN.mode_NE x y) = true)
+                   (div_nan  (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x y) = true)
     by (rewrite T; auto).
   apply Binary.B2R_Bsign_inj; auto;
   rewrite ?S, ?R, ?U, ?E; auto; apply is_finite_not_is_nan; auto.
 - 
   pose proof Binary.B2FF_inj _ _
        (Binary.Bdiv (fprec ty) (femax ty) (fprec_gt_0 ty) 
-            (fprec_lt_femax ty) (div_nan ty) BinarySingleNaN.mode_NE x y)
+            (fprec_lt_femax ty) (div_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x y)
       (Binary.Bmult (fprec ty) (femax ty) (fprec_gt_0 ty) 
-            (fprec_lt_femax ty) (mult_nan ty) BinarySingleNaN.mode_NE x z).
+            (fprec_lt_femax ty) (mult_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x z).
   rewrite E in HMUL.
   rewrite HMUL, HDIV in *; auto.
 Qed.
@@ -409,15 +409,15 @@ Theorem Bdiv_mult_inverse_nan ty {STD: is_standard ty}:
   Binary.is_finite _ _ y = true ->
   Binary.is_finite _ _ z = true ->
   Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
-  Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) BinarySingleNaN.mode_NE x y =
-  Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) BinarySingleNaN.mode_NE x z .
+  Bdiv _ _ _ (fprec_lt_femax ty) (div_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x y =
+  Bmult _ _ _ (fprec_lt_femax ty) (mult_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x z .
 Proof.
   intros.
   destruct (Bexact_inverse_correct _ _ _ _ _ _ H2) as (A & B & C & D & E).
   assert (HMUL :=Binary.Bmult_correct (fprec ty)  (femax ty) 
-                     (fprec_gt_0 ty) (fprec_lt_femax ty) (mult_nan ty) BinarySingleNaN.mode_NE x z).
+                     (fprec_gt_0 ty) (fprec_lt_femax ty) (mult_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x z).
   assert (HDIV := Binary.Bdiv_correct  (fprec ty)  (femax ty)  
-                    (fprec_gt_0 ty) (fprec_lt_femax ty) (div_nan ty) BinarySingleNaN.mode_NE x y D).
+                    (fprec_gt_0 ty) (fprec_lt_femax ty) (div_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x y D).
  unfold Rdiv in HDIV.
  rewrite <- C in HDIV.
  destruct Rlt_bool.
@@ -429,11 +429,11 @@ Proof.
  set (x:= (B754_zero (fprec ty) (femax ty) s)) in *.
  assert (Binary.is_finite  (fprec ty) (femax ty)
                (Binary.Bmult (fprec ty) (femax ty)  (fprec_gt_0 ty) (fprec_lt_femax ty) 
-                   (mult_nan ty) BinarySingleNaN.mode_NE x z) = true) 
+                   (mult_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x z) = true) 
    by  (rewrite Q; auto;  rewrite ?andb_true_iff; auto).
   assert (Binary.is_finite (fprec ty) (femax ty)
               (Binary.Bdiv (fprec ty) (femax ty)  (fprec_gt_0 ty) (fprec_lt_femax ty) 
-                   (div_nan ty) BinarySingleNaN.mode_NE x y) = true)
+                   (div_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x y) = true)
     by (rewrite T; auto).
   apply Binary.B2R_Bsign_inj; auto;
   rewrite ?S, ?R, ?U, ?E; auto; apply is_finite_not_is_nan; auto.
@@ -445,9 +445,9 @@ Proof.
 - 
   pose proof Binary.B2FF_inj _ _
        (Binary.Bdiv (fprec ty) (femax ty) (fprec_gt_0 ty) 
-            (fprec_lt_femax ty) (div_nan ty) BinarySingleNaN.mode_NE x y)
+            (fprec_lt_femax ty) (div_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x y)
       (Binary.Bmult (fprec ty) (femax ty) (fprec_gt_0 ty) 
-            (fprec_lt_femax ty) (mult_nan ty) BinarySingleNaN.mode_NE x z).
+            (fprec_lt_femax ty) (mult_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x z).
   rewrite E in HMUL.
   rewrite HMUL, HDIV in *; auto.
 Qed.
@@ -458,8 +458,8 @@ Theorem Bdiv_mult_inverse_equiv ty {STD: is_standard ty}:
   Binary.is_finite _ _ z = true ->
   Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
   binary_float_equiv
-  (Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) BinarySingleNaN.mode_NE x y) 
-  (Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) BinarySingleNaN.mode_NE x z) .
+  (Bdiv _ _ _ (fprec_lt_femax ty) (div_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x y) 
+  (Bmult _ _ _ (fprec_lt_femax ty) (mult_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x z) .
 Proof.
 intros.
 destruct x.
@@ -473,7 +473,7 @@ destruct x.
  + cbv [Bdiv Bmult Binary.build_nan binary_float_equiv]. reflexivity.
 - apply binary_float_eq_equiv.
    apply Bdiv_mult_inverse_finite; auto.
-Qed.
+Qed.  
 
 Theorem Bdiv_mult_inverse_equiv2 ty {STD: is_standard ty}:
   forall x1 x2 y z: (Binary.binary_float (fprec ty) (femax ty)),
@@ -482,8 +482,8 @@ Theorem Bdiv_mult_inverse_equiv2 ty {STD: is_standard ty}:
   Binary.is_finite _ _ z = true ->
   Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
   binary_float_equiv
-  (Bdiv _ _ _ (fprec_lt_femax ty) (div_nan ty) BinarySingleNaN.mode_NE x1 y) 
-  (Bmult _ _ _ (fprec_lt_femax ty) (mult_nan ty) BinarySingleNaN.mode_NE x2 z) .
+  (Bdiv _ _ _ (fprec_lt_femax ty) (div_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x1 y) 
+  (Bmult _ _ _ (fprec_lt_femax ty) (mult_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x2 z) .
 Proof.
 intros.
 assert (binary_float_equiv x1 x2) by apply H.

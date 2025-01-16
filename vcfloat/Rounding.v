@@ -2021,17 +2021,17 @@ Proof.
 
   {
     (* plus *)
-    generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
+    generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE _ _ F1 F2).
     change (SpecFloat.fexp _ _) with (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
     change (BinarySingleNaN.round_mode _) with ZnearestE.
     rewrite <- !FT2R_ftype_of_float, !ftype_of_float_of_ftype.
     rewrite Raux.Rlt_bool_true by lra.
     destruct 1 as (? & ? & _).
     unfold BPLUS, BINOP; rewrite float_of_ftype_of_float; auto.
-  }
+  }  
   {
     (* minus *)
-    generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
+    generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE _ _ F1 F2).
     change (SpecFloat.fexp _ _) with (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
     change (BinarySingleNaN.round_mode _) with ZnearestE.
     rewrite <- !FT2R_ftype_of_float, !ftype_of_float_of_ftype.
@@ -2041,7 +2041,7 @@ Proof.
   }
   {
     (* mult *)
-    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (float_of_ftype e1) (float_of_ftype e2)).
+    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE (float_of_ftype e1) (float_of_ftype e2)).
     change (SpecFloat.fexp _ _) with (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
     change (BinarySingleNaN.round_mode _) with ZnearestE.
     rewrite <- !FT2R_ftype_of_float, !ftype_of_float_of_ftype.
@@ -2052,7 +2052,7 @@ Proof.
     unfold BMULT, BINOP; rewrite float_of_ftype_of_float; auto.
   }
   (* div *)
-  generalize (fun K => Bdiv_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (div_nan _) BinarySingleNaN.mode_NE (float_of_ftype e1) (float_of_ftype e2) K).
+  generalize (fun K => Bdiv_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (div_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE (float_of_ftype e1) (float_of_ftype e2) K).
     change (SpecFloat.fexp _ _) with (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
     change (BinarySingleNaN.round_mode _) with ZnearestE.
     rewrite <- !FT2R_ftype_of_float, !ftype_of_float_of_ftype.
@@ -2099,7 +2099,7 @@ Proof.
   repeat rewrite B2R_correct in *.
     cbn -[Zminus] in * |- * ;
     rewrite V1 in * |- *.
-    generalize (Bsqrt_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (sqrt_nan _) 
+    generalize (Bsqrt_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (sqrt_nan _ _ (fprec_gt_one _)) 
           BinarySingleNaN.mode_NE (float_of_ftype e1)).
     destruct 1 as (? & ? & _).
     unfold BSQRT, UNOP.
@@ -2326,7 +2326,7 @@ Lemma cast_standard: forall NAN tto tfrom STDto STDfrom f,
     | left r => eq_rect _ _ f _ r
     | _ =>  ftype_of_float
            (Bconv (fprec tfrom) (femax tfrom) (fprec tto) (femax tto)
-                        (fprec_gt_0 _) (fprec_lt_femax _) (conv_nan _ _) 
+                        (fprec_gt_0 _) (fprec_lt_femax _) (conv_nan _ _ _ _ (fprec_gt_one _)) 
                  BinarySingleNaN.mode_NE (float_of_ftype f))
   end.
 Proof.
@@ -2644,7 +2644,7 @@ Proof.
         specialize (H1 _ EB2).
         specialize (H1' _ EB2).
         rewrite is_finite_Binary in F1,F2.
-        generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
+        generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE _ _ F1 F2).
         intro K.
         change ( Z.pos (fprecp ty)) with (fprec ty) in K.
         rewrite !B2R_float_of_ftype in *.
@@ -2731,7 +2731,7 @@ Proof.
           destruct minus.
           ++
             unfold BMINUS, BINOP.
-            generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
+            generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE _ _ F1 F2).
             rewrite ZERO.
             rewrite Rminus_0_l.
             rewrite Generic_fmt.round_opp.
@@ -2749,7 +2749,7 @@ Proof.
                    is_finite_Binary, float_of_ftype_of_float, BV.
             intuition auto with *.
           ++
-            generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
+            generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE _ _ F1 F2).
             rewrite ZERO.
             rewrite Rplus_0_l.
             rewrite Generic_fmt.round_generic
@@ -2771,7 +2771,7 @@ Proof.
           rewrite is_finite_Binary in F1,F2|-*.
           destruct minus.
           {
-          generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
+          generalize (Bminus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE _ _ F1 F2).
           rewrite ZERO.
           rewrite Rminus_0_r.
           rewrite Generic_fmt.round_generic; try typeclasses eauto.
@@ -2789,7 +2789,7 @@ Proof.
           }
           apply generic_format_B2R.
          }
-         generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _) BinarySingleNaN.mode_NE _ _ F1 F2).
+         generalize (Bplus_correct _ _  (fprec_gt_0 _) (fprec_lt_femax _) (plus_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE _ _ F1 F2).
          rewrite ZERO.
          rewrite Rplus_0_r.
          rewrite Generic_fmt.round_generic; try typeclasses eauto.
@@ -2945,8 +2945,8 @@ Proof.
     rewrite Z.leb_le in H.
     apply center_Z_correct in H.
     assert (B2_FIN := B2_finite ty (Z.neg pow) (proj2 H)).
-    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) (float_of_ftype (fval env e))).
-    generalize (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) (float_of_ftype (fval env e))).
+    generalize (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) (float_of_ftype (fval env e))).
+    generalize (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) (float_of_ftype (fval env e))).
     rewrite Rmult_comm.
     change (SpecFloat.fexp (fprec ty) (femax ty))
      with  (FLT_exp (3 - femax ty - fprec ty) (fprec ty)).
@@ -3031,9 +3031,9 @@ Proof.
       generalize (B2_finite ty (Z.of_N pow) (proj2 H)).
       intro B2_FIN.
       generalize
-          (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.of_N pow)) (float_of_ftype (fval env e))).
+          (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE (B2 ty (Z.of_N pow)) (float_of_ftype (fval env e))).
       generalize
-         (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _) BinarySingleNaN.mode_NE (B2 ty (Z.of_N pow)) (float_of_ftype (fval env e))).
+         (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE (B2 ty (Z.of_N pow)) (float_of_ftype (fval env e))).
       rewrite Rmult_comm.
       replace (Z.of_N (pow + 1)) with (Z.of_N pow + 1)%Z in H by (rewrite N2Z.inj_add; simpl; ring).
       specialize (H1 _ (or_introl _ (refl_equal _)) _ EB1).
@@ -3119,7 +3119,7 @@ Proof.
     rewrite is_finite_Binary in F1.
     generalize ((fun J1 =>
                   Bconv_widen_exact _ _ _ _ J1 (fprec_gt_0 _) (fprec_lt_femax _) 
-                        (Z.le_ge _ _ H0) (Z.le_ge _ _ H3) (conv_nan _ _) BinarySingleNaN.mode_NE _ F1) ltac:( typeclasses eauto ) ).
+                        (Z.le_ge _ _ H0) (Z.le_ge _ _ H3) (conv_nan _ _ _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE _ F1) ltac:( typeclasses eauto ) ).
     destruct 1 as (K & L & _).
     symmetry in K.
     rewrite B2R_float_of_ftype, <- V1 in K.
@@ -3162,7 +3162,7 @@ Proof.
   destruct K as (errors2 & E & R & EB).
   rewrite V1 in R.
   rewrite is_finite_Binary in F1.
-  generalize (Bconv_correct _ _ _ _ (fprec_gt_0 _) (fprec_lt_femax ty) (conv_nan _ _) BinarySingleNaN.mode_NE _ F1).
+  generalize (Bconv_correct _ _ _ _ (fprec_gt_0 _) (fprec_lt_femax ty) (conv_nan _ _ _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE _ F1).
   unfold BinarySingleNaN.round_mode.
   rewrite !B2R_float_of_ftype, <- R.
   rewrite Raux.Rlt_bool_true.
