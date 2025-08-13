@@ -19,13 +19,13 @@ Definition kepler1_bmap_list := [Build_varinfo Tdouble _x1 (4) (636e-2);
 Definition kepler1_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list kepler1_bmap_list) in exact z).
 
-Definition kepler1 (x1 : ftype Tdouble) (x2 : ftype Tdouble) (x3 : ftype Tdouble) (x4 : ftype Tdouble) := 
+Definition kepler1 (x1 : ftype Tdouble) (x2 : ftype Tdouble) (x3 : ftype Tdouble) (x4 : ftype Tdouble) :=
   cast Tdouble (((((((((x1 * x4)%F64 * ((((-x1) + x2)%F64 + x3)%F64 - x4)%F64)%F64 + (x2 * (((x1 - x2)%F64 + x3)%F64 + x4)%F64)%F64)%F64 + (x3 * (((x1 + x2)%F64 - x3)%F64 + x4)%F64)%F64)%F64 - ((x2 * x3)%F64 * x4)%F64)%F64 - (x1 * x3)%F64)%F64 - (x1 * x2)%F64)%F64 - x4)%F64).
 
-Definition kepler1_expr := 
+Definition kepler1_expr :=
  ltac:(let e' :=  HO_reify_float_expr constr:([_x1;_x2;_x3;_x4]) kepler1 in exact e').
 
-Derive kepler1_b 
+Derive kepler1_b
 SuchThat (forall vmap, prove_roundoff_bound kepler1_bmap vmap kepler1_expr kepler1_b)
 As kepler1_bound.
 Proof.

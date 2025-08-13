@@ -6,7 +6,7 @@ Require Import Interval.Tactic.
 From vcfloat Require Export RAux.
 From Flocq Require Import Binary Bits Core.
 From vcfloat Require Import IEEE754_extra. (*  lib.Floats. *)
-Require compcert.lib.Maps.  
+Require compcert.lib.Maps.
 Require Coq.MSets.MSetAVL.
 Require vcfloat.Fprop_absolute.
 Require Import vcfloat.Float_lemmas.
@@ -83,7 +83,7 @@ Definition collection := sig collection_ok.
 Existing Class collection.
 
 Definition incollection {coll: collection} t : Prop :=
- match nonstd t with 
+ match nonstd t with
  | Some _ => In t (proj1_sig coll)
  | _ => True
  end.
@@ -92,7 +92,7 @@ Existing Class incollection.
 Unset Elimination Schemes.
 
 (* See https://coq.zulipchat.com/#narrow/stream/237977-Coq-users/topic/Coq.20can't.20recognize.20a.20strictly.20positive.20occurrence
-   for a discussion of Func1,Func2, etc. *)   
+   for a discussion of Func1,Func2, etc. *)
 Inductive expr `{coll: collection} (ty: type) : Type :=
 | Const (STD: is_standard ty) (f: Binary.binary_float (fprec ty) (femax ty))
 | Var (IN: incollection ty) (i: V)
@@ -130,7 +130,7 @@ refine (
   | @Binop _ _ STD b e1 e2 => H1 ty STD b e1 (F ty e1) e2 (F ty e2)
   | @Unop _ _ STD u e1 => H2 ty STD u e1 (F ty e1)
   | Cast _ fromty STDto STDfrom knowl e1 => H3 ty fromty STDto STDfrom knowl e1 (F fromty e1)
-  | Func _ f5 args => _ 
+  | Func _ f5 args => _
     end) ty e).
 apply H4.
 clear - F f5.
@@ -190,7 +190,7 @@ Fixpoint apply_list (l: list R) (f: function_type (map RR' l) R) {struct l} : R.
  apply (apply_list l). apply f. hnf. apply r.
 Defined.
 
-Definition environ {coll: collection} := 
+Definition environ {coll: collection} :=
   forall (ty : type) (IN: incollection ty), FPLang.V -> ftype ty.
 
 Definition env_all_finite `{coll: collection} (env: environ) :=
@@ -204,13 +204,13 @@ Fixpoint rval `{coll: collection} (env: environ) {ty: type} (e: expr ty): R :=
     | Binop b e1 e2 =>  Rop_of_binop b (rval env e1) (rval env e2)
     | Unop b e => Rop_of_unop b (rval env e)
     | Cast _ _  _ _ _ e => rval env e
-    | Func _ ff en => 
+    | Func _ ff en =>
     let fix rval_klist {tys: list type} (l': klist expr tys) (f: function_type (map RR tys) R) {struct l'}: R :=
           match l' in (klist _ l)  return (function_type (map RR l) R -> R)
           with
           | Knil => fun f0 => f0
           | Kcons h tl => fun f0 => rval_klist tl (f0 (rval env h))
-          end f 
+          end f
           in rval_klist en (ff_realfunc ff)
   end.
 
@@ -228,7 +228,7 @@ Context {NANS: Nans}.
 
 Definition unop_valid ty (u: unop): bool :=
   match u with
-    | Exact1 (Shift p _) => 
+    | Exact1 (Shift p _) =>
       Z.leb 0 (center_Z (3 - femax ty) (Z.of_N p + 1) (femax ty))
     | Rounded1 (InvShift p _) _ =>
       Z.leb 0 (center_Z (3 - (femax ty)) (- Z.pos p + 1) (femax ty))
@@ -242,24 +242,24 @@ Fixpoint expr_valid `{coll: collection} {ty} (e: expr ty): Prop :=
     | Binop _ e1 e2 => expr_valid e1 /\ expr_valid e2
     | Unop u e => unop_valid ty u = true /\ expr_valid e
     | Cast _ _  _ _ _ e => expr_valid e
-    | Func _ ff en => 
+    | Func _ ff en =>
        let fix expr_klist_valid {tys: list type} (es: klist expr tys) : Prop :=
         match es with
-        | Knil => True 
-        | Kcons h tl => expr_valid h /\ expr_klist_valid tl 
+        | Knil => True
+        | Kcons h tl => expr_valid h /\ expr_klist_valid tl
        end
        in expr_klist_valid en
   end.
 
-Definition expr_klist_valid `{coll: collection} : 
+Definition expr_klist_valid `{coll: collection} :
        forall {tys: list type} (es: klist expr tys), Prop :=
   fix expr_klist_valid {tys: list type} (es: klist expr tys) : Prop :=
      match es with
-        | Knil => True 
-        | Kcons h tl => expr_valid h /\ expr_klist_valid tl 
+        | Knil => True
+        | Kcons h tl => expr_valid h /\ expr_klist_valid tl
        end.
 
-Definition fop_of_rounded_binop (r: rounded_binop): 
+Definition fop_of_rounded_binop (r: rounded_binop):
   forall ty (STD: is_standard ty),
     ftype ty -> ftype ty -> ftype ty
   :=
@@ -280,20 +280,20 @@ Definition fop_of_binop (r: binop):
       | PlusZero minus zero_left => if minus then @BMINUS _ else @BPLUS _
     end.
 
-Definition fop_of_rounded_unop (r: rounded_unop): 
+Definition fop_of_rounded_unop (r: rounded_unop):
   forall ty (STD: is_standard ty),
     ftype ty -> ftype ty
   :=
     match r with
       | SQRT => @BSQRT _
-      | InvShift n b => 
+      | InvShift n b =>
         if b
         then (fun ty STD x => @BMULT _ ty _ x (ftype_of_float (B2 ty (- Z.pos n))))
         else (fun ty STD => @BMULT _ ty _ (ftype_of_float (B2 ty (- Z.pos n))))
     end.
 
 Definition fop_of_exact_unop (r: exact_unop)
-  := 
+  :=
     match r with
       | Abs => @BABS _
       | Opp => @BOPP _
@@ -324,7 +324,7 @@ Fixpoint fval `{coll: collection} (env: environ) {ty} (e: expr ty) {struct e}: f
           with
           | Knil => fun f0 => f0
           | Kcons h tl => fun f0 => fval_klist tl (f0 (fval env h))
-          end f 
+          end f
           in fval_klist en (ff_func (ff_ff ff))
       end.
 
@@ -378,8 +378,8 @@ unfold Bconv.
 destruct x1; try discriminate; auto.
 Qed.
 
-Lemma InvShift_accuracy: 
- forall (pow : positive) (ltr : bool) (ty : type) (STD: is_standard ty) x 
+Lemma InvShift_accuracy:
+ forall (pow : positive) (ltr : bool) (ty : type) (STD: is_standard ty) x
   (F1 : is_finite x = true),
  Rabs (FT2R (fop_of_rounded_unop (InvShift pow ltr) ty STD x) -
       F2R radix2 (B2F (B2 ty (Z.neg pow))) * FT2R x) <=
@@ -410,10 +410,10 @@ destruct ltr.
     pose proof (bpow_gt_0 radix2 (3 - femax ty - fprec ty)).
     set (j := bpow radix2 _) in *. clearbody j.
     destruct x; try discriminate; simpl;
-     rewrite ?Rmult_0_l, Rminus_0_r, Rabs_R0; lra.     
+     rewrite ?Rmult_0_l, Rminus_0_r, Rabs_R0; lra.
   +
     assert (H2 := Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) x).
-    rewrite Rmult_comm in H2. 
+    rewrite Rmult_comm in H2.
     unfold BMULT, BINOP.
      rewrite !float_of_ftype_of_float.
     rewrite !FT2R_ftype_of_float.
@@ -421,13 +421,13 @@ destruct ltr.
     rewrite (B2_correct ty (Z.neg pow) ltac:(lia)) in *.
     replace (Z.neg pow) with (- Z.pos pow)%Z in * |- * by reflexivity.
     match type of H2 with if ?A then _ else _ => assert (H4: A=true) end;
-    [ clear H2 | rewrite H4 in H2; clear H4]. 
+    [ clear H2 | rewrite H4 in H2; clear H4].
   * apply Rlt_bool_true.
    apply  InvShift_finite_aux; auto.
   * destruct H2 as [H2 _].
     rewrite H2. clear H2.
     apply InvShift_accuracy_aux; auto.
-- 
+-
    destruct  (Z_lt_le_dec ((Z.neg pow) + 1) (3 - femax ty)).
   + rewrite (B2_zero ty (Z.neg pow)) in * by auto.
      simpl B2R. clear H l.
@@ -436,10 +436,10 @@ destruct ltr.
     rewrite !FT2R_ftype_of_float.
     pose proof (bpow_gt_0 radix2 (3 - femax ty - fprec ty)).
     set (j := bpow radix2 _) in *. clearbody j.
-    destruct x; try discriminate; simpl; rewrite ?Rmult_0_l, Rminus_0_r, Rabs_R0; lra.     
+    destruct x; try discriminate; simpl; rewrite ?Rmult_0_l, Rminus_0_r, Rabs_R0; lra.
   +
     assert (H2 := Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) x).
-    rewrite Rmult_comm in H2. 
+    rewrite Rmult_comm in H2.
     unfold BMULT, BINOP.
      rewrite !float_of_ftype_of_float.
     rewrite !FT2R_ftype_of_float.
@@ -447,7 +447,7 @@ destruct ltr.
     rewrite (B2_correct ty (Z.neg pow) ltac:(lia)) in *.
     replace (Z.neg pow) with (- Z.pos pow)%Z in * |- * by reflexivity.
     match type of H2 with if ?A then _ else _ => assert (H4: A=true) end;
-    [ clear H2 | rewrite H4 in H2; clear H4]. 
+    [ clear H2 | rewrite H4 in H2; clear H4].
   * apply Rlt_bool_true.
    apply  InvShift_finite_aux; auto.
   * destruct H2 as [H2 _].
@@ -455,8 +455,8 @@ destruct ltr.
     apply InvShift_accuracy_aux; auto.
 Qed.
 
-Lemma InvShift_finite: 
- forall (pow : positive) (ltr : bool) (ty : type) (STD: is_standard ty) (x : ftype ty) 
+Lemma InvShift_finite:
+ forall (pow : positive) (ltr : bool) (ty : type) (STD: is_standard ty) (x : ftype ty)
   (F1 : is_finite x = true),
  is_finite (fop_of_rounded_unop (InvShift pow ltr) ty STD x) = true.
 Proof.
@@ -472,24 +472,24 @@ destruct ltr; destruct  (Z_lt_le_dec ((Z.neg pow) + 1) (3 - femax ty));
   unfold Datatypes.id;
   rewrite is_finite_Binary, !float_of_ftype_of_float.
 - rewrite (B2_zero _ _ l); unfold Bmult. destruct (float_of_ftype x); auto.
-- 
+-
     pose proof (Bmult_correct_comm _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) (float_of_ftype x)).
-    rewrite Rmult_comm in H2. 
+    rewrite Rmult_comm in H2.
     pose proof (B2_correct ty (Z.neg pow) ltac:(lia)).
    rewrite H3 in H2.
-    replace (Z.neg pow) with (- Z.pos pow)%Z in * |- * by reflexivity.   
+    replace (Z.neg pow) with (- Z.pos pow)%Z in * |- * by reflexivity.
     rewrite F1, H1, Raux.bpow_opp in H2. simpl andb in H2.
     match type of H2 with if ?A then _ else _ => assert (H4: A=true) end;
     [ clear H2 | rewrite H4 in H2; apply H2].
      apply Rlt_bool_true.
    apply  InvShift_finite_aux; auto.
 - rewrite (B2_zero _ _ l); unfold Bmult. destruct (float_of_ftype x); auto.
-- 
+-
     pose proof (Bmult_correct _ _ (fprec_gt_0 _) (fprec_lt_femax _) (mult_nan _ _ (fprec_gt_one _)) BinarySingleNaN.mode_NE (B2 ty (Z.neg pow)) (float_of_ftype x)).
-    rewrite Rmult_comm in H2. 
+    rewrite Rmult_comm in H2.
     pose proof (B2_correct ty (Z.neg pow) ltac:(lia)).
    rewrite H3 in H2.
-    replace (Z.neg pow) with (- Z.pos pow)%Z in * |- * by reflexivity.   
+    replace (Z.neg pow) with (- Z.pos pow)%Z in * |- * by reflexivity.
     rewrite F1, H1, Raux.bpow_opp in H2. simpl andb in H2.
     match type of H2 with if ?A then _ else _ => assert (H4: A=true) end;
     [ clear H2 | rewrite H4 in H2; apply H2].

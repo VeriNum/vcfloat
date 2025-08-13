@@ -54,7 +54,7 @@ destruct nonstd; try contradiction.
 hnf in x,y.
 destruct x as [[|]| | |[|]], y as [[|]| | |[|]] ;
 simpl in *;
-unfold Binary.Bcompare; simpl; split; 
+unfold Binary.Bcompare; simpl; split;
  try intros [? [? ?]]; intros; subst;
   auto; try contradiction; try congruence; try discriminate.
 -
@@ -97,7 +97,7 @@ f_equal.
 apply Raux.Rcompare_Eq; auto.
 Qed.
 
-Lemma feq_refl' {t}: forall x: ftype t, feq x x. 
+Lemma feq_refl' {t}: forall x: ftype t, feq x x.
 exact feq_refl.
 Qed.
 
@@ -177,8 +177,8 @@ Lemma test_pair: forall t (a a': ftype t) (b b': list (ftype t)),
   (feq * Forall2 feq)%signature (a,b) (a',b').
 Proof.
 intros.
-rewrite H. 
-rewrite H0. 
+rewrite H.
+rewrite H0.
 reflexivity.
 Abort.  (* no need to save this *)
 
@@ -227,7 +227,7 @@ destruct nonstd; try contradiction.
 hnf in x,y.
 destruct x as [[|]| | |[|]], y as [[|]| | |[|]] ;
 simpl in *;
-unfold Binary.Bcompare; simpl; split; 
+unfold Binary.Bcompare; simpl; split;
  try intros [? [? ?]]; intros; subst;
   auto; try contradiction; try congruence; try discriminate.
 -
@@ -260,7 +260,7 @@ destruct (Pos.compare_cont Eq m m0); try discriminate.
 rewrite H0,H1 by auto; auto.
 Qed.
 
-Local Ltac inv H := inversion H; clear H; subst. 
+Local Ltac inv H := inversion H; clear H; subst.
 
 #[export] Instance subrelation_strict_feq {t: type}: subrelation (@strict_feq t) (@feq t).
 Proof.
@@ -317,7 +317,7 @@ Add Parametric Relation {t: type}: (ftype t) (@strict_feq t)
   transitivity proved by strict_feq_trans
    as strict_feq_rel.
 
-#[export] Hint Extern 100 (Proper ?R ?x) => 
+#[export] Hint Extern 100 (Proper ?R ?x) =>
  (* See https://coq.zulipchat.com/#narrow/stream/237977-Coq-users/topic/rewriting.20with.20PERs *)
     (lazymatch R with respectful _ _ => fail | _ => red; auto with nocore typeclass_instances end)    : typeclass_instances.
 
@@ -360,7 +360,7 @@ all:
 unfold Binary.Bfma, Binary.BSN2B, BinarySingleNaN.Bfma, Binary.B2BSN,
 Operations.Fmult, Operations.Fplus, Operations.Falign;
 destruct (_ + _ <=? _);
-destruct (BinarySingleNaN.binary_normalize _ _ _ _ _ _ _ _); try apply I; 
+destruct (BinarySingleNaN.binary_normalize _ _ _ _ _ _ _ _); try apply I;
  solve [auto].
 Qed.
 
@@ -382,8 +382,8 @@ apply IHn; intros.
 apply H; lia.
 Qed.
 
-Lemma BPLUS_BOPP_diag: 
-  forall {NAN: Nans} {t} {STD: is_standard t} 
+Lemma BPLUS_BOPP_diag:
+  forall {NAN: Nans} {t} {STD: is_standard t}
      (x: ftype t), finite x -> BPLUS x (BOPP x) = Zconst t 0.
 Proof.
 intros.
@@ -408,7 +408,7 @@ inv H.
 constructor; auto.
 Qed.
 
-Lemma BFMA_zero1: forall {NAN: Nans} {t} {STD: is_standard t} y s, 
+Lemma BFMA_zero1: forall {NAN: Nans} {t} {STD: is_standard t} y s,
   strict_feq y y ->
   feq (BFMA (Zconst t 0) y s) s.
 Proof.
@@ -417,14 +417,14 @@ rewrite <- strict_feq'_iff in H.
 intros.
 rewrite <- feq'_iff.
 destruct t as [? ? ? ? ? [|]]; try contradiction.
-change (Zconst _ 0) with 
+change (Zconst _ 0) with
   (Binary.B754_zero (Z.pos fprecp) femax false).
 red.
 simpl.
 destruct y, s; try discriminate; simpl; auto.
 Qed.
 
-Lemma BFMA_zero2: forall  {NAN: Nans}{t} {STD: is_standard t} x s, 
+Lemma BFMA_zero2: forall  {NAN: Nans}{t} {STD: is_standard t} x s,
   strict_feq x x ->
   feq (BFMA x (Zconst t 0) s) s.
 Proof.
@@ -433,14 +433,14 @@ rewrite <- strict_feq'_iff in H.
 intros.
 rewrite <- feq'_iff.
 destruct t as [? ? ? ? ? [|]]; try contradiction.
-change (Zconst _ 0) with 
+change (Zconst _ 0) with
   (Binary.B754_zero (Z.pos fprecp) femax false).
 red.
 simpl.
 destruct x, s; try discriminate; simpl; auto.
 Qed.
 
-Lemma BPLUS_0_l: forall  {NAN: Nans} {t} {STD: is_standard t} x, finite x -> 
+Lemma BPLUS_0_l: forall  {NAN: Nans} {t} {STD: is_standard t} x, finite x ->
       feq (BPLUS (Zconst t 0) x) x.
 Proof.
   intros.
@@ -449,10 +449,10 @@ Proof.
  destruct s; simpl; auto.
 Qed.
 
-Lemma BPLUS_0_r: forall {NAN: Nans} {t} {STD: is_standard t} x, finite x -> 
+Lemma BPLUS_0_r: forall {NAN: Nans} {t} {STD: is_standard t} x, finite x ->
       feq (BPLUS x (Zconst t 0)) x.
 Proof.
-  intros. 
+  intros.
   destruct t as [? ? ? ? ? [|]]; try contradiction.
   destruct x; try contradiction;
  destruct s; simpl; auto.
@@ -466,7 +466,7 @@ reflexivity.
 Qed.
 
 Lemma BMULT_congr:
- forall  {NAN: Nans}{t} {STD: is_standard t} (x x' y y': ftype t), feq x x' -> feq y y' -> 
+ forall  {NAN: Nans}{t} {STD: is_standard t} (x x' y y': ftype t), feq x x' -> feq y y' ->
    feq (BMULT x y) (BMULT x' y').
 Proof.
 intros.
@@ -479,7 +479,7 @@ apply feq_refl.
 Qed.
 
 Lemma BMINUS_congr:
- forall  {NAN: Nans}{t} {STD: is_standard t} (x x' y y': ftype t), feq x x' -> feq y y' -> 
+ forall  {NAN: Nans}{t} {STD: is_standard t} (x x' y y': ftype t), feq x x' -> feq y y' ->
    feq (BMINUS x y) (BMINUS x' y').
 Proof.
 intros.
@@ -489,9 +489,9 @@ destruct x,x'; inv H; try constructor;
 destruct y,y'; inv H0; try constructor;
 repeat lazymatch goal with
    |  H: _ /\ _ |- _ => destruct H; subst
-  |  s: bool |- _ => first [clear s | destruct s] 
+  |  s: bool |- _ => first [clear s | destruct s]
   end;
-repeat proof_irr; 
+repeat proof_irr;
   simpl; auto; try reflexivity.
 Qed.
 
@@ -504,7 +504,7 @@ simpl.
 apply Forall2_app; auto.
 Qed.
 
-Lemma Forall2_rel_refl: forall {A: Type} (rel: relation A), 
+Lemma Forall2_rel_refl: forall {A: Type} (rel: relation A),
    (forall x, rel x x) -> forall al, Forall2 rel al al.
 Proof.
 unfold reflexive; intros.
@@ -520,8 +520,8 @@ Qed.
 #[export] Hint Resolve Forall2_subrelation: core.
 
 Lemma BFMA_xx_mor:
- forall  {NAN: Nans}{t} {STD: is_standard t} (x x' s s': ftype t), 
-  feq x x' -> 
+ forall  {NAN: Nans}{t} {STD: is_standard t} (x x' s s': ftype t),
+  feq x x' ->
   feq s s' ->
   feq (BFMA x x s) (BFMA x' x' s').
 Proof.
@@ -532,12 +532,12 @@ red.
 unfold BFMA.
 destruct x,x'; inv H; simpl; auto;
  destruct s,s'; inv H0; simpl; auto;
-repeat proof_irr; 
+repeat proof_irr;
 repeat lazymatch goal with
    |  H: _ /\ _ |- _ => destruct H; subst
-  |  s: bool |- _ => first [clear s | destruct s] 
+  |  s: bool |- _ => first [clear s | destruct s]
   end;
-repeat proof_irr; 
+repeat proof_irr;
   simpl; auto;
 try solve [destruct (Binary.Bfma _ _ _ _ _ _ _ _ _); auto].
 all:
@@ -546,7 +546,7 @@ set (K := _ (proj1 _)); clearbody K; destruct K; simpl; auto.
 Qed.
 
 Lemma strict_feq_i1:
-  forall  {t} (x y: ftype t), 
+  forall  {t} (x y: ftype t),
     finite x -> feq x y ->
     strict_feq x y.
 Proof.
@@ -579,7 +579,7 @@ red in H.
 destruct (is_finite x), (is_finite y); auto; try contradiction.
 Qed.
 
-Lemma strict_floatlist_eqv_i1: 
+Lemma strict_floatlist_eqv_i1:
    forall {t} (a b: list (ftype t)),
     Forall finite a -> Forall2 feq a b -> Forall2 strict_feq a b.
 Proof.
@@ -630,7 +630,7 @@ Proof.
 intros.
 destruct t as [? ? ? ? ? [|]]; try contradiction.
 unfold finite in *.
-rewrite <- !strict_feq'_iff in *. 
+rewrite <- !strict_feq'_iff in *.
 destruct x,y, z; try contradiction H;
  try solve [split; [ | split]; simpl; auto; constructor; auto].
 all: try solve [destruct s,s0,s1; contradiction].
@@ -678,9 +678,9 @@ rewrite <- feq'_iff in H,H0|-.
 simpl in *.
 compute in x,y,x0,y0.
 hnf in H,H0|-. simpl in *|-.
-destruct x,y; inv H; destruct x0,y0; inv H0; 
+destruct x,y; inv H; destruct x0,y0; inv H0;
 repeat match goal with s: bool |- _ => destruct s end; simpl in *|-;
-repeat match goal with H: _ /\ _ |- _ => destruct H end; 
+repeat match goal with H: _ /\ _ |- _ => destruct H end;
 auto;
 subst;
 repeat proof_irr; reflexivity.
@@ -696,9 +696,9 @@ rewrite <- feq'_iff in H,H0|-.
 simpl in *.
 compute in x,y,x0,y0.
 hnf in H,H0|-. simpl in *|-.
-destruct x,y; inv H; destruct x0,y0; inv H0; 
+destruct x,y; inv H; destruct x0,y0; inv H0;
 repeat match goal with s: bool |- _ => destruct s end; simpl in *|-;
-repeat match goal with H: _ /\ _ |- _ => destruct H end; 
+repeat match goal with H: _ /\ _ |- _ => destruct H end;
 auto;
 subst;
 repeat proof_irr; reflexivity.
@@ -714,9 +714,9 @@ rewrite <- feq'_iff in H,H0|-.
 simpl in *.
 compute in x,y,x0,y0.
 hnf in H,H0|-. simpl in *|-.
-destruct x,y; inv H; destruct x0,y0; inv H0; 
+destruct x,y; inv H; destruct x0,y0; inv H0;
 repeat match goal with s: bool |- _ => destruct s end; simpl in *|-;
-repeat match goal with H: _ /\ _ |- _ => destruct H end; 
+repeat match goal with H: _ /\ _ |- _ => destruct H end;
 auto;
 subst;
 repeat proof_irr; reflexivity.
@@ -732,16 +732,16 @@ rewrite <- feq'_iff in H; rewrite <- strict_feq'_iff in H0.
 simpl in *.
 compute in x,y,x0,y0.
 hnf in H,H0|-. simpl in *|-.
-destruct x,y; inv H; destruct x0,y0; inv H0; 
+destruct x,y; inv H; destruct x0,y0; inv H0;
 repeat match goal with s: bool |- _ => destruct s end; simpl in *|-;
-repeat match goal with H: _ /\ _ |- _ => destruct H end; 
+repeat match goal with H: _ /\ _ |- _ => destruct H end;
 auto;
 subst;
 repeat proof_irr; reflexivity.
 Qed.
 
 
-Add Parametric Morphism {t} STD: (@BCMP t STD) 
+Add Parametric Morphism {t} STD: (@BCMP t STD)
  with signature eq ==> eq ==> strict_feq ==> strict_feq ==> eq
  as BCMP_mor.
 Proof.

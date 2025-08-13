@@ -30,7 +30,7 @@ Qed.
 Lemma klist_cons {k: type -> Type} {t: type} {tr: list type} (al: klist k (t::tr)) :
    exists h: k t, exists r: klist k tr, al = Kcons h r.
 Proof.
-refine 
+refine
  match al with Knil => idProp | Kcons _ _ => _ end.
 eexists. eexists. reflexivity.
 Qed.
@@ -41,7 +41,7 @@ Definition klist_cons1 {k: type -> Type} {t: type} {tr: list type} (al: klist k 
   | Kcons h _ => h
   end.
 
-Definition klist_cons2 {k: type -> Type} {t: type} {tr: list type} (al: klist k (t::tr)) : klist k tr := 
+Definition klist_cons2 {k: type -> Type} {t: type} {tr: list type} (al: klist k (t::tr)) : klist k tr :=
   match al with
   | Knil =>idProp
   | Kcons _ tr => tr
@@ -64,7 +64,7 @@ Qed.
 
 Inductive Kforall2 {k1 k2: type -> Type} (P: forall ty, k1 ty -> k2 ty -> Prop): forall {tys: list type} (al: klist k1 tys) (bl: klist k2 tys), Prop :=
  | Kforall2_nil: Kforall2 P Knil Knil
- | Kforall2_cons: forall {t tr} (ah: k1 t) (bh: k2 t) (ar: klist k1 tr) (br: klist k2 tr),  
+ | Kforall2_cons: forall {t tr} (ah: k1 t) (bh: k2 t) (ar: klist k1 tr) (br: klist k2 tr),
                      P _ ah bh -> Kforall2 P ar br -> Kforall2 P (Kcons ah ar) (Kcons bh br).
 
 Lemma Kforall2_inv: forall (k1 k2: type -> Type) (P: forall ty, k1 ty -> k2 ty -> Prop)
@@ -117,7 +117,7 @@ set (tbc := tb++tc) in *.
 set (ebc := kapp eb ec) in *. clearbody ebc.
 set (eab := kapp ea eb) in *; clearbody eab.
 rename tys into ta.
-set (abc1 := @kapp tab tc k eab ec) in *. 
+set (abc1 := @kapp tab tc k eab ec) in *.
 set (abc2 := @kapp ta tbc k ea ebc) in *.
 revert IHea.
 fold u in abc1.
@@ -137,8 +137,8 @@ End KLIST.
 Arguments Knil {type k}.
 Arguments Kcons {type k ty tys}.
 
-Fixpoint mapk {type: Type} {k1 k2: type -> Type} (f: forall ty: type, k1 ty -> k2 ty) 
-  {tys: list type} (al: klist k1 tys) : klist k2 tys := 
+Fixpoint mapk {type: Type} {k1 k2: type -> Type} (f: forall ty: type, k1 ty -> k2 ty)
+  {tys: list type} (al: klist k1 tys) : klist k2 tys :=
     match al in (klist _ l) return (l = tys -> klist k2 tys) with
     | Knil =>
         fun H : [] = tys =>
@@ -153,7 +153,7 @@ Fixpoint mapk {type: Type} {k1 k2: type -> Type} (f: forall ty: type, k1 ty -> k
 
 Lemma mapk_mapk:
   forall {type: Type} [k1 k2 k3: type -> Type] (f: forall ty, k1 ty -> k2 ty) (g: forall ty, k2 ty -> k3 ty)
-           (tys: list type) (l: klist k1 tys), 
+           (tys: list type) (l: klist k1 tys),
      mapk g (mapk f l) = mapk (fun ty x => g ty (f ty x)) l.
 Proof.
 induction l; simpl; auto.
@@ -176,7 +176,7 @@ inversion Heqargs0; clear Heqargs0; subst.
 apply (applyk (f (valmapper _ e1)) valmapper er).
 Defined.
 
-Fixpoint applyk {type: Type} {k: type -> Type}  
+Fixpoint applyk {type: Type} {k: type -> Type}
     (typemapper: type -> Type)
     (args: list type)
     (res: type)
@@ -203,7 +203,7 @@ Require Import Recdef.
 Section KLIST.
 Context {type: Type}.
 
-Definition mapk_aux A {k: type -> Type} (f: forall ty: type, k ty -> A) 
+Definition mapk_aux A {k: type -> Type} (f: forall ty: type, k ty -> A)
   (t: type) (ts: list type)
     (mapk: klist k ts -> list A):  klist k (t::ts) -> list A :=
 fun X: klist k (t::ts) =>
@@ -220,7 +220,7 @@ with
                    (eq_rect_r (fun ty1 : type => k ty1 -> list A)
                       (fun e' : k t =>
                        eq_rect_r (fun tys2 : list type => klist k tys2 -> list A)
-                         (fun k3 : klist k ts => f t e' :: mapk k3)  (f_equal (@tl type) H2) k2) 
+                         (fun k3 : klist k ts => f t e' :: mapk k3)  (f_equal (@tl type) H2) k2)
                                (f_equal  (hd ty) H2) e)
 end eq_refl .
 
@@ -228,7 +228,7 @@ end eq_refl .
 
 Function mapk_aux1 {k: type -> Type} A (f: forall (ty: type), k ty -> A) (tys: list type) {measure length tys}:
      (klist k tys)  -> list A :=
-match tys with 
+match tys with
 | nil => fun _ => nil
 | t::ts => mapk_aux A f t ts (@mapk_aux1 k A f ts)
 end.

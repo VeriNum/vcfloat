@@ -11,13 +11,13 @@ Definition turbine3_bmap_list := [Build_varinfo Tdouble 1%positive (-45e-1) (-3e
 Definition turbine3_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list turbine3_bmap_list) in exact z).
 
-Definition turbine3 (v : ftype Tdouble) (w : ftype Tdouble) (r : ftype Tdouble) : ftype Tdouble := 
+Definition turbine3 (v : ftype Tdouble) (w : ftype Tdouble) (r : ftype Tdouble) : ftype Tdouble :=
   ((( (3 -  (2 / (r * r))) - (( (125e-3 * (1 + (2 * v))) *  (((w * w) * r) * r)) / (1 - v))) - (5e-1))%F64).
 
-Definition turbine3_expr := 
+Definition turbine3_expr :=
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) turbine3 in exact e').
 
-Derive turbine3_b 
+Derive turbine3_b
 SuchThat (forall vmap, prove_roundoff_bound turbine3_bmap vmap turbine3_expr turbine3_b)
 As turbine3_bound.
 Proof.
@@ -40,24 +40,24 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
 try field_simplify_Rabs;
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with ( i_bisect vxH,
-i_bisect v, 
+i_bisect v,
 i_bisect v0, i_depth 13) as H'; apply H'; apply Rle_refl
 end;
 try match goal with |- Rabs ?a <= _ =>
 interval_intro (Rabs a) with (
-i_bisect v, 
+i_bisect v,
 i_bisect v0, i_depth 13) as H'; apply H'; apply Rle_refl
 end;
 try match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with ( 
+interval_intro (Rabs a) with (
 i_bisect v0, i_depth 13) as H'; apply H'; apply Rle_refl
 end;
 try match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with ( 
+interval_intro (Rabs a) with (
 i_bisect v, i_depth 13) as H'; apply H'; apply Rle_refl
 end;
 try match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with ( 
+interval_intro (Rabs a) with (
 i_bisect vxH, i_depth 13) as H'; apply H'; apply Rle_refl
 end;
 try match goal with |- Rabs ?a <= _ =>

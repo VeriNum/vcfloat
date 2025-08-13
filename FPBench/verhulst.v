@@ -11,15 +11,15 @@ Definition verhulst_bmap_list := [Build_varinfo Tdouble 1%positive (1e-1) (3e-1)
 Definition verhulst_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list verhulst_bmap_list) in exact z).
 
-Definition verhulst (x : ftype Tdouble) := 
+Definition verhulst (x : ftype Tdouble) :=
   cast Tdouble (let r := (4)%F64 in
   let k := (111e-2)%F64 in
   ((r * x)%F64 / ((1)%F64 + (x / k)%F64)%F64)%F64).
 
-Definition verhulst_expr := 
+Definition verhulst_expr :=
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive]) verhulst in exact e').
 
-Derive verhulst_b 
+Derive verhulst_b
 SuchThat (forall vmap, prove_roundoff_bound verhulst_bmap vmap verhulst_expr verhulst_b)
 As verhulst_bound.
 Proof.

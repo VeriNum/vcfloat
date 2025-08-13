@@ -3,7 +3,7 @@
 From vcfloat Require Export RAux.
 From Flocq Require Import Binary Bits Core.
 From vcfloat Require Import IEEE754_extra klist.
-Require compcert.lib.Maps.  
+Require compcert.lib.Maps.
 Require Coq.MSets.MSetAVL.
 Require vcfloat.Fprop_absolute.
 Require Import vcfloat.Float_lemmas.
@@ -33,30 +33,30 @@ Qed.
 Definition placeholder ty i : ftype ty := proj1_sig (placeholderx ty i).
 
 Definition func {ty} (f: floatfunc_package ty) := ff_func (ff_ff f).
-Ltac apply_func ff := 
+Ltac apply_func ff :=
  let f := constr:(func ff) in
  match type of f with ?t =>
    let t' := eval hnf in t in
-   let t' := eval cbv [function_type map ftype'] in t' in 
+   let t' := eval cbv [function_type map ftype'] in t' in
   let f' := constr:(f : t') in
   exact f'
   end.
- 
 
-Ltac ground_pos p := 
+
+Ltac ground_pos p :=
  match p with
  | Z.pos ?p' => ground_pos p'
- | xH => constr:(tt) 
- | xI ?p' => ground_pos p' 
- | xO ?p' => ground_pos p' 
+ | xH => constr:(tt)
+ | xI ?p' => ground_pos p'
+ | xO ?p' => ground_pos p'
  end.
 
 Ltac find_type prec emax :=
  match prec with
  | 24%Z => match emax with 128%Z => constr:(Tsingle) end
  | 53%Z => match emax with 1024%Z => constr:(Tdouble) end
- | Z.pos ?precp => 
-     let g := ground_pos precp in let g := ground_pos emax in 
+ | Z.pos ?precp =>
+     let g := ground_pos precp in let g := ground_pos emax in
      constr:(TYPE precp emax Logic.I Logic.I)
  end.
 
@@ -72,59 +72,59 @@ Ltac reify_float_expr E :=
  | placeholder32 ?i => constr:(Var Tsingle ltac:(prove_incollection) i)
  | placeholder ?ty ?i => constr:(@Var ltac:(auto with typeclass_instances) ty ltac:(prove_incollection) i)
  | Zconst ?t ?z => constr:(Const t I (Zconst t z))
- | BPLUS ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | BPLUS ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 PLUS None) a' b')
- | Norm (BPLUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Norm (BPLUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 PLUS (Some Normal)) a' b')
- | Denorm (BPLUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Denorm (BPLUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 PLUS (Some Denormal)) a' b')
- | BMINUS ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | BMINUS ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 MINUS None) a' b')
- | Norm (BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Norm (BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 MINUS (Some Normal)) a' b')
- | Denorm (BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Denorm (BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 MINUS (Some Denormal)) a' b')
- | BMULT ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | BMULT ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 MULT None) a' b')
- | Norm (BMULT ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Norm (BMULT ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 MULT (Some Normal)) a' b')
- | Denorm (BMULT ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Denorm (BMULT ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 MULT (Some Denormal)) a' b')
- | BDIV ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | BDIV ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 DIV None) a' b')
- | Norm (BDIV ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Norm (BDIV ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 DIV (Some Normal)) a' b')
- | Denorm (BDIV ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Denorm (BDIV ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 DIV (Some Denormal)) a' b')
- | BOPP ?a => let a' := reify_float_expr a in 
+ | BOPP ?a => let a' := reify_float_expr a in
                                       constr:(Unop (Exact1 Opp) a')
- | BABS ?a => let a' := reify_float_expr a in 
+ | BABS ?a => let a' := reify_float_expr a in
                                       constr:(Unop (Exact1 Abs) a')
- | BSQRT ?a => let a' := reify_float_expr a in 
+ | BSQRT ?a => let a' := reify_float_expr a in
                                       constr:(Unop (Rounded1 SQRT) a')
- | @cast _ Tsingle Tdouble ?f => let f':= reify_float_expr f in 
+ | @cast _ Tsingle Tdouble ?f => let f':= reify_float_expr f in
                                       constr:(Cast Tdouble Tsingle None f')
- | @cast _ Tdouble Tsingle ?f => let f':= reify_float_expr f in 
+ | @cast _ Tdouble Tsingle ?f => let f':= reify_float_expr f in
                                       constr:(Cast Tsingle Tdouble None f')
- | @cast _ Tsingle Tsingle ?f => let f':= reify_float_expr f in 
+ | @cast _ Tsingle Tsingle ?f => let f':= reify_float_expr f in
                                       constr:(f')
- | @cast _ Tdouble Tdouble ?f => let f':= reify_float_expr f in 
+ | @cast _ Tdouble Tdouble ?f => let f':= reify_float_expr f in
                                       constr:(f')
  | b32_B754_zero _ => constr:(Const Tsingle I E)
  | b64_B754_zero _ => constr:(Const Tdouble I E)
  | b64_B754_finite _ _ _ _ => constr:(Const Tdouble I E)
  | b32_B754_finite _ _ _ _ => constr:(Const Tsingle I E)
  | b64_B754_finite _ _ _ _ => constr:(Const Tdouble I E)
- | Sterbenz (BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in 
+ | Sterbenz (BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop SterbenzMinus a' b')
- | @func ?ty ?ff ?a1 => let a1' := reify_float_expr a1 in 
+ | @func ?ty ?ff ?a1 => let a1' := reify_float_expr a1 in
                                             constr:(Func ty ff (Kcons a1' Knil))
- | @func ?ty ?ff ?a1 ?a2 => let a1' := reify_float_expr a1 in 
-                                            let a2' := reify_float_expr a2 in 
+ | @func ?ty ?ff ?a1 ?a2 => let a1' := reify_float_expr a1 in
+                                            let a2' := reify_float_expr a2 in
                                             constr:(Func ty ff (Kcons a1' (Kcons a2' Knil)))
- | @func ?ty ?ff ?a1 ?a2 ?a3 => let a1' := reify_float_expr a1 in 
-                                            let a2' := reify_float_expr a2 in 
-                                            let a3' := reify_float_expr a3 in 
+ | @func ?ty ?ff ?a1 ?a2 ?a3 => let a1' := reify_float_expr a1 in
+                                            let a2' := reify_float_expr a2 in
+                                            let a3' := reify_float_expr a3 in
                                             constr:(Func ty ff (Kcons a1' (Kcons a2' (Kcons a3' Knil))))
  | _ => let E' := eval red in E in reify_float_expr E'
  | _ => fail 100 "could not reify" E
@@ -135,7 +135,7 @@ Ltac HO_reify_float_expr names E :=
          | ?n :: ?names' =>
               lazymatch (type of E) with
               | ftype ?ty -> _ =>
-                     let Ev := constr:(E (placeholder ty n)) in 
+                     let Ev := constr:(E (placeholder ty n)) in
                      HO_reify_float_expr names' Ev
               | _ => fail 100 "could not reify" E
               end

@@ -40,7 +40,7 @@ Proof.
   subst.
   assumption.
 Qed.
-      
+
 Lemma val_inject_single_inv_r v f:
   val_inject v Tsingle f ->
   v = Values.Vsingle f.
@@ -135,11 +135,11 @@ match x with
  match y with
    | Binary.B754_finite _ _ ?s ?m ?e _ =>
      let z := constr:(b32_B754_finite s m e (@eq_refl bool true))
-      in change x with x'; 
+      in change x with x';
         replace x' with z by (apply B754_finite_ext; reflexivity)
-   | Binary.B754_zero _ _ ?s => 
+   | Binary.B754_zero _ _ ?s =>
        let z := constr:(b32_B754_zero s) in
-       change x with z        
+       change x with z
   end
 | Float.of_bits (Int64.repr ?a) =>
   const_Z a;
@@ -148,15 +148,15 @@ match x with
  match y with
    | Binary.B754_finite _ _ ?s ?m ?e _ =>
      let z := constr:(b64_B754_finite s m e (@eq_refl bool true))
-      in change x with x'; 
+      in change x with x';
         replace x' with z by (apply B754_finite_ext; reflexivity)
-   | Binary.B754_zero _ _ ?s => 
+   | Binary.B754_zero _ _ ?s =>
        let z := constr:(b64_B754_zero s) in
-       change x with z        
+       change x with z
   end
 end.
 
-Ltac canonicalize_float_constants := 
+Ltac canonicalize_float_constants :=
   repeat
     match goal with
     | |- context [Binary.B754_finite 24 128 ?s ?m ?e ?p] =>

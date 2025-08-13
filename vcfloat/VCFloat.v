@@ -9,7 +9,7 @@ Set Bullet Behavior "Strict Subproofs".
  does not use interval arithmetic.   It could perhaps be improved to actually
  compute in interval arithmetic, etc.
 
-  Usage:  
+  Usage:
   RtoFloat' x    returns a float-valued expression corresponding
                                   to the real-valued expression
   RtoFloat x    returns a float-valued constant from the real-valued expr
@@ -27,8 +27,8 @@ lazymatch x with
 end.
 
 
-Ltac RtoFloat x := 
-   let y := eval simpl in x in 
+Ltac RtoFloat x :=
+   let y := eval simpl in x in
    let y := RtoFloat' y in
    let y := eval compute in y in
    exact y.
@@ -41,7 +41,7 @@ Defined.
 
 Require Import vcfloat.Float_notations.
 
-Ltac ShowBound bound := 
+Ltac ShowBound bound :=
   match type of bound with
   | ?t => first [unify t R | fail 1 "ShowBound expects an argument of type R but" bound "has type" t]
   end;
@@ -50,7 +50,7 @@ Ltac ShowBound bound :=
   let y := constr:(BSN2B _ _ some_nan64 (@BinarySingleNaN.SF2B 53 1024 (FloatOps.Prim2SF y) (eq_refl _))) in
   let y := eval compute in y in
   match y with  B754_finite 53 1024 ?s ?m ?e ?H =>
-     let z := constr:(b64_B754_finite s m e H) in 
+     let z := constr:(b64_B754_finite s m e H) in
      idtac "ShowBound" bound z; exact z
   end.
 

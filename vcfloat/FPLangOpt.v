@@ -120,7 +120,7 @@ Fixpoint fcval `{coll: collection} {ty} (e: expr ty) {struct e}: expr ty :=
           with
           | Knil => Knil
           | Kcons h tl => Kcons (fcval h) (fcval_klist tl)
-          end 
+          end
           in Func _ ff (fcval_klist el)
     | _ => e
   end.
@@ -155,7 +155,7 @@ Proof.
     subst. simpl. rewrite ftype_of_float_of_ftype. congruence.
   +
   simpl. congruence.
-- 
+-
  match goal with |- _ = (?G _ _ _) =>  change G with (@fval_klist _ _ env (ftype ty)) end.
 
   set (func := ff_func _). clearbody func.
@@ -316,7 +316,7 @@ Definition fshift_mult `{coll: collection} {ty} `{STD: is_standard ty}  (e'1 e'2
                   then Unop (Rounded1 (InvShift n true) None) e'1
                   else Binop (Rounded2 MULT None) e'1 e'2
               | None => Binop (Rounded2 MULT None) e'1 e'2
-            end                  
+            end
         end.
 
 Fixpoint fshift `{coll: collection} {ty} (e: expr ty) {struct e}: expr ty :=
@@ -334,7 +334,7 @@ Fixpoint fshift `{coll: collection} {ty} (e: expr ty) {struct e}: expr ty :=
           with
           | Knil => Knil
           | Kcons h tl => Kcons (fshift h) (fshift_klist tl)
-          end 
+          end
           in Func _ ff (fshift_klist el)
     | _ => e
   end.
@@ -344,7 +344,7 @@ Lemma fshift_correct `{coll: collection} env ty (e: expr ty):
 Proof.
   induction e; simpl; unfold fshift_mult; auto.
 - (* binop case *)
-  assert (DEFAULT:    
+  assert (DEFAULT:
           fval env (@Binop _ _ STD b (fshift e1) (fshift e2)) =
             fop_of_binop b _ _ (fval env e1) (fval env e2)). {
       revert IHe1 IHe2.
@@ -357,7 +357,7 @@ Proof.
   apply binop_eqb_eq in ISMULT.
   subst.
   destruct (fcval_nonrec (fshift e1)) eqn:E1; [ |  destruct (fcval_nonrec (fshift e2)) eqn:E2].
-  +  
+  +
      destruct (Binary.Bsign _ _ _); [ auto | ].
      destruct (fshift e1); try discriminate.
      simpl in E1.
@@ -496,7 +496,7 @@ Fixpoint fshift_div `{coll: collection} {ty} (e: expr ty) {struct e}: expr ty :=
       match (fcval_nonrec e'2) with
             | Some c2 =>
                 match (Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) (float_of_ftype c2)) with
-                  | Some z' => 
+                  | Some z' =>
                     let n1 := to_power_2_pos (float_of_ftype c2) in
                     if binary_float_eqb z' (B2 ty (Z.neg n1))
                     then Unop (Rounded1 (InvShift n1 true) None) e'1
@@ -518,7 +518,7 @@ Fixpoint fshift_div `{coll: collection} {ty} (e: expr ty) {struct e}: expr ty :=
           with
           | Knil => Knil
           | Kcons h tl => Kcons (fshift_div h) (fshift_div_klist tl)
-          end 
+          end
           in Func _ ff (fshift_div_klist el)
     | _ => e
   end.
@@ -530,19 +530,19 @@ Fixpoint fshift_div_klist `{coll: collection} {tys: list type} (l': klist expr t
           | Kcons h tl => Kcons (fshift_div h) (fshift_div_klist tl)
           end.
 
-Local Lemma binary_float_equiv_refl : forall prec emax x, 
+Local Lemma binary_float_equiv_refl : forall prec emax x,
    @binary_float_equiv prec emax x x.
 Proof. intros. destruct x; hnf; try reflexivity. repeat split; reflexivity. Qed.
 Local Hint Resolve binary_float_equiv_refl float_equiv_refl : vcfloat.
 
-Local Hint Extern 2 (Binary.is_finite _ _ _ = true) => 
+Local Hint Extern 2 (Binary.is_finite _ _ _ = true) =>
    match goal with EINV: Bexact_inverse _ _ _ _ _ = Some _ |- _ =>
-             apply is_finite_strict_finite; 
+             apply is_finite_strict_finite;
          apply (Bexact_inverse_correct _ _ _ _ _ _ EINV)
    end : vcfloat.
 
 Lemma cast_preserves_bf_equiv tfrom tto STDfrom STDto (b1 b2: ftype tfrom) :
-  binary_float_equiv (float_of_ftype b1) (float_of_ftype b2) -> 
+  binary_float_equiv (float_of_ftype b1) (float_of_ftype b2) ->
   binary_float_equiv (float_of_ftype (@cast _ tto tfrom STDto STDfrom b1))
                      (float_of_ftype (@cast _ tto tfrom STDto STDfrom b2)).
 Proof.
@@ -573,7 +573,7 @@ destruct ty as [? ? ? ? ? [|]]; try contradiction.
 hnf in b1,b2,b3,b4; simpl in *|-.
 destruct b1.
 all : (destruct b3; destruct b4; try contradiction; try discriminate).
-all: 
+all:
   try (apply binary_float_equiv_eq in H; [ | reflexivity]; rewrite <- H);
   try (apply binary_float_equiv_eq in H0; [ | reflexivity]; rewrite <- H0);
   try apply binary_float_equiv_refl; try apply I;
@@ -638,19 +638,19 @@ rewrite <- H.
 destruct (f x y); split; congruence.
 Qed.
 
-Local Ltac destruct_ifb H := 
+Local Ltac destruct_ifb H :=
     lazymatch type of H with
     | forall x y, ?f x y = true <-> x=y =>
          match goal with |- context [if f ?b ?c then _ else _] =>
-                  let FEQ := fresh "FEQ" in 
-                     destruct (f b c) eqn:FEQ; 
+                  let FEQ := fresh "FEQ" in
+                     destruct (f b c) eqn:FEQ;
              [apply H in FEQ; rewrite FEQ in *
              | apply (general_eqb_neq H) in FEQ]
          end
     | _ => fail "argument of destruct_ifb must be a lemma of the form,  forall x y, ?f x y = true <-> x=y"
     end.
 
-Local Lemma ifb_cases_lem: 
+Local Lemma ifb_cases_lem:
   forall {A} {f: A -> A -> bool} (H: forall x y, f x y = true <-> x=y),
   forall (x y: A) {B} (b c: B) (P: B -> Prop),
   (x=y -> P b) -> (x<>y -> P c) ->
@@ -672,17 +672,17 @@ intros.
  apply H. apply binary_float_eqb_eq. auto. auto.
 Qed.
 
-Local Ltac binary_float_eqb_cases := 
-  let H := fresh in 
+Local Ltac binary_float_eqb_cases :=
+  let H := fresh in
   apply binary_float_eqb_lem1; [intro H; rewrite H in *; clear H | ].
 
 Local Lemma Bmult_div_inverse_equiv ty {STD: is_standard ty}:
   forall x y z: (Binary.binary_float (fprec ty) (femax ty)),
   Binary.is_finite _ _ y = true ->
   Binary.is_finite _ _ z = true ->
-  Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
+  Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z ->
   binary_float_equiv
-  (Binary.Bmult _ _ _ (fprec_lt_femax ty) (mult_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x z) 
+  (Binary.Bmult _ _ _ (fprec_lt_femax ty) (mult_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x z)
   (Binary.Bdiv _ _ _ (fprec_lt_femax ty) (div_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x y) .
 Proof. intros. apply binary_float_equiv_sym; apply Bdiv_mult_inverse_equiv; auto. Qed.
 
@@ -691,15 +691,15 @@ Theorem Bmult_div_inverse_equiv2 ty {STD: is_standard ty}:
   binary_float_equiv x1 x2 ->
   Binary.is_finite _ _ y = true ->
   Binary.is_finite _ _ z = true ->
-  Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z -> 
+  Bexact_inverse (fprec ty) (femax ty) (fprec_gt_0 ty) (fprec_lt_femax ty) y = Some z ->
   binary_float_equiv
   (Binary.Bmult _ _ _ (fprec_lt_femax ty) (mult_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x2 z)
   (Binary.Bdiv _ _ _ (fprec_lt_femax ty) (div_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE x1 y) .
 Proof. intros. apply binary_float_equiv_sym; apply Bdiv_mult_inverse_equiv2; auto. Qed.
 
 Lemma uncast_finite_strict:
-  forall t t2 STD STD2 (f: ftype t2), 
-    Binary.is_finite_strict (fprec t) (femax t) 
+  forall t t2 STD STD2 (f: ftype t2),
+    Binary.is_finite_strict (fprec t) (femax t)
           (float_of_ftype (@cast _ t t2 STD STD2 f)) = true ->
         Binary.is_finite_strict _ _ (float_of_ftype f) = true.
 Proof.
@@ -780,7 +780,7 @@ Lemma Bmult_nan2:
   forall fprec emax H H0 H1 H2 f1 f2,
    Binary.is_nan fprec emax f2 = true -> Binary.is_nan _ _  (Binary.Bmult _ _ H H0 H1 H2 f1 f2) = true.
 Proof.
-intros. 
+intros.
 destruct f2; try discriminate.
 destruct f1; reflexivity.
 Qed.
@@ -797,7 +797,7 @@ Lemma Bdiv_nan2:
   forall fprec emax H H0 H1 H2 f1 f2,
    Binary.is_nan fprec emax f2 = true -> Binary.is_nan _ _  (Binary.Bdiv _ _ H H0 H1 H2 f1 f2) = true.
 Proof.
-intros. 
+intros.
 destruct f2; try discriminate.
 destruct f1; reflexivity.
 Qed.
@@ -805,7 +805,7 @@ Qed.
 Local Hint Resolve Bmult_nan1 Bmult_nan2 Bdiv_nan1 Bdiv_nan2 cast_is_nan : vcfloat.
 
 Ltac unfold_fval := cbv [fop_of_unop fop_of_exact_unop fop_of_rounded_unop
-                      fop_of_binop fop_of_rounded_binop 
+                      fop_of_binop fop_of_rounded_binop
                       BDIV BMULT BINOP BPLUS BMINUS].
 
 Ltac binary_float_equiv_tac :=
@@ -820,7 +820,7 @@ Ltac binary_float_equiv_tac :=
 Ltac binary_float_equiv_tac2 env e1 e2 :=
          simpl;
          repeat match goal with
-                    | H: binary_float_equiv _ _ |- _ => revert H 
+                    | H: binary_float_equiv _ _ |- _ => revert H
                     end;
          generalize (float_of_ftype (fval env (fshift_div  e1)));
          generalize (float_of_ftype (fval env (fshift_div  e2)));
@@ -844,7 +844,7 @@ Qed.
 
 Lemma binary_is_finite_congr:
   forall {ty} {x y: Binary.binary_float (fprec ty) (femax ty)},
-    binary_float_equiv x y -> 
+    binary_float_equiv x y ->
     (Binary.is_finite _ _ x = Binary.is_finite _ _ y).
 Proof.
 intros.
@@ -854,7 +854,7 @@ Qed.
 Lemma fval_klist_applyk:
  forall `{coll: collection} ty tys (env: environ) (args: klist expr tys)
      (f: function_type (List.map ftype' tys) (ftype' ty)),
-   fval_klist env args f = 
+   fval_klist env args f =
    applyk ftype tys ty f (fun _ t => t) (mapk (@fval _ _ env) args).
 Proof.
 induction args; intros; simpl; auto;
@@ -865,7 +865,7 @@ Qed.
 Lemma fshift_div_correct' `{coll: collection} env ty (e: expr ty) :
  float_equiv (fval env (fshift_div e))  (fval env e).
 Proof.
-induction e; cbn [fshift_div]; auto with vcfloat; 
+induction e; cbn [fshift_div]; auto with vcfloat;
  unfold fval; fold (@fval _ _ env ty);
 try (set (x1 := fval env e1) in *; clearbody x1);
 try (set (x2 := fval env e2) in *; clearbody x2).
@@ -885,8 +885,8 @@ try (set (x2 := fval env e2) in *; clearbody x2).
  + simpl.
    unfold BMULT, BDIV, BINOP.
    rewrite !float_of_ftype_of_float.
-   destruct (Bexact_inverse_correct _ _ _ _ _ _ EINV) 
-     as [? [? [? [? ?]]]]. 
+   destruct (Bexact_inverse_correct _ _ _ _ _ _ EINV)
+     as [? [? [? [? ?]]]].
    apply Bmult_div_inverse_equiv2; auto with vcfloat.
    apply binary_float_equiv_sym; auto.
    clear - IHe2 H.
@@ -897,8 +897,8 @@ try (set (x2 := fval env e2) in *; clearbody x2).
  + simpl.
    unfold BMULT, BDIV, BINOP.
    rewrite !float_of_ftype_of_float.
-   destruct (Bexact_inverse_correct _ _ _ _ _ _ EINV) 
-     as [? [? [? [? ?]]]]. 
+   destruct (Bexact_inverse_correct _ _ _ _ _ _ EINV)
+     as [? [? [? [? ?]]]].
    rewrite nat_N_Z, positive_nat_Z.
    apply Bmult_div_inverse_equiv2; auto with vcfloat.
    apply binary_float_equiv_sym; auto.
@@ -919,8 +919,8 @@ rewrite float_equiv_binary_float_equiv in IHe|-*.
 apply binary_float_equiv_UOP; apply IHe.
 - (* func case *)
   fold @fshift_div_klist.
-  match goal with |- float_equiv (?G _ _ _) _ => 
-      change G with (@fval_klist _ _ env (ftype ty)) 
+  match goal with |- float_equiv (?G _ _ _) _ =>
+      change G with (@fval_klist _ _ env (ftype ty))
   end.
   rewrite !fval_klist_applyk.
   apply ff_congr.
@@ -953,11 +953,11 @@ destruct a; try discriminate; reflexivity.
 Qed.
 
 Lemma fshift_div_correct `{coll: collection} env ty (e: expr ty):
-  is_finite (fval env (fshift_div e)) = true -> 
+  is_finite (fval env (fshift_div e)) = true ->
   fval env (fshift_div e) = fval env e.
 Proof.
   intros.
-  apply float_equiv_eq; auto. 
+  apply float_equiv_eq; auto.
   apply fshift_div_correct'.
 Qed.
 
@@ -971,13 +971,13 @@ Fixpoint erase `{coll: collection} {ty} (e: expr ty) {struct e}: expr ty :=
     | Unop (Rounded1 u k) e => Unop (Rounded1 u None) (erase e)
     | Cast _ u _ _ _ e => Cast _ u _ _ None (erase e)
     | Unop u e => Unop u (erase e)
-    | Func _ ff args => 
+    | Func _ ff args =>
        let fix erase_klist {tys: list type} (l': klist expr tys) {struct l'}: klist expr tys :=
           match  l' in (klist _ l) return (klist expr l)
           with
           | Knil => Knil
           | Kcons h tl => Kcons (erase h) (erase_klist tl)
-          end 
+          end
        in Func _ ff (erase_klist args)
     | _ => e
   end.
@@ -995,13 +995,13 @@ Proof.
   induction e; simpl; auto.
   - destruct b as [ | | [ | ]]; simpl; rewrite ?IHe1, ?IHe2; auto.
   - destruct u; simpl; rewrite ?IHe; auto.
-  - rewrite IHe; auto. 
+  - rewrite IHe; auto.
 -
   set (func := ff_func _). clearbody func.
   set (tys := ff_args f4) in *. clearbody tys.
   fold @erase_klist.
  match goal with |- ?G _ _ _ = _ =>  change G with (@fval_klist _ _ env (ftype ty)) end.
-  induction args. simpl; auto. 
+  induction args. simpl; auto.
  simpl.
   apply Kforall_inv in IH. destruct IH.
   specialize (IHargs H0).

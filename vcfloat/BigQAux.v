@@ -34,5 +34,5 @@ Definition Bnum b :=
 Definition Bden b :=
   match b with
   | BigQ.Qz _ => 1%bigN
-  | BigQ.Qq _ d => if (d =? BigN.zero)%bigN then 1%bigN else d 
+  | BigQ.Qq _ d => if (d =? BigN.zero)%bigN then 1%bigN else d
   end.
