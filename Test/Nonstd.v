@@ -1,7 +1,7 @@
 (** Test.v:  application demo of "ftype" usage-style of VCfloat.
  Copyright (C) 2021-2022 Andrew W. Appel and Ariel Kellison.
 *)
-
+From Coq Require Import NArith ZArith.
 Require Import vcfloat.VCFloat.
 Require Import Interval.Tactic.
 Import Binary.
@@ -211,6 +211,3 @@ Print x_acc.
 Check prove_roundoff_bound_x_alt.
 
 End WITHNANS.
-
-
-

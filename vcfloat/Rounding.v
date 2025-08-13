@@ -1,5 +1,6 @@
 (*  LGPL licensed; see ../LICENSE and, for historical notes, see ../OLD_LICENSE *)
 
+From Coq Require Import ZArith PArith.
 Require Import Interval.Tactic.
 From vcfloat Require Export RAux.
 From Flocq Require Import Binary Bits Core.
@@ -3431,5 +3432,3 @@ exists errors2; split; auto.
 Qed.
 
 End WITH_NAN.
-
-

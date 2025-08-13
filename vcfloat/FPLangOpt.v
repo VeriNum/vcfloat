@@ -3,7 +3,7 @@
 (** Helpers for correct optimization of rounding error terms in
   the real-number semantics of floating-point computations.
 **)
-
+From Coq Require Import NArith ZArith.
 Require Export vcfloat.Float_lemmas.
 Require Export vcfloat.FPLang.
 Require Import vcfloat.klist.

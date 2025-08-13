@@ -58,8 +58,8 @@ Proof.
   intros a b Hab u v Huv.
   subst.
   unfold Znearest.
-  destruct (Rcompare (v - IZR (Zfloor v)) (/ 2)); auto.
-  replace (b (Zfloor v)) with (a (Zfloor v)) by auto.
+  destruct (Rcompare (v - IZR (Raux.Zfloor v)) (/ 2)); auto.
+  replace (b (Raux.Zfloor v)) with (a (Raux.Zfloor v)) by auto.
   reflexivity.
 Qed.
 

@@ -1,7 +1,7 @@
 (*  LGPL licensed; see ../LICENSE and, for historical notes, see ../OLD_LICENSE *)
 
 (** Automate.v:  proof automation for "ftype" usage-style of VCFloat. *)
-
+From Coq Require Import ZArith.
 Require Import Flocq.IEEE754.Binary.
 From vcfloat Require Import FPLang FPLangOpt RAux Rounding Reify Float_notations.
 Require Import Interval.Tactic.
