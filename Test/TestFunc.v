@@ -1,7 +1,7 @@
 (** Test.v:  application demo of "ftype" usage-style of VCfloat.
  Copyright (C) 2021-2022 Andrew W. Appel and Ariel Kellison.
 *)
-
+From Coq Require Import NArith.
 Require Import vcfloat.VCFloat.
 Require Import Interval.Tactic.
 Import Binary.
@@ -20,7 +20,7 @@ Fixpoint always_true (args: list type) : function_type (map RR args) Prop :=
  end.
 
 Parameter c_function: forall (args: list type) (res: type) (bnds: klist bounds args) (rel: N) (f: function_type (map RR args) R),
-   {ff: function_type (map ftype' args) (ftype res) 
+   {ff: function_type (map ftype' args) (ftype res)
    | acc_prop args res rel 1 bnds f ff /\ floatfunc_congr ff}.
 
 Ltac floatfunc' args res bnds rel f :=
@@ -29,8 +29,8 @@ Ltac floatfunc' args res bnds rel f :=
  let ff1 := constr:(Build_floatfunc args res _ f (proj1_sig cf) rel abs (proj1 (proj2_sig cf)) (proj2 (proj2_sig cf))) in
  exact (Build_floatfunc_package _ _  _ _ ff1).
 
-Definition vacuous_bnds ty `{STD: is_standard ty} : bounds ty := 
-   ((ftype_of_float (B754_infinity (fprec ty) (femax ty) true), false), 
+Definition vacuous_bnds ty `{STD: is_standard ty} : bounds ty :=
+   ((ftype_of_float (B754_infinity (fprec ty) (femax ty) true), false),
     (ftype_of_float (B754_infinity (fprec ty) (femax ty) false), false)).
 
 Definition silly_bnds : bounds Tdouble :=
@@ -45,21 +45,21 @@ Definition sin := ltac:(apply_func sinff).
 Lemma test_reify1: False.
 Proof.
 pose (e := (1 +  cos 2)%F64).
-let u := reify_float_expr e in 
- constr_eq u 
+let u := reify_float_expr e in
+ constr_eq u
   (Binop (Rounded2 PLUS None) (Const Tdouble I 1%F64)
        (Func Tdouble cosff
           (Kcons (Const Tdouble I 2%F64) Knil))).
 Abort.
 
-Definition F (x : ftype Tdouble ) : ftype Tdouble := 
+Definition F (x : ftype Tdouble ) : ftype Tdouble :=
   (cos x * cos x + sin x * sin x)%F64.
 
 
-Definition _x : ident := 1%positive.  
+Definition _x : ident := 1%positive.
 (** These two lines compute a deep-embedded "expr"ession from
   a shallow-embedded Coq expression.  *)
-Definition F' := ltac:(let e' := 
+Definition F' := ltac:(let e' :=
   HO_reify_float_expr constr:([_x]) F in exact e').
 
 Print F'.  (* Demonstrates what x' looks like *)
@@ -67,11 +67,11 @@ Print F'.  (* Demonstrates what x' looks like *)
 (** When interpreting deep-embedded expressions, "Var"iables will appear
   which are labeled by identifiers such as "_x" and "_v".  We want a
   "varmap" for looking up the values of those variables.  We'll compute
-  that varmap in two stages.  Step one, given values "x" and "v", 
+  that varmap in two stages.  Step one, given values "x" and "v",
   make an association list mapping _x to x, and _v to v,  each labeled
   by its floating-point type.  *)
 
-Definition vmap_list (x : ftype Tdouble) := 
+Definition vmap_list (x : ftype Tdouble) :=
    [(_x, existT ftype _ x)].
 
 (** Step two, build that into "varmap" data structure, taking care to
@@ -80,11 +80,11 @@ Definition vmap_list (x : ftype Tdouble) :=
 Definition vmap (x : ftype Tdouble) : valmap :=
  ltac:(make_valmap_of_list (vmap_list x)).
 
-(**  Demonstration of reification and reflection.   When you have a 
+(**  Demonstration of reification and reflection.   When you have a
   deep-embedded "expr"ession, you can get back the shallow embedding
    by applying the "fval" function *)
 
-Lemma reflect_reify_x : forall x, 
+Lemma reflect_reify_x : forall x,
              fval (env_ (vmap x)) F' = F x.
 Proof.
 intros.
@@ -93,14 +93,14 @@ Qed.
 
 (** The main point of VCFloat is to prove bounds on the roundoff error of
   floating-point expressions.  Generally those bounds are provable only if
-  the free variables of the expression (e.g., "x" and "v") are themselves 
+  the free variables of the expression (e.g., "x" and "v") are themselves
   bounded in some way;  otherwise, the expression might overflow.
   A "boundsmap" is a mapping from identifier (such as "_x") to
   a "varinfo", which gives its (floating-point) and its lower and upper bound. *)
 
-(** First we make an association list.  This one says that 
+(** First we make an association list.  This one says that
    -2.0 <= x <= 2.0   and   -2.0 <= v <= 2.0  *)
-Definition bmap_list : list varinfo := 
+Definition bmap_list : list varinfo :=
   [ Build_varinfo Tdouble _x (-2)  2 ].
 
 (** Then we calculate an efficient lookup table, the "boundsmap". *)
@@ -118,13 +118,13 @@ prove_roundoff_bound.
 -
 prove_rndval.
 all: interval.
-- 
+-
 prove_roundoff_bound2.
  match goal with |- Rabs ?a <= _ => field_simplify a end. (* improves the bound *)
  interval.
 Qed.
 
-Derive x_acc 
+Derive x_acc
  SuchThat  (forall vmap,  prove_roundoff_bound bmap vmap F' x_acc)
  As prove_roundoff_bound_x_alt.
 Proof.
@@ -143,6 +143,3 @@ Print x_acc.
 Check prove_roundoff_bound_x_alt.
 
 End WITHNANS.
-
-
-

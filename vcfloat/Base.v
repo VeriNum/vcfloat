@@ -30,7 +30,7 @@ Proof.
   destruct a; try contradiction.
   unfold Bool.Is_true in h1, h2.
   destruct h1. destruct h2. reflexivity.
-Defined. 
+Defined.
 
 
 Definition extend_comp (c: comparison) (b: bool) (d: option comparison) :=
@@ -51,12 +51,12 @@ Definition extend_comp (c: comparison) (b: bool) (d: option comparison) :=
  end
  end.
 
-Definition nan_payload prec emax : Type := 
+Definition nan_payload prec emax : Type :=
    {x : binary_float prec emax | Binary.is_nan prec emax x = true}.
 
 Import Bool.
 
-Definition nan_pl_eqb {prec1 emax1 prec2 emax2} 
+Definition nan_pl_eqb {prec1 emax1 prec2 emax2}
          (n1: nan_payload prec1 emax1) (n2: nan_payload prec2 emax2) :=
  match proj1_sig n1, proj1_sig n2 with
  | B754_nan _ _ b1 pl1 _, B754_nan _ _ b2 pl2 _ => Bool.eqb b1 b2 && Pos.eqb pl1 pl2
@@ -74,7 +74,7 @@ apply (Bool.eqb s s0 && Pos.eqb pl pl0).
 Defined.
 
 Lemma nan_pl_sanity_check:
-   forall prec1 emax1 prec2 emax2 n1 n2, 
+   forall prec1 emax1 prec2 emax2 n1 n2,
    @nan_pl_eqb' prec1 emax1 prec2 emax2 n1 n2 = @nan_pl_eqb prec1 emax1 prec2 emax2 n1 n2.
 Proof.
 intros.
@@ -99,10 +99,10 @@ Proof.
   rewrite andb_true_iff in H. destruct H.
   rewrite eqb_true_iff in H.
   rewrite Pos.eqb_eq in H0.
-  assert (e=e0) by 
+  assert (e=e0) by
      (apply Eqdep_dec.eq_proofs_unicity; destruct x; destruct y; intuition congruence).
    subst s0 pl0 e0.
- assert (e1=e2) by 
+ assert (e1=e2) by
      (apply Eqdep_dec.eq_proofs_unicity; destruct x; destruct y; intuition congruence).
    subst e2.
   reflexivity.
@@ -124,7 +124,7 @@ Lemma binary_float_eqb_eq prec emax (b1 b2: binary_float prec emax):
   binary_float_eqb b1 b2 = true <-> b1 = b2.
 Proof.
   destruct b1; destruct b2; simpl;
-  
+
       (repeat rewrite andb_true_iff);
       (try rewrite Bool.eqb_true_iff);
       (try rewrite Pos.eqb_eq);
@@ -135,16 +135,16 @@ Proof.
       destruct x; destruct y; intuition congruence.
    + inversion H; clear H; subst; auto.
 - split; intro.
-   + destruct H as [[? ?] ?]. 
+   + destruct H as [[? ?] ?].
       apply Z.eqb_eq in H1. subst.
-      f_equal.       
+      f_equal.
       apply Eqdep_dec.eq_proofs_unicity.
       destruct x; destruct y; intuition congruence.
    + inversion H; clear H; subst; split; auto.
        apply Z.eqb_eq. auto.
 Qed.
 
-Definition binary_float_equiv {prec emax} 
+Definition binary_float_equiv {prec emax}
 (b1 b2: binary_float prec emax): Prop :=
   match b1, b2 with
     | B754_zero _ _ b1, B754_zero _ _ b2 => b1 = b2
@@ -164,17 +164,17 @@ Lemma binary_float_equiv_sym prec emax (b1 b2: binary_float prec emax):
      binary_float_equiv b1 b2 -> binary_float_equiv b2 b1.
 Proof.
 intros.
-destruct b1; destruct b2; simpl; auto. 
+destruct b1; destruct b2; simpl; auto.
 destruct H as (A & B & C); subst; auto. Qed.
 
 Lemma binary_float_equiv_trans prec emax (b1 b2 b3: binary_float prec emax):
-  binary_float_equiv b1 b2 -> 
+  binary_float_equiv b1 b2 ->
   binary_float_equiv b2 b3 -> binary_float_equiv b1 b3.
-Proof. 
+Proof.
 intros.
 destruct b1; destruct b2; destruct b3; simpl; auto.
-all: try (destruct H; destruct H0; reflexivity).    
-destruct H; destruct H0. subst. destruct H2; destruct H1; subst; auto. 
+all: try (destruct H; destruct H0; reflexivity).
+destruct H; destruct H0. subst. destruct H2; destruct H1; subst; auto.
 Qed.
 
 Lemma binary_float_eqb_equiv prec emax (b1 b2: binary_float prec emax):
@@ -185,12 +185,12 @@ Proof.
       (try rewrite Bool.eqb_true_iff);
       (try rewrite Pos.eqb_eq);
       (try intuition congruence).
-      rewrite ?Z.eqb_eq; 
-      rewrite ?and_assoc; auto.  
+      rewrite ?Z.eqb_eq;
+      rewrite ?and_assoc; auto.
 Qed.
 
 Lemma binary_float_finite_equiv_eqb prec emax (b1 b2: binary_float prec emax):
-Binary.is_finite prec emax b1  = true -> 
+Binary.is_finite prec emax b1  = true ->
 binary_float_equiv b1 b2 -> binary_float_eqb b1 b2 = true .
 Proof.
   destruct b1; destruct b2; simpl;
@@ -198,38 +198,38 @@ Proof.
       (try rewrite Bool.eqb_true_iff);
       (try rewrite Pos.eqb_eq);
       (try intuition congruence).
-      rewrite ?Z.eqb_eq; 
-      rewrite ?and_assoc; auto.  
+      rewrite ?Z.eqb_eq;
+      rewrite ?and_assoc; auto.
 Qed.
 
 Lemma binary_float_eq_equiv prec emax (b1 b2: binary_float prec emax):
    b1 = b2 -> binary_float_equiv b1 b2.
 Proof.
 intros.
-apply binary_float_eqb_eq in H. 
+apply binary_float_eqb_eq in H.
 apply binary_float_eqb_equiv in H; apply H.
 Qed.
 
 Lemma binary_float_equiv_eq prec emax (b1 b2: binary_float prec emax):
    binary_float_equiv b1 b2 -> Binary.is_nan _ _ b1 =  false -> b1 = b2.
 Proof.
-intros. 
-assert (binary_float_eqb b1 b2 = true). 
+intros.
+assert (binary_float_eqb b1 b2 = true).
 - destruct b1; destruct b2; simpl in H; subst; simpl; auto;
   try discriminate;
   try apply eqb_reflx.
-rewrite ?andb_true_iff. 
+rewrite ?andb_true_iff.
 destruct H; rewrite H.
-destruct H1; rewrite H1; rewrite H2; split. split; auto. 
-apply eqb_reflx. 
+destruct H1; rewrite H1; rewrite H2; split. split; auto.
+apply eqb_reflx.
 apply Pos.eqb_eq; reflexivity.
 apply Z.eqb_eq; reflexivity.
-- apply binary_float_eqb_eq; apply H1. 
+- apply binary_float_eqb_eq; apply H1.
 Qed.
 
 Lemma binary_float_inf_equiv_eqb prec emax (b1 b2: binary_float prec emax):
-Binary.is_finite prec emax b1  = false -> 
-Binary.is_nan prec emax b1  = false -> 
+Binary.is_finite prec emax b1  = false ->
+Binary.is_nan prec emax b1  = false ->
 binary_float_equiv b1 b2 -> binary_float_eqb b1 b2 = true .
 Proof.
   destruct b1; destruct b2; simpl;
@@ -242,21 +242,21 @@ Qed.
 
 Lemma binary_float_equiv_nan prec emax (b1 b2: binary_float prec emax):
 binary_float_equiv b1 b2 -> Binary.is_nan _ _ b1 = true -> Binary.is_nan _ _ b2 = true.
-Proof. 
+Proof.
 intros.
 destruct b1; simpl in H0; try discriminate.
 destruct b2; simpl in H; try contradiction.
 simpl; reflexivity.
 Qed.
 
-Lemma exact_inverse (prec emax : Z) 
+Lemma exact_inverse (prec emax : Z)
 (prec_gt_0_ : FLX.Prec_gt_0 prec)
 (Hmax : (prec < emax)%Z) :
 forall (b1 b2: binary_float prec emax),
-is_finite_strict prec emax b1 = false -> 
+is_finite_strict prec emax b1 = false ->
 Bexact_inverse prec emax prec_gt_0_ Hmax b1 = Some b2 -> False.
-Proof. 
-intros. 
+Proof.
+intros.
 apply Bexact_inverse_correct in H0; destruct H0; rewrite H0 in H; discriminate.
 Qed.
 
@@ -298,11 +298,11 @@ Definition build_nan_full {prec emax} (pl: nan_payload prec emax) :=
 Ltac const_pos p :=
   lazymatch p with xH => idtac | xI ?p => const_pos p | xO ?p => const_pos p end.
 
-Ltac const_Z i := 
+Ltac const_Z i :=
   lazymatch i with
-  | Zpos ?p => const_pos p 
+  | Zpos ?p => const_pos p
   | Zneg ?p => const_pos p
-  | Z0 => idtac 
+  | Z0 => idtac
  end.
 
 Ltac const_bool b := lazymatch b with true => idtac | false => idtac end.
@@ -344,8 +344,8 @@ Ltac compute_float_operation E :=
              let w := eval compute in w in
              let w := constr:(w (eq_refl true)) in
              replace E with w by apply B754_finite_replace_proof
-           | B754_zero ?prec ?emax ?s => 
-                  let w := constr:(B754_zero prec emax s) in 
+           | B754_zero ?prec ?emax ?s =>
+                  let w := constr:(B754_zero prec emax s) in
                   let w := eval compute in w in
                    change E with w
            end.
@@ -395,14 +395,14 @@ Definition FF2B_gen prec emax x :=
 
 Lemma FF2B_gen_correct prec emax x (Hx: valid_binary prec emax x = true):
   FF2B_gen _ _ x = FF2B _ _ _ Hx.
-Proof.  
+Proof.
   apply bool_true_elim.
 Qed.
 
 Axiom prop_ext: ClassicalFacts.prop_extensionality.
 
 Lemma proof_irr      : ClassicalFacts.proof_irrelevance.
-Proof. apply ClassicalFacts.ext_prop_dep_proof_irrel_cic. 
+Proof. apply ClassicalFacts.ext_prop_dep_proof_irrel_cic.
  apply prop_ext.
 Qed.
 Arguments proof_irr [A] a1 a2.

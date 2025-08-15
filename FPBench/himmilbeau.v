@@ -11,15 +11,15 @@ Definition himmilbeau_bmap_list := [Build_varinfo Tdouble 1%positive (-5) (5);Bu
 Definition himmilbeau_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list himmilbeau_bmap_list) in exact z).
 
-Definition himmilbeau (x1 : ftype Tdouble) (x2 : ftype Tdouble) := 
+Definition himmilbeau (x1 : ftype Tdouble) (x2 : ftype Tdouble) :=
   cast Tdouble (let a := (((x1 * x1)%F64 + x2)%F64 - (11)%F64)%F64 in
   let b := ((x1 + (x2 * x2)%F64)%F64 - (7)%F64)%F64 in
   ((a * a)%F64 + (b * b)%F64)%F64).
 
-Definition himmilbeau_expr := 
+Definition himmilbeau_expr :=
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive]) himmilbeau in exact e').
 
-Derive himmilbeau_b 
+Derive himmilbeau_b
 SuchThat (forall vmap, prove_roundoff_bound himmilbeau_bmap vmap himmilbeau_expr himmilbeau_b)
 As jetengine_bound.
 Proof.

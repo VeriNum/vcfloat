@@ -50,7 +50,7 @@ Lemma doppler1_test:
   (E17 : Rabs d6 <= powerRZ 2 (-53))
   (a := 2915025227559731 / 8796093022208 : R)
   (b := 5404319552844595 / 9007199254740992 : R),
- {bound: R | 
+ {bound: R |
 Rabs
   ((- ((a + (b * v_t * (1 + d) + e1)) * (1 + d1) + e0) * v_v *
     (1 + d2) + e8) /
@@ -59,7 +59,7 @@ Rabs
     (((a + (b * v_t * (1 + d) + e1)) * (1 + d1) + e0 + v_u) *
      (1 + d0) + e4) * (1 + d6) + e3) * (1 + d3) + e9 -
    - (a + b * v_t) * v_v *
-   / ((a + b * v_t + v_u) * (a + b * v_t + v_u))) 
+   / ((a + b * v_t + v_u) * (a + b * v_t + v_u)))
    <= bound}.
 Proof. intros.
 evar (bound: R).
@@ -96,21 +96,21 @@ Definition Neg' (e1: expr) :=
 
 Definition Sqr' (e1: expr) :=
  match e1 with
- | Econst (Int 0) => zeroexpr 
+ | Econst (Int 0) => zeroexpr
  | Econst (Int 1) => oneexpr
- | _ => e1 
+ | _ => e1
  end.
 
 
 Print Add0.
 
 Definition partial_deriv (x: nat) : expr -> option expr :=
- fix aux (e: expr) : option expr := 
+ fix aux (e: expr) : option expr :=
  match e with
  | Evar y => Some (if Nat.eqb x y then oneexpr else zeroexpr)
  | Econst _ => Some zeroexpr
  | Eunary Neg e1 => option_map Neg' (aux e1)
- | Eunary Inv e1 => option_map (fun d => Neg' (Div' d (Sqr' e1))) (aux e1) 
+ | Eunary Inv e1 => option_map (fun d => Neg' (Div' d (Sqr' e1))) (aux e1)
  | Eunary Sqr e => option_map (Mul' (Econst (Int 2))) (aux e)
  | Ebinary Add e1 e2 => bind2 Add0 (aux e1) (aux e2)
  | Ebinary Sub e1 e2 => bind2 Sub0 (aux e1) (aux e2)
@@ -154,7 +154,7 @@ cbv.
 cbv [partial_deriv __expr Nat.eqb ].
 
 
-  
+
 
 Check option_map.
 

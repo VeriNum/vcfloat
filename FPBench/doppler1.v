@@ -22,10 +22,10 @@ Definition doppler1 (u : ftype Tdouble) (v : ftype Tdouble) (t : ftype Tdouble) 
   let t1 := ((3314e-1)%F64 + ((6e-1)%F64 * t)%F64)%F64 in
   (((-t1) * v)%F64 / ((t1 + u)%F64 * (t1 + u)%F64)%F64)%F64.
 
-Definition doppler1_expr := 
+Definition doppler1_expr :=
  ltac:(let e' :=  HO_reify_float_expr constr:([_u;_v;_t]) doppler1 in exact e').
 
-Derive doppler1_b 
+Derive doppler1_b
 SuchThat (forall vmap, prove_roundoff_bound doppler1_bmap vmap doppler1_expr doppler1_b)
 As doppler1_bound.
 Proof.
@@ -44,11 +44,11 @@ try match goal with |- (Rabs ?e <= ?a - ?b)%R =>
                       eapply Rle_trans;
                       [apply G | apply Rminus_plus_le_minus; apply Rle_refl] end)));
 try match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect v_v, 
+interval_intro (Rabs a) with (i_bisect v_v,
  i_depth 17) as H'; apply H'; apply Rle_refl
 end;
 try match goal with |- Rabs ?a <= _ =>
-interval_intro (Rabs a) with (i_bisect v_u, 
+interval_intro (Rabs a) with (i_bisect v_u,
 i_bisect v_t, i_depth 17) as H'; apply H'; apply Rle_refl
 end).
 Time Qed.

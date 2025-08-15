@@ -3,8 +3,8 @@ Require FMapAVL.
 Import OrderedType.
 
 
-(* (c) 2022 Andrew W. Appel. 
- 
+(* (c) 2022 Andrew W. Appel.
+
  LEMMAS FOR REASONING ABOUT COMMUTATIVE FOLDS OVER TABLES.
 
  This module adds two extra lemmas to the FMapAVL functor.
@@ -26,7 +26,7 @@ Import OrderedType.
 
   That's just the purpose of the lemmas
         relate_fold_add lemma  and   fold_add_ignore,
-  which (when used together) can facilitate reasoning about 
+  which (when used together) can facilitate reasoning about
   table folds when  adding elements.
 
  The second module "Demonstration" illustrates an example of its use.
@@ -44,16 +44,16 @@ Module Table := FMapAVL.Make Keys.
 
 Lemma fold_bal:
   forall [elt A] (f: Table.Raw.key -> elt -> A -> A) (t1 t2: Table.Raw.tree elt) k e x,
-  Table.Raw.fold f (Table.Raw.bal t1 k e t2) x = 
+  Table.Raw.fold f (Table.Raw.bal t1 k e t2) x =
    Table.Raw.fold f t2 (f k e (Table.Raw.fold f t1 x)).
 Proof.
 intros.
 unfold Table.Raw.bal.
 repeat match goal with
- | |- context [if ?A then _ else _] => destruct A 
- | |- context [match Table.Raw.add ?p ?x ?y with _ => _ end] => 
+ | |- context [if ?A then _ else _] => destruct A
+ | |- context [match Table.Raw.add ?p ?x ?y with _ => _ end] =>
                    destruct (Table.Raw.add p x y) eqn:?H
- | |- context [match ?t with _ => _ end ] => is_var t; destruct t 
+ | |- context [match ?t with _ => _ end ] => is_var t; destruct t
 end;
 simpl; auto.
 Qed.
@@ -76,7 +76,7 @@ Qed.
 
 Lemma relate_fold_add':
  forall [elt A: Type]
-     [eqv: A -> A -> Prop] 
+     [eqv: A -> A -> Prop]
      (eqv_rel: Equivalence eqv)
      (lift: Table.key -> elt -> A)
      (lift_prop: forall k k' x, Keys.eq k k' -> eqv (lift k x) (lift k' x))
@@ -94,8 +94,8 @@ Lemma relate_fold_add':
     (k: Table.key),
     eqv (Table.fold g tab u)
       (f (match Table.find k tab with Some x => lift k x | None => u end)
-       (Table.fold (fun k' x a => 
-                           match Keys.compare k k' with EQ _ => a 
+       (Table.fold (fun k' x a =>
+                           match Keys.compare k k' with EQ _ => a
                                  | _ => g k' x a end) tab u)).
 Proof.
 intros.
@@ -145,7 +145,7 @@ destruct (Table.Raw.find k this) eqn:?H.
 set (a:=u). clearbody a.
 revert a; induction is_bst; simpl; intros; [ discriminate | ].
 simpl in H.
-unfold h at 2. 
+unfold h at 2.
 destruct (Keys.compare k x).
 +
 specialize (IHis_bst1 H); clear IHis_bst2.
@@ -202,7 +202,7 @@ Qed.
 
 Lemma relate_fold_add:
  forall [elt A: Type]
-     [eqv: A -> A -> Prop] 
+     [eqv: A -> A -> Prop]
      (eqv_rel: Equivalence eqv)
      (lift: Table.key -> elt -> A)
      (lift_prop: forall k k' x, Keys.eq k k' -> eqv (lift k x) (lift k' x))
@@ -275,7 +275,7 @@ Qed.
 
 Lemma relate_fold_add_alt:
  forall [elt A: Type]
-     [eqv: A -> A -> Prop] 
+     [eqv: A -> A -> Prop]
      (eqv_rel: Equivalence eqv)
      (lift: Table.key -> elt -> A)
      (lift_prop: forall k k' x, Keys.eq k k' -> eqv (lift k x) (lift k' x))
@@ -337,7 +337,7 @@ Qed.
 
 Lemma cmp_antisym1: forall x y, cmp x y = Gt -> cmp y x = Lt.
 Proof. intros. apply Zcompare_Gt_Lt_antisym; auto. Qed.
- 
+
 Definition compare ( x y : t) : OrderedType.Compare lt eq x y :=
 match cmp x y as c0 return (cmp x y = c0 -> OrderedType.Compare lt eq x y) with
 | Eq => fun H0 : cmp x y = Eq => OrderedType.EQ (Z.compare_eq _ _ H0)
@@ -382,7 +382,7 @@ pose proof relate_fold_add_alt Z.eq_equiv lift
    (fun k p x => Z.add (lift k p) x)
    ltac:(intros; subst; reflexivity)
    tab k p oldnew.
-unfold addup_table, add_to_table. 
+unfold addup_table, add_to_table.
 set (f := fun (k : Table.key) (p : positive) (x : Z) => (lift k p + x)%Z) in *.
 change (fun (_ : Table.key) (p1 : positive) (i : Z) => (Z.pos p1 + i)%Z) with f in *.
 rewrite Z.add_comm.
