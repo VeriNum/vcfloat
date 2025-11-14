@@ -1,4 +1,4 @@
-Require Import Lia.
+From Coq Require Import Lia.
 From vcfloat Require Import FPStdLib. (* FPLang Rounding FPLangOpt.*)
 Require compcert.common.AST compcert.common.Values.
 Require Import compcert.lib.Floats.

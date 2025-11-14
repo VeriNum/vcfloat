@@ -1,4 +1,4 @@
-Require Import ZArith Lia Reals Coq.Lists.List.
+From Coq Require Import ZArith Lia Reals Lists.List.
 From Flocq Require Import Binary Bits Core.
 Export Flocq.Core.Raux.
 From vcfloat Require Export IEEE754_extra klist Float_notations Base.
@@ -924,7 +924,7 @@ Inductive type_coretype: forall [t: type], ftype t -> FPCore.ftype (coretype_of_
       type_coretype (@cast NAN t1 t2 x) 
        (@FPCore.cast NAN (coretype_of_type t1) (coretype_of_type t2) (STDtype t1) (STDtype t2) x').
 
-Require Import JMeq.
+From Coq Require Import JMeq.
 Require vcfloat.Rounding.
 Set Bullet Behavior "Strict Subproofs".
 

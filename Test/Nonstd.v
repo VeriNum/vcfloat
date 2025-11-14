@@ -2,6 +2,7 @@
  Copyright (C) 2021-2022 Andrew W. Appel and Ariel Kellison.
 *)
 
+From Coq Require Import ZArith.
 Require Import vcfloat.VCFloat.
 Require Import Interval.Tactic.
 Import Binary.
@@ -193,8 +194,8 @@ prove_roundoff_bound2.
 Qed.
 
 Derive x_acc 
- SuchThat  (forall vmap,  prove_roundoff_bound bmap vmap F' x_acc)
- As prove_roundoff_bound_x_alt.
+ in  (forall vmap,  prove_roundoff_bound bmap vmap F' x_acc)
+ as prove_roundoff_bound_x_alt.
 Proof.
 intros.
  prove_roundoff_bound.

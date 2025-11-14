@@ -1,6 +1,7 @@
 Require Import Ltac2.Ltac2.
 Require Import Ltac2.Printf.
 Require Import Ltac2.Bool.
+Local Set Warnings "-ltac2-unused-variable".
 
 (** * Restricted reduction/evaluation/computation *)
 

@@ -4,6 +4,7 @@
   the real-number semantics of floating-point computations.
 **)
 
+From Coq Require Import ZArith.
 Require Export vcfloat.Float_lemmas.
 Require Export vcfloat.FPLang.
 Require Import vcfloat.klist.

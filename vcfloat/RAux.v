@@ -1,8 +1,8 @@
 (*  LGPL licensed; see ../LICENSE and, for historical notes, see ../OLD_LICENSE *)
 (** More properties about real numbers. *)
 
-Require Export Reals Psatz.
-Require Export Lia.
+From Coq Require Export Reals Psatz.
+From Coq Require Export Lia.
 Open Scope R_scope.
 
 Lemma increasing_weaken f x y:
@@ -280,8 +280,8 @@ nra.
 Qed.
 
 
-Require Import ZArith.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith.
+From Coq Require Import Lists.List.
 
 Ltac R_to_pos p :=
   match p with

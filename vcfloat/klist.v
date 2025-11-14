@@ -1,6 +1,6 @@
-Require Import List. Import ListNotations.
-Require ProofIrrelevance.
-Require Import JMeq.
+From Coq Require Import List. Import ListNotations.
+From Coq Require ProofIrrelevance.
+From Coq Require Import JMeq.
 
 Fixpoint function_type (args : list Type) (rhs : Type) {struct args} : Type :=
   match args with
@@ -111,7 +111,7 @@ clear.
 induction ea; simpl; auto.
 set (u := (tys++tb)++tc) in *.
 set (v := tys++tb++tc) in *.
-assert (u=v) by apply app_ass.
+assert (u=v) by (symmetry; apply app_assoc).
 set (tab := tys++tb) in *.
 set (tbc := tb++tc) in *.
 set (ebc := kapp eb ec) in *. clearbody ebc.
@@ -197,8 +197,9 @@ match
           (applyk typemapper args0 res)
    end.
 
+From Coq Require Import Recdef.
+Local Set Warnings "-funind-cannot-define-graph,-funind-cannot-build-inversion".
 Module StuffNotNeeded.
-Require Import Recdef.
 
 Section KLIST.
 Context {type: Type}.

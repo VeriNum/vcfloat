@@ -19,7 +19,7 @@
    Thus, the refinement proof in VST will need to import FPCore but
     not the rest of VCFloat. *)
 
-Require Import ZArith Lia Reals Coq.Lists.List.
+From Coq Require Import ZArith Lia Reals Lists.List.
 From Flocq Require Import Binary Bits Core.
 From vcfloat Require Import IEEE754_extra klist.
 Global Unset Asymmetric Patterns. (* because "Require compcert..." sets it *)

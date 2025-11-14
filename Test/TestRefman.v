@@ -91,8 +91,8 @@ Definition find_and_prove_roundoff_bound (bmap: boundsmap) (e: expr) :=
    {bound | proof that it really is a bound for step }
  where "bound" is a simple real-valued expression with only constants. *)
 Derive step_b 
- SuchThat  (forall vmap,  prove_roundoff_bound step_bmap vmap step' step_b)
- As prove_step_bound.
+ in  (forall vmap,  prove_roundoff_bound step_bmap vmap step' step_b)
+ as prove_step_bound.
 Proof.
 subst step_b.
 intro.

@@ -1,7 +1,9 @@
 (*  LGPL licensed; see ../LICENSE and, for historical notes, see ../OLD_LICENSE *)
 (* Helpers for computing in rational numbers. *)
 
-Require Export QArith Qreals Flocq.Core.Raux Reals.
+From Coq Require Export QArith Qreals.
+Require Import Flocq.Core.Raux.
+From Coq Require Import Reals.
 Open Scope R_scope.
 
 Global Instance Q2R_proper:

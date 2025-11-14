@@ -149,8 +149,8 @@ prove_roundoff_bound.
 Qed.
 
 Derive x_acc 
- SuchThat  (forall vmap,  prove_roundoff_bound leapfrog_bmap vmap x' x_acc)
- As prove_roundoff_bound_x_alt.
+ in  (forall vmap,  prove_roundoff_bound leapfrog_bmap vmap x' x_acc)
+ as prove_roundoff_bound_x_alt.
 Proof.
 intros.
  prove_roundoff_bound.

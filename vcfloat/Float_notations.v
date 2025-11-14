@@ -43,9 +43,11 @@
   is more difficult, but in Coq we have the Z type that simplifies some issues.
 *)
 
+Local Set Warnings "-via-type-remapping,-via-type-mismatch".
+
 From Flocq Require Import Binary Bits Core.
 From vcfloat Require Import IEEE754_extra. (* This file should really be part of Flocq, not CompCert *)
-Require Import ZArith.
+From Coq Require Import ZArith.
 Open Scope Z.
 
 Definition b32_B754_zero : _ -> binary32 := B754_zero 24 128.

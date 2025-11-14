@@ -211,7 +211,7 @@ rewrite (IZR_Zpower Zaux.radix2) by lia.
 change (bpow _ ?n) with (2 * bpow Zaux.radix2 (Z.pred n)).
 rewrite Rinv_mult. assumption.
 }
-apply Rlt_Rminus.
+apply Rlt_0_minus.
 rewrite Rmult_1_l.
 eapply Rle_lt_trans.
 eapply Rle_trans.
@@ -498,7 +498,7 @@ subst d; interval.
 assert (HA2: 0 < A).
 {
 subst A.
-apply Rlt_Rminus.
+apply Rlt_0_minus.
 subst n.
 simpl (length(a::l)).
 rewrite <- Nat.add_1_r.
@@ -741,13 +741,13 @@ apply H1; auto.
 auto.
 apply Rmult_le_compat; auto.
 apply Stdlib.Rdiv_pos_compat; auto.
-rewrite map_length. 
+rewrite length_map. 
 apply pos_INR.
 apply Req_le; nra.
 replace (length (map FT2R l)) with (length l); auto.
-rewrite map_length; auto.
-rewrite map_length; auto.
-rewrite map_length; auto.
+rewrite length_map; auto.
+rewrite length_map; auto.
+rewrite length_map; auto.
 -
 (* Rabs s0 <= b *)
 eapply Rle_trans.
@@ -757,11 +757,11 @@ apply H0; auto.
 auto.
 apply Rmult_le_compat; auto.
 apply Stdlib.Rdiv_pos_compat; auto.
-rewrite map_length. 
+rewrite length_map. 
 apply pos_INR.
 apply Req_le; nra.
 replace (length (map FT2R l)) with (length l); auto.
-rewrite map_length; auto.
+rewrite length_map; auto.
 }
 
 assert (HBMD: boundsmap_denote bmap (vmap a s1)).

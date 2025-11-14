@@ -6,7 +6,7 @@
 COQC=coqc
 COQDEP=coqdep
 COQFLAGS := $(shell cat _CoqProject)
-COQEXTRAFLAGS?= 
+COQEXTRAFLAGS?=  -w "-deprecated-from-Coq,-deprecated-dirpath-Coq"
 
 target:  vcfloat2 tests
 

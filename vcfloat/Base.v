@@ -1,4 +1,4 @@
-Require Import ZArith Lia Reals Coq.Lists.List.
+From Coq Require Import ZArith Lia Reals Lists.List.
 From Flocq Require Import Binary Bits Core.
 From vcfloat Require Import IEEE754_extra klist Float_notations.
 

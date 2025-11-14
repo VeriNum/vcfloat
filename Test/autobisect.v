@@ -18,7 +18,7 @@ Definition turbine1_expr :=
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) turbine1 in exact e').
 
 Derive a
-SuchThat 
+in  
 (forall (v0 e2 d7 : R)
  (H : 38 / 10 <= v0 <= 78 / 10)
  (H0 : Rabs d7 <= / 9007199254740992)
@@ -26,7 +26,7 @@ SuchThat
      /
      404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568),
  Rabs (v0 ^ 2 / (v0 ^ 2 * d7 + v0 ^ 2 + e2)) <= a - 0)
-As a_proof.
+as a_proof.
 Proof.
 intros.
 subst a.
@@ -40,8 +40,8 @@ Qed.
 
 
 Derive turbine1_b 
-SuchThat (forall vmap, prove_roundoff_bound turbine1_bmap vmap turbine1_expr turbine1_b)
-As turbine1_bound.
+in (forall vmap, prove_roundoff_bound turbine1_bmap vmap turbine1_expr turbine1_b)
+as turbine1_bound.
 Proof.
 idtac "Starting turbine1".
 intro.

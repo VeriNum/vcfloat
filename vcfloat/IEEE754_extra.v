@@ -18,14 +18,14 @@
 (** Additional operations and proofs about IEEE-754 binary
     floating-point numbers, on top of the Flocq library. *)
 
-Require Import Reals.
+From Coq Require Import Reals.
 Require Import SpecFloat.
 From Flocq Require Import Core Digits Operations Round Bracket Sterbenz
                           BinarySingleNaN Binary Round_odd.
-Require Import ZArith.
-Require Import Psatz.
-Require Import Bool.
-Require Import Eqdep_dec.
+From Coq Require Import ZArith.
+From Coq Require Import Psatz.
+From Coq Require Import Bool.
+From Coq Require Import Eqdep_dec.
 
 Local Open Scope Z_scope.
 
@@ -431,7 +431,7 @@ Proof.
     apply integer_representable_2p. auto.
     apply (Zpower_gt_0 radix2).
     lia.
-- assert (IZR x <> 0%R) by (apply (IZR_neq _ _ n)).
+- assert (IZR x <> 0%R) by (apply (eq_IZR_contrapositive _ _ n)).
   destruct (BofZ_finite x H) as (A & B & C).
   destruct (BofZ_representable (2^p)) as (D & E & F).
     apply integer_representable_2p. auto.
@@ -992,7 +992,7 @@ Remark bounded_Bexact_inverse:
   emin <= e <= emax - prec <-> bounded prec emax Bexact_inverse_mantissa e = true.
 Proof.
   intros. unfold bounded, canonical_mantissa. rewrite andb_true_iff.
-  rewrite <- Zeq_is_eq_bool. rewrite <- Zle_is_le_bool.
+  rewrite Z.eqb_eq. rewrite <- Zle_is_le_bool.
   rewrite Bexact_inverse_mantissa_digits2_pos.
   unfold fexp, FLT_exp, emin. lia.
 Qed.

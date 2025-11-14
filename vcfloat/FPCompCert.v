@@ -1,6 +1,6 @@
 (*  LGPL licensed; see ../LICENSE and, for historical notes, see ../OLD_LICENSE *)
 
-Require Import Lia.
+From Coq Require Import Lia.
 From vcfloat Require Export FPCore. (* FPLang Rounding FPLangOpt.*)
 Require compcert.common.AST compcert.common.Values.
 Require Import compcert.lib.Floats.
@@ -30,7 +30,7 @@ Proof.
 Qed.
 
 Require Import Coq.Classes.EquivDec.
-Require Import ZArith.
+From Coq Require Import ZArith.
 
 Lemma conv_nan_ex:
   { conv_nan: forall (prec1 emax1 prec2 emax2 : Z),

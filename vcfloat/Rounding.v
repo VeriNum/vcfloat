@@ -1,11 +1,12 @@
 (*  LGPL licensed; see ../LICENSE and, for historical notes, see ../OLD_LICENSE *)
 
+From Coq Require Import ZArith.
 Require Import Interval.Tactic.
 From vcfloat Require Export RAux.
 From Flocq Require Import Binary Bits Core.
 From vcfloat Require Import IEEE754_extra. (* lib.Floats. *)
 Require compcert.lib.Maps.  
-Require Import JMeq.
+From Coq Require Import JMeq.
 Require Coq.MSets.MSetAVL.
 Require vcfloat.Fprop_absolute.
 Require Import vcfloat.Float_lemmas.
@@ -16,7 +17,7 @@ Require Export vcfloat.FPCore vcfloat.FPLang.
 Require Import vcfloat.klist.
 Import Bool.
 
-Import Coq.Lists.List ListNotations.
+Import Lists.List ListNotations.
 
 Local Open Scope R_scope.
 
@@ -2253,7 +2254,7 @@ rewrite Rmult_comm.
 rewrite Rmult_assoc.
 rewrite (Rmult_comm (/ _)).
 rewrite Rinv_r. lra.
-apply IZR_neq.
+apply eq_IZR_contrapositive.
 intro; discriminate.
 Qed.
 
@@ -3313,12 +3314,12 @@ Proof.
         assert (Rabs delta' = 0) by (pose proof (Rabs_pos delta'); lra).
         apply Rabs_eq_R0 in H; auto.
         unfold Rdiv. rewrite !(Rmult_comm _ (/ _)). rewrite <- !(Rmult_assoc _ (/ _)). 
-        rewrite !Rinv_r by (apply IZR_neq; lia). rewrite !Rmult_1_l. auto.
+        rewrite !Rinv_r by (apply eq_IZR_contrapositive; lia). rewrite !Rmult_1_l. auto.
         destruct abs; simpl in *. rewrite Rmult_0_r. rewrite Rmult_0_l in H5.
         assert (Rabs epsilon' = 0) by (pose proof (Rabs_pos epsilon'); lra).
         apply Rabs_eq_R0 in H; auto.
         unfold Rdiv. rewrite !(Rmult_comm _ (/ _)). rewrite <- !(Rmult_assoc _ (/ _)). 
-        rewrite !Rinv_r by (apply IZR_neq; lia). rewrite !Rmult_1_l. auto.
+        rewrite !Rinv_r by (apply eq_IZR_contrapositive; lia). rewrite !Rmult_1_l. auto.
 
  + apply Kforall_inv in H4. destruct H4.
     change (Kforall

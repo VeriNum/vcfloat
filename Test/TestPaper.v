@@ -92,8 +92,8 @@ Qed.
 (* The next part demonstrates that you don't have to guess the
   upper bound in advance, to use the tool. *)
 Derive acc 
- SuchThat  (forall vmap,  prove_roundoff_bound step_bmap vmap step' acc)
- As prove_roundoff_bound_x_alt.
+ in  (forall vmap,  prove_roundoff_bound step_bmap vmap step' acc)
+ as prove_roundoff_bound_x_alt.
 Proof.
 intros.
  prove_roundoff_bound.

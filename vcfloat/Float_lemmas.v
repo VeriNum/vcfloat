@@ -1,3 +1,4 @@
+From Coq Require Import ZArith.
 From vcfloat Require Import RAux.
 From Flocq Require Import Binary Bits Core Zaux.
 From vcfloat Require Import IEEE754_extra.
@@ -638,7 +639,7 @@ apply Rmult_le_compat_r.
 lra.
 assert (y * /j <= y * 1); [ | lra].
 apply Rmult_le_compat_l; try lra.
-apply Rle_Rinv in H2; lra.
+apply Rinv_le_contravar in H2; lra.
 Qed.
 
 Lemma InvShift_accuracy_aux:
@@ -659,7 +660,7 @@ rewrite FLT_format_div_beta_1; auto.
 2: apply valid_rnd_N.
 rewrite Rmult_comm.
 unfold Rdiv.
-rewrite Rminus_eq_0, Rabs_R0.
+rewrite Rminus_diag, Rabs_R0.
 pose proof (bpow_gt_0 radix2 (3 - femax ty - fprec ty)). lra.
 eapply Rle_trans. 2: apply r. apply bpow_le. lia.
 -

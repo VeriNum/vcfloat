@@ -2,8 +2,9 @@
 
 (** More properties of floating-point numbers: absolute error, multiply/divide by radix. *)
 
-Require Import ZArith Flocq.Core.Raux Reals.
-Require Import Lia Lra.
+From Coq Require Import ZArith.
+Require Import Flocq.Core.Raux. 
+From Coq Require Import Reals Lia Lra.
 
 Require Import Flocq.Prop.Relative.
 (*Require Import Flocq.Appli.Fappli_IEEE. *)
@@ -58,8 +59,8 @@ Proof.
   intros a b Hab u v Huv.
   subst.
   unfold Znearest.
-  destruct (Rcompare (v - IZR (Zfloor v)) (/ 2)); auto.
-  replace (b (Zfloor v)) with (a (Zfloor v)) by auto.
+  destruct (Rcompare (v - IZR (Raux.Zfloor v)) (/ 2)); auto.
+  replace (b (Raux.Zfloor v)) with (a (Raux.Zfloor v)) by auto.
   reflexivity.
 Qed.
 
@@ -144,7 +145,7 @@ Proof.
   replace (Defs.Fexp f) with (Defs.Fexp f - 1 + 1)%Z at 1 by ring.
   rewrite bpow_plus_1.
   field.
-  apply IZR_neq.
+  apply eq_IZR_contrapositive.
   generalize (Zaux.radix_gt_0 beta). lia.
  -
   simpl.

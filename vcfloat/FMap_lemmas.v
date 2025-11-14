@@ -1,5 +1,5 @@
-Require FMapInterface.
-Require FMapAVL.
+From Coq Require FMapInterface.
+From Coq Require FMapAVL.
 Import OrderedType.
 
 

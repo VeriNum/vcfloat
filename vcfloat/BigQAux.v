@@ -5,7 +5,7 @@
 (* Auxiliary theorems for big rational numbers *)
 
 Require Export Morphisms.
-Require Export QArith.
+From Coq Require Export QArith.
 Require Export Bignums.BigQ.BigQ.
 
 Global Instance to_Q_morph: Proper (BigQ.eq ==> Qeq) BigQ.to_Q.

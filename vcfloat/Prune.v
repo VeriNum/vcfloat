@@ -1,9 +1,10 @@
-Require Import Reals ZArith Lra Lia Interval.Tactic.
+From Coq Require Import Reals ZArith Lra Lia.
+Require Import Interval.Tactic.
 Import Raux.
 From Flocq Require Import IEEE754.Binary Zaux.
-Require Import Setoid.
+From Coq Require Import Setoid.
 
-Import Coq.Lists.List ListNotations.
+Import Lists.List ListNotations.
 Import Tree. (* must import this _after_ List *)
 Import Interval Private Interval_helper I2 IT2.IH Xreal Eval.Reify.
 
@@ -1279,9 +1280,9 @@ revert e1 slop H Hslop.
     [destruct (F'.le t cutoff) eqn:?H; inversion H; clear H; subst;
      apply (b_expr_correct _ vars _ _ H0) in H1;
      [destruct H1; simpl in H1|-*; rewrite Rminus_0_r; auto
-     | rewrite Rminus_eq_0, Rabs_R0, FtoR_zero; lra
+     | rewrite Rminus_diag, Rabs_R0, FtoR_zero; lra
      ]
-    | inversion H; clear H; subst; rewrite Rminus_eq_0, Rabs_R0, FtoR_zero; lra
+    | inversion H; clear H; subst; rewrite Rminus_diag, Rabs_R0, FtoR_zero; lra
     ]].
 (* binary case *)
  destruct (b_expr (Ebinary b e1 e2) env) eqn:?H.
@@ -1290,7 +1291,7 @@ revert e1 slop H Hslop.
  destruct (F'.le t cutoff) eqn:?H.
     inversion H; clear H; subst.
     simpl eval in *. rewrite Rminus_0_r. auto.
-    inversion H; clear H; subst. rewrite Rminus_eq_0, FtoR_zero, Rabs_R0; lra.
+    inversion H; clear H; subst. rewrite Rminus_diag, FtoR_zero, Rabs_R0; lra.
 -
      destruct (prune env e1 cutoff) as [e1' b1].
      destruct (prune env e2 cutoff) as [e2' b2].
@@ -1344,8 +1345,8 @@ revert e1 slop H Hslop.
      destruct e2' as [ | [ [ | | ] | | ] | | ] ;
      simpl;
      unfold Rabs; repeat destruct (Rcase_abs _); lra.
- + inversion H; clear H; subst. rewrite Rminus_eq_0, FtoR_zero, Rabs_R0; lra.
- + inversion H; clear H; subst. rewrite Rminus_eq_0, FtoR_zero, Rabs_R0; lra.
+ + inversion H; clear H; subst. rewrite Rminus_diag, FtoR_zero, Rabs_R0; lra.
+ + inversion H; clear H; subst. rewrite Rminus_diag, FtoR_zero, Rabs_R0; lra.
 Qed.
 
 Lemma prune_terms_correct:
@@ -1439,7 +1440,7 @@ Fixpoint count_terms (e: expr) : Z :=
  | _ => 1
  end.
 
-Require QArith.
+From Coq Require QArith.
 
 Definition Add0 (e1 e2: expr) :=
  match e1 with
@@ -2203,7 +2204,7 @@ try solve [
   lra.
 Qed.
 
-Require FMapInterface.
+From Coq Require FMapInterface.
 
 Module Keys <: OrderedType.OrderedType.
   Definition t := powers.

@@ -1,2 +1,2 @@
-Require Import Coq.Strings.String.  Open Scope string.
-Definition version := "2.2".
+From Coq Require Import Strings.String.  Open Scope string.
+Definition version := "2.3".

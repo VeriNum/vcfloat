@@ -2,6 +2,7 @@
 
 (* Core and annotated languages for floating-point operations. *)
 
+From Coq Require Import ZArith.
 Require Import Interval.Tactic.
 From vcfloat Require Export RAux.
 From Flocq Require Import Binary Bits Core.
