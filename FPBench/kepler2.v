@@ -11,13 +11,13 @@ Definition kepler2_bmap_list := [Build_varinfo Tdouble 1%positive (4) (636e-2);B
 Definition kepler2_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list kepler2_bmap_list) in exact z).
 
-Definition kepler2 (x1 : ftype Tdouble) (x2 : ftype Tdouble) (x3 : ftype Tdouble) (x4 : ftype Tdouble) (x5 : ftype Tdouble) (x6 : ftype Tdouble) := 
+Definition kepler2 (x1 : ftype Tdouble) (x2 : ftype Tdouble) (x3 : ftype Tdouble) (x4 : ftype Tdouble) (x5 : ftype Tdouble) (x6 : ftype Tdouble) :=
   cast Tdouble (((((((((x1 * x4)%F64 * ((((((-x1) + x2)%F64 + x3)%F64 - x4)%F64 + x5)%F64 + x6)%F64)%F64 + ((x2 * x5)%F64 * (((((x1 - x2)%F64 + x3)%F64 + x4)%F64 - x5)%F64 + x6)%F64)%F64)%F64 + ((x3 * x6)%F64 * (((((x1 + x2)%F64 - x3)%F64 + x4)%F64 + x5)%F64 - x6)%F64)%F64)%F64 - ((x2 * x3)%F64 * x4)%F64)%F64 - ((x1 * x3)%F64 * x5)%F64)%F64 - ((x1 * x2)%F64 * x6)%F64)%F64 - ((x4 * x5)%F64 * x6)%F64)%F64).
 
-Definition kepler2_expr := 
+Definition kepler2_expr :=
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive;4%positive;5%positive;6%positive]) kepler2 in exact e').
 
-Derive kepler2_b 
+Derive kepler2_b
 SuchThat (forall vmap, prove_roundoff_bound kepler2_bmap vmap kepler2_expr kepler2_b)
 As kepler2_bound.
 Proof.

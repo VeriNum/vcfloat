@@ -204,7 +204,7 @@ Ltac2 rec eval_cbv_uao_afr (head : constr) (rf : Std.red_flags) (term : constr) 
       else (term, false)
 *)
   | Constr.Unsafe.Case case_a constr_return_rel case_b constr_match case_funcs =>
-      let (constr_return, relev) := constr_return_rel in 
+      let (constr_return, relev) := constr_return_rel in
       let (return_r, return_m) := eval_cbv_uao_afr head rf constr_return in
       let (match_r, match_m) := eval_cbv_uao_afr head rf constr_match in
       let case_funcs_e := Array.map (eval_cbv_uao_afr head rf) case_funcs in
@@ -243,7 +243,7 @@ Ltac2 cbv_uao_lr (head : constr) : unit :=
     (* The line below can be commented out for performance tests - it is just an extra debug type check*)
     let goal_r := check_throw goal_r in
     change $goal_r.
-  
+
 Ltac2 cbv_uao_afr (head : constr) : unit :=
     let goal := Control.goal() in
     let (goal_r, goal_m) := eval_cbv_uao_afr head (redflags_full ()) goal in
@@ -254,11 +254,11 @@ Ltac2 cbv_uao_afr (head : constr) : unit :=
 (** ** Ltac1 wrapper *)
 
 (** compute_every f
-    will find every term below the line of the form  (f _) or (f _ _) etc. whose head is f, 
-    and fully reduce it using "compute". 
+    will find every term below the line of the form  (f _) or (f _ _) etc. whose head is f,
+    and fully reduce it using "compute".
     This tactic does NOT look for (f _) within types, fixpoints or native arrays.
 *)
-Ltac compute_every := 
+Ltac compute_every :=
   ltac2:(f |- compute_tactics_ltac2.cbv_uao_lr (Option.get (Ltac1.to_constr f))).
 
 (** ** Tests / examples *)

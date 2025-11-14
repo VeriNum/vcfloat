@@ -27,7 +27,7 @@ Qed.
 
 
 Lemma Rle_powerRZ_2:
-  forall a b : R, 
+  forall a b : R,
   forall n: nat,
   0 <= a ->
   a <= b -> powerRZ a (Z.of_nat n) <= powerRZ b (Z.of_nat n).
@@ -35,16 +35,16 @@ Proof.
   intros.
   induction n.
   + simpl. nra.
-  + replace (Z.of_nat (S n)) with ( (Z.of_nat n + 1%Z)%Z) by lia. 
+  + replace (Z.of_nat (S n)) with ( (Z.of_nat n + 1%Z)%Z) by lia.
     destruct H.
-    - rewrite ?powerRZ_add; try nra. 
+    - rewrite ?powerRZ_add; try nra.
       eapply Rmult_le_compat; try simpl; try nra.
       apply powerRZ_le; auto.
     - subst; destruct H0; subst; try simpl; try nra.
       assert ((0 < n + 1)%nat) by lia.
-      pose proof pow_i (n+1) H0. 
+      pose proof pow_i (n+1) H0.
       replace (powerRZ 0 (Z.of_nat n + 1)) with
-       (0^( n + 1)). 
+       (0^( n + 1)).
       pose proof pow_i (n+1) H0. rewrite H1. apply powerRZ_le; nra.
       rewrite ?pow_powerRZ; apply f_equal; lia.
 Qed.
@@ -104,7 +104,7 @@ Proof.
    unfold IZR. rewrite <- INR_IPR.
     rewrite Rpower_pow; auto.
   }
-  rewrite IZR_NEG. unfold IZR.  rewrite <- INR_IPR. 
+  rewrite IZR_NEG. unfold IZR.  rewrite <- INR_IPR.
   rewrite Rpower_Ropp.
   rewrite Rpower_pow; auto.
 Qed.
@@ -223,7 +223,7 @@ Rabs (x-y) <= z ->
 Rabs x <= z + Rabs y.
 Proof.
 intros.
-pose proof Rle_trans (Rabs x - Rabs y) (Rabs (x - y)) z  
+pose proof Rle_trans (Rabs x - Rabs y) (Rabs (x - y)) z
   (Rabs_triang_inv x y) H.
 nra.
 Qed.
@@ -252,10 +252,10 @@ Proof.
 Qed.
 
 Lemma neg_powerRZ (x:R) (n:Z) :
-  x <> R0 -> 
+  x <> R0 ->
   1 / (powerRZ x%R n%Z) = (powerRZ x%R (-n)%Z) .
 Proof.
-intros; pose proof power_RZ_inv x n H; symmetry; rewrite <- H0; nra. 
+intros; pose proof power_RZ_inv x n H; symmetry; rewrite <- H0; nra.
 Qed.
 
 
@@ -273,8 +273,8 @@ end.
 pose proof powerRZ_add 2 (-1) (-n) H. rewrite H0.
 replace (1 / 2) with (powerRZ 2 (-1)). reflexivity.
 simpl; nra.
-replace (powerRZ 2 (- n)) with 
-(1 / powerRZ 2 n). 
+replace (powerRZ 2 (- n)) with
+(1 / powerRZ 2 n).
 nra.
 (apply neg_powerRZ); nra.
 Qed.
@@ -325,7 +325,7 @@ Proof.
   {
     apply Req_le.
     congruence.
-  }  
+  }
   assert (K: x1 < x2) by lra.
   destruct (MVT_cor2 f f' _ _ K) as (c & ? & ?).
   {
@@ -362,7 +362,7 @@ Proof.
   {
     unfold opp_fct.
     lra.
-  }    
+  }
   eapply derivable_nonpos_decr with (a := a) (b := b) (f' := opp_fct f'); eauto.
   {
     intros.
@@ -466,7 +466,7 @@ Proof.
   apply Rle_ge.
   rewrite <- sin_0.
   generalize PI2_3_2; intro.
-  apply sin_incr_1; try lra.   
+  apply sin_incr_1; try lra.
 Qed.
 
 Corollary sin_ub_abs x:
@@ -601,7 +601,7 @@ Proof.
   destruct (Req_dec x (-PI)).
   {
     subst.
-    rewrite sin_neg. 
+    rewrite sin_neg.
     repeat rewrite Rabs_Ropp.
     rewrite Rabs_right by lra.
     rewrite sin_PI.
@@ -1004,7 +1004,7 @@ Proof.
   assumption.
 Qed.
 
-Lemma sqrt_succ_le : 
+Lemma sqrt_succ_le :
 forall n: R,
 0 <= n ->
 sqrt(n) < sqrt(n+1).
@@ -1040,7 +1040,7 @@ Qed.
 Lemma Rabs_div_eq : forall a b , b <> 0 -> 0 <= b -> Rabs (a /b) = Rabs a / b.
 Proof. intros. rewrite Rabs_div_Raux; try nra; replace (Rabs b) with b; try nra; symmetry; apply Rabs_pos_eq; auto. Qed.
 
-Lemma Rminus_rel_error : 
+Lemma Rminus_rel_error :
 forall u1 u2 v1 v2, ((u1 - v1) ) - (u2 - v2) = (u1 - u2) - (v1 - v2).
 Proof. intros. nra. Qed.
 
@@ -1048,7 +1048,7 @@ Lemma Rplus_rel_error:
 forall u1 u2 v1 v2, (u1 + v1) - (u2 + v2) = (u1 - u2) + (v1 - v2).
 Proof. intros. nra. Qed.
 
-Lemma Rmult_rel_error: 
+Lemma Rmult_rel_error:
 forall u1 v1 u v, (u1 * v1) - (u  * v) = (u1 - u)*v + (v1 - v)*u + (u1-u) * (v1-v).
 Proof. intros.  nra. Qed.
 
@@ -1058,17 +1058,17 @@ u'/v' - u/v = ((u'-u)/u - (v'-v)/v ) * (1 / (1 + ((v'-v)/v))) * (u/v).
 Proof. intros. field_simplify; repeat try split; try nra; auto. Qed.
 
 Lemma Rdiv_rel_error_add : forall u v u' v', v' <>0 -> v <> 0 -> u <> 0 ->
-Rabs (u'/v' - u/v) <= 
+Rabs (u'/v' - u/v) <=
 (Rabs((u'-u) / u) + Rabs((v'-v) /v)) * Rabs (1 / (1 + ((v'-v)/v))) * Rabs (u/v).
 Proof.
 intros.
-rewrite Rdiv_rel_error; auto. 
+rewrite Rdiv_rel_error; auto.
 rewrite Rabs_mult.
 rewrite Rabs_mult.
 eapply Rle_trans.
-rewrite Rmult_assoc. 
+rewrite Rmult_assoc.
 apply Rmult_le_compat. apply Rabs_pos.
-rewrite <- Rabs_mult. 
+rewrite <- Rabs_mult.
 apply Rabs_pos.
 match goal with |- Rabs (?a/u - ?b /v) <= _=>
 replace (a/u - b /v) with (a/u + (v - v') /v) by nra
@@ -1078,20 +1078,20 @@ apply Rabs_triang.
 apply Rplus_le_compat.
 apply Rle_refl. apply Rle_refl.
 apply Rle_refl.
-rewrite Rmult_assoc. 
+rewrite Rmult_assoc.
 replace ((v - v')/v) with (-((v' - v)/v)) by nra.
 rewrite Rabs_Ropp.
 apply Rle_refl.
 Qed.
 
 Lemma Rdiv_rel_error_add_reduced_r : forall u v u' v', v' <>0 -> v <> 0 -> u <> 0 ->
-Rabs (u'/v' - u/v) <= 
+Rabs (u'/v' - u/v) <=
 (Rabs((u'-u)/u)  + Rabs (v'-v) * Rabs(1/v)) * Rabs (1 / (1 + ((v'-v)/v))) * Rabs (u/v).
 Proof.
 intros.
-rewrite Rdiv_rel_error; auto. 
+rewrite Rdiv_rel_error; auto.
 eapply Rle_trans.
-rewrite Rmult_assoc. 
+rewrite Rmult_assoc.
 rewrite Rabs_mult.
 apply Rmult_le_compat. apply Rabs_pos. apply Rabs_pos.
 match goal with |- Rabs (?a/u - ?b /v) <= _=>
@@ -1112,13 +1112,13 @@ apply Rle_refl.
 Qed.
 
 Lemma Rdiv_rel_error_add_reduced_l : forall u v u' v', v' <>0 -> v <> 0 -> u <> 0 ->
-Rabs (u'/v' - u/v) <= 
+Rabs (u'/v' - u/v) <=
 (Rabs(u'-u) * Rabs(1/u)  + Rabs((v'-v)/v)) * Rabs (1 / (1 + ((v'-v)/v))) * Rabs (u/v).
 Proof.
 intros.
-rewrite Rdiv_rel_error; auto. 
+rewrite Rdiv_rel_error; auto.
 eapply Rle_trans.
-rewrite Rmult_assoc. 
+rewrite Rmult_assoc.
 rewrite Rabs_mult.
 apply Rmult_le_compat. apply Rabs_pos. apply Rabs_pos.
 match goal with |- Rabs (?a/u - ?b /v) <= _=>
@@ -1131,23 +1131,23 @@ eapply Rle_trans.
 apply Rabs_triang.
 apply Rplus_le_compat.
 rewrite Rabs_mult. apply Rle_refl.
-rewrite <- Rabs_Ropp. apply Rle_refl. 
+rewrite <- Rabs_Ropp. apply Rle_refl.
 field_simplify. f_equal. split; auto. split; auto.
 rewrite Rabs_mult; apply Rle_refl.
 rewrite Rmult_assoc.
 apply Req_le.
-f_equal. f_equal. f_equal. 
+f_equal. f_equal. f_equal.
 nra.
 Qed.
 
 Lemma Rdiv_rel_error_add_reduced : forall u v u' v', v' <>0 -> v <> 0 -> u <> 0 ->
-Rabs (u'/v' - u/v) <= 
+Rabs (u'/v' - u/v) <=
 (Rabs(u'-u) * Rabs (1/u) + Rabs (v'-v) * Rabs(1/v)) * Rabs (1 / (1 + ((v'-v)/v))) * Rabs (u/v).
 Proof.
 intros.
-rewrite Rdiv_rel_error; auto. 
+rewrite Rdiv_rel_error; auto.
 eapply Rle_trans.
-rewrite Rmult_assoc. 
+rewrite Rmult_assoc.
 rewrite Rabs_mult.
 apply Rmult_le_compat. apply Rabs_pos. apply Rabs_pos.
 match goal with |- Rabs (?a/u - ?b /v) <= _=>
@@ -1175,14 +1175,14 @@ Lemma Rdiv_rel_error_no_u_div2 : forall u v u' v', v' <>0 -> v <> 0 ->
 u'/v' - u/v = ((u'-u) - (v'-v)/v  * u)  * (1 / (1 + ((v'-v)/v))) * (1/v).
 Proof. intros. field_simplify; repeat try split; try nra; auto. Qed.
 
-Lemma Rdiv_rel_error_no_u_div_reduced : 
+Lemma Rdiv_rel_error_no_u_div_reduced :
 forall u v u' v', v' <>0 -> v <> 0 ->
 Rabs (u'/v' - u/v) <= (Rabs (u'-u)  +  Rabs ((v'-v)) * Rabs (1/v) * Rabs u)  * Rabs (1 / (1 + ((v'-v)/v))) * Rabs (1/v).
 Proof.
 intros.
-rewrite Rdiv_rel_error_no_u_div'; auto. 
+rewrite Rdiv_rel_error_no_u_div'; auto.
 eapply Rle_trans.
-rewrite Rmult_assoc. 
+rewrite Rmult_assoc.
 rewrite Rabs_mult.
 apply Rmult_le_compat. apply Rabs_pos. apply Rabs_pos.
 match goal with |- Rabs (?a - (v' - v) *1/v * u) <= _=>
@@ -1198,14 +1198,14 @@ try apply Rabs_pos.
 rewrite Rabs_mult.
 apply Rmult_le_compat;
 try apply Rabs_pos.
-rewrite <- Rabs_Ropp;  apply Rle_refl. 
-apply Rle_refl. 
-apply Rle_refl. 
+rewrite <- Rabs_Ropp;  apply Rle_refl.
+apply Rle_refl.
+apply Rle_refl.
 rewrite Rabs_mult.
 apply Rmult_le_compat;
 try apply Rabs_pos.
-apply Rle_refl. 
-apply Rle_refl. 
+apply Rle_refl.
+apply Rle_refl.
 repeat rewrite Rmult_assoc.
 apply Req_le.
 f_equal. f_equal. f_equal.
@@ -1213,14 +1213,14 @@ f_equal.
 nra.
 Qed.
 
-Lemma Rdiv_rel_error_no_u_div_reduced2 : 
+Lemma Rdiv_rel_error_no_u_div_reduced2 :
 forall u v u' v', v' <>0 -> v <> 0 ->
 Rabs (u'/v' - u/v) <= (Rabs (u'-u)  +  Rabs ((v'-v)/v)* Rabs u)  * Rabs (1 / (1 + ((v'-v)/v))) * Rabs (1/v).
 Proof.
 intros.
-rewrite Rdiv_rel_error_no_u_div2; auto. 
+rewrite Rdiv_rel_error_no_u_div2; auto.
 eapply Rle_trans.
-rewrite Rmult_assoc. 
+rewrite Rmult_assoc.
 rewrite Rabs_mult.
 apply Rmult_le_compat. apply Rabs_pos. apply Rabs_pos.
 match goal with |- Rabs (?a - (v' - v)/v * u) <= _=>
@@ -1233,9 +1233,9 @@ apply Rle_refl.
 rewrite Rabs_mult.
 apply Rmult_le_compat;
 try apply Rabs_pos.
-rewrite <- Rabs_Ropp;  apply Rle_refl. 
-apply Rle_refl. 
-apply Rle_refl. 
+rewrite <- Rabs_Ropp;  apply Rle_refl.
+apply Rle_refl.
+apply Rle_refl.
 
 repeat rewrite Rmult_assoc.
 apply Req_le.
@@ -1315,7 +1315,7 @@ Proof.
   rewrite mult_IZR.
   rewrite plus_IZR.
   replace (IZR 2) with 2 by reflexivity.
-  apply center_R_complete.  
+  apply center_R_complete.
   intuition eauto using IZR_le.
 Qed.
 

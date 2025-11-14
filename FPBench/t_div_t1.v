@@ -11,13 +11,13 @@ Definition t_div_t1_bmap_list := [Build_varinfo Tdouble 1%positive (0) (999)].
 Definition t_div_t1_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list t_div_t1_bmap_list) in exact z).
 
-Definition t_div_t1 (z : ftype Tdouble) := 
+Definition t_div_t1 (z : ftype Tdouble) :=
   cast Tdouble ((z / (z + (1)%F64)%F64)%F64).
 
-Definition t_div_t1_expr := 
+Definition t_div_t1_expr :=
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive]) t_div_t1 in exact e').
 
-Derive t_div_t1_b 
+Derive t_div_t1_b
 SuchThat (forall vmap, prove_roundoff_bound t_div_t1_bmap vmap t_div_t1_expr t_div_t1_b)
 As t_div_t1_bound.
 idtac "Starting t_div_t1".

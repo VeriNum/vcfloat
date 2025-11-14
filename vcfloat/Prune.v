@@ -77,14 +77,14 @@ Fixpoint ring_simp_Mul fuel (e1 e2 : expr) : option expr :=
      | _, Econst (Int 0) =>
                 Some e2
      | Econst (Int a), Econst (Int b) => Some (Econst (Int (a*b)))
-     | Eunary Inv (Econst a), Eunary Inv (Econst b) => 
+     | Eunary Inv (Econst a), Eunary Inv (Econst b) =>
         if nullary_op_nonzero a && nullary_op_nonzero b then
          match ring_simp_Mul fuel' (Econst a) (Econst b) with
          | Some ab => Some (Eunary Inv ab)
          | None => Some (Eunary Inv (Ebinary Mul (Econst a) (Econst b)))
          end
        else None
-     | Eunary Inv (Econst _), Econst _ => 
+     | Eunary Inv (Econst _), Econst _ =>
          Some (Ebinary Mul e2 e1)
      | Econst _, Ebinary Mul (Eunary Inv (Econst a)) (Eunary Inv (Econst b)) =>
         if nullary_op_nonzero a && nullary_op_nonzero b then
@@ -106,28 +106,28 @@ Fixpoint ring_simp_Mul fuel (e1 e2 : expr) : option expr :=
      | Econst _, Eunary Inv (Econst _) => None
      | _, Econst _ =>  ring_simp_Mul fuel' e2 e1
      | _, Eunary Inv (Econst _) =>  ring_simp_Mul fuel' e2 e1
-     | _, Ebinary Mul (Econst b) c => 
+     | _, Ebinary Mul (Econst b) c =>
           match ring_simp_Mul fuel' e1 (Econst b) with
           | Some ab => Some (Ebinary Mul ab c)
           | None => Some (Ebinary Mul (Ebinary Mul e1 (Econst b)) c)
           end
-     | _, Ebinary Mul (Eunary Inv (Econst b)) c => 
+     | _, Ebinary Mul (Eunary Inv (Econst b)) c =>
           match ring_simp_Mul fuel' e1  (Eunary Inv (Econst b)) with
           | Some ab => Some (Ebinary Mul ab c)
           | None => Some (Ebinary Mul (Ebinary Mul e1  (Eunary Inv (Econst b))) c)
           end
      | Ebinary Add e11 e12, Ebinary Add e21 e22 =>
-          Some (Ebinary Add 
+          Some (Ebinary Add
                 (Ebinary Add (Ebinary Mul e11 e21) (Ebinary Mul e11 e22))
                 (Ebinary Add (Ebinary Mul e12 e21) (Ebinary Mul e12 e22)))
      | Ebinary Add e11 e12, Ebinary Sub e21 e22 =>
-          Some (Ebinary Add 
+          Some (Ebinary Add
                 (Ebinary Sub (Ebinary Mul e11 e21) (Ebinary Mul e11 e22))
                 (Ebinary Sub (Ebinary Mul e12 e21) (Ebinary Mul e12 e22)))
      | Ebinary Add e11 e12,  _ =>
            Some (Ebinary Add (Ebinary Mul e11 e2) (Ebinary Mul e12 e2))
      | Ebinary Sub e11 e12, Ebinary Add e21 e22 =>
-          Some (Ebinary Sub 
+          Some (Ebinary Sub
                 (Ebinary Add (Ebinary Mul e11 e21) (Ebinary Mul e11 e22))
                 (Ebinary Add (Ebinary Mul e12 e21) (Ebinary Mul e12 e22)))
      | Ebinary Sub e11 e12, Ebinary Sub e21 e22 =>
@@ -167,7 +167,7 @@ Local Lemma Some_inj: forall {A} (x y: A), Some x = Some y -> x=y.
 Proof. congruence. Qed.
 
 Lemma ring_simp_Mul_correct:
-  forall fuel e1 e2 e, 
+  forall fuel e1 e2 e,
     ring_simp_Mul fuel e1 e2 = Some e ->
     e == Ebinary Mul e1 e2.
 Proof.
@@ -186,7 +186,7 @@ repeat
 | H: _ && _ = true |- _ => rewrite andb_true_iff in H; destruct H
 | H: nullary_op_nonzero _ = true |- _ => apply nullary_op_nonzero_e in H
  end;
- intro; simpl; 
+ intro; simpl;
  try ring;
  rewrite <- ?mult_IZR, ?Zpow_facts.Zpower_pos_0_l; simpl; auto;
  try (rewrite <- Rinv_mult by auto; auto).
@@ -200,7 +200,7 @@ Definition add_assoc2 (enable: bool) op e1 e2 :=
  | Sub, Ebinary Mul (Econst (Int (Zneg p))) b =>
                 Some (Ebinary Add e1 (Ebinary Mul (Econst (Int (Zpos p))) b))
  | Sub, Eunary Neg b => Some (Ebinary Add e1 b)
- | Add, Ebinary Add e21 e22 => 
+ | Add, Ebinary Add e21 e22 =>
         if enable then Some (Ebinary Add (Ebinary Add e1 e21) e22) else None
  | Add, Ebinary Sub e21 e22 =>
         if enable then Some (Ebinary Sub (Ebinary Add e1 e21) e22) else None
@@ -218,7 +218,7 @@ Definition add_assoc (enable: bool) op e1 e2 :=
  | _, _ => add_assoc2 enable op e1 e2
  end.
 
-Lemma add_assoc_correct: 
+Lemma add_assoc_correct:
   forall enable op e1 e2 e,
   add_assoc enable op e1 e2 = Some e ->
   e == Ebinary op e1 e2.
@@ -229,8 +229,8 @@ destruct op; simpl; auto; try discriminate;
 destruct e1, e2; simpl;  try discriminate; auto;
 repeat match goal with
            | H: Some _ = Some _ |- _ => inversion H; clear H; subst
-           | H: context [match ?a with _ => _ end] |- _  => 
-               is_var a; destruct a; simpl in H; try discriminate; auto 
+           | H: context [match ?a with _ => _ end] |- _  =>
+               is_var a; destruct a; simpl in H; try discriminate; auto
            end;
 intro; simpl; rewrite ?IZR_NEG; ring.
 Qed.
@@ -258,7 +258,7 @@ Definition ring_simp_Div e1 e2 :=
  end.
 
 Lemma ring_simp_Div_correct:
-  forall e1 e2 e, 
+  forall e1 e2 e,
     ring_simp_Div e1 e2 = Some e ->
     e == Ebinary Div e1 e2.
 Proof.
@@ -267,7 +267,7 @@ intros.
 destruct e1,e2; intros; try discriminate;
 repeat match type of H with match ?a with _ => _ end = _ => destruct a; try discriminate end;
 apply Some_inj in H; subst;
-intro; simpl; 
+intro; simpl;
 rewrite ?Rcomplements.Rdiv_1; auto;
 unfold Rdiv;
 rewrite Rmult_1_l;
@@ -280,7 +280,7 @@ Fixpoint ring_simp1 enable (e: expr) :=
  | Evar _ => None
  | Econst _ => None
  | Eunary Neg e1 => Some (Ebinary Mul (Econst (Int (-1))) e1)
- | Eunary Sqr e1 => 
+ | Eunary Sqr e1 =>
       match ring_simp1 enable e1 with
       | Some e1' => match ring_simp_Mul mul_fuel e1' e1' with
                              | Some e => Some e
@@ -314,7 +314,7 @@ Fixpoint ring_simp1 enable (e: expr) :=
  end.
 
 Lemma ring_simp1_correct:
-  forall enable e e', 
+  forall enable e e',
     ring_simp1 enable e = Some e' ->
     e == e'.
 Proof.
@@ -379,7 +379,7 @@ Qed.
 Ltac simple_reify_aux t r :=
   let vars := get_vars t (@nil R) in
   let expr1 := reify t vars in
-  let expr := fresh "__expr" in 
+  let expr := fresh "__expr" in
   pose (expr := expr1);
   change t with (eval expr vars);
   find_hyps vars;
@@ -397,15 +397,15 @@ Ltac simple_reify :=
 lazymatch goal with
  | |- Rabs ?t <= ?r => simple_reify_aux t r
  | |- Rabs ?t < ?r => simple_reify_aux t r
- | |- ?a < ?b - Rabs ?c => apply simple_reify_aux1; simple_reify 
- | |- ?a <= ?b - Rabs ?c => apply simple_reify_aux2; simple_reify 
+ | |- ?a < ?b - Rabs ?c => apply simple_reify_aux1; simple_reify
+ | |- ?a <= ?b - Rabs ?c => apply simple_reify_aux2; simple_reify
 end.
 
 Ltac reified_ring_simplify enable e :=
  match goal with |- context [eval e ?vars] =>
    let H := fresh in let e1 := fresh e in
   assert (H :=ring_simp_correct enable 100 e vars);
-  set (e1 := ring_simp enable 100 e) in H; 
+  set (e1 := ring_simp enable 100 e) in H;
   hnf in e1; cbv [add_assoc' add_assoc] in e1;
   rewrite <- H; clear H; try clear e
  end.
@@ -417,9 +417,9 @@ Ltac unfold_eval_hyps :=
     try unfold v; try clear v;
     try unfold p; try clear p
   end;
- cbv [eval_hyps eval_hyps_aux eval_hyp 
+ cbv [eval_hyps eval_hyps_aux eval_hyp
         add_assoc' add_assoc
-        eval nullary_real unary_real binary_real]; 
+        eval nullary_real unary_real binary_real];
   intros; simpl nth.
 
 Definition fint := Float.f_interval F.type.
@@ -442,14 +442,14 @@ match e with
 | Eunary (PowerInt i) e' => let f := b_expr0 e' in
                                         if decent_interval f then I.power_int p52 f i else Float.Inan
 | Ebinary Mul e1 e2 => let f1 := b_expr0 e1 in let f2 := b_expr0 e2 in
-                                      if decent_interval f1 && decent_interval f2 
+                                      if decent_interval f1 && decent_interval f2
                                       then mul p52 (b_expr0 e1) (b_expr0 e2)
                                       else Float.Inan
 | _ => Float.Inan
 end.
 
 Lemma b_expr0_inv:
- forall l u x, 
+ forall l u x,
     match (if F.real l && F.real u then Float.Ibnd l u else Float.Inan) with
       | Float.Inan => True
       | Float.Ibnd lo hi => F.toR lo <= x <= F.toR hi
@@ -480,12 +480,12 @@ Qed.
 
 Definition fixup_fint (x: fint) : fint :=
  match x with
- | Float.Ibnd lo hi => if F.real lo && F.real hi then x else Float.Inan 
+ | Float.Ibnd lo hi => if F.real lo && F.real hi then x else Float.Inan
  | _ => x
  end.
 
 Lemma classify_neg:
- forall l, F.classify (F.neg l) = 
+ forall l, F.classify (F.neg l) =
           match F.classify l with
           | Sig.Fminfty => Sig.Fpinfty
           | Sig.Fpinfty => Sig.Fminfty
@@ -530,8 +530,8 @@ lra.
 Qed.
 
 Lemma inv_div1:
-  forall x, 
-   decent_interval x = true -> 
+  forall x,
+   decent_interval x = true ->
    inv p52 x = div p52 (fromZ p52 1) x.
 Proof.
 intros.
@@ -547,7 +547,7 @@ auto.
 Qed.
 
 Lemma fixup_fint_abs_correct:
- forall l u x, 
+ forall l u x,
   match fixup_fint (Float.Ibnd l u) with
   | Float.Inan => True
   | Float.Ibnd lo hi => F.toR lo <= x <= F.toR hi
@@ -642,7 +642,7 @@ Proof.
 induction e; simpl; auto.
 -
 destruct n; simpl; auto.
- + 
+ +
   destruct (F.real _) eqn:?H; [ | simpl; auto].
   destruct (F.real (F.fromZ_UP _ _)) eqn:?H; [ | simpl; auto].
   simpl.
@@ -650,7 +650,7 @@ destruct n; simpl; auto.
   destruct (F.fromZ_UP_correct p52 n) as [_ ?].
   set (lo := F.fromZ_DN p52 n) in *; clearbody lo.
   set (hi := F.fromZ_UP p52 n) in *; clearbody hi.
-  pose proof (le_contains _ _ _ H1 H2). clear H1 H2. 
+  pose proof (le_contains _ _ _ H1 H2). clear H1 H2.
   destruct H3.
   unfold F.toR, proj_val.
   rewrite I.F.real_correct in H,H0.
@@ -682,7 +682,7 @@ destruct n; simpl; auto.
   unfold Xpower_int', bpow' in *.
   destruct n; [ | | rewrite is_zero_false in H2 by lra];
   simpl in H2; injection H2; clear H2; intro H2; subst.
-  auto. 
+  auto.
   rewrite Zpower_pos_powerRZ; rewrite pow_powerRZ; f_equal; lia.
   f_equal.
   rewrite Zpower_pos_powerRZ; rewrite pow_powerRZ; f_equal; lia.
@@ -739,7 +739,7 @@ destruct n; simpl; auto.
  + destruct (b_expr0 e); simpl in *; auto.
      destruct (F.real l) eqn:?H; simpl; auto.
      destruct (F.real u) eqn:?H; simpl; auto.
-     simpl in IHe.   
+     simpl in IHe.
      set (x := eval e nil) in *; clearbody x; clear e.
      pose proof (I.power_int_correct p52 n (Float.Ibnd l u) (Xreal x)).
      cbv beta in H1.
@@ -801,7 +801,7 @@ destruct n; simpl; auto.
    hnf; simpl.
        rewrite F'.valid_lb_real by auto.
        rewrite F'.valid_ub_real by auto.
-      simpl.    
+      simpl.
     rewrite F.real_correct in H1, H2.
     destruct (F.toX l0); try discriminate.
     destruct (F.toX u0); try discriminate.
@@ -833,8 +833,8 @@ Definition hyps_to_interval : list hyp -> Float.f_interval F.type :=
     List.fold_right (fun h x => I.meet (IT2.IH.R.eval_hyp_bnd p52 h) x) Float.Inan.
 
 Lemma hyps_to_interval_correct:
- forall (hs: list hyp) r, 
-      Forall (fun h => eval_hyp h r) hs -> 
+ forall (hs: list hyp) r,
+      Forall (fun h => eval_hyp h r) hs ->
       contains (convert (hyps_to_interval hs)) (Xreal r).
 Proof.
 intros.
@@ -850,7 +850,7 @@ Qed.
 Definition b_hyps (h: list hyp) : option F.type :=
    let u := upper (abs (hyps_to_interval h))
    in if F.real u then Some u else None.
-  
+
 Lemma b_hyps_correct: forall hs x r,
   b_hyps hs = Some x ->
   Forall (fun h => eval_hyp h r) hs ->
@@ -876,7 +876,7 @@ simpl in H0.
 destruct (F.valid_lb l0) eqn:?H; simpl in H0.
 rewrite F'.valid_ub_real in H0 by auto.
 destruct H0 as [_ ?].
-pose proof (F.real_correct u0). rewrite H1 in H2. 
+pose proof (F.real_correct u0). rewrite H1 in H2.
 destruct (F.toX u0) eqn:?H; try discriminate.
 rewrite F'.real_correct in H3 by auto.
 inversion H3; clear H3; subst.
@@ -889,11 +889,11 @@ match e with
 | Evar i => nth i env Float.Inan
 | Econst (Int n) => fromZ p52 n
 | Econst (Bpow 2 n) => power_int p52 (fromZ p52 2) n
-| Eunary op e1 => 
-     match fint_eval_expr e1 env with 
+| Eunary op e1 =>
+     match fint_eval_expr e1 env with
      | Float.Inan => Float.Inan
-     | b1 => 
-          match op with 
+     | b1 =>
+          match op with
           | Inv => inv p52 b1
           | Neg => neg b1
           | Abs => abs b1
@@ -905,7 +905,7 @@ match e with
      match fint_eval_expr e1 env, fint_eval_expr e2 env with
      | Float.Inan, _ => Float.Inan
      | _, Float.Inan => Float.Inan
-     | b1, b2 => 
+     | b1, b2 =>
            match op with
            | Mul => mul p52 b1 b2
            | Div => div p52 b1 b2
@@ -919,7 +919,7 @@ end.
 Definition b_constexpr e := fint_eval_expr e nil.
 
 Lemma fint_eval_expr_correct:
- forall e fenv env, 
+ forall e fenv env,
      Forall2 (fun i x => contains (convert i) (Xreal x)) fenv env ->
      contains (convert (fint_eval_expr e fenv)) (Xreal (eval e env)).
 Proof.
@@ -939,7 +939,7 @@ induction e.
       replace (Xreal (bpow' 2 n)) with (Xpower_int (Xreal 2) n); auto; clear.
       simpl.
       unfold bpow', Xpower_int'.
-      destruct n; auto. 
+      destruct n; auto.
       f_equal. rewrite Zpower_pos_powerRZ.
       rewrite pow_powerRZ. f_equal. lia.
       unfold is_zero.
@@ -950,16 +950,16 @@ induction e.
 - unfold fint_eval_expr; fold fint_eval_expr.
     destruct (fint_eval_expr e fenv). apply I.
     destruct u; try apply I.
-  + (* neg *) 
+  + (* neg *)
      simpl eval. set (x := eval e env) in *; clearbody x; clear e env H.
      apply (neg_correct (Float.Ibnd l u0) (Xreal x)); auto.
-  + (* abs *) 
+  + (* abs *)
      simpl eval. set (x := eval e env) in *; clearbody x; clear e env H.
      apply (abs_correct (Float.Ibnd l u0) (Xreal x)); auto.
-  + (* inv *) 
+  + (* inv *)
      simpl eval. set (x := eval e env) in *; clearbody x; clear e env H.
      apply (J.inv_correct p52 (Float.Ibnd l u0) x IHe).
-  + (* sqr *) 
+  + (* sqr *)
      simpl eval. set (x := eval e env) in *; clearbody x; clear e env H.
      apply (sqr_correct p52 (Float.Ibnd l u0) (Xreal x)); auto.
 -
@@ -970,13 +970,13 @@ induction e.
     set (x1 := eval e1 env) in *; set (x2 := eval e2 env) in *; clearbody x1 x2.
     clear e1 e2 env H.
     unfold binary_real; destruct b.
-  + (* add *) 
+  + (* add *)
      apply (add_correct p52 (Float.Ibnd l u) (Float.Ibnd l0 u0) _ _ IHe1 IHe2).
   + (* sub *)
      apply (sub_correct p52 (Float.Ibnd l u) (Float.Ibnd l0 u0) _ _ IHe1 IHe2).
   + (* mul *)
      apply (mul_correct p52 (Float.Ibnd l u) (Float.Ibnd l0 u0) _ _ IHe1 IHe2).
-  + (* div *) 
+  + (* div *)
      pose proof (J.div_correct p52 (Float.Ibnd l u) (Float.Ibnd l0 u0) _ _ IHe1 IHe2).
      unfold Xbind2 in H. unfold Xdiv' in H.
      destruct (is_zero x2) eqn:?H; auto.
@@ -990,7 +990,7 @@ apply (fint_eval_expr_correct e nil nil).
 constructor.
 Qed.
 
-Definition check_bound (b: option F.type) (r: R) := 
+Definition check_bound (b: option F.type) (r: R) :=
         match b with
         | Some u => F.real u = true /\ Rabs r <= F.toR u
         | None => True
@@ -1017,7 +1017,7 @@ match e with
 | _ => None
 end end.
 
-Lemma Freal_abs: 
+Lemma Freal_abs:
   forall x, F.real x = true -> F.real (F.abs x) = true.
 Proof.
 intros.
@@ -1029,7 +1029,7 @@ rewrite F.real_correct. rewrite H0.
 auto.
 Qed.
 
-Lemma Fmax_real: forall a b, 
+Lemma Fmax_real: forall a b,
     F.real a = true -> F.real b = true -> F.real (F.max a b) = true.
 Proof.
 intros.
@@ -1104,7 +1104,7 @@ Qed.
 Lemma b_expr_correct:
   forall hyps vars e x,
     Forall2 check_bound hyps vars ->
-    b_expr e hyps = Some x -> 
+    b_expr e hyps = Some x ->
     F.real x = true /\ Rabs (eval e vars) <= F.toR x.
 Proof.
 intros.
@@ -1127,9 +1127,9 @@ simpl eval in H1.
 destruct (b_constexpr (Econst n)) eqn:?. discriminate.
 apply (bconstexpr_correct' _ _ _ x vars Heqf H0).
 - (* unary case *)
-  destruct (b_constexpr (Eunary u e)) eqn:?H. 
+  destruct (b_constexpr (Eunary u e)) eqn:?H.
   + destruct u; try discriminate.
-    * apply IHe in H0. clear - H0.  simpl. rewrite Rabs_Ropp; auto. 
+    * apply IHe in H0. clear - H0.  simpl. rewrite Rabs_Ropp; auto.
     * apply IHe in H0. clear - H0.  simpl.  rewrite Rabs_Rabsolu; auto.
     * destruct n; try discriminate.
        destruct (b_expr e hyps) eqn:?H; try discriminate.
@@ -1154,7 +1154,7 @@ apply (bconstexpr_correct' _ _ _ x vars Heqf H0).
        simpl in H1. simpl.
        eapply Rle_trans; try apply H1.
        apply pow_maj_Rabs. rewrite Rabs_Rabsolu. auto.
-   + 
+   +
       apply (bconstexpr_correct' _ _ _ x vars H1 H0).
 - (* binary case *)
   destruct (b_constexpr (Ebinary b e1 e2)) eqn:?H.
@@ -1194,7 +1194,7 @@ Definition eval_hyps1 (hyps: list hyp) (r: R) :=
    Forall (fun h => eval_hyp h r) hyps.
 
 Lemma eval_hyps_correct:
-  forall hyps vars P, 
+  forall hyps vars P,
     length hyps = length vars ->
      (eval_hyps hyps vars P <->
        (Forall2 eval_hyps1 hyps vars -> P)).
@@ -1234,21 +1234,21 @@ Qed.
 
 Fixpoint prune (hyps: list (option F.type)) (e: expr) (cutoff: F.type) :
            expr * F.type :=
- match b_expr e hyps with 
+ match b_expr e hyps with
  | Some b => if F'.le b cutoff then (zeroexpr, b) else (e,zero)
  | None =>
  match e with
  | Ebinary Add e1 e2 =>
-  let (e1',b1) := prune hyps e1 cutoff in 
-  let (e2',b2) := prune hyps e2 cutoff in 
+  let (e1',b1) := prune hyps e1 cutoff in
+  let (e2',b2) := prune hyps e2 cutoff in
   (match e1', e2'  with
    | Econst (Int 0), _ => e2'
    | _, Econst (Int 0) => e1'
    | _, _ => Ebinary Add e1' e2'
    end, if F.real b1 && F.real b2 then F.add_UP p52 b1 b2 else infinity)
  | Ebinary Sub e1 e2 =>
-  let (e1',b1) := prune hyps e1 cutoff in 
-  let (e2',b2) := prune hyps e2 cutoff in 
+  let (e1',b1) := prune hyps e1 cutoff in
+  let (e2',b2) := prune hyps e2 cutoff in
   (match e1', e2' with
    | Econst (Int 0), _ => Eunary Neg e2'
    | _, Econst (Int 0) => e1'
@@ -1350,10 +1350,10 @@ revert e1 slop H Hslop.
 Qed.
 
 Lemma prune_terms_correct:
- forall hyps e cutoff e1 slop, 
+ forall hyps e cutoff e1 slop,
    prune (map b_hyps hyps) e cutoff = (e1,slop) ->
   F.real slop = true ->
-   forall vars r, 
+   forall vars r,
      length hyps = length vars ->
      eval_hyps hyps vars (Rabs (eval e1 vars) <= r - F.toR slop) ->
       eval_hyps hyps vars (Rabs (eval e vars) <= r).
@@ -1389,10 +1389,10 @@ Qed.
 
 
 Lemma prune_terms_correct_lt:
- forall hyps e cutoff e1 slop, 
+ forall hyps e cutoff e1 slop,
    prune (map b_hyps hyps) e cutoff = (e1,slop) ->
   F.real slop = true ->
-   forall vars r, 
+   forall vars r,
      length hyps = length vars ->
      eval_hyps hyps vars (Rabs (eval e1 vars) < r - F.toR slop) ->
       eval_hyps hyps vars (Rabs (eval e vars) < r).
@@ -1455,7 +1455,7 @@ Lemma Add0_correct: forall e1 e2, Add0 e1 e2 == Ebinary Add e1 e2.
 Proof.
 intros. intro.
 destruct e1 as [ | [ [ | | ] | | ] | | ]; simpl; auto;
-destruct e2 as [ | [ [ | | ] | | ] | | ]; simpl; auto; 
+destruct e2 as [ | [ [ | | ] | | ] | | ]; simpl; auto;
 lra.
 Qed.
 
@@ -1475,7 +1475,7 @@ Definition Sub0 (e1 e2: expr) :=
 Lemma Sub0_correct: forall e1 e2, Sub0 e1 e2 == Ebinary Sub e1 e2.
 Proof.
 intros. intro.
-destruct e2 as [ | [ [ | | ] | | ] | | ]; simpl; auto; 
+destruct e2 as [ | [ [ | | ] | | ] | | ]; simpl; auto;
 lra.
 Qed.
 
@@ -1496,7 +1496,7 @@ Fixpoint reflect_power k v e :=
  end.
 
 Add Parametric Morphism : reflect_power
- with signature eq ==> expr_equiv ==> expr_equiv ==> expr_equiv as 
+ with signature eq ==> expr_equiv ==> expr_equiv ==> expr_equiv as
     reflect_power_mor.
 Proof.
 induction y; simpl; intros; auto.
@@ -1509,8 +1509,8 @@ Fixpoint reflect_powers al n e : expr :=
  | k :: al' => reflect_power k (Evar n) (reflect_powers al' (S n) e)
  end.
 
-Add Parametric Morphism : reflect_powers 
- with signature eq ==> eq ==> expr_equiv ==> expr_equiv as 
+Add Parametric Morphism : reflect_powers
+ with signature eq ==> eq ==> expr_equiv ==> expr_equiv as
     reflect_powers_mor.
 Proof.
 induction y; simpl; intros; auto.
@@ -1522,7 +1522,7 @@ Definition reflect_coeff (x: coefficient) :=
   let '({|QArith_base.Qnum := n; QArith_base.Qden := d|}, e) := x in
  if Z.eqb n 0 then Econst (Int 0) else
  let en := Econst (Int n) in
- let ed := Eunary Inv (Econst (Int (Zpos d))) in 
+ let ed := Eunary Inv (Econst (Int (Zpos d))) in
  let ee := Econst (Bpow 2 e) in
     match Z.eqb n 1, Pos.eqb d 1, Z.eqb e 0 with
     | true,true,true => oneexpr
@@ -1538,7 +1538,7 @@ Definition reflect_coeff (x: coefficient) :=
 Definition reflect_coeff_simple (x: coefficient) :=
   let '({|QArith_base.Qnum := n; QArith_base.Qden := d|}, e) := x in
  let en := Econst (Int n) in
- let ed := Eunary Inv (Econst (Int (Zpos d))) in 
+ let ed := Eunary Inv (Econst (Int (Zpos d))) in
  let ee := Econst (Bpow 2 e) in
  Ebinary Mul (Ebinary Mul en ed) ee.
 
@@ -1553,15 +1553,15 @@ subst; intro; simpl; rewrite ?Rinv_1; ring.
 Qed.
 
 Definition reflect_normterm (x: normterm) : expr :=
-  let '(al,ec) := x in 
+  let '(al,ec) := x in
      reflect_powers al O (reflect_coeff ec).
 
 Definition reflect_normterm_simple (x: normterm) : expr :=
-  let '(al,ec) := x in 
+  let '(al,ec) := x in
   Ebinary Mul (reflect_powers al O oneexpr) (reflect_coeff_simple ec).
 
 Lemma reflect_powers_untangle:
-  forall p i e, 
+  forall p i e,
   reflect_powers p i e == Ebinary Mul (reflect_powers p i oneexpr) e.
 Proof.
 intros. intro.
@@ -1584,7 +1584,7 @@ reflexivity.
 Qed.
 
 Lemma reflect_powers_ext:
-  forall p i e1 e2, 
+  forall p i e1 e2,
     e1 == e2 ->
    reflect_powers p i e1 == reflect_powers p i e2.
 Proof.
@@ -1598,13 +1598,13 @@ Qed.
 Fixpoint merge_powers (al bl: powers) :=
  match al, bl with
  | nil, _ => bl
- | _, nil => al 
+ | _, nil => al
  | a::al', b::bl' => (a+b)%nat :: merge_powers al' bl'
  end.
 
 Definition mult_normterm (x y : normterm) : normterm :=
  let '(xp,(xc,xe)) := x in
- let '(yp,(yc,ye)) := y in 
+ let '(yp,(yc,ye)) := y in
    (merge_powers xp yp, (Qreduction.Qmult' xc yc, Z.add xe ye)).
 
 Definition negate_normterm (x: normterm) :=
@@ -1695,9 +1695,9 @@ end.
 Definition inverse_term (i: Z): option normterm :=
    match factor_powers i with
        | (Z0,_) => None
-       | (Zpos p, k) => 
+       | (Zpos p, k) =>
            Some (nil, ({|QArith_base.Qnum:=1%Z; QArith_base.Qden:=p|}, Z.opp k))
-       | (Zneg p, k) => 
+       | (Zneg p, k) =>
            Some (nil, ({|QArith_base.Qnum:=(-1)%Z; QArith_base.Qden:=p|}, Z.opp k))
        end.
 
@@ -1708,21 +1708,21 @@ match e with
       | Some e1', Some e2' => Some (mult_normterm e1' e2')
       | _, _ => None
       end
-| Econst (Int i) => let '(z,k) := factor_powers i in 
+| Econst (Int i) => let '(z,k) := factor_powers i in
                 Some (nil, (QArith_base.inject_Z z, k))
 | Eunary Inv (Econst (Int i)) => inverse_term i
- | Econst (Bpow 2 k) => 
+ | Econst (Bpow 2 k) =>
             Some (nil, (Qone, k))
- | Eunary Inv (Econst (Bpow 2 k)) => 
+ | Eunary Inv (Econst (Bpow 2 k)) =>
             Some (nil, (Qone, Z.opp k))
  | Ebinary Div (Econst (Int 1)) (Econst (Int i)) => inverse_term i
  | Ebinary Div (Econst (Int (-1))) (Econst (Int i)) => inverse_term (-i)
- | Ebinary Div e1 (Econst (Int i)) => 
+ | Ebinary Div e1 (Econst (Int i)) =>
       match normalize_term e1, inverse_term i with
       | Some e1', Some e2' => Some (mult_normterm e1' e2')
       | _,_ => None
       end
- | Ebinary Div e1 (Econst (Bpow 2 k)) => 
+ | Ebinary Div e1 (Econst (Bpow 2 k)) =>
       match normalize_term e1 with
       | Some e1' => Some (mult_normterm e1' (nil, (Qone, Z.opp k)))
       | None => None
@@ -1732,7 +1732,7 @@ match e with
 end.
 
 Lemma reflect_power_untangle:
-  forall i e1 e2, 
+  forall i e1 e2,
    reflect_power i e1 e2 ==
    Ebinary Mul (reflect_power i e1 oneexpr) e2.
 Proof.
@@ -1801,7 +1801,7 @@ unfold bpow'.
 simpl.
 pose proof (Zpower_pos_gt_0 2 p ltac:(lia)).
 destruct (Z.pow_pos 2 p); try lia.
-rewrite <- Rinv_mult by (apply not_0_IZR; lia). 
+rewrite <- Rinv_mult by (apply not_0_IZR; lia).
 rewrite <- mult_IZR, <- Pos2Z.inj_mul. auto.
 -
 inversion H; clear H; subst.
@@ -1815,7 +1815,7 @@ simpl.
 pose proof (Zpower_pos_gt_0 2 p ltac:(lia)).
 destruct (Z.pow_pos 2 p); try lia.
 rewrite <- opp_IZR.
-rewrite <- Rinv_mult by (apply not_0_IZR; lia). 
+rewrite <- Rinv_mult by (apply not_0_IZR; lia).
 f_equal.
 rewrite <- mult_IZR.
 reflexivity.
@@ -1866,7 +1866,7 @@ lra.
 Qed.
 
 Lemma mult_normterm_correct:
-  forall a b, 
+  forall a b,
   reflect_normterm (mult_normterm a b) ==
   Ebinary Mul (reflect_normterm a) (reflect_normterm b).
 Proof.
@@ -1875,7 +1875,7 @@ simpl.
 rewrite ?reflect_normterm_spec.
 destruct a as [va [[na da] ea]], b as [vb [[nb db] eb]].
 unfold mult_normterm.
-pose proof (Qreduction.Qmult'_correct 
+pose proof (Qreduction.Qmult'_correct
            {| QArith_base.Qnum := na; QArith_base.Qden := da |}
            {| QArith_base.Qnum := nb; QArith_base.Qden := db |}).
 set (j := Qreduction.Qmult' _ _). fold j in H. clearbody j.
@@ -1907,7 +1907,7 @@ rewrite !mult_IZR.
  field.
 Qed.
 
-Lemma normalize_term_correct: 
+Lemma normalize_term_correct:
   forall e nt, normalize_term e = Some nt ->
             reflect_normterm nt == e.
 Proof.
@@ -1934,8 +1934,8 @@ destruct n; try discriminate.
  simpl.
  pose proof (factor_powers_nonneg n).
  pose proof (factor_powers_correct n).
- destruct (factor_powers n). subst. 
- inversion H; clear H; subst nt. simpl in H0. 
+ destruct (factor_powers n). subst.
+ inversion H; clear H; subst nt. simpl in H0.
  simpl.
  pose proof (Z.eqb_spec z 0). destruct H; subst.
  simpl. ring. ring_simplify.
@@ -1983,11 +1983,11 @@ destruct n; try discriminate.
  assert (forall i,
      eval (reflect_normterm ([], (Qone, (- i)%Z))) env =
      / eval (reflect_normterm ([], (Qone, i))) env). {
-   destruct i; simpl; try lra. field. 
+   destruct i; simpl; try lra. field.
    apply not_0_IZR. pose proof (Zpower_pos_gt_0 2 p); lia.
  }
   unfold binary_real. unfold Rdiv.
-  repeat 
+  repeat
   match type of H with
   | Some _ = Some _ => apply Some_inj in H; subst nt
   | match ?x with _ => _ end = _ => is_var x; destruct x; try discriminate
@@ -1997,12 +1997,12 @@ destruct n; try discriminate.
         try (rewrite <- (IHe1 _ (eq_refl _)); clear IHe1);
         try (rewrite <- (IHe2 _ (eq_refl _)); clear IHe2)
  | match inverse_term ?x with _ => _ end = _ =>
-        let H := fresh in 
+        let H := fresh in
         destruct (inverse_term x) eqn:H;
         try discriminate;
         let NZ := fresh "NZ" in assert (NZ := inverse_term_nonzero _ _ H);
         apply inverse_term_correct in H
- | inverse_term ?n = Some _ => 
+ | inverse_term ?n = Some _ =>
         let NZ := fresh "NZ" in assert (NZ := inverse_term_nonzero _ _ H);
      apply inverse_term_correct in H
   end;
@@ -2010,7 +2010,7 @@ destruct n; try discriminate.
   rewrite <- !reflect_normterm_spec;
   rewrite mult_normterm_correct;
    unfold eval; fold eval; unfold binary_real;
-  repeat match goal with H: reflect_normterm _ == _ |- _ => 
+  repeat match goal with H: reflect_normterm _ == _ |- _ =>
     rewrite H; clear H
   end;
   f_equal;
@@ -2023,17 +2023,17 @@ Qed.
 
 Fixpoint normalize_terms (negate: bool) (e: expr) (nl: list normterm) : expr * list normterm :=
  match e with
- | Ebinary Add e1 e2 => 
+ | Ebinary Add e1 e2 =>
       let '(e2',nl') := normalize_terms negate e2 nl in
       let '(e1',nl'') := normalize_terms negate e1 nl' in
        (Add0 e1' e2', nl'')
- | Ebinary Sub e1 e2 => 
+ | Ebinary Sub e1 e2 =>
       let '(e2',nl') := normalize_terms (negb negate) e2 nl in
       let '(e1',nl'') := normalize_terms negate e1 nl' in
        (Add0 e1' e2', nl'')
  | Eunary Neg e1 => normalize_terms (negb negate) e1 nl
- | _ => match normalize_term e with 
-            | Some nt => (zeroexpr, 
+ | _ => match normalize_term e with
+            | Some nt => (zeroexpr,
                                    (if negate then negate_normterm nt else nt) :: nl)
             | None => (if negate then Eunary Neg e else e, nl)
             end
@@ -2043,7 +2043,7 @@ Definition reflect_normterms (nts: list normterm) (e: expr) :=
    fold_right (fun nt e1 => Ebinary Add (reflect_normterm nt) e1) e nts.
 
 Lemma negate_normterm_correct:
-  forall nt, 
+  forall nt,
    reflect_normterm (negate_normterm nt) == Eunary Neg  (reflect_normterm nt).
 Proof.
 intros. intro; simpl.
@@ -2055,7 +2055,7 @@ ring.
 Qed.
 
 Lemma reflect_normterms_untangle:
-  forall nl e, 
+  forall nl e,
   reflect_normterms nl e ==  Ebinary Add (reflect_normterms nl zeroexpr) e.
 Proof.
 intros. intro. simpl.
@@ -2067,7 +2067,7 @@ Qed.
 Lemma normalize_terms_correct:
   forall sign e nl,
   let '(e1, nts) := normalize_terms sign e nl in
-  reflect_normterms nts e1 == 
+  reflect_normterms nts e1 ==
     Ebinary Add (Ebinary Mul (if sign then moneexpr else oneexpr) e) (reflect_normterms nl zeroexpr).
 Proof.
 intros.
@@ -2077,7 +2077,7 @@ revert sign nl e0 l H; induction e; intros.
 -
 unfold normalize_terms in H.
 destruct (normalize_term (Evar n)) eqn:?H.
- + inversion H; clear H; subst. 
+ + inversion H; clear H; subst.
   pose proof (normalize_term_correct _ _ H0 env).
   unfold reflect_normterms.
   rewrite <- H.
@@ -2116,12 +2116,12 @@ destruct (normalize_term (Evar n)) eqn:?H.
  destruct sign; simpl;
  rewrite reflect_normterms_untangle; simpl; lra].
  + (* Neg *)
- simpl. 
+ simpl.
  simpl in H. apply IHe in H. rewrite H.
  destruct sign; simpl; lra.
  + (* Inv *)
   simpl in H.
-  destruct e; 
+  destruct e;
   try solve [
  simpl in H; inversion H; clear H; subst;
  destruct sign; simpl;
@@ -2131,7 +2131,7 @@ destruct (normalize_term (Evar n)) eqn:?H.
  simpl in H; inversion H; clear H; subst;
  destruct sign; simpl;
  rewrite reflect_normterms_untangle; simpl; lra].
- destruct (inverse_term n) eqn:?H; 
+ destruct (inverse_term n) eqn:?H;
   try solve [
  simpl in H; inversion H; clear H; subst;
  destruct sign; simpl;
@@ -2221,11 +2221,11 @@ Module Keys <: OrderedType.OrderedType.
   | al', nil => if all0 al' then Eq else Gt
   | nil, bl' => if all0 bl' then Eq else Lt
   | i :: al', j :: bl' => match Nat.compare i j with
-                              | Lt => Lt | Gt => Gt 
+                              | Lt => Lt | Gt => Gt
                               | Eq => cmp al' bl'
                              end
   end.
-   
+
   Definition lt al bl := cmp al bl = Lt.
   Definition eq al bl := cmp al bl = Eq.
   Lemma eq_refl: forall al, eq al al.
@@ -2278,7 +2278,7 @@ Lemma all0_all0_cmp:
     destruct (Nat.compare 0 n0) eqn:?H; try discriminate.
     destruct (all0 y) eqn:?H; try discriminate.
     apply Nat.compare_eq in H1. subst.
-    rewrite (cmp_eq_all0 _ _ H0 H2). auto. 
+    rewrite (cmp_eq_all0 _ _ H0 H2). auto.
     destruct a; try discriminate. destruct n; try discriminate.
     simpl. destruct (all0 x) eqn:?H; try discriminate.
      destruct (all0 z) eqn:?H; try discriminate.
@@ -2360,7 +2360,7 @@ Proof.
       rewrite Nat.compare_antisym. destruct (Nat.compare a n); try discriminate;
        simpl; auto.
   Qed.
- 
+
   Definition compare ( x y : t) : OrderedType.Compare lt eq x y :=
 match cmp x y as c0 return (cmp x y = c0 -> OrderedType.Compare lt eq x y) with
 | Eq => fun H0 : cmp x y = Eq => OrderedType.EQ H0
@@ -2414,14 +2414,14 @@ Fixpoint cancel1_intable (yl: intable_t) (x: (QArith_base.Q * Z)): intable_t :=
  match yl with
  | y::yl' =>
    let '({|QArith_base.Qnum:= yn; QArith_base.Qden:= yd|}, ye)  := y in
-   if Z.eqb (Z.opp xn) yn && Pos.eqb xd yd && Z.eqb xe ye 
+   if Z.eqb (Z.opp xn) yn && Pos.eqb xd yd && Z.eqb xe ye
    then yl'
    else y :: cancel1_intable yl' x
  | nil => x::nil
  end.
 
 Lemma cancel1_intable_correct:
-  forall k yl x e, 
+  forall k yl x e,
    reflect_intable_simple k (cancel1_intable yl x) e ==
    reflect_intable_simple k (x::yl) e.
 Proof.
@@ -2484,7 +2484,7 @@ Definition find_default [elt] (default: elt) (k: Table.key) (tab: Table.t elt) :
  match Table.find k tab with Some x => x | None => default end.
 
 Definition add_to_table (tab: Table.t intable_t) (nt: normterm) :=
-  let '(key,it) := nt in 
+  let '(key,it) := nt in
    Table.add key (cancel1_intable (find_default nil key tab) it) tab.
 
 Lemma reflect_all0: forall j, Keys.all0 j = true -> forall n e, reflect_powers j n e == e.
@@ -2516,7 +2516,7 @@ apply IHi. auto.
 Qed.
 
 Lemma fold_symmetric_setoid:
-  forall [A : Type] [eqv: A -> A -> Prop] 
+  forall [A : Type] [eqv: A -> A -> Prop]
   (eqv_rel: Equivalence eqv)
   (f : A -> A -> A)
   (f_mor: forall x1 y1, eqv x1 y1 ->
@@ -2562,7 +2562,7 @@ intro; simpl; ring.
 Qed.
 
 Lemma fold_right_Add0_Add:
-  forall a l, fold_right Add0 a l == 
+  forall a l, fold_right Add0 a l ==
                 fold_right (Ebinary Add) a l.
 Proof.
 intros.
@@ -2578,7 +2578,7 @@ Proof.
 intros.
 apply fold_symmetric_setoid.
 apply expr_equiv_rel.
-intros. 
+intros.
 apply Add0_mor; auto.
 intros. rewrite ?Add0_correct. intro; simpl; ring.
 intros. rewrite ?Add0_correct. intro; simpl; ring.
@@ -2657,7 +2657,7 @@ intro; simpl; ring.
 Qed.
 
 Lemma fold_reflect_intable_simple_untangle:
-  forall t e, fold_reflect_intable_simple t e == 
+  forall t e, fold_reflect_intable_simple t e ==
    Ebinary Add (fold_reflect_intable_simple t zeroexpr) e.
 Proof.
 unfold fold_reflect_intable_simple.
@@ -2688,7 +2688,7 @@ reflexivity.
 Qed.
 
 Definition add_to_table_correct:
-  forall tab nt, reflect_table (add_to_table tab nt) == 
+  forall tab nt, reflect_table (add_to_table tab nt) ==
             Ebinary Add (reflect_table tab) (reflect_normterm nt).
 Proof.
 intros.
@@ -2700,7 +2700,7 @@ pose (lift k x := reflect_intable_simple k x zeroexpr).
 set (f := Ebinary Add).
 set (u := zeroexpr).
 (*
-pose (oldnew := 
+pose (oldnew :=
    Ebinary Add (lift k j) match Table.find (elt:=intable_t) k tab with
       | Some x => lift k x
       | None => zeroexpr
@@ -2708,14 +2708,14 @@ pose (oldnew :=
 *)
 pose proof relate_fold_add_alt expr_equiv_rel lift
       ltac:(intros; apply reflect_intable_simple_mor; auto; reflexivity)
-     (Ebinary Add) 
+     (Ebinary Add)
     (Ebinary_mor Add Add (eq_refl _))
     ltac:(intros; intro; simpl; ring)
     ltac:(intros; intro; simpl; ring)
     u
     ltac:(intros; intro; simpl; ring)
     reflect_intable_simple
-     reflect_intable_simple_untangle 
+     reflect_intable_simple_untangle
    tab k [it] j.
 rewrite <- H; clear H.
 -
@@ -2749,7 +2749,7 @@ Definition reflect_intable_aux (al: intable_t) : expr :=
 
 Definition reflect_intable (x: Table.key * intable_t) :=
  let '(p, it) := x in
- match reflect_intable_aux it with 
+ match reflect_intable_aux it with
  | Econst (Int 0) => Econst (Int 0)
  | c => reflect_powers p 0 c
  end.
@@ -2761,8 +2761,8 @@ Definition find_power_two (al: intable_t) : Z :=
 Fixpoint collapse_intable_aux (k: Z) (c: QArith_base.Q) (al: intable_t) : coefficient :=
  match al with
  | nil => (c, k)
- | (c1,p1)::al' => 
-   collapse_intable_aux k 
+ | (c1,p1)::al' =>
+   collapse_intable_aux k
     (Qreduction.Qplus' c
        match (p1-k)%Z with
         | Z0 => c1
@@ -2777,10 +2777,10 @@ Fixpoint collapse_intable_aux (k: Z) (c: QArith_base.Q) (al: intable_t) : coeffi
 Fixpoint collapse_intable_aux' (k: Z) (c: QArith_base.Q) (al: intable_t) : coefficient :=
  match al with
  | nil => (c, k)
- | (c1,p1)::al' => 
-   collapse_intable_aux' k 
+ | (c1,p1)::al' =>
+   collapse_intable_aux' k
     (Qreduction.Qplus' c
-       (QArith_base.Qmult c1 (QArith_base.Qpower (QArith_base.inject_Z 2) (p1-k)))) 
+       (QArith_base.Qmult c1 (QArith_base.Qpower (QArith_base.inject_Z 2) (p1-k))))
      al'
  end.
 
@@ -2827,7 +2827,7 @@ Qed.
 
 Lemma collapse_intable_aux_correct:
   forall (k: Z) (c: QArith_base.Q) (al: intable_t),
-  Ebinary Add (reflect_coeff (c,k)) (reflect_intable_aux al) 
+  Ebinary Add (reflect_coeff (c,k)) (reflect_intable_aux al)
     == reflect_coeff (collapse_intable_aux k c al).
 Proof.
 intros.
@@ -2874,7 +2874,7 @@ destruct (p ?= p0)%positive eqn:?H.
 apply Pos.compare_eq in H. subst p0.
 transitivity (IZR n1 * / IZR (Z.pos d1) * ( IZR (Z.pow_pos 2 p) / IZR (Z.pow_pos 2 p)));
  [ | lra].
-f_equal. symmetry. apply Rinv_r. apply not_0_IZR. 
+f_equal. symmetry. apply Rinv_r. apply not_0_IZR.
 rewrite <- Pos2Z.inj_pow_pos. lia.
 change (p < p0)%positive in H.
 replace (Z.pow_pos 2 p0) with (Z.pow_pos 2 (p + (p0-p))) by (f_equal; lia).
@@ -2899,7 +2899,7 @@ clear.
 simpl.
 unfold bpow'.
 rewrite Pos2Z.inj_mul, mult_IZR.
-rewrite Pos2Z.inj_pow_pos. 
+rewrite Pos2Z.inj_pow_pos.
 destruct k;simpl; rewrite ?mult_IZR.
 rewrite Rinv_mult
   by (apply not_0_IZR; try lia; rewrite <- Pos2Z.inj_pow_pos; lia).
@@ -2937,12 +2937,12 @@ Qed.
 
 Definition collapse_intable (it: Table.key * intable_t) : Table.key * intable_t :=
  let '(k, al) := it in
- let n := find_power_two al in 
+ let n := find_power_two al in
  (k, collapse_intable_aux n (QArith_base.inject_Z 0) al :: nil).
 
 Definition reflect_list l := fold_right Add0 zeroexpr (map reflect_intable l).
 
-Ltac reflect_powers_untangle := 
+Ltac reflect_powers_untangle :=
  repeat match goal with |- context [reflect_powers ?k ?i ?e] =>
   lazymatch e with zeroexpr => fail | _ => idtac end;
  rewrite (reflect_powers_untangle k i e)
@@ -2965,7 +2965,7 @@ destruct (Prog.expr_eq_dec a (Econst (Int 0))).
  rewrite IHi. intro; simpl; ring.
  transitivity (Ebinary Add zeroexpr f); [ | intro; simpl; ring].
  apply Ebinary_mor; auto; try reflexivity.
- transitivity (Ebinary Mul (reflect_powers k O oneexpr) 
+ transitivity (Ebinary Mul (reflect_powers k O oneexpr)
             (fold_right Add0 zeroexpr (map reflect_coeff i))).
  2:{ rewrite <- H. intro; simpl; ring. }
  clear H.
@@ -2991,7 +2991,7 @@ induction i as [| [[n d] c] i].
 rewrite reflect_powers_untangle. intro; simpl; ring.
 +
 unfold map; fold (map (reflect_intable1_simple k));  fold (map reflect_coeff).
-unfold fold_right; 
+unfold fold_right;
  fold (fold_right (Ebinary Add) zeroexpr); fold (fold_right Add0 zeroexpr).
 rewrite reflect_powers_untangle.
 rewrite IHi; clear IHi.
@@ -3034,7 +3034,7 @@ fold (reflect_list l).
 fold (reflect_list c). lra.
 Qed.
 
-Lemma collapse_intable_correct: forall it, 
+Lemma collapse_intable_correct: forall it,
    reflect_intable (collapse_intable it) == reflect_intable it.
 Proof.
 intros [k al].
@@ -3069,7 +3069,7 @@ f_equal.
 rewrite reflect_coeff_spec. auto.
 Qed.
 
-Lemma reflect_elements: forall ta tb, reflect_table ta == reflect_table tb -> 
+Lemma reflect_elements: forall ta tb, reflect_table ta == reflect_table tb ->
   reflect_list (Table.elements ta) == reflect_list (Table.elements tb).
 Proof.
 intros. intro. specialize (H env).
@@ -3079,7 +3079,7 @@ intros. intro. specialize (H env).
  set (al := Table.elements ta) in *.
  set (bl := Table.elements tb) in *.
  clearbody al bl.
- assert (forall al, 
+ assert (forall al,
    eval (fold_right Add0 zeroexpr (map reflect_intable al)) env =
    eval
      (fold_left
@@ -3091,9 +3091,9 @@ intros. intro. specialize (H env).
  rewrite <- fold_left_rev_right, rev_alt.
  set (cl := @nil (Table.key * intable_t)) in *.
  transitivity
- (eval (fold_right Add0 zeroexpr (map reflect_intable cl)) env + 
+ (eval (fold_right Add0 zeroexpr (map reflect_intable cl)) env +
   eval (fold_right Add0 zeroexpr (map reflect_intable al)) env).
- simpl; lra. 
+ simpl; lra.
  clearbody cl.
  revert cl; induction al; intros.
  2:{ simpl fold_right at 2. rewrite Add0_correct. simpl eval at 2.
@@ -3118,7 +3118,7 @@ unfold reflect_table.
 rewrite Table.fold_1.
 rewrite <- reflect_list_rev.
 rewrite <- fold_left_rev_right.
-unfold reflect_list. 
+unfold reflect_list.
 induction (rev _); simpl; intros; auto.
 destruct a.
 rewrite Add0_correct. unfold eval; fold eval. unfold binary_real.
@@ -3135,7 +3135,7 @@ Definition sort_using_table (nts: list normterm) : expr -> expr :=
     (fold_left add_to_table nts (Table.empty intable_t))).
 
 Definition sort_using_table_alt (nts: list normterm) (e0: expr) : expr :=
- Ebinary Add e0 
+ Ebinary Add e0
  (reflect_list
   (map collapse_intable
   (Table.elements
@@ -3243,17 +3243,17 @@ simpl. lra.
 Qed.
 
 Definition simplify_and_prune hyps e cutoff :=
-    let e1 := ring_simp false 100 e in 
+    let e1 := ring_simp false 100 e in
     let '(e2,slop) := prune (map b_hyps hyps) e1 cutoff in
     let e3 := cancel_terms e2 in
 (*    let e4 := ring_simp true 100 e3 in*)
     (e3, slop).
 
 Lemma simplify_and_prune_correct:
- forall hyps e cutoff e1 slop,  
+ forall hyps e cutoff e1 slop,
    simplify_and_prune hyps e cutoff = (e1,slop) ->
   F.real slop = true ->
-   forall vars r, 
+   forall vars r,
      length hyps = length vars ->
      eval_hyps hyps vars (Rabs (eval e1 vars) <= r - F.toR slop) ->
       eval_hyps hyps vars (Rabs (eval e vars) <= r).
@@ -3270,10 +3270,10 @@ eapply prune_terms_correct in H3; try eassumption; auto.
 Qed.
 
 Lemma simplify_and_prune_correct_lt:
- forall hyps e cutoff e1 slop,  
+ forall hyps e cutoff e1 slop,
    simplify_and_prune hyps e cutoff = (e1,slop) ->
   F.real slop = true ->
-   forall vars r, 
+   forall vars r,
      length hyps = length vars ->
      eval_hyps hyps vars (Rabs (eval e1 vars) < r - F.toR slop) ->
       eval_hyps hyps vars (Rabs (eval e vars) < r).
@@ -3291,17 +3291,17 @@ Qed.
 
 Ltac cleanup_F_toR :=
 repeat
- let j := fresh "j" in 
+ let j := fresh "j" in
  set (j := Private.I2.F.toR _);
  cbv - [IZR] in j;
  subst j.
 
-Ltac prune_terms cutoff := 
+Ltac prune_terms cutoff :=
  simple_reify;
  match goal with
- | |- eval_hyps _ _ (Rabs (eval ?e _) <= _) => 
+ | |- eval_hyps _ _ (Rabs (eval ?e _) <= _) =>
     eapply (simplify_and_prune_correct _ _ cutoff);  [vm_compute; reflexivity | reflexivity |  reflexivity |  try clear e]
- | |- eval_hyps _ _ (Rabs (eval ?e _) < _) => 
+ | |- eval_hyps _ _ (Rabs (eval ?e _) < _) =>
     eapply (simplify_and_prune_correct_lt _ _ cutoff);  [vm_compute; reflexivity | reflexivity |  reflexivity |  try clear e]
  end;
  unfold_eval_hyps;
@@ -3312,7 +3312,7 @@ Ltac prune_terms cutoff :=
 Lemma do_cancel_correct:
  forall (vars: list R) (P: R -> Prop) (re re': Tree.expr),
    Prune.cancel_terms re = re' ->
-   forall vars, 
+   forall vars,
      P (Tree.eval re' vars) ->P (Tree.eval re vars).
 Proof.
 intros.
@@ -3321,10 +3321,10 @@ rewrite Prune.cancel_terms_correct in H0.
 auto.
 Qed.
 
-Ltac power_simplifier x := 
-   (* Where x contains occurrences of (a ^ b)%R, 
+Ltac power_simplifier x :=
+   (* Where x contains occurrences of (a ^ b)%R,
        carefully unfold into (a*(a*...)), and return the
-       expression with unfoldings *) 
+       expression with unfoldings *)
    lazymatch x with
    | context C [Rpow_def.pow ?a (S ?b)] =>
         let e := constr:(Rpow_def.pow a (S b)) in
@@ -3344,9 +3344,9 @@ Ltac power_simplifier x :=
 Ltac cancel_terms e :=
    (* Precondition: The proof goal contains the term e of type R.
       Postcondition: the proof goal contains (in the same place)
-           an equal expression e', in which things have been canceled. 
+           an equal expression e', in which things have been canceled.
     *)
-      let e' := power_simplifier e in 
+      let e' := power_simplifier e in
       let vars := Tree.get_vars e' (@nil R) in
       let re := Tree.reify e' vars in
       pattern e; change e with (Tree.eval re vars);
@@ -3356,7 +3356,7 @@ Ltac cancel_terms e :=
 (* End of the implementation of the version that _only_ does cancel_terms *)
 
 Definition simplify_and_prune_a hyps e cutoff :=
-    let e1 := ring_simp false 100 e in 
+    let e1 := ring_simp false 100 e in
     let '(e2,slop) := prune (map b_hyps hyps) e1 cutoff in
 (*    let e3 := cancel_terms e2 in *)
 (*    let e2 := ring_simp true 100 e1 in*)
@@ -3365,37 +3365,37 @@ Definition simplify_and_prune_a hyps e cutoff :=
 Lemma prune_terms_correct2a:
  False ->   (* because this is just for measurement, we don't need to
                         prove it correct *)
- forall hyps e cutoff e1 slop,  
+ forall hyps e cutoff e1 slop,
    simplify_and_prune_a hyps e cutoff = (e1,slop) ->
   F.real slop = true ->
-   forall vars r, 
+   forall vars r,
      length hyps = length vars ->
      eval_hyps hyps vars (Rabs (eval e1 vars) <= r - F.toR slop) ->
       eval_hyps hyps vars (Rabs (eval e vars) <= r).
 Proof. intros. contradiction. Qed.
 
 Definition simplify_and_prune_b hyps e cutoff :=
-    let e1 := ring_simp false 100 e in 
+    let e1 := ring_simp false 100 e in
     let '(e2,slop) := prune (map b_hyps hyps) e1 cutoff in
-    let e3 := cancel_terms e2 in 
+    let e3 := cancel_terms e2 in
 (*    let e2 := ring_simp true 100 e1 in*)
     (e2, slop).
 
 Lemma prune_terms_correct2b:
  False ->   (* because this is just for measurement, we don't need to
                         prove it correct *)
- forall hyps e cutoff e1 slop,  
+ forall hyps e cutoff e1 slop,
    simplify_and_prune_b hyps e cutoff = (e1,slop) ->
   F.real slop = true ->
-   forall vars r, 
+   forall vars r,
      length hyps = length vars ->
      eval_hyps hyps vars (Rabs (eval e1 vars) <= r - F.toR slop) ->
       eval_hyps hyps vars (Rabs (eval e vars) <= r).
 Proof. intros. contradiction. Qed.
 
-Ltac prune_terms' H cutoff := 
+Ltac prune_terms' H cutoff :=
  simple_reify;
- match goal with |- eval_hyps _ _ (Rabs (eval ?e _) <= _) => 
+ match goal with |- eval_hyps _ _ (Rabs (eval ?e _) <= _) =>
     eapply (H _ _ cutoff);  [vm_compute; reflexivity | reflexivity |  reflexivity |  try clear e]
  end;
  unfold_eval_hyps.

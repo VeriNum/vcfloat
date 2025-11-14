@@ -1,7 +1,7 @@
 (*  LGPL licensed; see ../LICENSE and, for historical notes, see ../OLD_LICENSE *)
 
 (** FPCore module.
-  These definitions, which were previously part of FPLang.v, are 
+  These definitions, which were previously part of FPLang.v, are
   separated out to support a modularity principle:  some clients
   may want the definitions of [type], [BPLUS] etc.  but not the
   deep-embedded syntax of [binop], [PLUS] etc.  Such clients
@@ -27,12 +27,12 @@ Require Export vcfloat.Float_notations.
 
 Require Export vcfloat.Base.
 
-Record nonstdtype 
+Record nonstdtype
    (fprecp: positive)
    (femax: Z)
    (fprec := Z.pos fprecp)
    (fprec_lt_femax_bool: ZLT fprec femax)
-   (fprecp_not_one_bool: Bool.Is_true (negb (Pos.eqb fprecp xH))) := NONSTD 
+   (fprecp_not_one_bool: Bool.Is_true (negb (Pos.eqb fprecp xH))) := NONSTD
   { nonstd_rep: Type;
     nonstd_nonempty: nonstd_rep;
     nonstd_to_F: nonstd_rep -> option (float radix2);
@@ -44,7 +44,7 @@ Record nonstdtype
       nonstd_to_F f2 = Some g2 ->
       nonstd_compare f1 f2 = Some (Rcompare (Defs.F2R g1) (Defs.F2R g2));
     nonstd_nonempty_finite: if nonstd_to_F nonstd_nonempty then True else False;
-    nonstd_bounds: forall x: nonstd_rep, 
+    nonstd_bounds: forall x: nonstd_rep,
        ( - (bpow radix2 femax - bpow radix2 (femax - Z.pos fprecp)) <=
         match nonstd_to_F x with Some f => Defs.F2R f | None => R0 end <=
         bpow radix2 femax - bpow radix2 (femax - Z.pos fprecp) )%R
@@ -58,7 +58,7 @@ Arguments nonstd_nonempty [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool]
 Arguments nonstd_to_F [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n] n.
 Arguments nonstd_compare [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n]
     _ _.
-Arguments nonstd_finite_compare [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n] 
+Arguments nonstd_finite_compare [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n]
     x.
 Arguments nonstd_compare_correct [fprecp femax fprec_lt_femax_bool fprecp_not_one_bool n]
     f1 f2 g1 g2.
@@ -71,21 +71,21 @@ Definition nonstd_to_R {fprecp femax fprec_lt_femax_bool fprecp_not_one_bool}
       (x: nonstd_rep n) : R :=
   match nonstd_to_F x with Some f => Defs.F2R f | None => R0 end.
 
-Definition nonstd_is_finite {fprecp: positive} {femax: Z} 
+Definition nonstd_is_finite {fprecp: positive} {femax: Z}
         {fprec_lt_femax_bool: ZLT (Z.pos fprecp) femax}
         {fprecp_not_one_bool: Bool.Is_true (negb (Pos.eqb fprecp xH))}
         {n: nonstdtype fprecp femax fprec_lt_femax_bool fprecp_not_one_bool}
         (x: nonstd_rep n) :=
  match nonstd_to_F x with Some _ => true | _ => false end.
 
-Definition nonstd_is_nan {fprecp: positive} {femax: Z} 
+Definition nonstd_is_nan {fprecp: positive} {femax: Z}
         {fprec_lt_femax_bool: ZLT (Z.pos fprecp) femax}
         {fprecp_not_one_bool: Bool.Is_true (negb (Pos.eqb fprecp xH))}
         {n: nonstdtype fprecp femax fprec_lt_femax_bool fprecp_not_one_bool}
         (x: nonstd_rep n) :=
   match nonstd_compare x x with Some Eq => false | _ => true end.
 
-Lemma nonstd_compare_correct': 
+Lemma nonstd_compare_correct':
   forall {fprecp femax fprec_lt_femax_bool fprecp_not_one_bool}
    {n: nonstdtype fprecp femax fprec_lt_femax_bool fprecp_not_one_bool}
     (f1 f2: nonstd_rep n),
@@ -115,17 +115,17 @@ Definition TYPE fprecp femax fprec_lt_femax fprecp_not_one :=
   GTYPE  fprecp femax fprec_lt_femax fprecp_not_one None.
 
 
-Definition ftype (ty: type) : Type := 
- match nonstd ty with 
+Definition ftype (ty: type) : Type :=
+ match nonstd ty with
  | None => binary_float (fprec ty) (femax ty)
  | Some t => nonstd_rep t
  end.
 
-Class is_standard (t: type) := 
-   Is_standard: match nonstd t with None => True | _ => False end. 
+Class is_standard (t: type) :=
+   Is_standard: match nonstd t with None => True | _ => False end.
 
 
-Definition ftype_of_float {t: type} {STD: is_standard t} 
+Definition ftype_of_float {t: type} {STD: is_standard t}
     (x: binary_float (fprec t) (femax t)) : ftype t.
 unfold ftype.
 destruct t; simpl.
@@ -234,7 +234,7 @@ Proof.
   apply type_eq_iff; auto.
 Qed.
 
-Lemma type_eq_dec (t1 t2: type): 
+Lemma type_eq_dec (t1 t2: type):
    is_standard t1 -> is_standard t2 ->
   {t1 = t2} + {t1 <> t2}.
 Proof.
@@ -307,7 +307,7 @@ Class Nans: Type :=
                 nan_payload prec2 emax2
     ;
     plus_nan:
-      forall prec emax, 
+      forall prec emax,
         (1<prec)%Z ->
         binary_float prec emax ->
         binary_float prec emax ->
@@ -398,7 +398,7 @@ destruct (@nonstd_is_nan fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool
 apply binary_float_equiv_refl.
 Qed.
 
-Lemma float_equiv_sym: forall ty (b1 b2: ftype ty), 
+Lemma float_equiv_sym: forall ty (b1 b2: ftype ty),
    float_equiv b1 b2 -> float_equiv b2 b1.
 Proof.
 intros.
@@ -408,7 +408,7 @@ destruct (@nonstd_is_nan fprecp0 femax0 fprec_lt_femax_bool0 fprecp_not_one_bool
 apply binary_float_equiv_sym; auto.
 Qed.
 
-Lemma float_equiv_trans: forall ty (b1 b2 b3: ftype ty), 
+Lemma float_equiv_trans: forall ty (b1 b2 b3: ftype ty),
    float_equiv b1 b2 -> float_equiv b2 b3 -> float_equiv b1 b3.
 Proof.
 intros.
@@ -482,7 +482,7 @@ Proof.
   set (a:=1%positive).
   assert (H: Binary.nan_pl (fprec ty) a = true).
   unfold Binary.nan_pl.
-  subst a. 
+  subst a.
    pose proof (fprec_gt_one ty). simpl. lia.
   exists (Binary.B754_nan (fprec ty) (femax ty) false 1 H).
   reflexivity.
@@ -492,7 +492,7 @@ Defined.
 Section WITHNANS.
 Context {NANS: Nans}.
 
-Definition cast (tto: type) {tfrom: type} 
+Definition cast (tto: type) {tfrom: type}
   {STDto: is_standard tto} {STDfrom: is_standard tfrom} (f: ftype tfrom):
    ftype tto.
 
@@ -539,7 +539,7 @@ Lemma cast_eq tfrom tto STDfrom STDto:
   type_le tfrom tto ->
   forall f,
     Binary.is_finite _ _ f = true ->
-    B2R _ _ (float_of_ftype (@cast tto tfrom STDto STDfrom (ftype_of_float f))) = 
+    B2R _ _ (float_of_ftype (@cast tto tfrom STDto STDfrom (ftype_of_float f))) =
            B2R _ _ f.
 Proof.
   unfold cast.
@@ -554,7 +554,7 @@ Proof.
   destruct H.
   destruct tfrom as [? ? ? ? ? [|]]; try contradiction.
   destruct tto as [? ? ? ? ? [|]]; try contradiction.
-  simpl in *.  
+  simpl in *.
   apply Bconv_widen_exact; auto with zarith.
   typeclasses eauto.
 Qed.
@@ -571,15 +571,15 @@ Proof.
 Qed.
 
 
-Definition BINOP (op: ltac:( let t := type of Bplus in exact t ) ) 
+Definition BINOP (op: ltac:( let t := type of Bplus in exact t ) )
       (op_nan: forall prec emax,
        (1<prec) ->
        binary_float prec emax ->
        binary_float prec emax ->
        nan_payload prec emax)
     ty `{STD: is_standard ty}
-    (x y: ftype ty) : ftype ty := 
-   ftype_of_float (op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) 
+    (x y: ftype ty) : ftype ty :=
+   ftype_of_float (op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty)
                      (op_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE
             (float_of_ftype x) (float_of_ftype y)).
 
@@ -589,18 +589,18 @@ Definition BMINUS := BINOP Bminus plus_nan. (* NOTE: must be same as the one use
 Definition BMULT := BINOP Bmult mult_nan.
 Definition BDIV := BINOP Bdiv div_nan.
 
-Definition UNOP (op: ltac:( let t := type of Bsqrt in exact t ) ) 
+Definition UNOP (op: ltac:( let t := type of Bsqrt in exact t ) )
    (op_nan: forall prec emax,
        (1<prec) ->
        binary_float prec emax ->
        nan_payload prec emax)
     ty `{STD: is_standard ty}
-      (x: ftype ty) : ftype ty := 
-      ftype_of_float (op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty) 
+      (x: ftype ty) : ftype ty :=
+      ftype_of_float (op _ _ (fprec_gt_0 ty) (fprec_lt_femax ty)
                      (op_nan (fprec ty) (femax ty) (fprec_gt_one ty)) BinarySingleNaN.mode_NE
             (float_of_ftype x)).
 
-Definition BABS {ty} {STD: is_standard ty} (x: ftype ty) := 
+Definition BABS {ty} {STD: is_standard ty} (x: ftype ty) :=
    ftype_of_float (Babs _ (femax ty) (abs_nan (fprec ty) (femax ty) (fprec_gt_one _)) (float_of_ftype x)).
 Definition BOPP {ty} {STD: is_standard ty} (x: ftype ty) :=
    ftype_of_float (Bopp _ (femax ty) (opp_nan (fprec ty) (femax ty) (fprec_gt_one _)) (float_of_ftype x)).
@@ -640,10 +640,10 @@ Notation "x - y"  := (@BMINUS _ Tsingle _ x y) (at level 50, left associativity)
 Notation "x * y"  := (@BMULT _ Tsingle _ x y) (at level 40, left associativity) : float32_scope.
 Notation "x / y"  := (@BDIV _ Tsingle _ x y) (at level 40, left associativity) : float32_scope.
 Notation "- x" := (@BOPP _ Tsingle _ x) (at level 35, right associativity) : float32_scope.
-Notation "x <= y" := (@BCMP Tsingle _ Gt false x y) (at level 70, no associativity) : float32_scope. 
-Notation "x < y" := (@BCMP Tsingle _ Gt true y x) (at level 70, no associativity) : float32_scope. 
-Notation "x >= y" := (@BCMP Tsingle _ Lt false x y) (at level 70, no associativity) : float32_scope. 
-Notation "x > y" := (@BCMP Tsingle _ Gt true x y) (at level 70, no associativity) : float32_scope. 
+Notation "x <= y" := (@BCMP Tsingle _ Gt false x y) (at level 70, no associativity) : float32_scope.
+Notation "x < y" := (@BCMP Tsingle _ Gt true y x) (at level 70, no associativity) : float32_scope.
+Notation "x >= y" := (@BCMP Tsingle _ Lt false x y) (at level 70, no associativity) : float32_scope.
+Notation "x > y" := (@BCMP Tsingle _ Gt true x y) (at level 70, no associativity) : float32_scope.
 Notation "x <= y <= z" := (x <= y /\ y <= z)%F32 (at level 70, y at next level) : float32_scope.
 Notation "x <= y < z" := (x <= y /\ y < z)%F32 (at level 70, y at next level) : float32_scope.
 Notation "x < y < z" := (x < y /\ y < z)%F32 (at level 70, y at next level) : float32_scope.
@@ -654,10 +654,10 @@ Notation "x - y"  := (@BMINUS _ Tdouble _ x y) (at level 50, left associativity)
 Notation "x * y"  := (@BMULT _ Tdouble _ x y) (at level 40, left associativity) : float64_scope.
 Notation "x / y"  := (@BDIV _ Tdouble _ x y) (at level 40, left associativity) : float64_scope.
 Notation "- x" := (@BOPP _ Tdouble _ x) (at level 35, right associativity) : float64_scope.
-Notation "x <= y" := (@BCMP Tdouble _ Gt false x y) (at level 70, no associativity) : float64_scope. 
-Notation "x < y" := (@BCMP Tdouble _ Gt true y x) (at level 70, no associativity) : float64_scope. 
-Notation "x >= y" := (@BCMP Tdouble _ Lt false x y) (at level 70, no associativity) : float64_scope. 
-Notation "x > y" := (@BCMP Tdouble _ Gt true x y) (at level 70, no associativity) : float64_scope. 
+Notation "x <= y" := (@BCMP Tdouble _ Gt false x y) (at level 70, no associativity) : float64_scope.
+Notation "x < y" := (@BCMP Tdouble _ Gt true y x) (at level 70, no associativity) : float64_scope.
+Notation "x >= y" := (@BCMP Tdouble _ Lt false x y) (at level 70, no associativity) : float64_scope.
+Notation "x > y" := (@BCMP Tdouble _ Gt true x y) (at level 70, no associativity) : float64_scope.
 Notation "x <= y <= z" := (x <= y /\ y <= z)%F64 (at level 70, y at next level) : float64_scope.
 Notation "x <= y < z" := (x <= y /\ y < z)%F64 (at level 70, y at next level) : float64_scope.
 Notation "x < y < z" := (x < y /\ y < z)%F64 (at level 70, y at next level) : float64_scope.
@@ -668,22 +668,22 @@ Ltac compute_binary_floats :=
 repeat (match goal with
 | |- context [@BDIV ?NANS ?t ?STD ?x1 ?x2] =>
            const_float x1; const_float x2;
-           change (@BDIV NANS t STD x1 x2) 
+           change (@BDIV NANS t STD x1 x2)
             with (Bdiv (fprec t) (femax t) (fprec_gt_0 t)
               (fprec_lt_femax t) (div_nan (fprec t) (femax t) (fprec_gt_one t)) BinarySingleNaN.mode_NE x1 x2)
 | |- context [@BMULT ?NANS ?t ?STD ?x1 ?x2] =>
            const_float x1; const_float x2;
-           change (@BMULT NANS t STD x1 x2) 
+           change (@BMULT NANS t STD x1 x2)
              with (Bmult (fprec t) (femax t) (fprec_gt_0 t)
                 (fprec_lt_femax t) (mult_nan (fprec t) (femax t) (fprec_gt_one t)) BinarySingleNaN.mode_NE x1 x2)
 | |- context [@BPLUS ?NANS ?t ?STD ?x1 ?x2] =>
            const_float x1; const_float x2;
-           change (@BPLUS NANS t STD x1 x2) 
+           change (@BPLUS NANS t STD x1 x2)
            with (Bplus (fprec t) (femax t) (fprec_gt_0 t)
                  (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t)) BinarySingleNaN.mode_NE x1 x2)
 | |- context [@BMINUS ?NANS ?t ?STD ?x1 ?x2] =>
            const_float x1; const_float x2;
-           change (@BMINUS NANS t STD x1 x2) 
+           change (@BMINUS NANS t STD x1 x2)
            with (Bminus (fprec t) (femax t) (fprec_gt_0 t)
                  (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t)) BinarySingleNaN.mode_NE x1 x2)
 | |- context [Bdiv ?prec ?emax ?a ?b ?c ?d ?x1 ?x2] =>
@@ -737,24 +737,24 @@ Proof.
  auto. Qed.
 
 Definition Zconst (t: type) `{STD: is_standard t} (i: Z) : ftype t :=
-    ftype_of_float 
+    ftype_of_float
   (BofZ (fprec t) (femax t) (Pos2Z.is_pos (fprecp t)) (fprec_lt_femax t) i).
 
-Lemma BPLUS_commut {NANS: Nans}: forall (t: type) `{STD: is_standard t} 
-     (a b: ftype t), 
-    plus_nan (fprec t) (femax t) (fprec_gt_one t) (float_of_ftype a) (float_of_ftype b) = 
-    plus_nan (fprec t) (femax t) (fprec_gt_one t) (float_of_ftype b) (float_of_ftype a) -> 
+Lemma BPLUS_commut {NANS: Nans}: forall (t: type) `{STD: is_standard t}
+     (a b: ftype t),
+    plus_nan (fprec t) (femax t) (fprec_gt_one t) (float_of_ftype a) (float_of_ftype b) =
+    plus_nan (fprec t) (femax t) (fprec_gt_one t) (float_of_ftype b) (float_of_ftype a) ->
     BPLUS a b = BPLUS b a.
 Proof.
-intros. 
+intros.
 unfold BPLUS, BINOP.
 f_equal.
 apply Bplus_commut; auto.
 Qed.
 
-Lemma BMULT_commut {NANS: Nans}: forall t `{STD: is_standard t} a b, 
-    mult_nan (fprec t) (femax t) (fprec_gt_one t) (float_of_ftype a) (float_of_ftype b) = 
-    mult_nan (fprec t) (femax t) (fprec_gt_one t) (float_of_ftype b) (float_of_ftype a) -> 
+Lemma BMULT_commut {NANS: Nans}: forall t `{STD: is_standard t} a b,
+    mult_nan (fprec t) (femax t) (fprec_gt_one t) (float_of_ftype a) (float_of_ftype b) =
+    mult_nan (fprec t) (femax t) (fprec_gt_one t) (float_of_ftype b) (float_of_ftype a) ->
     BMULT a b = BMULT b a.
 Proof.
 intros.
@@ -781,7 +781,7 @@ Definition interp_bounds {t} (bnds: bounds t) (x: ftype t) : bool :=
 
 Definition rounded_finite (t: type) (x: R) : Prop :=
   (Rabs (Generic_fmt.round Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))
-                         (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) x) 
+                         (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) x)
     < Raux.bpow Zaux.radix2 (femax t))%R.
 
 Definition exact_round ty r :=
@@ -796,27 +796,27 @@ destruct args as [ | a r].
 exact (     (rel=0 <-> abs=0)%N
                  /\ ( rel=0 -> exact_round result rf)%N
                 /\ (rounded_finite result rf ->
-                   is_finite f = true /\ 
+                   is_finite f = true /\
                    exists delta epsilon,
-                  (Rabs delta <= IZR (Z.of_N rel) * default_rel result 
+                  (Rabs delta <= IZR (Z.of_N rel) * default_rel result
                       /\ Rabs epsilon <= IZR (Z.of_N abs) * default_abs result /\
                    FT2R f = rf * (1+delta) + epsilon)%R)).
 inversion precond as [| ? ? bnds pre]; clear precond; subst.
-exact (forall z: ftype a, interp_bounds bnds z = true -> 
+exact (forall z: ftype a, interp_bounds bnds z = true ->
              acc_prop r result rel abs pre (rf (FT2R z)) (f z)).
 Defined.
 
-Definition floatfunc_congr {args: list type} {result: type} 
+Definition floatfunc_congr {args: list type} {result: type}
       (func: function_type (map ftype' args) (ftype' result)) : Prop :=
   forall (al bl: klist ftype args),
       Kforall2 (@float_equiv) al bl ->
-      float_equiv 
+      float_equiv
          (applyk ftype args result func (fun _ t => t) al)
          (applyk ftype args result func (fun _ t => t) bl).
 
-Record floatfunc (args: list type) (result: type) 
+Record floatfunc (args: list type) (result: type)
      (precond: klist bounds args)
-     (realfunc: function_type (map RR args) R) := 
+     (realfunc: function_type (map RR args) R) :=
  {ff_func: function_type (map ftype' args) (ftype' result);
   ff_rel: N;
   ff_abs: N;

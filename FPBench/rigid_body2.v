@@ -11,13 +11,13 @@ Definition rigidbody2_bmap_list := [Build_varinfo Tdouble 1%positive (-15) (15);
 Definition rigidbody2_bmap :=
  ltac:(let z := compute_PTree (boundsmap_of_list rigidbody2_bmap_list) in exact z).
 
-Definition rigidbody2 (x1 : ftype Tdouble) (x2 : ftype Tdouble) (x3 : ftype Tdouble) := 
+Definition rigidbody2 (x1 : ftype Tdouble) (x2 : ftype Tdouble) (x3 : ftype Tdouble) :=
   cast Tdouble (((((((((2)%F64 * x1)%F64 * x2)%F64 * x3)%F64 + (((3)%F64 * x3)%F64 * x3)%F64)%F64 - (((x2 * x1)%F64 * x2)%F64 * x3)%F64)%F64 + (((3)%F64 * x3)%F64 * x3)%F64)%F64 - x2)%F64).
 
-Definition rigidbody2_expr := 
+Definition rigidbody2_expr :=
  ltac:(let e' :=  HO_reify_float_expr constr:([1%positive;2%positive;3%positive]) rigidbody2 in exact e').
 
-Derive rigidbody2_b 
+Derive rigidbody2_b
 SuchThat (forall vmap, prove_roundoff_bound rigidbody2_bmap vmap rigidbody2_expr rigidbody2_b)
 As rigidbody2_bound.
 Proof.

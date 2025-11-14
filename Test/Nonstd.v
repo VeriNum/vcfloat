@@ -17,7 +17,7 @@ Definition dub_to_F (x: ftype Tdouble) : option (Defs.float Zaux.radix2) :=
 
 
 Definition dub_compare (x y : ftype Tdouble) : option comparison := compare' x y.
- 
+
 Lemma dub_finite_compare: forall x, if dub_to_F x then dub_compare x x = Some Eq else True.
 Proof.
 intros.
@@ -34,7 +34,7 @@ Qed.
 Lemma dub_compare_correct:
   forall (f1 f2 : ftype Tdouble) (g1 g2 : Defs.float Zaux.radix2),
   dub_to_F f1 = Some g1 ->
-  dub_to_F f2 = Some g2 -> 
+  dub_to_F f2 = Some g2 ->
   dub_compare f1 f2 = Some (Rcompare (Defs.F2R g1) (Defs.F2R g2)).
 Proof.
 intros.
@@ -87,7 +87,7 @@ Fixpoint always_true (args: list type) : function_type (map RR args) Prop :=
  end.
 
 Parameter c_function: forall (args: list type) (res: type) (bnds: klist bounds args) (rel: N) (f: function_type (map RR args) R),
-   {ff: function_type (map ftype' args) (ftype res) 
+   {ff: function_type (map ftype' args) (ftype res)
    | acc_prop args res rel 1 bnds f ff /\ floatfunc_congr ff}.
 
 Ltac floatfunc' args res bnds rel f :=
@@ -110,11 +110,11 @@ Definition multff := ltac:(floatfunc' [Tdub;Tdub] Tdub (Kcons some_bounds (Kcons
 Definition mult := ltac:(apply_func multff).
 (*
 
-Definition F (x : ftype Tdub ) : ftype Tdub := 
+Definition F (x : ftype Tdub ) : ftype Tdub :=
   plus (mult (cos x) (cos x)) (mult (sin x) (sin x)).
 *)
 
-Definition F (x : ftype Tdub ) : ftype Tdub := 
+Definition F (x : ftype Tdub ) : ftype Tdub :=
   plus x x.
 
 Instance incoll_dub: incollection Tdub.
@@ -127,7 +127,7 @@ Definition _x : ident := 1%positive.
 
 (** These two lines compute a deep-embedded "expr"ession from
   a shallow-embedded Coq expression.  *)
-Definition F' := ltac:(let e' := 
+Definition F' := ltac:(let e' :=
   HO_reify_float_expr constr:([_x]) F in exact e').
 
 Print F'.  (* Demonstrates what x' looks like *)
@@ -135,11 +135,11 @@ Print F'.  (* Demonstrates what x' looks like *)
 (** When interpreting deep-embedded expressions, "Var"iables will appear
   which are labeled by identifiers such as "_x" and "_v".  We want a
   "varmap" for looking up the values of those variables.  We'll compute
-  that varmap in two stages.  Step one, given values "x" and "v", 
+  that varmap in two stages.  Step one, given values "x" and "v",
   make an association list mapping _x to x, and _v to v,  each labeled
   by its floating-point type.  *)
 
-Definition vmap_list (x : ftype Tdub) := 
+Definition vmap_list (x : ftype Tdub) :=
    [(_x, existT ftype _ x)].
 
 
@@ -149,11 +149,11 @@ Definition vmap_list (x : ftype Tdub) :=
 Definition vmap (x : ftype Tdub) : valmap :=
  ltac:(make_valmap_of_list (vmap_list x)).
 
-(**  Demonstration of reification and reflection.   When you have a 
+(**  Demonstration of reification and reflection.   When you have a
   deep-embedded "expr"ession, you can get back the shallow embedding
    by applying the "fval" function *)
 
-Lemma reflect_reify_x : forall x, 
+Lemma reflect_reify_x : forall x,
              fval (env_ (vmap x)) F' = F x.
 Proof.
 intros.
@@ -162,14 +162,14 @@ Qed.
 
 (** The main point of VCFloat is to prove bounds on the roundoff error of
   floating-point expressions.  Generally those bounds are provable only if
-  the free variables of the expression (e.g., "x" and "v") are themselves 
+  the free variables of the expression (e.g., "x" and "v") are themselves
   bounded in some way;  otherwise, the expression might overflow.
   A "boundsmap" is a mapping from identifier (such as "_x") to
   a "varinfo", which gives its (floating-point) and its lower and upper bound. *)
 
-(** First we make an association list.  This one says that 
+(** First we make an association list.  This one says that
    -2.0 <= x <= 2.0   and   -2.0 <= v <= 2.0  *)
-Definition bmap_list : list varinfo := 
+Definition bmap_list : list varinfo :=
   [ Build_varinfo Tdub _x (-2)  2 ].
 
 (** Then we calculate an efficient lookup table, the "boundsmap". *)
@@ -187,7 +187,7 @@ prove_roundoff_bound.
 -
 prove_rndval.
 all: interval.
-- 
+-
 prove_roundoff_bound2.
  match goal with |- (Rabs ?a <= _)%R => field_simplify a end. (* improves the bound *)
  interval.
@@ -212,6 +212,3 @@ Print x_acc.
 Check prove_roundoff_bound_x_alt.
 
 End WITHNANS.
-
-
-

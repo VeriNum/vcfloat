@@ -86,7 +86,7 @@ Proof.
     rewrite Rabs_left in H by lra.
     assert (0 < - x) by lra.
     destruct (absolute_error_N_FLT_aux _ (fun t => negb (choice (- (t + 1))%Z)) _ H1 H) as (eta & Heta & EQ).
-    rewrite round_N_opp in EQ. 
+    rewrite round_N_opp in EQ.
     apply (f_equal Ropp) in EQ.
     rewrite Ropp_involutive in EQ.
     exists (- eta).

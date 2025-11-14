@@ -37,7 +37,7 @@ Lemma conv_nan_ex:
                 (1< prec2)%Z ->
                 binary_float prec1 emax1 -> (* guaranteed to be a nan, if this is not a nan then any result will do *)
                 nan_payload prec2 emax2
-  | 
+  |
   conv_nan (fprec Tsingle) (femax Tsingle) (fprec Tdouble) (femax Tdouble) (fprec_gt_one _) = Floats.Float.of_single_nan
   /\
   conv_nan (fprec Tdouble) (femax Tdouble) (fprec Tsingle) (femax Tsingle) (fprec_gt_one _) =  Floats.Float.to_single_nan
@@ -116,7 +116,7 @@ Definition binop_nan :  forall prec emax,
     (fun prec emax H =>
        binary_float prec emax ->
        binary_float prec emax ->
-       nan_payload prec emax) 
+       nan_payload prec emax)
      (fun prec emax H _ _ => any_nan prec emax H)
      (fun _ => Floats.Float32.binop_nan)
      (fun _ => Floats.Float.binop_nan).
@@ -125,7 +125,7 @@ Definition abs_nan :=
   single_double
     (fun prec emax H =>
        binary_float prec emax ->
-       nan_payload prec emax) 
+       nan_payload prec emax)
      (fun prec emax H  _ => any_nan prec emax H)
      (fun _ => Floats.Float32.abs_nan)
      (fun _ => Floats.Float.abs_nan).
@@ -134,12 +134,12 @@ Definition opp_nan :=
   single_double
     (fun prec emax H =>
        binary_float prec emax ->
-       nan_payload prec emax) 
+       nan_payload prec emax)
      (fun prec emax H  _ => any_nan prec emax H)
      (fun _ => Floats.Float32.neg_nan)
      (fun _ => Floats.Float.neg_nan).
 
-Module FMA_NAN. 
+Module FMA_NAN.
 (* some of these definitions adapted from [the open-source part of] CompCert  *)
 Import ZArith. Import Coq.Lists.List.
 
@@ -148,9 +148,9 @@ Import ZArith. Import Coq.Lists.List.
 Definition quiet_nan_payload (prec: Z) (p: positive) :=
   Z.to_pos (Zbits.P_mod_two_p (Pos.lor p ((Zaux.iter_nat xO (Z.to_nat (prec - 2)) 1%positive))) (Z.to_nat (prec - 1))).
 
-Lemma quiet_nan_proof (prec: Z): (1<prec)%Z -> 
+Lemma quiet_nan_proof (prec: Z): (1<prec)%Z ->
    forall p, Binary.nan_pl prec (quiet_nan_payload prec p) = true.
-Proof. 
+Proof.
 intros.
  apply normalized_nan; auto; lia.
 Qed.
@@ -158,7 +158,7 @@ Qed.
 Definition quiet_nan prec emax (H: (1<prec)%Z) (sp: bool * positive) :
          {x : binary_float prec emax | Binary.is_nan _ _ x = true} :=
   let (s, p) := sp in
-  exist _ (Binary.B754_nan prec emax s (quiet_nan_payload prec p) 
+  exist _ (Binary.B754_nan prec emax s (quiet_nan_payload prec p)
               (quiet_nan_proof prec H p)) (eq_refl _).
 
 Definition default_nan (prec: Z) := (fst Archi.default_nan_64, iter_nat (Z.to_nat (prec - 2)) _ xO xH).
@@ -177,7 +177,7 @@ try (let p := constr:(Archi.choose_nan_64) in
 Opaque Archi.choose_nan_64.
 Defined.
 
-Definition ARMchoose_nan (is_signaling: positive -> bool) 
+Definition ARMchoose_nan (is_signaling: positive -> bool)
                       (default: bool * positive)
                       (l0: list (bool * positive)) : bool * positive :=
   let fix choose_snan (l1: list (bool * positive)) :=
@@ -241,7 +241,7 @@ Proof.
   subst.
   assumption.
 Qed.
-      
+
 Lemma val_inject_single_inv_r v f:
   val_inject v Tsingle f ->
   v = Values.Vsingle f.
@@ -335,11 +335,11 @@ match x with
  match y with
    | Binary.B754_finite _ _ ?s ?m ?e _ =>
      let z := constr:(b32_B754_finite s m e (@eq_refl bool true))
-      in change x with x'; 
+      in change x with x';
         replace x' with z by (apply B754_finite_ext; reflexivity)
-   | Binary.B754_zero _ _ ?s => 
+   | Binary.B754_zero _ _ ?s =>
        let z := constr:(b32_B754_zero s) in
-       change x with z        
+       change x with z
   end
 | Float.of_bits (Int64.repr ?a) =>
   const_Z a;
@@ -348,15 +348,15 @@ match x with
  match y with
    | Binary.B754_finite _ _ ?s ?m ?e _ =>
      let z := constr:(b64_B754_finite s m e (@eq_refl bool true))
-      in change x with x'; 
+      in change x with x';
         replace x' with z by (apply B754_finite_ext; reflexivity)
-   | Binary.B754_zero _ _ ?s => 
+   | Binary.B754_zero _ _ ?s =>
        let z := constr:(b64_B754_zero s) in
-       change x with z        
+       change x with z
   end
 end.
 
-Ltac canonicalize_float_constants := 
+Ltac canonicalize_float_constants :=
   repeat
     match goal with
     | |- context [Binary.B754_finite 24 128 ?s ?m ?e ?p] =>

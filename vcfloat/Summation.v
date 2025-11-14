@@ -376,11 +376,11 @@ Theorem error_rounded_sum_with_approx Q q Q_ q_ d e Mq Mdq Md Me n:
   let L := (Mq * Md) in
   let K := (Mq * Md + Mdq * (1 + Md) + Me) in
   Rabs (Q_ - Q) <= D_ K L M n ->
-  Rabs ((Q_ + q_) * (1 + d) + e - (Q + q)) <= D_ K L M (S n). 
+  Rabs ((Q_ + q_) * (1 + d) + e - (Q + q)) <= D_ K L M (S n).
 Proof.
   intros H H0 H1 H2 H3 M L K H4.
   pose (dq := q_ - q).
-  assert 
+  assert
     ((Q_ + q_) * (1 + d) + e - (Q + q)
      = (Q_ - Q) * (1 + d) + Q * d + (q * d + dq * (1 + d) + e))
     as V_m_U.
@@ -388,7 +388,7 @@ Proof.
     unfold dq.
     ring.
   }
-  assert 
+  assert
   (Rabs ((Q_ + q_) * (1 + d) + e - (Q + q)) <= Rabs (Q_ - Q) * M + INR n * L + K)
   as V_m_U_le.
   {
@@ -511,7 +511,7 @@ Proof.
   rewrite DS.
   apply Rplus_le_compat_r.
   apply Rplus_le_compat_r.
-  apply Rmult_le_compat_r; auto.   
+  apply Rmult_le_compat_r; auto.
   unfold M.
   generalize (Rabs_pos d).
   lra.
@@ -520,7 +520,7 @@ Qed.
 End S.
 
 (* Implementations *)
- 
+
 Fixpoint Sf (f: nat -> R) (n: nat): R :=
   match n with
   | O => 0

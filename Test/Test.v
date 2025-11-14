@@ -19,7 +19,7 @@ Section WITHNANS.
   independent of the Nans details, so we can leave it abstract, like this: *)
 Context {NANS: Nans}.
 
-(** We will demonstrate VCfloat on a symplectic ODE (ordinary differential 
+(** We will demonstrate VCfloat on a symplectic ODE (ordinary differential
   equation) integration for a simple harmonic oscillator. *)
 
 Definition h := (1 / 32)%F32.   (* Time-step: 1/32 of a second *)
@@ -30,9 +30,9 @@ Definition F (x : ftype Tsingle ) : ftype Tsingle := (-x)%F32.
 (** Compute one time-step: given "ic" which is a pair of position and velocity,
   calculate the new position and velocity after time "h" has elapsed. *)
 Definition leapfrog_step ( ic : ftype Tsingle * ftype Tsingle) : ftype Tsingle * ftype Tsingle :=
-  let x  := fst ic in let v:= snd ic in 
+  let x  := fst ic in let v:= snd ic in
   let x' := ((x + h * v) + ((1/2) * (h * h)) * F x)%F32 in
-  let v' :=  (v +  (1/2 * h) * (F x + F x'))%F32 in 
+  let v' :=  (v +  (1/2 * h) * (F x + F x'))%F32 in
   (x', v').
 
 (** Calculate a new position, as a function of position x and velocity v *)
@@ -48,9 +48,9 @@ Definition _v : ident := 2%positive.  (* Variable name for velocity *)
 
 (** These two lines compute a deep-embedded "expr"ession from
   a shallow-embedded Coq expression.  *)
-Definition x' := ltac:(let e' := 
+Definition x' := ltac:(let e' :=
   HO_reify_float_expr constr:([_x; _v]) leapfrog_stepx in exact e').
-Definition v' := ltac:(let e' := 
+Definition v' := ltac:(let e' :=
   HO_reify_float_expr constr:([_x; _v]) leapfrog_stepv in exact e').
 
 Print x'.  (* Demonstrates what x' looks like *)
@@ -58,11 +58,11 @@ Print x'.  (* Demonstrates what x' looks like *)
 (** When interpreting deep-embedded expressions, "Var"iables will appear
   which are labeled by identifiers such as "_x" and "_v".  We want a
   "varmap" for looking up the values of those variables.  We'll compute
-  that varmap in two stages.  Step one, given values "x" and "v", 
+  that varmap in two stages.  Step one, given values "x" and "v",
   make an association list mapping _x to x, and _v to v,  each labeled
   by its floating-point type.  *)
 
-Definition leapfrog_vmap_list (x v : ftype Tsingle) := 
+Definition leapfrog_vmap_list (x v : ftype Tsingle) :=
    [(_x, existT ftype _ x);(_v, existT ftype _ v)].
 
 (** Step two, build that into "varmap" data structure, taking care to
@@ -71,11 +71,11 @@ Definition leapfrog_vmap_list (x v : ftype Tsingle) :=
 Definition leapfrog_vmap (x v : ftype Tsingle) : valmap :=
  ltac:(make_valmap_of_list (leapfrog_vmap_list x v)).
 
-(**  Demonstration of reification and reflection.   When you have a 
+(**  Demonstration of reification and reflection.   When you have a
   deep-embedded "expr"ession, you can get back the shallow embedding
    by applying the "fval" function *)
 
-Lemma reflect_reify_x : forall x v, 
+Lemma reflect_reify_x : forall x v,
              fval (env_ (leapfrog_vmap x v)) x' = leapfrog_stepx x v.
 Proof.
 intros.
@@ -91,7 +91,7 @@ destruct true.  (* artificial way to get two subgoals *)
    (* Therefore, use unfold_reflect if you wish to, for clarity, not for performance *)
 Qed.
 
-(**  Demonstration of reification and reflection, this time on  leapfrog_stepv *) 
+(**  Demonstration of reification and reflection, this time on  leapfrog_stepv *)
 Lemma reflect_reify_v : forall x v, fval (env_ (leapfrog_vmap x v)) v' = leapfrog_stepv x v.
 Proof.
 intros.
@@ -102,14 +102,14 @@ Qed.
 
 (** The main point of VCFloat is to prove bounds on the roundoff error of
   floating-point expressions.  Generally those bounds are provable only if
-  the free variables of the expression (e.g., "x" and "v") are themselves 
+  the free variables of the expression (e.g., "x" and "v") are themselves
   bounded in some way;  otherwise, the expression might overflow.
   A "boundsmap" is a mapping from identifier (such as "_x") to
   a "varinfo", which gives its (floating-point) and its lower and upper bound. *)
 
-(** First we make an association list.  This one says that 
+(** First we make an association list.  This one says that
    -2.0 <= x <= 2.0   and   -2.0 <= v <= 2.0  *)
-Definition leapfrog_bmap_list : list varinfo := 
+Definition leapfrog_bmap_list : list varinfo :=
   [ Build_varinfo Tsingle _x (-2)  2 ;  Build_varinfo Tsingle _v (-2)  2 ].
 
 (** Then we calculate an efficient lookup table, the "boundsmap". *)
@@ -120,13 +120,13 @@ Definition leapfrog_bmap : boundsmap :=
    has a roundoff error less than 1.0e-5 *)
 Lemma prove_roundoff_bound_x:
   forall vmap,
-  prove_roundoff_bound leapfrog_bmap vmap x' 
+  prove_roundoff_bound leapfrog_bmap vmap x'
     (/ 4068166).
 Proof.
 intros.
 prove_roundoff_bound.
- (* This divides into two proof goals.  
-  Goal 1 is "prove_rndval", which generates a list of verification conditions 
+ (* This divides into two proof goals.
+  Goal 1 is "prove_rndval", which generates a list of verification conditions
         about subexpressions of x'; and if those can be proved, then
   x' evaluates equivalent to a perturbed expression.
   Goal 2 shows that the perturbed expression evaluates "close to"
@@ -137,7 +137,7 @@ prove_roundoff_bound.
      by the "interval" tactic *)
  prove_rndval.
  all: interval.
-- 
+-
  prove_roundoff_bound2.
  match goal with |- Rabs ?a <= _ => field_simplify a end. (* improves the bound *)
  (* Right now, just "interval" would solve the goal.
@@ -168,7 +168,7 @@ Check prove_roundoff_bound_x_alt.
 
 Lemma prove_roundoff_bound_v:
   forall x v : ftype Tsingle,
-  prove_roundoff_bound leapfrog_bmap (leapfrog_vmap x v) v' 
+  prove_roundoff_bound leapfrog_bmap (leapfrog_vmap x v) v'
     (/ 7662902).
 Proof.
 intros.
@@ -180,20 +180,20 @@ prove_roundoff_bound.
  interval.
 Qed.
 
-(*  This one commented out, because prove_val_bound2 needs to 
-   be brought up to date with the recent changes to prove_roundoff_bound2 
-(** The following lemma demonstrates [val_bound],  that is, 
+(*  This one commented out, because prove_val_bound2 needs to
+   be brought up to date with the recent changes to prove_roundoff_bound2
+(** The following lemma demonstrates [val_bound],  that is,
   compute the maximum absolute value of a floating-point expression *)
 Lemma prove_val_bound_x:
   forall vmap,
-  prove_val_bound leapfrog_bmap vmap x' 
+  prove_val_bound leapfrog_bmap vmap x'
     (4642138645987358 / 2251799813685248).
 Proof.
 intros.
 prove_val_bound.
-- 
+-
  abstract (prove_rndval; interval).
-- 
+-
   prove_val_bound2.
  match goal with |- Rabs ?a <= _ => field_simplify a end.
   match goal with |- Rabs ?a <= _ => interval_intro (Rabs a) end.
