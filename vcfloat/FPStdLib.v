@@ -81,22 +81,11 @@ Proof.
   apply type_ext; auto.
 Defined.
 
-Lemma fprec_lt_femax' ty: (fprec ty < femax ty)%Z.
-Proof.
-  apply ZLT_elim.
-  apply fprec_lt_femax_bool.
-Qed.
+Definition coretype_of_type (t: type) : FPCore.type :=
+  FPCore.TYPE (fprecp t) (femax t) (fprec_lt_femax_bool t) (fprecp_not_one_bool t).
 
-(* For transparency purposes *)
-Lemma fprec_lt_femax ty: (fprec ty < femax ty)%Z.
-Proof.
-  unfold Z.lt.
-  destruct (Z.compare (fprec ty) (femax ty)) eqn:EQ; auto;
-  generalize (fprec_lt_femax' ty);
-    intro K;
-    unfold Z.lt in K;
-    congruence.
-Defined.
+Definition fprec_lt_femax ty: (fprec ty < femax ty)%Z :=
+  FPCore.fprec_lt_femax (coretype_of_type ty).
 
 Lemma fprecp_not_one ty:
     fprecp ty <> 1%positive
@@ -123,120 +112,12 @@ Definition ftype ty := binary_float (fprec ty) (femax ty).
  "Is_true (negb (fprecp t =? 1)%positive)".
 *)
 
-
-Definition coretype_of_type (t: type) : FPCore.type :=
- FPCore.TYPE (fprecp t) (femax t) (ZLT_intro _ _ (fprec_lt_femax t)) (fprecp_not_one_bool t).
-
 #[export] Instance STDtype: forall (t: type), FPCore.is_standard (coretype_of_type t).
 Proof.
 intros. apply I.
 Qed.
 
-(*
-Definition Nans := FPCore.Nans.
-*)
-(*
-Existing Class Nans.
-
-Definition conv_nan {NAN: Nans} : forall ty1 ty2 : type,
-                binary_float (fprec ty1) (femax ty1) ->
-                nan_payload (fprec ty2) (femax ty2)
-  := fun t1 t2 => @FPCore.conv_nan NAN
-        (FPCore.fprec (coretype_of_type t1))
-        (FPCore.femax (coretype_of_type t1))
-        (FPCore.fprec (coretype_of_type t2))
-        (FPCore.femax (coretype_of_type t2)) (FPCore.fprec_gt_one (coretype_of_type t2)).
-
-Definition plus_nan {NAN: Nans}:
-      forall ty: type,
-        binary_float (fprec ty) (femax ty) ->
-        binary_float (fprec ty) (femax ty) ->
-        nan_payload (fprec ty) (femax ty)
- := fun t => @FPCore.plus_nan NAN
-        (FPCore.fprec (coretype_of_type t))
-        (FPCore.femax (coretype_of_type t)) (FPCore.fprec_gt_one (coretype_of_type t)).
-
-Definition  mult_nan {NAN: Nans}:
-      forall ty : type,
-        binary_float (fprec ty) (femax ty) ->
-        binary_float (fprec ty) (femax ty) ->
-        nan_payload (fprec ty) (femax ty)
- := fun t => @FPCore.plus_nan NAN
-        (FPCore.fprec (coretype_of_type t))
-        (FPCore.femax (coretype_of_type t)) (FPCore.fprec_gt_one (coretype_of_type t)).
-
-Definition    div_nan {NAN: Nans}:
-      forall ty : type,
-        binary_float (fprec ty) (femax ty) ->
-        binary_float (fprec ty) (femax ty) ->
-        nan_payload (fprec ty) (femax ty)
- := fun t => @FPCore.div_nan NAN
-        (FPCore.fprec (coretype_of_type t))
-        (FPCore.femax (coretype_of_type t)) (FPCore.fprec_gt_one (coretype_of_type t)).
-
-Definition    abs_nan {NAN: Nans}:
-      forall ty : type,
-        binary_float (fprec ty) (femax ty) -> (* guaranteed to be a nan, if this is not a nan then any result will do *)
-        nan_payload (fprec ty) (femax ty)
- := fun t => @FPCore.abs_nan NAN
-        (FPCore.fprec (coretype_of_type t))
-        (FPCore.femax (coretype_of_type t)) (FPCore.fprec_gt_one (coretype_of_type t)).
-
-Definition    opp_nan {NAN: Nans}:
-      forall ty : type,
-        binary_float (fprec ty) (femax ty) -> (* guaranteed to be a nan, if this is not a nan then any result will do *)
-        nan_payload (fprec ty) (femax ty)
- := fun t => @FPCore.opp_nan NAN
-        (FPCore.fprec (coretype_of_type t))
-        (FPCore.femax (coretype_of_type t)) (FPCore.fprec_gt_one (coretype_of_type t)).
-
-Definition    sqrt_nan {NAN: Nans}:
-      forall ty : type,
-        binary_float (fprec ty) (femax ty) ->
-        nan_payload (fprec ty) (femax ty)
- := fun t => @FPCore.sqrt_nan NAN
-        (FPCore.fprec (coretype_of_type t))
-        (FPCore.femax (coretype_of_type t)) (FPCore.fprec_gt_one (coretype_of_type t)).
-
-Definition    fma_nan {NAN: Nans}:
-      forall ty : type,
-        binary_float (fprec ty) (femax ty) ->
-        binary_float (fprec ty) (femax ty) ->
-        binary_float (fprec ty) (femax ty) ->
-        nan_payload (fprec ty) (femax ty)
- := fun t => @FPCore.fma_nan NAN
-        (FPCore.fprec (coretype_of_type t))
-        (FPCore.femax (coretype_of_type t)) (FPCore.fprec_gt_one (coretype_of_type t)).
-
-*)
-
-Lemma fprec_gt_one ty:
-  (1 < fprec ty)%Z.
-Proof.
-  generalize (fprec_gt_0 ty).
-  unfold FLX.Prec_gt_0.
-  unfold fprec.
-  intros.
-  generalize (fprecp_not_one ty).
-  intros.
-  assert (Z.pos (fprecp ty) <> 1%Z) by congruence.
-  lia.
-Qed.
-
-(*
-
-Corollary any_nan ty: nan_payload (fprec ty) (femax ty).
-Proof.
- red.
-  set (a:=1%positive).
-  assert (H: Binary.nan_pl (fprec ty) a = true).
-  unfold Binary.nan_pl.
-  subst a.
-   pose proof (fprec_gt_one ty). simpl. lia.
-  exists (Binary.B754_nan (fprec ty) (femax ty) false 1 H).
-  reflexivity.
-Defined.
-*)
+Definition fprec_gt_one ty: (1 < fprec ty)%Z := FPCore.fprec_gt_one (coretype_of_type ty).
 
 Definition FT2R {t: type} : ftype t -> R := B2R (fprec t) (femax t).
 
@@ -937,54 +818,25 @@ Qed.
 
 Lemma type_of_coretype_of_type: forall t, type_of_coretype (coretype_of_type t) = t.
 Proof.
-intros.
-unfold coretype_of_type, type_of_coretype;
-destruct t; simpl.
-f_equal.
-apply proof_irr.
+destruct t; reflexivity.
 Qed.
 
-
-Axiom extensionality: forall s t (f g: s -> t), (forall x, f x = g x) -> f = g.
+(* Axiom extensionality: forall s t (f g: s -> t), (forall x, f x = g x) -> f = g. *)
 
 Lemma type_coretype_sound: forall t (e: ftype t) (e': FPCore.ftype (coretype_of_type t)),
   type_coretype e e' ->
   JMeq e (@FPCore.float_of_ftype _ (STDtype t) e').
 Proof.
 intros.
-induction H; simpl.
--
-apply eq_JMeq.
-unfold Zconst, FPCore.Zconst.
-f_equal; auto; try apply proof_irr.
+induction H; simpl; try reflexivity.
 -
 apply eq_JMeq.
 unfold BINOP, FPCore.BINOP.
-(*
-rewrite FPCore.float_of_ftype_of_float. *)
-f_equal; auto; try apply proof_irr.
-clear.
-unfold coreNAN2.
-do 2 (apply extensionality; intro).
-unfold coretype_of_type, type_of_coretype;
-destruct t; simpl.
-replace (ZLT_intro _ _ _) with (fprec_lt_femax_bool0) by apply proof_irr.
-auto.
-f_equal. apply proof_irr.
-apply JMeq_eq; auto.
-apply JMeq_eq; auto.
+f_equal; auto; apply JMeq_eq; auto.
 -
 apply eq_JMeq.
 unfold UNOP, FPCore.UNOP.
-f_equal; auto; try apply proof_irr.
-unfold coreNAN1.
-apply extensionality; intro.
-unfold coretype_of_type, type_of_coretype;
-destruct t; simpl.
-replace (ZLT_intro _ _ _) with (fprec_lt_femax_bool0) by apply proof_irr.
-auto.
-f_equal. apply proof_irr.
-apply JMeq_eq; auto.
+f_equal; auto; apply JMeq_eq; auto.
 -
 unfold cast, FPCore.cast.
 destruct (type_eq_dec t2 t1).
@@ -1011,13 +863,7 @@ destruct (FPCore.type_eq_dec _ _ _ _).
     unfold coretype_of_type, FPCore.TYPE in *.
     inv e.
     destruct t1, t2; simpl in *; subst; repeat f_equal; apply proof_irr.
-  *
-  destruct t1, t2.
-  unfold coretype_of_type in *.
-  simpl in *. clear H.
-  f_equal. apply proof_irr.
-  simpl.
-  f_equal. apply proof_irr.
+  * reflexivity.
 Qed.
 
 Module Test.
@@ -1048,9 +894,6 @@ eexists.
 apply type_coretype_sound.
 repeat econstructor; eauto.
 Defined.
-(*
-Print corify.
-*)
 
 End Test.
 
