@@ -1,2 +1,2 @@
 From Coq Require Import Strings.String.  Open Scope string.
-Definition version := "2.4".
+Definition version := "2.4.1".

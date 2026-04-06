@@ -1411,7 +1411,7 @@ end;
  rewrite <- H2; clear H2 e;
 
  match goal with |- context [rval ?env ?x] =>
-   let a := constr:(rval env x) in let b := eval hnf in a in change a with b
+   let a := constr:(rval env x) in let b := eval red in a in let b := eval simpl in b in change a with b
  end;
  cbv_reval;
  simpl ff_args;
