@@ -740,16 +740,48 @@ Definition Zconst (t: type) `{STD: is_standard t} (i: Z) : ftype t :=
     ftype_of_float
   (BofZ (fprec t) (femax t) (Pos2Z.is_pos (fprecp t)) (fprec_lt_femax t) i).
 
-Lemma BPLUS_commut {NANS: Nans}: forall (t: type) `{STD: is_standard t}
-     (a b: ftype t),
-    plus_nan (fprec t) (femax t) (fprec_gt_one t) (float_of_ftype a) (float_of_ftype b) =
-    plus_nan (fprec t) (femax t) (fprec_gt_one t) (float_of_ftype b) (float_of_ftype a) ->
-    BPLUS a b = BPLUS b a.
+Lemma is_nan_false_bplus_if_finite {NANS: Nans}: forall (t: type) `{STD: is_standard t}
+   (a b: ftype t),
+   Binary.is_finite (fprec t) (femax t) (float_of_ftype a) = true ->
+   Binary.is_finite (fprec t) (femax t) (float_of_ftype b) = true ->
+   Binary.is_nan _ _ (float_of_ftype (BPLUS a b)) = false.
 Proof.
 intros.
 unfold BPLUS, BINOP.
-f_equal.
-apply Bplus_commut; auto.
+destruct (float_of_ftype a), (float_of_ftype b); 
+simpl in *; try discriminate; auto; rewrite float_of_ftype_of_float.
+destruct s, s0; simpl; auto.
+destruct s, s0; simpl; auto.
+destruct s, s0; simpl; auto.
+cbv [Bplus]; simpl.
+rewrite is_nan_BSN2B.
+apply BinarySingleNaN.is_nan_binary_normalize.
+Qed.
+
+Lemma BPLUS_commut {NANS: Nans}: forall (t: type) `{STD: is_standard t}
+     (a b: ftype t),
+     Binary.is_finite (fprec t) (femax t) (float_of_ftype a) = true ->
+     Binary.is_finite (fprec t) (femax t) (float_of_ftype b) = true ->
+     BPLUS a b = BPLUS b a.
+Proof.
+intros.
+pose proof is_nan_false_bplus_if_finite t a b H H0 as H1.
+revert H1. 
+unfold BPLUS, BINOP.
+rewrite !float_of_ftype_of_float.
+intros;
+destruct (float_of_ftype a), (float_of_ftype b); simpl in *;
+try discriminate; auto.
+destruct s, s0 ; simpl in *; auto.
+revert H1.
+cbv [Bplus BSN2B]; simpl.
+cbv [BinarySingleNaN.Fplus_naive].
+replace (Z.min e e1) with (Z.min e1 e) by lia. 
+set (x1:= SpecFloat.cond_Zopp s _).
+set (x2:= SpecFloat.cond_Zopp s0 _).
+replace (x2 + x1) with (x1 + x2) by lia.
+set (bnl := BinarySingleNaN.binary_normalize _ _ _ _ _ _ _ _).
+destruct bnl; simpl; intros; try discriminate; auto.
 Qed.
 
 Lemma BMULT_commut {NANS: Nans}: forall t `{STD: is_standard t} a b,
