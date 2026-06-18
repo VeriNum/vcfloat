@@ -102,7 +102,7 @@ Ltac reify_float_expr E :=
                                       constr:(Binop (Rounded2 MINUS (Some Denormal)) a' b')
  | FPCore.BMULT ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 MULT None) a' b')
- | BMULT ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
+ | FPStdLib.BMULT ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 MULT None) a' b')
  | Norm (FPCore.BMULT ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 MULT (Some Normal)) a' b')
