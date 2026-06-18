@@ -5,7 +5,7 @@ From Flocq Require Import Binary Bits Core.
 From vcfloat Require Import IEEE754_extra klist.
 Require compcert.lib.Maps.
 Require Coq.MSets.MSetAVL.
-Require vcfloat.Fprop_absolute.
+Require vcfloat.Fprop_absolute vcfloat.FPStdLib.
 Require Import vcfloat.Float_lemmas.
 Set Bullet Behavior "Strict Subproofs".
 Global Unset Asymmetric Patterns.
@@ -17,7 +17,7 @@ Import Lists.List.
 
 Definition ident := positive.
 
-Definition placeholder32: ident -> ftype Tsingle. intro. apply 0%F32. Qed.
+(* obsolete? Definition placeholder32: ident -> ftype Tsingle. intro. apply 0%F32. Qed. *)
 
 Definition placeholderx ty: ident -> {x: ftype ty | is_finite x = true}.
 intros.
@@ -31,6 +31,10 @@ reflexivity.
 Qed.
 
 Definition placeholder ty i : ftype ty := proj1_sig (placeholderx ty i).
+
+Definition Std_placeholder ty i : FPStdLib.ftype ty := 
+  proj1_sig (placeholderx (FPStdLib.coretype_of_type ty) i).
+
 
 Definition func {ty} (f: floatfunc_package ty) := ff_func (ff_ff f).
 Ltac apply_func ff :=
@@ -69,53 +73,94 @@ Ltac prove_incollection :=
 
 Ltac reify_float_expr E :=
  match E with
- | placeholder32 ?i => constr:(Var Tsingle ltac:(prove_incollection) i)
+(*  obsolete?   | placeholder32 ?i => constr:(Var Tsingle ltac:(prove_incollection) i) *)
  | placeholder ?ty ?i => constr:(@Var ltac:(auto with typeclass_instances) ty ltac:(prove_incollection) i)
- | Zconst ?t ?z => constr:(Const t I (Zconst t z))
- | BPLUS ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
+ | Std_placeholder ?ty ?i => constr:(@Var ltac:(auto with typeclass_instances) (FPStdLib.coretype_of_type ty) ltac:(prove_incollection) i)
+ | FPCore.Zconst ?t ?z => constr:(Const t I E)
+ | FPStdLib.Zconst ?t ?z => constr:(Const (FPStdLib.coretype_of_type t) _ E)
+ | FPCore.BPLUS ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 PLUS None) a' b')
- | Norm (BPLUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
+ | FPStdLib.BPLUS ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
+                                      constr:(Binop (Rounded2 PLUS None) a' b')
+ | Norm (FPCore.BPLUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 PLUS (Some Normal)) a' b')
- | Denorm (BPLUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
+ | Norm (FPStdLib.BPLUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
+                                      constr:(Binop (Rounded2 PLUS (Some Normal)) a' b')
+ | Denorm (FPCore.BPLUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 PLUS (Some Denormal)) a' b')
- | BMINUS ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
+ | Denorm (FPStdLib.BPLUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
+                                      constr:(Binop (Rounded2 PLUS (Some Denormal)) a' b')
+ | FPCore.BMINUS ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 MINUS None) a' b')
- | Norm (BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
+ | FPStdLib.BMINUS ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
+                                      constr:(Binop (Rounded2 MINUS None) a' b')
+ | Norm (FPCore.BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
+                                      constr:(Binop (Rounded2 MINUS (Some Normal)) a' b')
+ | Norm (FPStdLib.BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 MINUS (Some Normal)) a' b')
  | Denorm (BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 MINUS (Some Denormal)) a' b')
+ | FPCore.BMULT ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
+                                      constr:(Binop (Rounded2 MULT None) a' b')
  | BMULT ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 MULT None) a' b')
- | Norm (BMULT ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
+ | Norm (FPCore.BMULT ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 MULT (Some Normal)) a' b')
- | Denorm (BMULT ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
+ | Norm (FPStdLib.BMULT ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
+                                      constr:(Binop (Rounded2 MULT (Some Normal)) a' b')
+ | Denorm (FPCore.BMULT ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 MULT (Some Denormal)) a' b')
- | BDIV ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
+ | Denorm (FPStdLib.BMULT ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
+                                      constr:(Binop (Rounded2 MULT (Some Denormal)) a' b')
+ | FPCore.BDIV ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 DIV None) a' b')
- | Norm (BDIV ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
+ | FPStdLib.BDIV ?a ?b => let a' := reify_float_expr a in let b' := reify_float_expr b in
+                                      constr:(Binop (Rounded2 DIV None) a' b')
+ | Norm (FPCore.BDIV ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 DIV (Some Normal)) a' b')
- | Denorm (BDIV ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
+ | Norm (FPStdLib.BDIV ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
+                                      constr:(Binop (Rounded2 DIV (Some Normal)) a' b')
+ | Denorm (FPCore.BDIV ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop (Rounded2 DIV (Some Denormal)) a' b')
- | BOPP ?a => let a' := reify_float_expr a in
+ | Denorm (FPStdLib.BDIV ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
+                                      constr:(Binop (Rounded2 DIV (Some Denormal)) a' b')
+ | FPCore.BOPP ?a => let a' := reify_float_expr a in
                                       constr:(Unop (Exact1 Opp) a')
- | BABS ?a => let a' := reify_float_expr a in
+ | FPStdLib.BOPP ?a => let a' := reify_float_expr a in
+                                      constr:(Unop (Exact1 Opp) a')
+ | FPCore.BABS ?a => let a' := reify_float_expr a in
                                       constr:(Unop (Exact1 Abs) a')
- | BSQRT ?a => let a' := reify_float_expr a in
+ | FPStdLib.BABS ?a => let a' := reify_float_expr a in
+                                      constr:(Unop (Exact1 Abs) a')
+ | FPCore.BSQRT ?a => let a' := reify_float_expr a in
                                       constr:(Unop (Rounded1 SQRT) a')
- | @cast _ Tsingle Tdouble ?f => let f':= reify_float_expr f in
-                                      constr:(Cast Tdouble Tsingle None f')
+ | FPStdLib.BSQRT ?a => let a' := reify_float_expr a in
+                                      constr:(Unop (Rounded1 SQRT) a')
+ | @FPCore.cast _ FPCore.Tsingle FPCore.Tdouble ?f => let f':= reify_float_expr f in
+                                      constr:(Cast FPCore.Tdouble FPCore.Tsingle None f')
+ | @FPStdLib.cast _ FPStdLib.Tsingle FPStdLib.Tdouble ?f => let f':= reify_float_expr f in
+                                      constr:(Cast FPStdLib.Tdouble FPStdLib.Tsingle None f')
+
+
+ | @cast _ Tdouble Tsingle ?f => let f':= reify_float_expr f in
+                                      constr:(Cast Tsingle Tdouble None f')
  | @cast _ Tdouble Tsingle ?f => let f':= reify_float_expr f in
                                       constr:(Cast Tsingle Tdouble None f')
  | @cast _ Tsingle Tsingle ?f => let f':= reify_float_expr f in
                                       constr:(f')
+ | @cast _ Tsingle Tsingle ?f => let f':= reify_float_expr f in
+                                      constr:(f')
  | @cast _ Tdouble Tdouble ?f => let f':= reify_float_expr f in
                                       constr:(f')
- | b32_B754_zero _ => constr:(Const Tsingle I E)
- | b64_B754_zero _ => constr:(Const Tdouble I E)
- | b64_B754_finite _ _ _ _ => constr:(Const Tdouble I E)
- | b32_B754_finite _ _ _ _ => constr:(Const Tsingle I E)
- | b64_B754_finite _ _ _ _ => constr:(Const Tdouble I E)
- | Sterbenz (BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
+ | @cast _ Tdouble Tdouble ?f => let f':= reify_float_expr f in
+                                      constr:(f')
+ | b32_B754_zero _ => constr:(Const FPCore.Tsingle I E)
+ | b64_B754_zero _ => constr:(Const FPCore.Tdouble I E)
+ | b64_B754_finite _ _ _ _ => constr:(Const FPCore.Tdouble I E)
+ | b32_B754_finite _ _ _ _ => constr:(Const FPCore.Tsingle I E)
+ | Sterbenz (FPCore.BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
+                                      constr:(Binop SterbenzMinus a' b')
+ | Sterbenz (FPCore.BMINUS ?a ?b) => let a' := reify_float_expr a in let b' := reify_float_expr b in
                                       constr:(Binop SterbenzMinus a' b')
  | @func ?ty ?ff ?a1 => let a1' := reify_float_expr a1 in
                                             constr:(Func ty ff (Kcons a1' Knil))
@@ -134,8 +179,13 @@ Ltac HO_reify_float_expr names E :=
          lazymatch names with
          | ?n :: ?names' =>
               lazymatch (type of E) with
-              | ftype ?ty -> _ =>
+              | FPCore.ftype ?ty -> _ =>
                      let Ev := constr:(E (placeholder ty n)) in
+                     let Ev := eval cbv beta in Ev in 
+                     HO_reify_float_expr names' Ev
+              | FPStdLib.ftype ?ty -> _ =>
+                     let Ev := constr:(E (Std_placeholder ty n)) in 
+                     let Ev := eval cbv beta in Ev in 
                      HO_reify_float_expr names' Ev
               | _ => fail 100 "could not reify" E
               end
