@@ -922,6 +922,29 @@ cbv [fcval fcval_nonrec option_pair_of_options
   repeat change (ftype_of_float ?x) with x;
   repeat change (float_of_ftype ?x) with x.
 
+Lemma B754_finite_congr: forall prec emax (s1 s2: bool) (m1 m2: positive) (e1 e2: Z) H1 H2,
+  s1=s2 -> m1=m2 -> e1=e2 -> 
+  B754_finite prec emax s1 m1 e1 H1 = B754_finite prec emax s2 m2 e2 H2.
+Proof.
+intros; subst; f_equal.
+apply proof_irr.
+Qed.
+
+Ltac compute_float F :=
+ match type of F with ?t => let t' := eval compute in t in 
+ lazymatch t' with
+ | binary_float ?prec ?emax =>
+   let EQ := fresh "EQ" in
+     first [ let y := fresh "y" in evar (y: binary_float prec emax);
+              assert (EQ: F = y) by (eapply B754_finite_congr; reflexivity); subst y; instantiate (1:=eq_refl) in EQ
+            | let s := fresh "s" in evar (s: bool); assert (EQ: F = B754_zero prec emax s); subst s; [reflexivity |]
+         ];
+   simpl in EQ;
+   try (rewrite EQ; clear EQ)
+ | _ => fail 1 "compute_float requires type of argument to be binary_float 53 1024 but here " F ":" t
+ end
+ end.
+
 Ltac compute_fshift_div_special_reduce :=
  cbv_fcval;
  repeat (
@@ -932,7 +955,10 @@ Ltac compute_fshift_div_special_reduce :=
      compute_every3 @to_inv_power_2;
      compute_binary_floats;
      compute_every6 @binary_float_eqb;
-     cbv_fcval).
+     cbv_fcval);
+  repeat match goal with |- context [Const _ _ ?e] =>
+    let u := fresh "u" in set (u:=e); simpl in u; compute_float u; subst u
+  end.
 
 Ltac compute_fshift_div2 :=
   (* don't use this one, it causes Qed blowup in (for example) the kepler1 benchmark *)
