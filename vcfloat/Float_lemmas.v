@@ -254,7 +254,7 @@ Proof.
   f_equal.
   simpl.
   f_equal.
-  apply Zpow_facts.Zpower_pos_1_r.
+  rewrite Zpower_pos_nat; simpl; lia.
 Qed.
 
 Lemma FLT_format_div_beta_1_aux beta emin prec n

@@ -652,8 +652,8 @@ destruct n; simpl; auto.
   set (hi := F.fromZ_UP p52 n) in *; clearbody hi.
   assert (H3: contains (Ibnd (F.toX lo) (F.toX hi)) (Xreal (IZR n))). {
    apply le_contains; intros.
-   rewrite H3 in H1. apply H1.
-  rewrite H3 in H2; apply H2.
+  rewrite ?H3 in H1; apply H1.  (* the question-mark is for version compatibility *)
+  rewrite ?H3 in H2; apply H2.  (* the question-mark is for version compatibility *)
   }
   destruct H3.
   unfold F.toR, proj_val.
